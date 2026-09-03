@@ -287,7 +287,7 @@ cordinatorPersonContactNo: event.cordinatorPersonContactNo || "",
     f.customPackageId != null ? String(f.customPackageId) : "",
   venueTouched: !!(f.function_venue && f.function_venue.trim()), // ← add this
    functionTouched: !!(f.function?.id ?? f.functionId ?? null),
-   dateTouched: false, 
+   dateTouched: mode === "copy" ? false : !!f.id, 
 };
             }),
 

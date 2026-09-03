@@ -1323,25 +1323,37 @@ if (loading) {
   const existingRename = data.categoryRenames?.[renameCatModal] || {};
   const reportFromData = data.categoryReportNames?.[renameCatModal] || {};
 
+  // const initialValues = {
+  //   english: existingRename.english 
+  //     || first.reportNameEnglish 
+  //     || reportFromData.english 
+  //     || first.menuCategoryName 
+  //     || renameCatModal,
+  //   hindi: existingRename.hindi 
+  //     || first.reportNameHindi 
+  //     || reportFromData.hindi 
+  //     || first.menuCategoryNameHindi 
+  //     || first.menuCategoryName 
+  //     || renameCatModal,
+  //   gujarati: existingRename.gujarati 
+  //     || first.reportNameGujarati 
+  //     || reportFromData.gujarati 
+  //     || first.menuCategoryNameGujarati 
+  //     || first.menuCategoryName 
+  //     || renameCatModal,
+  // };
+
   const initialValues = {
-    english: existingRename.english 
-      || first.reportNameEnglish 
-      || reportFromData.english 
-      || first.menuCategoryName 
-      || renameCatModal,
-    hindi: existingRename.hindi 
-      || first.reportNameHindi 
-      || reportFromData.hindi 
-      || first.menuCategoryNameHindi 
-      || first.menuCategoryName 
-      || renameCatModal,
-    gujarati: existingRename.gujarati 
-      || first.reportNameGujarati 
-      || reportFromData.gujarati 
-      || first.menuCategoryNameGujarati 
-      || first.menuCategoryName 
-      || renameCatModal,
-  };
+  english: existingRename.english 
+    || reportFromData.english 
+    || renameCatModal, // ← category key first, not first.reportNameEnglish
+  hindi: existingRename.hindi 
+    || reportFromData.hindi 
+    || renameCatModal,
+  gujarati: existingRename.gujarati 
+    || reportFromData.gujarati 
+    || renameCatModal,
+};
 
 
   return (
