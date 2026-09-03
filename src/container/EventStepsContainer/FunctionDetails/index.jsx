@@ -450,6 +450,8 @@ useEffect(() => {
   };
   fetchPackages();
 }, []);
+
+
 useEffect(() => {
   const fetchEventTypesRaw = async () => {
     try {
@@ -682,6 +684,51 @@ useEffect(() => {
     fetchBanquets();
   }, []);
 
+
+  const computeFunctionDateTime = (func, source, eventStartDateTime, eventEndDateTime, functionOptions) => {
+  const startDateBase = eventStartDateTime
+    ? dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A")
+    : null;
+  const endDateBase = eventEndDateTime
+    ? dayjs(eventEndDateTime, "DD/MM/YYYY hh:mm A")
+    : null;
+
+  if (!startDateBase && !endDateBase) {
+    return { start: func.functionStartDateTime, end: func.functionEndDateTime };
+  }
+
+  let startTime = startDateBase;
+  let endTime = endDateBase;
+
+  if (source === "function" && func.functionId) {
+    const matched = functionOptions.find((o) => o.value === func.functionId);
+    if (matched) {
+      startTime = dayjs(matched.functionstartTime, "HH:mm");
+      endTime = dayjs(matched.functionendTime, "HH:mm");
+    }
+  } else if (source === "shift" && func.shiftId) {
+    const matched = (func.shiftOptions || []).find(
+      (o) => String(o.value) === String(func.shiftId)
+    );
+    if (matched) {
+      startTime = dayjs(matched.startTime, "HH:mm");
+      endTime = dayjs(matched.endTime, "HH:mm");
+    }
+  }
+  // source === "event" (or fallback): keep event's own time-of-day
+
+  const newStart =
+    startDateBase && startTime
+      ? startDateBase.hour(startTime.hour()).minute(startTime.minute()).format("DD/MM/YYYY hh:mm A")
+      : func.functionStartDateTime;
+  const newEnd =
+    endDateBase && endTime
+      ? endDateBase.hour(endTime.hour()).minute(endTime.minute()).format("DD/MM/YYYY hh:mm A")
+      : func.functionEndDateTime;
+
+  return { start: newStart, end: newEnd };
+};
+
 const fetchShiftOptionsForRow = async (index, banquetId, explicitDate = null, overrideOriginalShiftId = undefined) => {
   const ids = Array.isArray(banquetId) ? banquetId : banquetId ? [banquetId] : [];
   if (ids.length === 0) {
@@ -866,8 +913,8 @@ const createEmptyRow = () => {
         : [],
     shiftId: formData.shiftId || "",
     originalShiftId: formData.shiftId || "",
-    functionStartDateTime: eventStartDateTime || null,   
-    functionEndDateTime: eventEndDateTime || null, 
+    functionStartDateTime: eventStartDateTime || "",   
+    functionEndDateTime: eventEndDateTime || "", 
     pax: "",
     rate: "",
     function_venue: selectedVenueName,
@@ -883,6 +930,7 @@ const createEmptyRow = () => {
     venueManualEdit: false,
     venueTouched: false, 
     functionTouched: false,
+    timeSource: "event",
     dateTouched: false,
   };
 };
@@ -894,28 +942,27 @@ useEffect(() => {
   if (!formData?.eventFunction?.length) return;
   if (!eventStartDateTime && !eventEndDateTime) return;
 
-  const needsUpdate = formData.eventFunction.some(
-    (func) =>
-      !func.dateTouched &&
-      (func.functionStartDateTime !== eventStartDateTime ||
-        func.functionEndDateTime !== eventEndDateTime)
-  );
+  setFormData((prev) => {
+    let changed = false;
+    const updated = prev.eventFunction.map((func) => {
+      if (func.dateTouched) return func; // manual override wins until Function/Shift is re-picked
 
-  if (!needsUpdate) return;
+      const { start, end } = computeFunctionDateTime(
+        func,
+        func.timeSource || "event",
+        eventStartDateTime,
+        eventEndDateTime,
+        options
+      );
 
-  setFormData((prev) => ({
-    ...prev,
-    eventFunction: prev.eventFunction.map((func) =>
-      func.dateTouched
-        ? func
-        : {
-            ...func,
-            functionStartDateTime: eventStartDateTime || func.functionStartDateTime,
-            functionEndDateTime: eventEndDateTime || func.functionEndDateTime,
-          }
-    ),
-  }));
-}, [eventStartDateTime, eventEndDateTime, formData.eventFunction?.length])
+      if (start === func.functionStartDateTime && end === func.functionEndDateTime) return func;
+      changed = true;
+      return { ...func, functionStartDateTime: start, functionEndDateTime: end };
+    });
+
+    return changed ? { ...prev, eventFunction: updated } : prev;
+  });
+}, [eventStartDateTime, eventEndDateTime, options]);
 
   
 // ── Auto-fill venue from event-level venue selection ──
@@ -1098,53 +1145,50 @@ useEffect(() => {
   if (!formData.eventTypeId) return;
   if (!eventTypeRawList.length || !options.length) return;
   if (autoMatchedEventTypeRef.current === formData.eventTypeId) return;
+
   const selectedEventType = eventTypeRawList.find(
     (e) => String(e.id) === String(formData.eventTypeId)
   );
   if (!selectedEventType) return;
+
   const eventTypeName = getLocalizedField(selectedEventType, "name");
   if (!eventTypeName) return;
+
   const matchedFunction = options.find(
     (opt) => opt.label?.trim().toLowerCase() === eventTypeName.trim().toLowerCase()
   );
   if (!matchedFunction) return;
+
   autoMatchedEventTypeRef.current = formData.eventTypeId;
+
   setFormData((prev) => {
     const updated = [...(prev.eventFunction || [])];
     if (updated.length === 0) {
       updated.push(createEmptyRow());
     }
-           if (!updated[0].functionTouched) {
-      // Prefer the row's already-selected shift timing over the Function Type's own time
-      const existingShift = (updated[0].shiftOptions || []).find(
-        (o) => String(o.value) === String(updated[0].shiftId)
-      );
-      const startTime = existingShift
-        ? dayjs(existingShift.startTime, "HH:mm")
-        : dayjs(matchedFunction.functionstartTime, "HH:mm");
-      const endTime = existingShift
-        ? dayjs(existingShift.endTime, "HH:mm")
-        : dayjs(matchedFunction.functionendTime, "HH:mm");
 
-      const baseDate = updated[0].functionStartDateTime
-        ? dayjs(updated[0].functionStartDateTime, "DD/MM/YYYY hh:mm A")
-        : dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A");
+    // Only auto-fill if the row hasn't been touched by the user in any way
+    if (!updated[0].functionTouched && !updated[0].dateTouched) {
+      const { start, end } = computeFunctionDateTime(
+        { ...updated[0], functionId: matchedFunction.value },
+        "event",                         // ← use Event Details time, NOT function master
+        eventStartDateTime,
+        eventEndDateTime,
+        options
+      );
+
       updated[0] = {
         ...updated[0],
         functionId: matchedFunction.value,
-        functionStartDateTime: baseDate
-          .hour(startTime.hour())
-          .minute(startTime.minute())
-          .format("DD/MM/YYYY hh:mm A"),
-        functionEndDateTime: baseDate
-          .hour(endTime.hour())
-          .minute(endTime.minute())
-          .format("DD/MM/YYYY hh:mm A"),
+        functionStartDateTime: start,
+        functionEndDateTime: end,
+        timeSource: "event",              // ← still "event"-driven, so it keeps syncing with Event Details until user acts
+        // functionTouched intentionally left false — this was a SYSTEM auto-match, not a user pick
       };
     }
     return { ...prev, eventFunction: updated };
   });
-}, [formData.eventTypeId, eventTypeRawList, options]);
+}, [formData.eventTypeId, eventTypeRawList, options, eventStartDateTime, eventEndDateTime]);
 
 const handleAddClick = () => setShowFunctionModal(true);
 
@@ -1258,6 +1302,7 @@ const handleInputChange = async (index, field, value) => {
 
    if (field === "functionStartDateTime" || field === "functionEndDateTime") {
     updatedArray[index].dateTouched = true;   
+    updatedArray[index].timeSource = "manual";
   }
 
   if (field === "functionStartDateTime" && updatedArray[index].banquetHallId) {
@@ -1338,68 +1383,50 @@ const handlePackageChange = async (index, packageId) => {
   setFormData({ ...formData, eventFunction: updatedArray });
 };
 
- const handleFunctionSelect = (index, functionId) => {
-  const selected = options.find((opt) => opt.value === functionId);
-  const updatedArray = [...formData.eventFunction];
-  if (!selected) return;
+const applyTimeToEventDate = (eventDateTime, time) => {
+  if (!eventDateTime || !time) return "";
 
-  const currentRow = updatedArray[index];
+  const date = dayjs(eventDateTime, "DD/MM/YYYY hh:mm A");
+  const parsedTime = dayjs(time, ["HH:mm", "hh:mm A"]);
 
-  const selectedShift = (currentRow.shiftOptions || []).find(
-    (o) => String(o.value) === String(currentRow.shiftId)
-  );
-  const startTime = selectedShift
-    ? dayjs(selectedShift.startTime, "HH:mm")
-    : dayjs(selected.functionstartTime, "HH:mm");
-  const endTime = selectedShift
-    ? dayjs(selectedShift.endTime, "HH:mm")
-    : dayjs(selected.functionendTime, "HH:mm");
-
-  // Check if same functionId already exists in other rows
-  const existingRows = updatedArray.filter(
-    (f, i) => i !== index && f.functionId === functionId
-  );
-
-  let baseStartDate;
-
-  if (existingRows.length > 0) {
-    // Find the latest start date among existing rows with same function
-    const latestDate = existingRows.reduce((latest, f) => {
-      const d = dayjs(f.functionStartDateTime, "DD/MM/YYYY hh:mm A");
-      return d.isAfter(latest) ? d : latest;
-    }, dayjs(existingRows[0].functionStartDateTime, "DD/MM/YYYY hh:mm A"));
-
-    // Set base start date to next day after the latest existing row
-    baseStartDate = latestDate.add(1, "day");
-  } else if (currentRow.functionStartDateTime) {
-    // Use current row's existing start date
-    baseStartDate = dayjs(currentRow.functionStartDateTime, "DD/MM/YYYY hh:mm A");
-  } else {
-    // Fall back to event start date
-    baseStartDate = dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A");
+  if (!date.isValid() || !parsedTime.isValid()) {
+    return "";
   }
 
-  // Apply the function's start time to the base date
-  const newStartDateTime = baseStartDate
-    .hour(startTime.hour())
-    .minute(startTime.minute())
+  return date
+    .hour(parsedTime.hour())
+    .minute(parsedTime.minute())
+    .second(0)
     .format("DD/MM/YYYY hh:mm A");
+};
 
-  // End date = same day as start date (NOT event end date)
-  const newEndDateTime = baseStartDate
-    .hour(endTime.hour())
-    .minute(endTime.minute())
-    .format("DD/MM/YYYY hh:mm A");
+const handleFunctionSelect = (index, functionId) => {
+  const selected = options.find((opt) => opt.value === functionId);
+  if (!selected) return;
 
-  updatedArray[index] = {
-    ...currentRow,
-    functionId,
-    functionStartDateTime: newStartDateTime,
-    functionEndDateTime: newEndDateTime,
-     functionTouched: true, 
-  };
+  setFormData((prev) => {
+    const updatedArray = [...prev.eventFunction];
+    const currentRow = updatedArray[index];
 
-  setFormData({ ...formData, eventFunction: updatedArray });
+    const { start, end } = computeFunctionDateTime(
+      { ...currentRow, functionId },
+      "function",
+      eventStartDateTime,
+      eventEndDateTime,
+      options
+    );
+
+    updatedArray[index] = {
+      ...currentRow,
+      functionId,
+      functionStartDateTime: start,
+      functionEndDateTime: end,
+      functionTouched: true,
+      dateTouched: false,   // ← Function selection clears manual override
+      timeSource: "function",
+    };
+    return { ...prev, eventFunction: updatedArray };
+  });
 };
 
 
@@ -1594,19 +1621,24 @@ const isODCRow =
     return updated;
   });
 
- if (selected) {
-  const baseDate = func.functionStartDateTime
-    ? dayjs(func.functionStartDateTime, "DD/MM/YYYY hh:mm A")
-    : dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A");
-  const shiftStart = dayjs(selected.startTime, "HH:mm");
-  const shiftEnd = dayjs(selected.endTime, "HH:mm");
+
+if (selected) {
+  const { start, end } = computeFunctionDateTime(
+    { ...func, shiftId: val },
+    "shift",
+    eventStartDateTime,
+    eventEndDateTime,
+    options
+  );
 
   const updatedArray = [...formData.eventFunction];
   updatedArray[index] = {
     ...updatedArray[index],
     shiftId: val,
-    functionStartDateTime: baseDate.hour(shiftStart.hour()).minute(shiftStart.minute()).format("DD/MM/YYYY hh:mm A"),
-    functionEndDateTime: baseDate.hour(shiftEnd.hour()).minute(shiftEnd.minute()).format("DD/MM/YYYY hh:mm A"),
+    functionStartDateTime: start,
+    functionEndDateTime: end,
+    dateTouched: false,   // ← Shift selection clears manual override
+    timeSource: "shift",
   };
   setFormData({ ...formData, eventFunction: updatedArray });
 } else {
@@ -1872,19 +1904,22 @@ const isODCRow =
 });
 
 if (selected) {
-  const baseDate = func.functionStartDateTime
-    ? dayjs(func.functionStartDateTime, "DD/MM/YYYY hh:mm A")
-    : dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A");
-  const shiftStart = dayjs(selected.startTime, "HH:mm");
-  const shiftEnd = dayjs(selected.endTime, "HH:mm");
+  const { start, end } = computeFunctionDateTime(
+    { ...func, shiftId: val },
+    "shift",
+    eventStartDateTime,
+    eventEndDateTime,
+    options
+  );
 
   const updatedArray = [...formData.eventFunction];
   updatedArray[index] = {
     ...updatedArray[index],
     shiftId: val,
-    functionStartDateTime: baseDate.hour(shiftStart.hour()).minute(shiftStart.minute()).format("DD/MM/YYYY hh:mm A"),
-    functionEndDateTime: baseDate.hour(shiftEnd.hour()).minute(shiftEnd.minute()).format("DD/MM/YYYY hh:mm A"),
-    // dateTouched line removed — no longer locks the row
+    functionStartDateTime: start,
+    functionEndDateTime: end,
+    dateTouched: false,   // ← Shift selection clears manual override
+    timeSource: "shift",
   };
   setFormData({ ...formData, eventFunction: updatedArray });
 } else {

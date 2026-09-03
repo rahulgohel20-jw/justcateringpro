@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import MultiLangInputBox from "../../../components/form-inputs/MultiLangInputBox/index";
 import { Translateapi } from "@/services/apiServices";
+import MultiLangInputBox from "../../../components/form-inputs/MultiLangInputbox";
 
 const RenameItemCat = ({ label, initialValues = {}, onClose, onSave, onLiveChange }) => {
   const [formData, setFormData] = useState({
