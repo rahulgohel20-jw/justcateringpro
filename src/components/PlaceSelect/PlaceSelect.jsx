@@ -8,12 +8,19 @@ const PlaceSelect = ({
   // Optional: allow overriding with custom options if needed
   customOptions = null,
   customLoading = null,
+  additionalOptions = [],
 }) => {
   // Use the custom hook
   const { options: hookOptions, loading: hookLoading } = usePlaceOptions();
 
   // Allow override with custom options (for special cases)
-  const options = customOptions || hookOptions;
+  const options = customOptions || [
+    ...hookOptions,
+    ...additionalOptions.filter(
+      (additionalOption) =>
+        !hookOptions.some((option) => option.value === additionalOption.value),
+    ),
+  ];
   const loading = customLoading !== null ? customLoading : hookLoading;
 
   const handleChange = (selectedValue, option) => {
