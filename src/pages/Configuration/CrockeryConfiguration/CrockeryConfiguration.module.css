@@ -1,0 +1,55 @@
+/* CrockeryConfiguration.module.css - Scoped styles for crockery table only */
+
+.crockeryTableWrapper table thead th {
+    font-size: 1.1rem !important;
+    padding: 1.25rem 1rem !important;
+    line-height: 1.5;
+    white-space: nowrap;
+    background-color: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.crockeryTableWrapper table tbody td {
+    padding: 0.75rem !important;
+    vertical-align: middle;
+}
+
+/* Sticky name column */
+.crockeryTableWrapper table thead th:first-child,
+.crockeryTableWrapper table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: white;
+    z-index: 10;
+    font-weight: 600;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.08);
+    min-width: 180px;
+}
+
+.crockeryTableWrapper table thead th:first-child {
+    z-index: 20;
+    background-color: #f8fafc;
+}
+
+/* Row hover effect — keep sticky cell background consistent on hover */
+.crockeryTableWrapper table tbody tr:hover td:first-child {
+    background-color: #f9fafb;
+}
+
+.crockeryTableWrapper table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* Center align headers (except first column) */
+.crockeryTableWrapper table thead th:not(:first-child) {
+    text-align: center;
+}
+
+/* Ensure the table wrapper itself scrolls horizontally,
+   not the whole page — this keeps the sticky column visible */
+.crockeryTableWrapper {
+    overflow-x: auto;
+    width: 100%;
+    /* Prevent the sticky column from ever sliding under the sidebar */
+    isolation: isolate;
+}

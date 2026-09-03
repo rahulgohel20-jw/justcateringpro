@@ -1,0 +1,603 @@
+/* Tailwind core */
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* Demos */
+@import "demos/demo1";
+
+/* Shadcn UI */
+@import "shadcn.ui";
+
+html,
+:host {
+  font-family: Inter, system-ui, sans-serif !important;
+}
+
+body::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+body {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Also hide for html element */
+html::-webkit-scrollbar {
+  display: none;
+}
+
+html {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.allocation-inner-tabs .ant-tabs-nav {
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  padding: 4px;
+  background: #ffffff;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Inactive tab */
+.allocation-inner-tabs .ant-tabs-tab {
+  margin: 0 !important;
+  border-radius: 8px !important;
+  padding: 0;
+}
+
+/* Inactive tab text */
+.allocation-inner-tabs .ant-tabs-tab-btn {
+  display: block;
+  padding: 8px 24px;
+  font-size: 14px;
+  color: #000 !important;
+  font-weight: 500;
+}
+
+/* Remove blue underline */
+.allocation-inner-tabs .ant-tabs-ink-bar {
+  display: none !important;
+}
+
+/* ACTIVE TAB background + text */
+.allocation-inner-tabs .ant-tabs-tab.ant-tabs-tab-active {
+  background: #005ba8 !important;
+  border-radius: 8px !important;
+  color: #ffffff !important;
+}
+
+.font-14 {
+  font-size: 14px !important;
+}
+
+.custom-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #005ba8 !important;
+  font-weight: 700;
+  font-size: larger;
+}
+
+.custom-tabs .ant-tabs-ink-bar {
+  background: #005ba8 !important;
+}
+.allocation-inner-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #ffffff !important;
+}
+
+.dnd-active .cursor-grab {
+  cursor: none;
+}
+
+.remove-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.remove-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.apexcharts-legend {
+  scrollbar-width: none;
+}
+
+@layer utilities {
+  .bg-user-access {
+    @apply bg-lightUserAccessBg dark:bg-darkUserAccessBg bg-no-repeat;
+    background-position: right center;
+    background-size: 60%;
+  }
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  /* IE/Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+
+.completed-row {
+  background-color: #f0fdf4 !important;  /* green-600 */
+  border-left: 4px solid #f0fdf4 !important;  /* green-700 */
+}
+
+.completed-row td {
+  color: #07a035 !important;
+  font-weight: 500 !important;
+}
+
+
+
+.completed-row i {
+  color: #4ca567 !important;
+}
+
+.ant-select-dropdown
+  .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background-color: var(--tw-primary);
+}
+
+.ant-select-dropdown
+  .ant-select-item-option-selected:not(.ant-select-item-option-disabled)
+  .ant-select-item-option-state {
+  color: var(--tw-primary);
+}
+
+/* segmentedTabs */
+.segmentedTabs .ant-segmented {
+  width: 100%;
+}
+
+.segmentedTabs .ant-segmented-group {
+  gap: 6px;
+}
+
+.segmentedTabs
+  .ant-segmented-group
+  .ant-segmented-item
+  .ant-segmented-item-label {
+  min-height: unset;
+  line-height: unset;
+  padding: 10px 14px;
+}
+
+.segmentedTabs
+  .ant-segmented-group
+  .ant-segmented-item.ant-segmented-item-selected
+  .ant-segmented-item-label {
+  color: var(--tw-primary);
+}
+
+.segmentedTabs
+  .ant-segmented-group
+  .ant-segmented-item
+  .ant-segmented-item-label
+  > span
+  i {
+  font-size: 18px;
+}
+
+.segmentedTabs
+  .ant-segmented-group
+  .ant-segmented-item:hover:not(.ant-segmented-item-selected):not(
+    .ant-segmented-item-disabled
+  )::after {
+  background-color: #fff;
+}
+
+.ant-select-dropdown
+  .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  color: #fff;
+}
+
+.ant-select-dropdown
+  .ant-select-item-option-selected:not(.ant-select-item-option-disabled)
+  .anticon.anticon-check
+  > svg
+  > path {
+  fill: #fff;
+}
+
+.input-sm {
+  height: 1.75rem;
+  padding-inline-start: 6px;
+  padding-inline-end: 6px;
+}
+
+/* /segmentedTabs */
+.filters__right .custTabs {
+  width: auto;
+}
+
+.filters__right .custTabs .custtNav {
+  margin: 0;
+}
+
+.mandatory {
+  line-height: unset;
+}
+
+/* ant-table */
+.ant-table-wrapper .ant-table-cell,
+.ant-table-wrapper .ant-table-thead > tr > th,
+.ant-table-wrapper .ant-table-tbody > tr > th,
+.ant-table-wrapper .ant-table-tbody > tr > td,
+.ant-table-wrapper tfoot > tr > th,
+.ant-table-wrapper tfoot > tr > td {
+  padding: 10px;
+}
+
+.ant-table-thead > tr > th {
+  background-color: #f9f9f9 !important;
+}
+
+/* .ant-picker {
+  display: block;
+  width: 100%;
+  appearance: none;
+  box-shadow: none;
+  outline: none;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  line-height: 1;
+  background-color: var(--tw-light);
+  border-radius: 0.375rem;
+  height: 2.5rem;
+  padding-inline-start: 0.75rem;
+  padding-inline-end: 0.75rem;
+  border: 1px solid var(--tw-gray-400);
+  color: var(--tw-gray-900);
+} */
+
+/* UPDATED: Mobile Calendar with All View Buttons */
+
+/* Mobile Calendar Optimizations - UPDATED */
+@media (max-width: 640px) {
+  /* Ensure calendar fits on mobile screens */
+  .fullCalendarCommon {
+    font-size: 14px;
+  }
+
+  /* Toolbar Layout for Mobile */
+  .fc-header-toolbar {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  /* View buttons - make them fit nicely */
+  .fc-button-group {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: space-between !important;
+    gap: 3px !important;
+  }
+
+  .fc-button-group .fc-button {
+    flex: 1 !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    font-size: 0.65rem !important;
+    padding: 6px 4px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Title styling for mobile */
+  .fc-toolbar-title {
+    font-size: 14px !important;
+    text-align: center !important;
+    margin: 4px 0 !important;
+  }
+
+  /* Navigation buttons */
+  .fc-toolbar-chunk:last-child {
+    display: flex !important;
+    justify-content: center !important;
+    gap: 8px !important;
+  }
+
+  .fc-toolbar-chunk:last-child .fc-button {
+    min-width: 60px !important;
+  }
+
+  /* Make event titles more readable on mobile */
+  .fc-event-title {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Adjust day cell height for mobile */
+  .fc-daygrid-day-frame {
+    min-height: 80px !important;
+  }
+
+  /* Better touch targets for mobile */
+  .fc-button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Improve list view on mobile */
+  .fc-list-event {
+    padding: 8px 4px !important;
+  }
+
+  .fc-list-event-title a {
+    word-break: break-word;
+  }
+
+  /* Hide overflow text on mobile */
+  .fc-event-main {
+    overflow: hidden;
+  }
+
+  /* Adjust modal/tooltip z-index for mobile */
+  .tippy-box {
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  /* Prevent button text wrapping */
+  .fc-button {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+}
+
+/* Extra Small Devices (iPhone SE, etc.) */
+@media (max-width: 375px) {
+  .fc-button-group .fc-button {
+    font-size: 0.6rem !important;
+    padding: 4px 2px !important;
+  }
+
+  .fc-toolbar-title {
+    font-size: 13px !important;
+  }
+
+  .fc-daygrid-day-number {
+    font-size: 10px !important;
+  }
+}
+
+/* Tablet Optimizations */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .fullCalendarCommon {
+    font-size: 13px;
+  }
+
+  .fc-daygrid-day-frame {
+    min-height: 100px !important;
+  }
+
+  /* Reset toolbar to horizontal on tablet */
+  .fc-header-toolbar {
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+  }
+
+  .fc-toolbar-chunk:nth-child(1) {
+    order: 1;
+  }
+
+  .fc-toolbar-chunk:nth-child(2) {
+    order: 2;
+    flex: 1;
+  }
+
+  .fc-toolbar-chunk:nth-child(3) {
+    order: 3;
+  }
+
+  /* Better button spacing on tablets */
+  .fc-button-group {
+    gap: 4px;
+    width: auto !important;
+  }
+
+  .fc-button-group .fc-button {
+    flex: none !important;
+  }
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Better touch targets */
+  .fc-daygrid-day {
+    cursor: pointer;
+  }
+
+  .fc-event {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  /* Larger touch area for buttons */
+  .fc-button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Remove hover states on touch devices */
+  .fc-daygrid-day-frame:hover {
+    box-shadow: none !important;
+  }
+}
+
+/* Landscape mobile adjustments */
+@media (max-width: 896px) and (orientation: landscape) {
+  .fc-header-toolbar {
+    padding: 4px 0 !important;
+  }
+
+  .fc-daygrid-day-frame {
+    min-height: 60px !important;
+  }
+
+  /* Keep view buttons in one row on landscape */
+  .fc-button-group .fc-button {
+    font-size: 0.7rem !important;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+.calendar-wrapper {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Ensure tooltips don't overflow on mobile */
+@media (max-width: 640px) {
+  .tippy-content {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+  }
+
+  .tippy-content p {
+    margin-bottom: 4px !important;
+    font-size: 11px !important;
+  }
+
+  .tippy-content strong {
+    font-size: 12px !important;
+  }
+}
+
+/* Active button state visibility */
+.fc-button-active {
+  font-weight: 600 !important;
+}
+
+/* Ensure view buttons are always visible and clickable */
+.fc-button-group {
+  overflow: visible !important;
+}
+
+.fc-button {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Create Event CSS */
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for all browsers */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+.tab-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.tab-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+
+.ant-select-dropdown {
+  z-index: 9999 !important;
+}
+
+
+
+/* Prevent the menu planning page from causing full page scroll */
+.menu-planning-container {
+  height: 200vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom scrollbar for table */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.fc {
+  z-index: 0 !important;
+  isolation: isolate;
+}
+
+.fc-view-harness,
+.fc-scroller,
+.fc-scroller-harness {
+  z-index: 0 !important;
+}
+
+/* Custom scrollbar with primary color — reusable utility class */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--tw-primary) #f1f1f1;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--tw-primary);
+  border-radius: 10px;
+  border: 2px solid #f1f5f9;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  filter: brightness(0.85);
+}
+
+.swal-on-top {
+  z-index: 99999 !important;
+}

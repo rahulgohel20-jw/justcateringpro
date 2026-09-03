@@ -1,0 +1,38 @@
+export const requiredFields = {
+  basic_info: {
+    inquiryDate: "",
+    status: "0",
+    eventStartDateTime: "",
+    eventEndDateTime: "",
+    venue: "",
+    eventTypeId: "",
+    managerId: "",
+  },
+  client_info: {
+    prefix: "Mr.",
+    customer_name: "",
+    mobileno: "",
+    isHighPriority: "Yes",
+    reference: "",
+  },
+  functions: {
+    eventFunction: [],
+  },
+  other: {
+    mealTypeId: "",
+    meal_notes: "",
+    service: "",
+    theme: "",
+    remark: "",
+    groomBirthDate: "",
+    groomInstaLink: "",
+    groomMobileno: "",
+    groomName: "",
+    groom_community: "",
+    brideBirthDate: "",
+    brideInstaLink: "",
+    brideMobileno: "",
+    brideName: "",
+    bride_community: "",
+  },
+};
