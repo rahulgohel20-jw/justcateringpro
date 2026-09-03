@@ -1932,6 +1932,15 @@ const handleSaveRemarksPopup = (updatedRemarks) => {
               <div className="flex flex-row items-end gap-2">
                 {canAccessStock && (
                 <button
+                  type="button"
+                  onClick={() => navigate(`/general-fix/${eventId}`)}
+                  className="bg-orange-800 text-white text-sm px-5 py-2 rounded-md transition cursor-pointer"
+                >
+                  General Fix
+                </button>
+                )}
+                {canAccessStock && (
+                <button
                   onClick={handleGenerateSOT}
                   disabled={isSaving || isSotLocked === true}
                   className={`text-sm px-5 py-2 rounded-md transition ${
