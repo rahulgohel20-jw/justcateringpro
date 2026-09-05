@@ -3727,3 +3727,12 @@ export const addupdateSecurityDeposit = (data) => {
 export const deleteSecurityDeposit = (securityDepositId) => {
   return DELETE(`/quotation/delete-security-deposit?securityDepositId=${securityDepositId}`);
 };
+
+
+export const GetGeneralFix = (rawCatIds , eventFunctionIds ,eventId ) =>{
+  return GET (`/eventfunctiongeneral/getallgeneralfixraw?rawCatIds=${rawCatIds}&eventFunctionIds=${eventFunctionIds}&eventId=${eventId}`);
+};
+
+export const AddUpdateGeneralFix = (data) => {
+  return POST(`/eventfunctiongeneral/add-update`, data);
+};
