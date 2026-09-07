@@ -46,6 +46,9 @@ const [loadingEvents, setLoadingEvents] = useState(false);
   };
 
   let Id = localStorage.getItem("userId");
+console.log("RAW Id from localStorage:", JSON.stringify(Id), typeof Id);
+const isFunctionDateUser = Id === "683";
+console.log("isFunctionDateUser:", isFunctionDateUser);
   const authStorage = JSON.parse(localStorage.getItem("auth-storage") || "{}");
 const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
 const isInquiryVisible = authStorage?.state?.user?.isInquiryVisible ?? false;
@@ -153,6 +156,63 @@ const { isHallAllowed } = useBanquetPermission()
     return date.toISOString().split("T")[0];
   };
 
+  // --- userId 233 helpers: derive a single start/end range per event from eventFunctions[] ---
+
+  // Parses "DD/MM/YYYY hh:mm AM/PM" into a real Date object for comparison.
+  const parseDateTimeString = (dateTimeString) => {
+    if (!dateTimeString) return null;
+    try {
+      const [datePart, timePart, ampm] = dateTimeString.trim().split(" ");
+      const [day, month, year] = datePart.split("/");
+      let [hours, minutes] = timePart.split(":");
+      hours = parseInt(hours, 10);
+      if (ampm.toLowerCase() === "pm" && hours !== 12) hours += 12;
+      if (ampm.toLowerCase() === "am" && hours === 12) hours = 0;
+      return new Date(year, month - 1, day, hours, minutes);
+    } catch (error) {
+      console.warn("Invalid function datetime:", dateTimeString, error);
+      return null;
+    }
+  };
+
+  // Converts a Date back into "DD/MM/YYYY hh:mm AM/PM" so splitDateTime can parse it.
+  const formatAsDDMMYYYYhhmma = (date) => {
+    const pad = (n) => String(n).padStart(2, "0");
+    const day = pad(date.getDate());
+    const month = pad(date.getMonth() + 1);
+    const year = date.getFullYear();
+    let hours = date.getHours();
+    const minutes = pad(date.getMinutes());
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+    return `${day}/${month}/${year} ${pad(hours)}:${minutes} ${ampm}`;
+  };
+
+  // Picks the earliest functionStartDateTime and latest functionEndDateTime
+  // across all of an event's eventFunctions. Falls back to the event-level
+  // dates if eventFunctions is missing/empty.
+  const getFunctionWiseRange = (eventFunctions, fallbackStart, fallbackEnd) => {
+    if (!Array.isArray(eventFunctions) || eventFunctions.length === 0) {
+      return { start: fallbackStart, end: fallbackEnd };
+    }
+
+    let earliest = null;
+    let latest = null;
+
+    eventFunctions.forEach((fn) => {
+      const start = parseDateTimeString(fn.functionStartDateTime);
+      const end = parseDateTimeString(fn.functionEndDateTime || fn.functionStartDateTime);
+
+      if (start && (!earliest || start < earliest)) earliest = start;
+      if (end && (!latest || end > latest)) latest = end;
+    });
+
+    return {
+      start: earliest ? formatAsDDMMYYYYhhmma(earliest) : fallbackStart,
+      end: latest ? formatAsDDMMYYYYhhmma(latest) : fallbackEnd,
+    };
+  };
+
  useEffect(() => {
     FetchEventdetails(currentMonth, currentYear, statusFilter);
   }, [lang, currentMonth, currentYear, statusFilter]);
@@ -169,65 +229,79 @@ const { isHallAllowed } = useBanquetPermission()
 
 const FetchEventdetails = (month = currentMonth, year = currentYear, status = statusFilter) => {
   setLoadingEvents(true);
-  
-    GetEventMaster(Id, isChildUser, month, year, status === -1 ? null : status )
-      .then((res) => {
-        const eventdata = res?.data?.data?.["Event Details"] || [];
 
-        setData(
-  eventdata
-    .map((item, index) => {
-      try {
-        const { date: startDate, time12 } = splitDateTime(item.eventStartDateTime);
-        const { date: endDate } = splitDateTime(item.eventEndDateTime || item.eventStartDateTime);
-        const color = getStatusColor(item.status, item.isRMenu);
-        const hasODC = canAccessBanquet
-          ? (item.banquetHallId === null || item.banquetHallId === 0 || !item.banquetHallId)
-          : false;
-        const banquetSuffix = hasODC ? " = " : "";
+  GetEventMaster(Id, isChildUser, month, year, status === -1 ? null : status)
+    .then((res) => {
+      const eventdata = res?.data?.data?.["Event Details"] || [];
 
-        return {
-          eventid: item.id,
-          eventTypeId: item.eventType?.id || null,
-          title:
-            banquetSuffix +
-            (item.prefix || "") +
-            getLocalizedText(item.party, "name") +
-            " - " +
-            getLocalizedText(item.eventType, "name"),
-          start: startDate,
-          end: addOneDay(endDate),
-          time: time12,
-          mobile: item.party?.mobileno || "N/A",
-          statusCode: item.status,
-          isRMenu: item?.isRMenu,
-          banquetHallId: item.banquetHallId || null,
-          banquetHallName: item.banquetHallId ? item.banquetHallName : null,
-          address: getLocalizedText(item.venue, "name"),
-          event: getLocalizedText(item.eventType, "name"),
-          eventRooms: item.eventRooms || [],
-          remark: item.remark || "",
-          remarksGujarati: item.remarksGujarati || "",
-          remarksHindi: item.remarksHindi || "",
-          color: color,
-          allDay: true,
-          createdAt: item.createdAt,
-        };
-      } catch (error) {
-        console.error(`Error processing event item ${index}:`, item, error);
-        return null;
-      }
-    })
-    .filter((item) => item !== null)
-    .filter((item) => {
-      if (!canAccessBanquet) return true;           // non-banquet users see all events
-      return isHallAllowed(item.banquetHallId || 0); // banquet users: check hall rights
-    })
-    .filter((item) => {
-      if (isInquiryVisible) return true;   // allowed to see inquiries
-      return item.statusCode !== 0;        // status 0 = Inquiry, hide it otherwise
-    })
-);
+      setData(
+        eventdata
+          .map((item, index) => {
+            try {
+              // userId 233: derive the single start/end range from eventFunctions.
+              // All other users: keep using eventStartDateTime/eventEndDateTime.
+              const { start: rawStart, end: rawEnd } = isFunctionDateUser
+                ? getFunctionWiseRange(
+                    item.eventFunctions,
+                    item.eventStartDateTime,
+                    item.eventEndDateTime || item.eventStartDateTime
+                  )
+                : {
+                    start: item.eventStartDateTime,
+                    end: item.eventEndDateTime || item.eventStartDateTime,
+                  };
+
+              const { date: startDate, time12 } = splitDateTime(rawStart);
+              const { date: endDate } = splitDateTime(rawEnd);
+
+              const color = getStatusColor(item.status, item.isRMenu);
+              const hasODC = canAccessBanquet
+                ? (item.banquetHallId === null || item.banquetHallId === 0 || !item.banquetHallId)
+                : false;
+              const banquetSuffix = hasODC ? " = " : "";
+
+              return {
+                eventid: item.id,
+                eventTypeId: item.eventType?.id || null,
+                title:
+                  banquetSuffix +
+                  (item.prefix || "") +
+                  getLocalizedText(item.party, "name") +
+                  " - " +
+                  getLocalizedText(item.eventType, "name"),
+                start: startDate,
+                end: addOneDay(endDate),
+                time: time12,
+                mobile: item.party?.mobileno || "N/A",
+                statusCode: item.status,
+                isRMenu: item?.isRMenu,
+                banquetHallId: item.banquetHallId || null,
+                banquetHallName: item.banquetHallId ? item.banquetHallName : null,
+                address: getLocalizedText(item.venue, "name"),
+                event: getLocalizedText(item.eventType, "name"),
+                eventRooms: item.eventRooms || [],
+                remark: item.remark || "",
+                remarksGujarati: item.remarksGujarati || "",
+                remarksHindi: item.remarksHindi || "",
+                color: color,
+                allDay: true,
+                createdAt: item.createdAt,
+              };
+            } catch (error) {
+              console.error(`Error processing event item ${index}:`, item, error);
+              return null;
+            }
+          })
+          .filter((item) => item !== null)
+          .filter((item) => {
+            if (!canAccessBanquet) return true;           // non-banquet users see all events
+            return isHallAllowed(item.banquetHallId || 0); // banquet users: check hall rights
+          })
+          .filter((item) => {
+            if (isInquiryVisible) return true;   // allowed to see inquiries
+            return item.statusCode !== 0;        // status 0 = Inquiry, hide it otherwise
+          })
+      );
 
         setEvents(res.data);
       })
