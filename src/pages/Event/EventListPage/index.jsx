@@ -20,17 +20,14 @@ import Swal from "sweetalert2";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLanguage } from "@/i18n";
 import { usePermission } from "../../../hooks/usePermission";
-import { useModuleAccess } from "../../../hooks/useModuleAccess";
-import { useBanquetPermission } from "../../../hooks/useBanquetPermission";
 import { Spin } from "antd";
 
 const EventListPage = () => {
   const [loading, setLoading] = useState(false);
   const permissions = usePermission("Event List");
+  const invoicePermissions = usePermission("Invoice");
+  const quotationPermissions = usePermission("Quotation");
   const classes = useStyle();
-    const { hasModuleAccess } = useModuleAccess();
-  const canAccessBanquet = hasModuleAccess("Banquet");
-  const { isHallAllowed } = useBanquetPermission();
   const intl = useIntl();
   const { isRTL } = useLanguage();
   const [tableData, setTableData] = useState([]);
@@ -103,14 +100,13 @@ const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
   setLoading(true);
   try {
     const res = await GetEventMaster(Id, isChildUser);
-    const eventDetails = res.data.data["Event Details"];
+    const eventDetails = res?.data?.data?.["Event Details"] || [];
 
-    const filteredEventDetails = eventDetails.filter((cust) => {
-      if (!canAccessBanquet) return true;
-      return isHallAllowed(cust.banquetHallId || 0);
-    });
-
-    const formatted = filteredEventDetails.slice().map((cust, index) => ({
+    // The API receives the current user and child-user flag, and returns only
+    // the events that user may access. Do not apply a second client-side hall
+    // filter here: an empty/unhydrated banquetRights list otherwise removes all
+    // server-authorized events for child users.
+    const formatted = eventDetails.slice().map((cust, index) => ({
       sr_no: index + 1,
       eventid: cust.id,
       event_id: cust.eventNo || "-",
@@ -118,6 +114,9 @@ const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
         cust.eventStartDateTime.split(" ")[0] +
         " To " +
         cust.eventEndDateTime.split(" ")[0],
+      location: cust.banquetHallId
+        ? cust.banquetHallName || "-"
+        : cust.venue?.nameEnglish || "-",
       customer: getLocalizedText(cust.party, "name"),
       event_type: getLocalizedText(cust.eventType, "name"),
 
@@ -172,6 +171,7 @@ const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
         row.event_id.toUpperCase().includes(value) ||
         row.customer.toUpperCase().includes(value) ||
         row.event_type.toUpperCase().includes(value) ||
+        row.location.toUpperCase().includes(value) ||
         row.event_date.toUpperCase().includes(value),
     );
 
@@ -287,7 +287,14 @@ const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
   </div>
 ) : (
   <TableComponent
-    columns={columns(DeleteEvent, viewEvent, openMenuReport, permissions)}
+    columns={columns(
+      DeleteEvent,
+      viewEvent,
+      openMenuReport,
+      permissions,
+      invoicePermissions,
+      quotationPermissions,
+    )}
     data={tableData}
     paginationSize={10}
   />
