@@ -1177,6 +1177,16 @@ id="COMMON.ITEMRAWMATERIALUNITCHANGE"              defaultMessage="Item Raw Mate
         {
           title: (
             <FormattedMessage
+              id="USER.STORE_REQUISITION.TITLE"
+              defaultMessage="Store Requisition"
+            />
+          ),
+          path: "/stock-management/store-requisition",
+          pageName: "Store Requisition",
+        },
+        {
+          title: (
+            <FormattedMessage
               id="COMMON.STOCK_LEDGER"
               defaultMessage="Stock Ledger"
             />
