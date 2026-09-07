@@ -57,6 +57,14 @@ export const columns = (
       cellClassName: "w-[20%]",
     },
   },
+  {
+    accessorKey: "location",
+    header: "Banquet / Venue",
+    meta: {
+      headerClassName: "w-[12%]",
+      cellClassName: "w-[12%]",
+    },
+  },
 
   {
     accessorKey: "customer",

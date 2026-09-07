@@ -118,6 +118,9 @@ const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
         cust.eventStartDateTime.split(" ")[0] +
         " To " +
         cust.eventEndDateTime.split(" ")[0],
+      location: cust.banquetHallId
+        ? cust.banquetHallName || "-"
+        : cust.venue?.nameEnglish || "-",
       customer: getLocalizedText(cust.party, "name"),
       event_type: getLocalizedText(cust.eventType, "name"),
 
@@ -172,6 +175,7 @@ const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
         row.event_id.toUpperCase().includes(value) ||
         row.customer.toUpperCase().includes(value) ||
         row.event_type.toUpperCase().includes(value) ||
+        row.location.toUpperCase().includes(value) ||
         row.event_date.toUpperCase().includes(value),
     );
 
