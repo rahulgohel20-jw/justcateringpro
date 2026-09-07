@@ -211,6 +211,21 @@ export const SearchRawMaterial = (
   );
 };
 
+export const GetRawMaterialByCategoryId = (
+  isAsc,
+  Id,
+  page,
+  pageSize,
+  itemName,
+  signal,
+  categoryId = 0,
+) => {
+  return GET(
+    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=${categoryId}&unitid=0&userid=${Id}`,
+    signal,
+  );
+};
+
 export const DeleteRole = (Id) => {
   return DELETE(`/rolemaster/deletebyid?id=${Id}`);
 };
@@ -547,7 +562,7 @@ export const AddNamePlate = (data) => {
   return POST(`/nameplate/addorupdate`, data);
 };
 
-// Add Role
+
 
 export const Addrole = (data) => {
   return POST(`/rolemaster/add`, data);
