@@ -1,28 +1,12 @@
+import { useCallback, useEffect } from "react";
 import { DatePicker, Popconfirm } from "antd";
-
-/**
- * SecurityDepositModal
- *
- * All security-deposit state/handlers stay in the parent (QuotationPage) —
- * this component is purely presentational + fires the callbacks you pass in.
- *
- * Props:
- *  - open: boolean
- *  - onClose: () => void
- *  - securityDeposits: array
- *  - bankList: array
- *  - cashAccountList: array
- *  - savingDepositIdx: number | null
- *  - permissionQuotation: { add: boolean, ... }
- *  - onAdd: () => void
- *  - onChange: (idx, field, value) => void
- *  - onSave: (idx) => void
- *  - onRemove: (idx) => void
- *  - formatAccountLabel: (name, accountNumber) => string
- */
+import { getAllSecurityDepositByEventId } from "@/services/apiServices";
+import dayjs from "dayjs";
+console.log("SD MODAL FILE LOADED");
 const SecurityDepositModal = ({
   open,
   onClose,
+  eventId,
   securityDeposits,
   bankList,
   cashAccountList,
@@ -32,10 +16,63 @@ const SecurityDepositModal = ({
   onChange,
   onSave,
   onRemove,
+  onDepositsLoaded,
   formatAccountLabel,
 }) => {
-  if (!open) return null;
+  const fetchDeposits = useCallback(async () => {
+    if (!eventId) return;
+    try {
+      const res = await getAllSecurityDepositByEventId(eventId);
+      console.log("[SecurityDepositModal] raw response:", res);
+      const deposits = res?.data?.data || res?.data || [];
+      const mapped = (Array.isArray(deposits) ? deposits : []).map((d) => ({
+        id: d.id || 0,
+        amount: d.amount != null ? d.amount.toString() : "",
+        description: d.description || "",
+        paymentMode:
+          d.paymentMode === "CASH"
+            ? "Cash"
+            : d.paymentMode === "BANK_TRANSFER"
+              ? "Bank Transfer"
+              : "",
+        entryType: d.entryType === "PAYMENT" ? "PAYMENT" : "RECEIPT",
+        bankAccountId: d.bankAccountId || null,
+        cashAccountId: d.cashAccountId || null,
+        date:
+          d.paymentDateTime &&
+          dayjs(d.paymentDateTime, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY hh:mm a"]).isValid()
+            ? dayjs(d.paymentDateTime, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY hh:mm a"])
+            : null,
+      }));
+      onDepositsLoaded(mapped);
+    } catch (err) {
+      console.error("Error fetching security deposits:", err);
+    }
+  }, [eventId, onDepositsLoaded]);
 
+useEffect(() => {
+  console.log("[SecurityDepositModal] effect:", { open, eventId });
+  if (!open || !eventId) return;
+  console.log("[SecurityDepositModal] calling fetchDeposits");
+  fetchDeposits();
+}, [open, eventId, fetchDeposits]);
+const handleSave = async (i) => {
+    try {
+      await onSave(i);
+      await fetchDeposits();
+    } catch {
+      // onSave already shows its own error message; skip refetch on failure
+    }
+  };
+  const handleRemove = async (i) => {
+    try {
+      await onRemove(i);
+      await fetchDeposits();
+    } catch {
+      // onRemove already shows its own error message; skip refetch on failure
+    }
+  };
+  if (!open) return null;
   // Keep each deposit's ORIGINAL array index (so onChange/onSave/onRemove
   // still point at the right item in the parent's array), but reverse the
   // order we render them in, so the most recently added deposit (pushed to
@@ -238,20 +275,20 @@ const SecurityDepositModal = ({
                     </div>
 
                     <div className="flex justify-end gap-2">
-                      <button
-                        className="btn btn-sm btn-success"
-                        onClick={() => onSave(i)}
-                        disabled={savingDepositIdx === i}
-                      >
-                        <i className="ki-filled ki-save-2"></i>
-                        {savingDepositIdx === i ? "Saving..." : dep.id > 0 ? "Update" : "Save"}
-                      </button>
-                      <Popconfirm
-                        title="Remove this security deposit?"
-                        onConfirm={() => onRemove(i)}
-                        okText="Yes"
-                        cancelText="No"
-                      >
+                     <button
+  className="btn btn-sm btn-success"
+  onClick={() => handleSave(i)}   
+  disabled={savingDepositIdx === i}
+>
+  <i className="ki-filled ki-save-2"></i>
+  {savingDepositIdx === i ? "Saving..." : dep.id > 0 ? "Update" : "Save"}
+</button>
+<Popconfirm
+  title="Remove this security deposit?"
+  onConfirm={() => handleRemove(i)}  
+  okText="Yes"
+  cancelText="No"
+>
                         <button className="btn btn-sm btn-danger" title="Remove">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"

@@ -183,7 +183,10 @@ export const GetAllRawMaterial = (isAsc, page, pageSize, catId, Id, signal) => {
   );
 };
 
-
+// complete parameter of raw material all 
+export const getallrawmaterial = (isActive  , isAsc , pageNo , pageSize  , rawMateriaCatlId , rawMaterialName, unitid , userid) => {
+  return GET(`rawmaterial/getallbyuserid?isActive=${isActive}&isAsc=${isAsc}&pageNo=${pageNo}&pageSize=${pageSize}&rawMateriaCatlId=${rawMateriaCatlId}&rawMaterialName=${rawMaterialName}&unitid=${unitid}&userid=${userid}`);
+};
 
 export const GetItemRawMaterialByRawMaterialdata = (catId, userId) => {
   return GET(
@@ -3751,3 +3754,7 @@ export const GetGeneralFix = (rawCatIds , eventFunctionIds ,eventId ) =>{
 export const AddUpdateGeneralFix = (data) => {
   return POST(`/eventfunctiongeneral/add-update`, data);
 };
+
+export const getAllSecurityDepositByEventId = (eventId) => {
+  return GET(`/quotation/getAllSecurityDepositByEventId?eventId=${eventId}`);
+};  
