@@ -83,6 +83,9 @@ const GeneralFixPage = () => {
   const permAgencyDistribution = usePermission("Labour Agency Order");
   const permPerDishCosting = usePermission("Per Dish Costing");
 
+
+
+
   // ---------------------------------------------------------
   // Navigation blocker for unsaved changes (same pattern as RawMaterialAllocation)
   // ---------------------------------------------------------
@@ -90,6 +93,32 @@ const GeneralFixPage = () => {
     ({ currentLocation, nextLocation }) =>
       hasChanges && currentLocation.pathname !== nextLocation.pathname,
   );
+
+
+  const confirmUnsavedChanges = async () => {
+  const result = await Swal.fire({
+    title: "Unsaved Changes",
+    text: "You have unsaved changes. Do you want to save them before continuing?",
+    icon: "warning",
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonText: "Save & Continue",
+    denyButtonText: "Discard Changes",
+    cancelButtonText: "Cancel",
+    confirmButtonColor: "#3085d6",
+    denyButtonColor: "#d33",
+  });
+
+  if (result.isConfirmed) {
+    const saveResult = await autoSave();
+    return saveResult.success ? "saved" : "cancel"; // don't proceed if save failed
+  }
+  if (result.isDenied) {
+    setHasChanges(false);
+    return "discarded";
+  }
+  return "cancel";
+};
 
 
   const getLocalizedRawName = (item) => {
@@ -475,56 +504,45 @@ const GeneralFixPage = () => {
   // Function Dropdown Change
   // =========================================================
   const handleFunctionChange = async (event) => {
-    const value = event.target.value;
+  const value = event.target.value;
 
-    if (hasChanges) {
-      const result = await autoSave();
-      if (!result.success) {
-        console.warn(
-          "⚠️ Auto-save failed, but continuing with function switch"
-        );
-      }
-    }
+  if (hasChanges) {
+    const action = await confirmUnsavedChanges();
+    if (action === "cancel") return; // dropdown stays on old value since it's controlled
+  }
 
-    setSelectedFunction(value);
+  setSelectedFunction(value);
 
-    let functionIds = [];
+  let functionIds =
+    value === "all"
+      ? functions.map((item) => Number(item.value))
+      : [Number(value)];
 
-    if (value === "all") {
-      // All Function
-      functionIds = functions.map((item) => Number(item.value));
-    } else {
-      // Single Function
-      functionIds = [Number(value)];
-    }
+  setSelectedFunctionIds(functionIds);
 
-    setSelectedFunctionIds(functionIds);
-
-    const activeCategory = tabs.find((tab) => tab.value === activeTab);
-    if (activeCategory?.categoryId) {
-      await fetchGeneralFixItems(activeCategory.categoryId, functionIds);
-    }
-  };
+  const activeCategory = tabs.find((tab) => tab.value === activeTab);
+  if (activeCategory?.categoryId) {
+    await fetchGeneralFixItems(activeCategory.categoryId, functionIds);
+  }
+};
 
   // =========================================================
   // Category Tab Change
   // =========================================================
   const handleTabSwitch = async (tab) => {
-    if (hasChanges) {
-      const result = await autoSave();
-      if (!result.success) {
-        console.warn(
-          "⚠️ Auto-save failed, but continuing with tab switch"
-        );
-      }
-    }
+  if (activeTab === tab.value) return;
 
-    setActiveTab(tab.value);
+  if (hasChanges) {
+    const action = await confirmUnsavedChanges();
+    if (action === "cancel") return; // stay on current category
+  }
 
-    if (tab.categoryId && selectedFunctionIds.length > 0) {
-      await fetchGeneralFixItems(tab.categoryId, selectedFunctionIds);
-    }
-  };
+  setActiveTab(tab.value);
+
+  if (tab.categoryId && selectedFunctionIds.length > 0) {
+    await fetchGeneralFixItems(tab.categoryId, selectedFunctionIds);
+  }
+};
 
   // =========================================================
   // Search
@@ -1056,6 +1074,8 @@ const GeneralFixPage = () => {
         {/* =====================================================
             FUNCTION DROPDOWN
         ====================================================== */}
+
+        <div className="flex gap-5 mb-4">
         <div className="flex items-center gap-3 mb-4">
           <label className="text-sm font-semibold text-gray-700">
             Function:
@@ -1076,38 +1096,40 @@ const GeneralFixPage = () => {
             ))}
           </select>
 
-          {selectedFunction === "all" && functions.length > 0 && (
+          {/* {selectedFunction === "all" && functions.length > 0 && (
             <span className="text-xs text-gray-500">
               {functions.length} functions selected
             </span>
-          )}
+          )} */}
+        </div>
+
+         <div className="flex items-center gap-3 mb-3">
+  <label className="text-sm font-semibold text-gray-700">Category:</label>
+
+  <select
+    value={activeTab || ""}
+    onChange={(e) => {
+      const tab = tabs.find((t) => t.value === e.target.value);
+      if (tab) handleTabSwitch(tab);
+    }}
+    disabled={tabs.length === 0}
+    className="border border-gray-300 rounded-lg px-3 py-2 text-sm min-w-[240px] bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary"
+  >
+    {tabs.length === 0 && <option value="">No categories found</option>}
+    {tabs.map((tab) => (
+      <option key={tab.value} value={tab.value}>
+        {tab.label}
+      </option>
+    ))}
+  </select>
+</div>
+
         </div>
 
         {/* =====================================================
-            CATEGORY TABS
+            CATEGORY DROPDOWN
         ====================================================== */}
-        <div className="flex flex-wrap mb-3 border-gray-200 gap-1 rounded-lg">
-          {tabs.length === 0 ? (
-            <p className="text-gray-500 text-sm px-3">
-              No categories found
-            </p>
-          ) : (
-            tabs.map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => handleTabSwitch(tab)}
-                className={`px-4 py-2 text-sm font-medium border border-gray-200 ${
-                  activeTab === tab.value
-                    ? "bg-primary text-white"
-                    : "bg-gray-50 text-gray-600"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))
-          )}
-        </div>
+       
 
         {/* =====================================================
             SEARCH
@@ -1141,10 +1163,10 @@ const GeneralFixPage = () => {
     <th className="w-28 px-4 py-3 text-left">Weight</th>
     <th className="w-32 px-4 py-3 text-left">Unit</th>
     <th className="w-20 px-4 py-3 text-left">Pax</th>
-    <th className="w-40 px-4 py-3 text-left">Agency</th>
+    {/* <th className="w-40 px-4 py-3 text-left">Agency</th>
     <th className="w-36 px-4 py-3 text-left">Place</th>
     <th className="w-52 px-4 py-3 text-left">Date</th>
-    <th className="w-44 px-4 py-3 text-left">Remarks</th>
+    <th className="w-44 px-4 py-3 text-left">Remarks</th> */}
     <th className="w-28 px-4 py-3 text-left">Total</th>
     <th className="w-24 px-4 py-3 text-center">Action</th>
   </tr>
@@ -1198,12 +1220,12 @@ const GeneralFixPage = () => {
       </option>
     ))}
   </select>
-</td>
+ </td>
                         <td className="px-4 py-3">
   {item.pax ?? 0}
 </td>
 
-                        <td className="px-4 py-3">
+                      {/*  <td className="px-4 py-3">
                           {item.supplierName || "-"}
                         </td>
 
@@ -1229,7 +1251,7 @@ const GeneralFixPage = () => {
                               <i className="ki-filled ki-notepad-edit text-xs"></i>
                             </button>
                           </div>
-                        </td>
+                        </td> */}
 
                         <td className="px-4 py-3">
                           {Number(item.total || 0).toFixed(2)}
@@ -1243,11 +1265,11 @@ const GeneralFixPage = () => {
                               title="Edit"
                             ></i>
 
-                            <i
+                            {/* <i
                               className="ki-filled ki-trash text-red-500 cursor-pointer hover:text-red-700"
                               onClick={() => handleDeleteRow(item)}
                               title="Delete"
-                            ></i>
+                            ></i> */}
                           </div>
                         </td>
                       </tr>

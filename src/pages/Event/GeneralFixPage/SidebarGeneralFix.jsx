@@ -6,6 +6,7 @@ import { OutsideContactName } from "@/services/apiServices";
 import { Plus } from "lucide-react";
 import PlaceSelect from "../../../components/PlaceSelect/PlaceSelect";
 import AddContactName from "../../master/MenuItemMaster/components/AddContactName";
+import Swal from "sweetalert2";
 
 const FieldLabel = ({ children }) => (
   <div className="text-sm text-gray-800 font-medium truncate">{children}</div>
@@ -35,6 +36,7 @@ export default function SidebarGeneralFix({
 }) {
   const [functionRows, setFunctionRows] = useState([]);
   const [extraQty, setExtraQty] = useState(0);
+  const [isDirty, setIsDirty] = useState(false);
 
   // =========================================================
   // Build unitToBase map from a unit hierarchy:
@@ -131,19 +133,49 @@ useEffect(() => {
   });
 
   setFunctionRows(rows);
+   setIsDirty(false);
 }, [selectedRow, open]);
+
+
+const markDirty = () => setIsDirty(true);
+
 
   useEffect(() => {
     if (!open) setFunctionRows([]);
   }, [open]);
 
   const handleExtraQtyChange = (newExtraValue) => {
+    markDirty();
   const parsedExtra = parseFloat(newExtraValue) || 0; 
   setExtraQty(parsedExtra);
 };
 
+
+
+const handleCloseAttempt = () => {
+  if (!isDirty) {
+    onClose();
+    return;
+  }
+  Swal.fire({
+    title: "Unsaved Changes",
+    text: "You have unsaved changes in this row. Close without saving?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Discard & Close",
+    cancelButtonText: "Keep Editing",
+    confirmButtonColor: "#d33",
+  }).then((result) => {
+    if (result.isConfirmed) {
+      setIsDirty(false);
+      onClose();
+    }
+  });
+};
+
   // Qty change: same unit, so just weight × price-per-current-unit
   const handleQtyChange = (idx, value) => {
+    markDirty();
     setFunctionRows((prev) =>
       prev.map((row, i) => {
         if (i !== idx) return row;
@@ -161,7 +193,7 @@ useEffect(() => {
   // NEW unit, then re-price using the (unchanged) weight number.
   const handleUnitChange = (idx, selectedId) => {
     if (!selectedId) return;
-
+    markDirty();
     setFunctionRows((prev) =>
       prev.map((r, i) => {
         if (i !== idx) return r;
@@ -260,7 +292,7 @@ useEffect(() => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={handleCloseAttempt}
           />
 
           <motion.div
@@ -268,6 +300,7 @@ useEffect(() => {
             initial={{ x: "110%" }}
             animate={{ x: 0 }}
             exit={{ x: "110%" }}
+            
           >
             <div className="px-6 py-4 border-b flex justify-between items-center">
               <h2 className="text-lg font-semibold">
@@ -275,7 +308,7 @@ useEffect(() => {
               </h2>
               <button
                 className="px-3 py-1 border rounded hover:bg-gray-50"
-                onClick={onClose}
+                onClick={handleCloseAttempt}
               >
                 Close
               </button>
@@ -394,7 +427,7 @@ useEffect(() => {
             <div className="px-6 py-4 border-t flex justify-end gap-3">
               <button
                 className="px-4 py-2 border rounded hover:bg-gray-50"
-                onClick={onClose}
+                onClick={handleCloseAttempt}
               >
                 Cancel
               </button>
