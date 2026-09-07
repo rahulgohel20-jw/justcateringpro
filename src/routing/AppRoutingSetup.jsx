@@ -270,6 +270,8 @@ import CustomPackages from "../pages/marketing/packages/CustomPackages";
 import AcceptSOT from "../pages/stockmanagement/store-ordering-tickets/acceptsot/AcceptSOT";
 import AddChefRequisition from "../pages/stockmanagement/chef-requisition/AddChefRequisition";
 import ChefRequisition from "../pages/stockmanagement/chef-requisition/ChefRequisition";
+import AddStoreRequisition from "../pages/stockmanagement/store-requisition/AddStoreRequisition";
+import StoreRequisition from "../pages/stockmanagement/store-requisition/StoreRequisition";
 import UpgradeModule from "../components/upgrademodule/UpgradeModule";
 import AutoManualPO from "../pages/stockmanagement/auto-manual-po/AutoManualPO";
 import AddAutoManualPO from "../pages/stockmanagement/auto-manual-po/AddAutoManualPO";
@@ -740,6 +742,14 @@ const AppRoutingSetup = () => {
           <Route
             path="/stock-management/add-chef-requisition"
             element={<AddChefRequisition />}
+          />
+          <Route
+            path="/stock-management/store-requisition"
+            element={<StoreRequisition />}
+          />
+          <Route
+            path="/stock-management/add-store-requisition"
+            element={<AddStoreRequisition />}
           />
           <Route path="/report" element={<DynamicReports />} />
           <Route path="/quotation-function" element={<QuotationFunction />} />
