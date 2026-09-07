@@ -2389,6 +2389,18 @@ export const AddChefReq = (data) => {
 export const DeleteChefReq = (crId) => {
   return DELETE(`/chefrequisition/delete/${crId}`);
 };
+export const GetAllStoreReq = (id) => {
+  return GET(`/storerequisition/getbyuser?userId=${id}`);
+};
+export const UpdateStoreReqStatus = (crId, status) => {
+  return PUT(`/storerequisition/updatestatus/${crId}?status=${status}`);
+};
+export const AddStoreReq = (data) => {
+  return POST(`/storerequisition/add-update`, data);
+};
+export const DeleteStoreReq = (crId) => {
+  return DELETE(`/storerequisition/delete/${crId}`);
+};
 
 export const GenerateSOT = (data) => {
   return POST(`/sot/generate`, data);
@@ -2662,6 +2674,9 @@ export const GetStoreIssueReturnPdf = (isCompanyDetails , porId , userId ) => {
 export const GetChefRequisitionPdf = (isCompanyDetails, lang, porId, userId) => {
   return GET (`/chefrequisition/pdf?isCompanyDetails=${isCompanyDetails}&lang=${lang}&crId=${porId}&userId=${userId}`)
 }
+export const GetStoreRequisitionPdf = (isCompanyDetails, lang, porId, userId) => {
+  return GET(`/storerequisition/pdf?isCompanyDetails=${isCompanyDetails}&lang=${lang}&crId=${porId}&userId=${userId}`);
+};
 
 
 export const AddCategoryImages = (payload) => {
@@ -3729,6 +3744,15 @@ export const addupdateSecurityDeposit = (data) => {
 
 export const deleteSecurityDeposit = (securityDepositId) => {
   return DELETE(`/quotation/delete-security-deposit?securityDepositId=${securityDepositId}`);
+};
+
+
+export const GetGeneralFix = (rawCatIds , eventFunctionIds ,eventId ) =>{
+  return GET (`/eventfunctiongeneral/getallgeneralfixraw?rawCatIds=${rawCatIds}&eventFunctionIds=${eventFunctionIds}&eventId=${eventId}`);
+};
+
+export const AddUpdateGeneralFix = (data) => {
+  return POST(`/eventfunctiongeneral/add-update`, data);
 };
 
 export const getAllSecurityDepositByEventId = (eventId) => {

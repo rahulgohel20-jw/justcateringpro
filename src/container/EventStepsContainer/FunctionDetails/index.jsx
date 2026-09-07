@@ -318,11 +318,12 @@ const FunctionsDetails = ({
   errors = {},
   eventId,
   originalShiftId,
-   setErrors,
-   shiftRefreshTrigger,
-   skipFunctionsStep = false,
-    onTranslatingChange = () => {},
-   prefillAppliedRef, 
+  setErrors,
+  shiftRefreshTrigger,
+  skipFunctionsStep = false,
+  onTranslatingChange = () => {},
+  prefillAppliedRef,
+  enableAdvancedDateSync = false,
 }) => {
   const { isRTL, locale } = useLanguage();
   const [showFunctionModal, setShowFunctionModal] = useState(false);
@@ -348,9 +349,11 @@ const canAccessBanquet = hasModuleAccess("Banquet") &&
   const canShowPackage = hasModuleAccess("Banquet");
   const [packageList, setPackageList] = useState([]);
   const location = useLocation();
-const prefill = location.state || {};
-const localPrefillRef = useRef(false);
-const functionPrefillRef = prefillAppliedRef || localPrefillRef;
+  const prefill = location.state || {};
+  const localPrefillRef = useRef(false);
+  const functionPrefillRef = enableAdvancedDateSync
+    ? (prefillAppliedRef || localPrefillRef)
+    : localPrefillRef;
 
 const { filterHalls } = useBanquetPermission();
 const filteredBanquetList = filterHalls(banquetList);
@@ -375,53 +378,99 @@ const CAN_EDIT_RATE_WITH_PACKAGE = currentUserId == 356;
   }, [isRTL, locale]);
 
 useEffect(() => {
-    if (functionPrefillRef.current) return;
+  if (functionPrefillRef.current) return;
     if (!prefill.shiftId || !prefill.banquetHallId) return;
     if (!formData.eventFunction?.length && canAccessEventFlow) return;
     if (!formData.eventFunction?.length) return;
 
     functionPrefillRef.current = true;
 
-    const baseDate = prefill.event_date ? dayjs(prefill.event_date) : null;
-    const shiftStart = prefill.shiftStartTime
-      ? dayjs(prefill.shiftStartTime, ["HH:mm", "hh:mm A"])
+  const baseDate = prefill.event_date ? dayjs(prefill.event_date) : null;
+  const shiftStart = prefill.shiftStartTime
+    ? dayjs(prefill.shiftStartTime, ["HH:mm", "hh:mm A"])
+    : null;
+  const shiftEnd = prefill.shiftEndTime
+    ? dayjs(prefill.shiftEndTime, ["HH:mm", "hh:mm A"])
+    : null;
+
+  const withTime = (time) =>
+    baseDate
+      ? (time ? baseDate.hour(time.hour()).minute(time.minute()) : baseDate).format(
+          "DD/MM/YYYY hh:mm A",
+        )
       : null;
-    const shiftEnd = prefill.shiftEndTime
-      ? dayjs(prefill.shiftEndTime, ["HH:mm", "hh:mm A"])
+
+  const newStart = withTime(shiftStart);
+  const newEnd = withTime(shiftEnd);
+
+  setFormData((prev) => ({
+    ...prev,
+    eventFunction: prev.eventFunction.map((func, i) => {
+      if (i !== 0) return func;
+      return {
+        ...func,
+        banquetHallId: prefill.banquetHallId,
+        shiftId: String(prefill.shiftId),
+        originalShiftId: String(prefill.shiftId),
+        functionStartDateTime: newStart || func.functionStartDateTime,
+        functionEndDateTime: newEnd || func.functionEndDateTime,
+      };
+    }),
+  }));
+
+  fetchShiftOptionsForRow(
+    0,
+    prefill.banquetHallId,
+    newStart || (baseDate ? baseDate.format("DD/MM/YYYY hh:mm A") : null),
+    String(prefill.shiftId),
+  );
+},[formData.eventFunction?.length, banquetList.length]);
+
+
+
+
+  const computeFunctionDateTime = (func, source, eventStartDateTime, eventEndDateTime, functionOptions) => {
+    const startDateBase = eventStartDateTime
+      ? dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A")
+      : null;
+    const endDateBase = eventEndDateTime
+      ? dayjs(eventEndDateTime, "DD/MM/YYYY hh:mm A")
       : null;
 
-    const withTime = (time) =>
-      baseDate
-        ? (time ? baseDate.hour(time.hour()).minute(time.minute()) : baseDate).format(
-            "DD/MM/YYYY hh:mm A",
-          )
-        : null;
+    if (!startDateBase && !endDateBase) {
+      return { start: func.functionStartDateTime, end: func.functionEndDateTime };
+    }
 
-    const newStart = withTime(shiftStart);
-    const newEnd = withTime(shiftEnd);
+    let startTime = startDateBase;
+    let endTime = endDateBase;
 
-    setFormData((prev) => ({
-      ...prev,
-      eventFunction: prev.eventFunction.map((func, i) => {
-        if (i !== 0) return func;
-        return {
-          ...func,
-          banquetHallId: prefill.banquetHallId,
-          shiftId: String(prefill.shiftId),
-          originalShiftId: String(prefill.shiftId),
-          functionStartDateTime: newStart || func.functionStartDateTime,
-          functionEndDateTime: newEnd || func.functionEndDateTime,
-        };
-      }),
-    }));
+    if (source === "function" && func.functionId) {
+      const matched = functionOptions.find((o) => o.value === func.functionId);
+      if (matched) {
+        startTime = dayjs(matched.functionstartTime, "HH:mm");
+        endTime = dayjs(matched.functionendTime, "HH:mm");
+      }
+    } else if (source === "shift" && func.shiftId) {
+      const matched = (func.shiftOptions || []).find(
+        (o) => String(o.value) === String(func.shiftId)
+      );
+      if (matched) {
+        startTime = dayjs(matched.startTime, "HH:mm");
+        endTime = dayjs(matched.endTime, "HH:mm");
+      }
+    }
 
-    fetchShiftOptionsForRow(
-      0,
-      prefill.banquetHallId,
-      newStart || (baseDate ? baseDate.format("DD/MM/YYYY hh:mm A") : null),
-      String(prefill.shiftId),
-    );
-  }, [formData.eventFunction?.length, banquetList.length]);
+    const newStart =
+      startDateBase && startTime
+        ? startDateBase.hour(startTime.hour()).minute(startTime.minute()).format("DD/MM/YYYY hh:mm A")
+        : func.functionStartDateTime;
+    const newEnd =
+      endDateBase && endTime
+        ? endDateBase.hour(endTime.hour()).minute(endTime.minute()).format("DD/MM/YYYY hh:mm A")
+        : func.functionEndDateTime;
+
+    return { start: newStart, end: newEnd };
+  };
 
 
 useEffect(() => {
@@ -846,76 +895,73 @@ const handleFunctionBanquetChange = async (index, banquetIds) => {
 };
   
 
-const createEmptyRow = () => {
-  // Look up full venue data for Hindi/Gujarati
-  const fullVenue = selectedVenueName
-    ? venueList.find(
-        (v) =>
-          v.nameEnglish === selectedVenueName ||
-          v.nameHindi === selectedVenueName ||
-          v.nameGujarati === selectedVenueName
-      )
-    : null;
 
-  return {
-    eventFuncId: 0,
-    functionId: null,
-    banquetHallId:
-      canAccessBanquet && formData.banquetId && formData.banquetId !== "ODC"
-        ? [formData.banquetId]
-        : [],
-    shiftId: formData.shiftId || "",
-    originalShiftId: formData.shiftId || "",
-    functionStartDateTime: eventStartDateTime || null,   
-    functionEndDateTime: eventEndDateTime || null, 
-    pax: "",
-    rate: "",
-    function_venue: selectedVenueName,
-    function_venueHindi: fullVenue?.nameHindi || "",
-    function_venueGujarati: fullVenue?.nameGujarati || "",
-    notesEnglish: "",
-    notesGujarati: "",
-    notesHindi: "",
-    banquetNotes: "",
-    sortorder: (formData?.eventFunction?.length || 0) + 1,
-    id: Date.now() + Math.random(),
-    customPackageId: "",
-    venueManualEdit: false,
-    venueTouched: false, 
-    functionTouched: false,
-    dateTouched: false,
+  useEffect(() => {
+    if (!enableAdvancedDateSync) return;
+    if (!formData?.eventFunction?.length) return;
+    if (!eventStartDateTime && !eventEndDateTime) return;
+
+    setFormData((prev) => {
+      let changed = false;
+      const updated = prev.eventFunction.map((func) => {
+        if (func.dateTouched) return func;
+
+        const { start, end } = computeFunctionDateTime(
+          func,
+          func.timeSource || "event",
+          eventStartDateTime,
+          eventEndDateTime,
+          options
+        );
+
+        if (start === func.functionStartDateTime && end === func.functionEndDateTime) return func;
+        changed = true;
+        return { ...func, functionStartDateTime: start, functionEndDateTime: end };
+      });
+
+      return changed ? { ...prev, eventFunction: updated } : prev;
+    });
+  }, [eventStartDateTime, eventEndDateTime, options, enableAdvancedDateSync]);
+
+  const createEmptyRow = () => {
+    const fullVenue = selectedVenueName
+      ? venueList.find(
+          (v) =>
+            v.nameEnglish === selectedVenueName ||
+            v.nameHindi === selectedVenueName ||
+            v.nameGujarati === selectedVenueName
+        )
+      : null;
+
+    return {
+      eventFuncId: 0,
+      functionId: null,
+      banquetHallId:
+        canAccessBanquet && formData.banquetId && formData.banquetId !== "ODC"
+          ? [formData.banquetId]
+          : [],
+      shiftId: formData.shiftId || "",
+      originalShiftId: formData.shiftId || "",
+      functionStartDateTime: enableAdvancedDateSync ? (eventStartDateTime || "") : null,
+      functionEndDateTime: enableAdvancedDateSync ? (eventEndDateTime || "") : null,
+      pax: "",
+      rate: "",
+      function_venue: selectedVenueName,
+      function_venueHindi: fullVenue?.nameHindi || "",
+      function_venueGujarati: fullVenue?.nameGujarati || "",
+      notesEnglish: "",
+      notesGujarati: "",
+      notesHindi: "",
+      banquetNotes: "",
+      sortorder: (formData?.eventFunction?.length || 0) + 1,
+      id: Date.now() + Math.random(),
+      customPackageId: "",
+      venueManualEdit: false,
+      venueTouched: false,
+      functionTouched: false,
+      ...(enableAdvancedDateSync ? { timeSource: "event", dateTouched: false } : {}),
+    };
   };
-};
-
-
-// ── Auto-sync function dates from event-level Start/End Date ──────────────
-
-useEffect(() => {
-  if (!formData?.eventFunction?.length) return;
-  if (!eventStartDateTime && !eventEndDateTime) return;
-
-  const needsUpdate = formData.eventFunction.some(
-    (func) =>
-      !func.dateTouched &&
-      (func.functionStartDateTime !== eventStartDateTime ||
-        func.functionEndDateTime !== eventEndDateTime)
-  );
-
-  if (!needsUpdate) return;
-
-  setFormData((prev) => ({
-    ...prev,
-    eventFunction: prev.eventFunction.map((func) =>
-      func.dateTouched
-        ? func
-        : {
-            ...func,
-            functionStartDateTime: eventStartDateTime || func.functionStartDateTime,
-            functionEndDateTime: eventEndDateTime || func.functionEndDateTime,
-          }
-    ),
-  }));
-}, [eventStartDateTime, eventEndDateTime, formData.eventFunction?.length])
 
   
 // ── Auto-fill venue from event-level venue selection ──
@@ -1094,57 +1140,71 @@ useEffect(() => {
   });
 }, [selectedVenueName, lang]);
 
-useEffect(() => {
-  if (!formData.eventTypeId) return;
-  if (!eventTypeRawList.length || !options.length) return;
-  if (autoMatchedEventTypeRef.current === formData.eventTypeId) return;
-  const selectedEventType = eventTypeRawList.find(
-    (e) => String(e.id) === String(formData.eventTypeId)
-  );
-  if (!selectedEventType) return;
-  const eventTypeName = getLocalizedField(selectedEventType, "name");
-  if (!eventTypeName) return;
-  const matchedFunction = options.find(
-    (opt) => opt.label?.trim().toLowerCase() === eventTypeName.trim().toLowerCase()
-  );
-  if (!matchedFunction) return;
-  autoMatchedEventTypeRef.current = formData.eventTypeId;
-  setFormData((prev) => {
-    const updated = [...(prev.eventFunction || [])];
-    if (updated.length === 0) {
-      updated.push(createEmptyRow());
-    }
-           if (!updated[0].functionTouched) {
-      // Prefer the row's already-selected shift timing over the Function Type's own time
-      const existingShift = (updated[0].shiftOptions || []).find(
-        (o) => String(o.value) === String(updated[0].shiftId)
-      );
-      const startTime = existingShift
-        ? dayjs(existingShift.startTime, "HH:mm")
-        : dayjs(matchedFunction.functionstartTime, "HH:mm");
-      const endTime = existingShift
-        ? dayjs(existingShift.endTime, "HH:mm")
-        : dayjs(matchedFunction.functionendTime, "HH:mm");
+  useEffect(() => {
+    if (!formData.eventTypeId) return;
+    if (!eventTypeRawList.length || !options.length) return;
+    if (autoMatchedEventTypeRef.current === formData.eventTypeId) return;
 
-      const baseDate = updated[0].functionStartDateTime
-        ? dayjs(updated[0].functionStartDateTime, "DD/MM/YYYY hh:mm A")
-        : dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A");
-      updated[0] = {
-        ...updated[0],
-        functionId: matchedFunction.value,
-        functionStartDateTime: baseDate
-          .hour(startTime.hour())
-          .minute(startTime.minute())
-          .format("DD/MM/YYYY hh:mm A"),
-        functionEndDateTime: baseDate
-          .hour(endTime.hour())
-          .minute(endTime.minute())
-          .format("DD/MM/YYYY hh:mm A"),
-      };
-    }
-    return { ...prev, eventFunction: updated };
-  });
-}, [formData.eventTypeId, eventTypeRawList, options]);
+    const selectedEventType = eventTypeRawList.find(
+      (e) => String(e.id) === String(formData.eventTypeId)
+    );
+    if (!selectedEventType) return;
+
+    const eventTypeName = getLocalizedField(selectedEventType, "name");
+    if (!eventTypeName) return;
+
+    const matchedFunction = options.find(
+      (opt) => opt.label?.trim().toLowerCase() === eventTypeName.trim().toLowerCase()
+    );
+    if (!matchedFunction) return;
+
+    autoMatchedEventTypeRef.current = formData.eventTypeId;
+
+    setFormData((prev) => {
+      const updated = [...(prev.eventFunction || [])];
+      if (updated.length === 0) updated.push(createEmptyRow());
+
+      if (enableAdvancedDateSync) {
+        if (!updated[0].functionTouched && !updated[0].dateTouched) {
+          const { start, end } = computeFunctionDateTime(
+            { ...updated[0], functionId: matchedFunction.value },
+            "event",
+            eventStartDateTime,
+            eventEndDateTime,
+            options
+          );
+          updated[0] = {
+            ...updated[0],
+            functionId: matchedFunction.value,
+            functionStartDateTime: start,
+            functionEndDateTime: end,
+            timeSource: "event",
+          };
+        }
+      } else if (!updated[0].functionTouched) {
+        const existingShift = (updated[0].shiftOptions || []).find(
+          (o) => String(o.value) === String(updated[0].shiftId)
+        );
+        const startTime = existingShift
+          ? dayjs(existingShift.startTime, "HH:mm")
+          : dayjs(matchedFunction.functionstartTime, "HH:mm");
+        const endTime = existingShift
+          ? dayjs(existingShift.endTime, "HH:mm")
+          : dayjs(matchedFunction.functionendTime, "HH:mm");
+
+        const baseDate = updated[0].functionStartDateTime
+          ? dayjs(updated[0].functionStartDateTime, "DD/MM/YYYY hh:mm A")
+          : dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A");
+        updated[0] = {
+          ...updated[0],
+          functionId: matchedFunction.value,
+          functionStartDateTime: baseDate.hour(startTime.hour()).minute(startTime.minute()).format("DD/MM/YYYY hh:mm A"),
+          functionEndDateTime: baseDate.hour(endTime.hour()).minute(endTime.minute()).format("DD/MM/YYYY hh:mm A"),
+        };
+      }
+      return { ...prev, eventFunction: updated };
+    });
+  }, [formData.eventTypeId, eventTypeRawList, options, eventStartDateTime, eventEndDateTime, enableAdvancedDateSync]);
 
 const handleAddClick = () => setShowFunctionModal(true);
 
@@ -1253,16 +1313,16 @@ const priceDebounceRef = useRef({});
 
 const handleInputChange = async (index, field, value) => {
   const updatedArray = [...formData.eventFunction];
-  updatedArray[index] = { ...updatedArray[index], [field]: value }; 
+    updatedArray[index] = { ...updatedArray[index], [field]: value };
 
+    if (enableAdvancedDateSync && (field === "functionStartDateTime" || field === "functionEndDateTime")) {
+      updatedArray[index].dateTouched = true;
+      updatedArray[index].timeSource = "manual";
+    }
 
-   if (field === "functionStartDateTime" || field === "functionEndDateTime") {
-    updatedArray[index].dateTouched = true;   
-  }
-
-  if (field === "functionStartDateTime" && updatedArray[index].banquetHallId) {
-    fetchShiftOptionsForRow(index, updatedArray[index].banquetHallId, value);
-  }
+    if (field === "functionStartDateTime" && updatedArray[index].banquetHallId) {
+      fetchShiftOptionsForRow(index, updatedArray[index].banquetHallId, value);
+    }
 
   // re-fetch price when pax changes and package is selected
   if (field === "pax" && updatedArray[index].customPackageId) {
@@ -1338,71 +1398,122 @@ const handlePackageChange = async (index, packageId) => {
   setFormData({ ...formData, eventFunction: updatedArray });
 };
 
- const handleFunctionSelect = (index, functionId) => {
-  const selected = options.find((opt) => opt.value === functionId);
-  const updatedArray = [...formData.eventFunction];
-  if (!selected) return;
+  const handleFunctionSelect = (index, functionId) => {
+    const selected = options.find((opt) => opt.value === functionId);
+    if (!selected) return;
 
-  const currentRow = updatedArray[index];
+    if (enableAdvancedDateSync) {
+      setFormData((prev) => {
+        const updatedArray = [...prev.eventFunction];
+        const currentRow = updatedArray[index];
 
-  const selectedShift = (currentRow.shiftOptions || []).find(
-    (o) => String(o.value) === String(currentRow.shiftId)
-  );
-  const startTime = selectedShift
-    ? dayjs(selectedShift.startTime, "HH:mm")
-    : dayjs(selected.functionstartTime, "HH:mm");
-  const endTime = selectedShift
-    ? dayjs(selectedShift.endTime, "HH:mm")
-    : dayjs(selected.functionendTime, "HH:mm");
+        const { start, end } = computeFunctionDateTime(
+          { ...currentRow, functionId },
+          "function",
+          eventStartDateTime,
+          eventEndDateTime,
+          options
+        );
 
-  // Check if same functionId already exists in other rows
-  const existingRows = updatedArray.filter(
-    (f, i) => i !== index && f.functionId === functionId
-  );
+        updatedArray[index] = {
+          ...currentRow,
+          functionId,
+          functionStartDateTime: start,
+          functionEndDateTime: end,
+          functionTouched: true,
+          dateTouched: false,
+          timeSource: "function",
+        };
+        return { ...prev, eventFunction: updatedArray };
+      });
+      return;
+    }
 
-  let baseStartDate;
+    // ── Legacy behavior for everyone else (unchanged) ──
+    const updatedArray = [...formData.eventFunction];
+    const currentRow = updatedArray[index];
 
-  if (existingRows.length > 0) {
-    // Find the latest start date among existing rows with same function
-    const latestDate = existingRows.reduce((latest, f) => {
-      const d = dayjs(f.functionStartDateTime, "DD/MM/YYYY hh:mm A");
-      return d.isAfter(latest) ? d : latest;
-    }, dayjs(existingRows[0].functionStartDateTime, "DD/MM/YYYY hh:mm A"));
+    const selectedShift = (currentRow.shiftOptions || []).find(
+      (o) => String(o.value) === String(currentRow.shiftId)
+    );
+    const startTime = selectedShift
+      ? dayjs(selectedShift.startTime, "HH:mm")
+      : dayjs(selected.functionstartTime, "HH:mm");
+    const endTime = selectedShift
+      ? dayjs(selectedShift.endTime, "HH:mm")
+      : dayjs(selected.functionendTime, "HH:mm");
 
-    // Set base start date to next day after the latest existing row
-    baseStartDate = latestDate.add(1, "day");
-  } else if (currentRow.functionStartDateTime) {
-    // Use current row's existing start date
-    baseStartDate = dayjs(currentRow.functionStartDateTime, "DD/MM/YYYY hh:mm A");
-  } else {
-    // Fall back to event start date
-    baseStartDate = dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A");
-  }
+    const existingRows = updatedArray.filter(
+      (f, i) => i !== index && f.functionId === functionId
+    );
 
-  // Apply the function's start time to the base date
-  const newStartDateTime = baseStartDate
-    .hour(startTime.hour())
-    .minute(startTime.minute())
-    .format("DD/MM/YYYY hh:mm A");
+    let baseStartDate;
+    if (existingRows.length > 0) {
+      const latestDate = existingRows.reduce((latest, f) => {
+        const d = dayjs(f.functionStartDateTime, "DD/MM/YYYY hh:mm A");
+        return d.isAfter(latest) ? d : latest;
+      }, dayjs(existingRows[0].functionStartDateTime, "DD/MM/YYYY hh:mm A"));
+      baseStartDate = latestDate.add(1, "day");
+    } else if (currentRow.functionStartDateTime) {
+      baseStartDate = dayjs(currentRow.functionStartDateTime, "DD/MM/YYYY hh:mm A");
+    } else {
+      baseStartDate = dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A");
+    }
 
-  // End date = same day as start date (NOT event end date)
-  const newEndDateTime = baseStartDate
-    .hour(endTime.hour())
-    .minute(endTime.minute())
-    .format("DD/MM/YYYY hh:mm A");
+    const newStartDateTime = baseStartDate
+      .hour(startTime.hour())
+      .minute(startTime.minute())
+      .format("DD/MM/YYYY hh:mm A");
+    const newEndDateTime = baseStartDate
+      .hour(endTime.hour())
+      .minute(endTime.minute())
+      .format("DD/MM/YYYY hh:mm A");
 
-  updatedArray[index] = {
-    ...currentRow,
-    functionId,
-    functionStartDateTime: newStartDateTime,
-    functionEndDateTime: newEndDateTime,
-     functionTouched: true, 
+    updatedArray[index] = {
+      ...currentRow,
+      functionId,
+      functionStartDateTime: newStartDateTime,
+      functionEndDateTime: newEndDateTime,
+      functionTouched: true,
+    };
+
+    setFormData({ ...formData, eventFunction: updatedArray });
   };
 
-  setFormData({ ...formData, eventFunction: updatedArray });
-};
+useEffect(() => {
+   if (enableAdvancedDateSync) return;
+  formData.eventFunction?.forEach((func, index) => {
+    if (!func.shiftId || !func.shiftOptions?.length) return;
 
+    const selectedShift = func.shiftOptions.find(
+      (o) => String(o.value) === String(func.shiftId)
+    );
+    if (!selectedShift) return;
 
+    const currentStart = dayjs(func.functionStartDateTime, "DD/MM/YYYY hh:mm A");
+    const currentEnd = dayjs(func.functionEndDateTime, "DD/MM/YYYY hh:mm A");
+    const shiftStart = dayjs(selectedShift.startTime, "HH:mm");
+    const shiftEnd = dayjs(selectedShift.endTime, "HH:mm");
+
+    const startMismatch =
+      currentStart.hour() !== shiftStart.hour() || currentStart.minute() !== shiftStart.minute();
+    const endMismatch =
+      currentEnd.hour() !== shiftEnd.hour() || currentEnd.minute() !== shiftEnd.minute();
+
+    if (startMismatch || endMismatch) {
+      setFormData((prev) => {
+        const updated = [...prev.eventFunction];
+        const baseDate = dayjs(updated[index].functionStartDateTime, "DD/MM/YYYY hh:mm A");
+        updated[index] = {
+          ...updated[index],
+          functionStartDateTime: baseDate.hour(shiftStart.hour()).minute(shiftStart.minute()).format("DD/MM/YYYY hh:mm A"),
+          functionEndDateTime: baseDate.hour(shiftEnd.hour()).minute(shiftEnd.minute()).format("DD/MM/YYYY hh:mm A"),
+        };
+        return { ...prev, eventFunction: updated };
+      });
+    }
+  });
+}, [formData.eventFunction?.map((f) => f.shiftOptions?.length || 0).join(","), enableAdvancedDateSync]);
 
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -1595,20 +1706,40 @@ const isODCRow =
   });
 
  if (selected) {
-  const baseDate = func.functionStartDateTime
-    ? dayjs(func.functionStartDateTime, "DD/MM/YYYY hh:mm A")
-    : dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A");
-  const shiftStart = dayjs(selected.startTime, "HH:mm");
-  const shiftEnd = dayjs(selected.endTime, "HH:mm");
+  if (enableAdvancedDateSync) {
+    const { start, end } = computeFunctionDateTime(
+      { ...func, shiftId: val },
+      "shift",
+      eventStartDateTime,
+      eventEndDateTime,
+      options
+    );
+    const updatedArray = [...formData.eventFunction];
+    updatedArray[index] = {
+      ...updatedArray[index],
+      shiftId: val,
+      functionStartDateTime: start,
+      functionEndDateTime: end,
+      dateTouched: false,
+      timeSource: "shift",
+    };
+    setFormData({ ...formData, eventFunction: updatedArray });
+  } else {
+    const baseDate = func.functionStartDateTime
+      ? dayjs(func.functionStartDateTime, "DD/MM/YYYY hh:mm A")
+      : dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A");
+    const shiftStart = dayjs(selected.startTime, "HH:mm");
+    const shiftEnd = dayjs(selected.endTime, "HH:mm");
 
-  const updatedArray = [...formData.eventFunction];
-  updatedArray[index] = {
-    ...updatedArray[index],
-    shiftId: val,
-    functionStartDateTime: baseDate.hour(shiftStart.hour()).minute(shiftStart.minute()).format("DD/MM/YYYY hh:mm A"),
-    functionEndDateTime: baseDate.hour(shiftEnd.hour()).minute(shiftEnd.minute()).format("DD/MM/YYYY hh:mm A"),
-  };
-  setFormData({ ...formData, eventFunction: updatedArray });
+    const updatedArray = [...formData.eventFunction];
+    updatedArray[index] = {
+      ...updatedArray[index],
+      shiftId: val,
+      functionStartDateTime: baseDate.hour(shiftStart.hour()).minute(shiftStart.minute()).format("DD/MM/YYYY hh:mm A"),
+      functionEndDateTime: baseDate.hour(shiftEnd.hour()).minute(shiftEnd.minute()).format("DD/MM/YYYY hh:mm A"),
+    };
+    setFormData({ ...formData, eventFunction: updatedArray });
+  }
 } else {
   handleInputChange(index, "shiftId", val);
 }
@@ -1866,30 +1997,11 @@ const isODCRow =
   }
 
   setErrors((prev) => {
-  const updated = { ...prev };
-  delete updated[`eventFunction[${index}].shiftId`];
-  return updated;
-});
-
-if (selected) {
-  const baseDate = func.functionStartDateTime
-    ? dayjs(func.functionStartDateTime, "DD/MM/YYYY hh:mm A")
-    : dayjs(eventStartDateTime, "DD/MM/YYYY hh:mm A");
-  const shiftStart = dayjs(selected.startTime, "HH:mm");
-  const shiftEnd = dayjs(selected.endTime, "HH:mm");
-
-  const updatedArray = [...formData.eventFunction];
-  updatedArray[index] = {
-    ...updatedArray[index],
-    shiftId: val,
-    functionStartDateTime: baseDate.hour(shiftStart.hour()).minute(shiftStart.minute()).format("DD/MM/YYYY hh:mm A"),
-    functionEndDateTime: baseDate.hour(shiftEnd.hour()).minute(shiftEnd.minute()).format("DD/MM/YYYY hh:mm A"),
-    // dateTouched line removed — no longer locks the row
-  };
-  setFormData({ ...formData, eventFunction: updatedArray });
-} else {
+    const updated = { ...prev };
+    delete updated[`eventFunction[${index}].shiftId`];
+    return updated;
+  });
   handleInputChange(index, "shiftId", val);
-}
 }}
             >
               <option value="">— Select Shift —</option>

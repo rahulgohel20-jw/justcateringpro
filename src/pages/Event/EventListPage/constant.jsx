@@ -9,6 +9,8 @@ export const columns = (
   viewEvent,
   openMenuReport,
   permissions = {},
+  invoicePermissions = {},
+  quotationPermissions = {},
 ) => [
   {
     accessorKey: "sr_no",
@@ -57,6 +59,14 @@ export const columns = (
       cellClassName: "w-[20%]",
     },
   },
+  {
+    accessorKey: "location",
+    header: "Banquet / Venue",
+    meta: {
+      headerClassName: "w-[12%]",
+      cellClassName: "w-[12%]",
+    },
+  },
 
   {
     accessorKey: "customer",
@@ -73,7 +83,7 @@ export const columns = (
     header: (
       <FormattedMessage id="USER.EVENT.INVOICE" defaultMessage="Invoice" />
     ),
-    cell: ({ cell }) => cell.getValue(),
+    cell: ({ cell }) => invoicePermissions.view && cell.getValue(),
     meta: {
       headerClassName: "w-[6%] text-center",
       cellClassName: "w-[6%] text-center",
@@ -84,7 +94,7 @@ export const columns = (
     header: (
       <FormattedMessage id="USER.EVENT.QUOTATION" defaultMessage="Quotation" />
     ),
-    cell: ({ cell }) => cell.getValue(),
+    cell: ({ cell }) => quotationPermissions.view && cell.getValue(),
     meta: {
       headerClassName: "w-[6%] text-center",
       cellClassName: "w-[6%] text-center",

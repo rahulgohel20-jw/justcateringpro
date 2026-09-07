@@ -129,6 +129,7 @@ import EventListPage from "@/pages/Event/EventListPage";
 import EventPlanningPage from "../pages/Event/EventPlanningPage";
 import EventMenuAllocationPage from "@/pages/Event/EventMenuAllocationPage";
 import RawMaterialAllocationPage from "@/pages/Event/RawMaterialAllocationPage";
+import GeneralFixPage from "@/pages/Event/GeneralFixPage";
 import LabourOtherManagementPage from "@/pages/Event/LabourOtherManagementPage";
 import CustomPackage from "@/pages/Event/CustomPackage";
 import OrderBookingReportsPage from "@/pages/Event/OrderBookingReportsPage";
@@ -269,6 +270,8 @@ import CustomPackages from "../pages/marketing/packages/CustomPackages";
 import AcceptSOT from "../pages/stockmanagement/store-ordering-tickets/acceptsot/AcceptSOT";
 import AddChefRequisition from "../pages/stockmanagement/chef-requisition/AddChefRequisition";
 import ChefRequisition from "../pages/stockmanagement/chef-requisition/ChefRequisition";
+import AddStoreRequisition from "../pages/stockmanagement/store-requisition/AddStoreRequisition";
+import StoreRequisition from "../pages/stockmanagement/store-requisition/StoreRequisition";
 import UpgradeModule from "../components/upgrademodule/UpgradeModule";
 import AutoManualPO from "../pages/stockmanagement/auto-manual-po/AutoManualPO";
 import AddAutoManualPO from "../pages/stockmanagement/auto-manual-po/AddAutoManualPO";
@@ -529,6 +532,10 @@ const AppRoutingSetup = () => {
             path="/raw-material-allocation/:eventId/"
             element={<RawMaterialAllocationPage mode="raw" />}
           />
+          <Route
+            path="/general-fix/:eventId"
+            element={<GeneralFixPage />}
+          />
           <Route path="/custom-package" element={<CustomPackage />} />
           <Route path="/report-configuration" element={<ReportsConfig />} />
           {/* <Route path="/report-datewise" element={<DateWiseReport />} /> */}
@@ -735,6 +742,14 @@ const AppRoutingSetup = () => {
           <Route
             path="/stock-management/add-chef-requisition"
             element={<AddChefRequisition />}
+          />
+          <Route
+            path="/stock-management/store-requisition"
+            element={<StoreRequisition />}
+          />
+          <Route
+            path="/stock-management/add-store-requisition"
+            element={<AddStoreRequisition />}
           />
           <Route path="/report" element={<DynamicReports />} />
           <Route path="/quotation-function" element={<QuotationFunction />} />

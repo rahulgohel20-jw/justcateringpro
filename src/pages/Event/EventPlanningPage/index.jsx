@@ -741,6 +741,7 @@ import { QRCodeCanvas } from "qrcode.react";
           const [rawMaterialLoading, setRawMaterialLoading] = useState(false);
           const [rawMaterialCategoryFilter, setRawMaterialCategoryFilter] = useState(0);
           const [rawMaterialNameMap, setRawMaterialNameMap] = useState({});
+          const lastSavedPermissionRawMaterialsRef = useRef(null);
 
 
 
@@ -1210,7 +1211,7 @@ import { QRCodeCanvas } from "qrcode.react";
 
 
 
-          const fetchPermissableData = useCallback(async () => {
+         const fetchPermissableData = useCallback(async () => {
   if (!selectedFunction || !eventId) return;
   try {
     const res = await GetPermissableNonPermissable(selectedFunction, eventId, userId);
@@ -1222,14 +1223,16 @@ import { QRCodeCanvas } from "qrcode.react";
           rawMaterialName: item.rawMaterialNameEnglish || `RM #${item.rawMaterialId}`,
           categoryName: item.categoryName || "—",
         }));
-      setPermissionRawMaterials({
+      const enriched = {
         permissables: enrich(data.permissables),
         notPermissables: enrich(data.notPermissables),
         userId: Number(userId),
-      });
+      };
+      setPermissionRawMaterials(enriched);
+      lastSavedPermissionRawMaterialsRef.current = enriched; // ← baseline for next diff
     } else {
       setPermissionRawMaterials(null);
-      
+      lastSavedPermissionRawMaterialsRef.current = null;
     }
   } catch (err) {
     console.error("Failed to fetch permissable data:", err);
@@ -1238,10 +1241,7 @@ import { QRCodeCanvas } from "qrcode.react";
 
 
 
-
-          useEffect(() => {
-          fetchPermissableData();
-          }, [fetchPermissableData]);
+          
 
 
           const ITEMS_PER_PAGE = 100;
@@ -1632,14 +1632,14 @@ try {
           const { rawItems, rawSelectedCats, prepMeta } =
             await cfg.api.getItems(selectedFunction, "", 0, 1, 200, userIdLocal);
 
-          if (prepMeta?.permissionRawMaterials) {
-          setPermissionRawMaterials({
-          ...prepMeta.permissionRawMaterials,
-          userId: Number(userId),
-          });
-          } else {
-          setPermissionRawMaterials(null);
-          }
+          // if (prepMeta?.permissionRawMaterials) {
+          // setPermissionRawMaterials({
+          // ...prepMeta.permissionRawMaterials,
+          // userId: Number(userId),
+          // });
+          // } else {
+          // setPermissionRawMaterials(null);
+          // }
 
 
           let allItemsForPrice = rawItems;
@@ -1793,9 +1793,10 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [isPrepLoading, selectedFunction]);
 
-          useEffect(() => {
-          loadSavedMenuPrep();
-          }, [selectedFunction, loadSavedMenuPrep]);
+useEffect(() => {
+  loadSavedMenuPrep();
+  fetchPermissableData();
+}, [selectedFunction, loadSavedMenuPrep, fetchPermissableData]);
 
           async function urlToFile(url, filename) {
   const res = await fetch(url); // requires the image host to allow CORS
@@ -2071,9 +2072,18 @@ const handleMenuItemImageUpload = useCallback(
                       menuItem.itemInstruction?.gujarati ||
                       "",
                   },
-                  reportNameEnglish: selectedCategoryInfo.reportNameEnglish || categoryName || menuItem.reportNameEnglish || menuItem.menuCategoryName || menuItem.menuCategory?.nameEnglish || "",
-          reportNameHindi: selectedCategoryInfo.reportNameHindi || categoryNameHindi || menuItem.reportNameHindi || menuItem.menuCategoryNameHindi || menuItem.menuCategory?.nameHindi || "",
-          reportNameGujarati: selectedCategoryInfo.reportNameGujarati || categoryNameGujarati || menuItem.reportNameGujarati || menuItem.menuCategoryNameGujarati || menuItem.menuCategory?.nameGujarati || "",
+                  reportNameEnglish: categoryName || selectedCategoryInfo.reportNameEnglish || categoryName,
+reportNameHindi: categoryNameHindi || selectedCategoryInfo.reportNameHindi || categoryNameHindi,
+reportNameGujarati: categoryNameGujarati || selectedCategoryInfo.reportNameGujarati || categoryNameGujarati,
+
+
+
+          //         reportNameEnglish: selectedCategoryInfo.reportNameEnglish || categoryName || menuItem.reportNameEnglish || menuItem.menuCategoryName || menuItem.menuCategory?.nameEnglish || "",
+          // reportNameHindi: selectedCategoryInfo.reportNameHindi || categoryNameHindi || menuItem.reportNameHindi || menuItem.menuCategoryNameHindi || menuItem.menuCategory?.nameHindi || "",
+          // reportNameGujarati: selectedCategoryInfo.reportNameGujarati || categoryNameGujarati || menuItem.reportNameGujarati || menuItem.menuCategoryNameGujarati || menuItem.menuCategory?.nameGujarati || "",
+
+
+
           //           reportNameEnglish: menuItem.reportNameEnglish || menuItem.menuCategoryName || menuItem.menuCategory?.nameEnglish || categoryName,
           // reportNameHindi: menuItem.reportNameHindi || menuItem.menuCategoryNameHindi || menuItem.menuCategory?.nameHindi || categoryNameHindi,
           // reportNameGujarati: menuItem.reportNameGujarati || menuItem.menuCategoryNameGujarati || menuItem.menuCategory?.nameGujarati || categoryNameGujarati,
@@ -3176,7 +3186,12 @@ const buildFullChangeSummary = (prev, next) => {
             }
 
           
-            const prevBucketSnapshot = savedMenuPrepCacheRef.current[selectedFunction] || null;
+           const prevBucketSnapshot = savedMenuPrepCacheRef.current[selectedFunction]
+  ? {
+      ...savedMenuPrepCacheRef.current[selectedFunction],
+      permissionRawMaterials: lastSavedPermissionRawMaterialsRef.current,
+    }
+  : null;
             const nextFullSnapshot = buildFullSnapshot();
             const payload = buildRequestPayload();
 
