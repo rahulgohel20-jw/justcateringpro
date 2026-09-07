@@ -47,8 +47,13 @@ const canAccessEventFlow = hasModuleAccess("Event Flow");
 const [submitting, setSubmitting] = useState(false);  
 const [eventid, setEventid] = useState(0);
 const [isVenueTranslating, setIsVenueTranslating] = useState(false);
-const eventPrefillAppliedRef = useRef(false);
-const functionPrefillAppliedRef = useRef(false);
+
+  const currentUserId = localStorage.getItem("userId");
+  const ENABLE_ADVANCED_DATE_SYNC = currentUserId == 356;
+
+  const eventPrefillAppliedRef = useRef(false);
+  const functionPrefillAppliedRef = useRef(false);
+
 
 
 
@@ -287,7 +292,6 @@ cordinatorPersonContactNo: event.cordinatorPersonContactNo || "",
     f.customPackageId != null ? String(f.customPackageId) : "",
   venueTouched: !!(f.function_venue && f.function_venue.trim()), // ← add this
    functionTouched: !!(f.function?.id ?? f.functionId ?? null),
-   dateTouched: false, 
 };
             }),
 
@@ -872,18 +876,18 @@ const sendLog = useCallback(
             defaultMessage="Event Information"
           />
         ),
-        content: (
-          <EventBasicInfoStep
-            formData={formData}
-            setFormData={setFormData}
-            onInputChange={handleInputChange}
-            errors={errors}
-            eventId={eventId}
-            originalShiftId={originalShiftId}
-            prefillAppliedRef={eventPrefillAppliedRef}
-          />
-        ),
-        icon: <i className="ki-filled ki-calendar"></i>,
+       content: (
+  <EventBasicInfoStep
+    formData={formData}
+    setFormData={setFormData}
+    onInputChange={handleInputChange}
+    errors={errors}
+    eventId={eventId}
+    originalShiftId={originalShiftId}
+    prefillAppliedRef={eventPrefillAppliedRef}
+    enableAdvancedDateSync={ENABLE_ADVANCED_DATE_SYNC}
+  />
+),        icon: <i className="ki-filled ki-calendar"></i>,
       },
       {
         title: (
@@ -911,22 +915,23 @@ const sendLog = useCallback(
               defaultMessage="Functions"
             />
           ),
-          content: (
-            <FunctionsDetails
-              formData={formData}
-              setFormData={setFormData}
-              onInputChange={handleInputChange}
-              errors={errors}
-              setErrors={setErrors}
-              eventStartDateTime={formData.eventStartDateTime}
-              eventEndDateTime={formData.eventEndDateTime}
-              eventId={eventId}
-              originalShiftId={originalShiftId}
-              shiftRefreshTrigger={shiftRefreshTrigger}
-              skipFunctionsStep={skipFunctionsStep}
-              prefillAppliedRef={functionPrefillAppliedRef}
-            />
-          ),
+         content: (
+  <FunctionsDetails
+    formData={formData}
+    setFormData={setFormData}
+    onInputChange={handleInputChange}
+    errors={errors}
+    setErrors={setErrors}
+    eventStartDateTime={formData.eventStartDateTime}
+    eventEndDateTime={formData.eventEndDateTime}
+    eventId={eventId}
+    originalShiftId={originalShiftId}
+    shiftRefreshTrigger={shiftRefreshTrigger}
+    skipFunctionsStep={skipFunctionsStep}
+    prefillAppliedRef={functionPrefillAppliedRef}
+    enableAdvancedDateSync={ENABLE_ADVANCED_DATE_SYNC}
+  />
+),
           icon: <i className="ki-filled ki-setting-4" />,
         }]
       : []),
