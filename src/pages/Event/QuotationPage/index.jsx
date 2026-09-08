@@ -4147,6 +4147,8 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
           eventId={eventId}
           isinvoice={1}
           isDecor={isDecor ? true : false} 
+           mobileNumber={quotationData.mobileNumber}   
+          partyName={quotationData.partyName} 
         />
         {isSaving && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">

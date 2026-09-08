@@ -427,8 +427,11 @@ useEffect(() => {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[110] p-4">
-      <div className="bg-[#F2F7FB] rounded-xl w-full max-w-5xl p-6 relative">
+   <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[1100] p-4">
+      <div
+      className="bg-[#F2F7FB] rounded-xl w-full max-w-5xl p-6 relative"
+      onClick={(e) => e.stopPropagation()}   
+    >
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold">

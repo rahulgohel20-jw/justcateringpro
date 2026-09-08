@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Trash2, Plus, FileText, ChevronDown, Save } from "lucide-react";
-import { AddExtraCharges, GetExtraCharges,DeleteExtraChargeRow,
+import { X, Trash2, Plus, FileText, ChevronDown, Save, Pencil, Check } from "lucide-react";import { AddExtraCharges, GetExtraCharges,DeleteExtraChargeRow,
   DeleteExtraChargeHeading,AddLogs  } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { TimePicker } from "antd";
@@ -37,7 +36,8 @@ useEffect(() => {
   const [isLocalLoading, setIsLocalLoading] = useState(false);
 
   const SESSION_OPTIONS = ["Morning", "Afternoon", "Evening", "Night"];
-
+const [renamingHeadingId, setRenamingHeadingId] = useState(null);
+const [renameDraft, setRenameDraft] = useState("");
 
   const initialHeadingsRef = useRef([]);
 
@@ -72,6 +72,23 @@ const parseFlexibleDate = (val) => {
     if (d.isValid()) return d;
   }
   return null;
+};
+
+const startRenameHeading = (heading) => {
+  setRenamingHeadingId(heading.id);
+  setRenameDraft(heading.name || "");
+};
+
+const confirmRenameHeading = () => {
+  if (!renameDraft.trim()) return; // don't allow blank names
+  updateHeadingName(renamingHeadingId, renameDraft.trim());
+  setRenamingHeadingId(null);
+  setRenameDraft("");
+};
+
+const cancelRenameHeading = () => {
+  setRenamingHeadingId(null);
+  setRenameDraft("");
 };
 
 const getFunctionDateTime = (funcId) => {
@@ -327,8 +344,64 @@ const buildExtraChargeChangeSummary = (prevHeadings, currentHeadings) => {
   return parts.length ? parts.join(" | ") : "No item-level changes detected.";
 };
 
+
+const validateHeadingsBeforeSave = () => {
+  const emptyHeadings = [];
+  const rowsMissingSession = [];
+
+  headings.forEach((h) => {
+    if (!h.rows || h.rows.length === 0) {
+      emptyHeadings.push(h.name || "Untitled Heading");
+      return;
+    }
+    h.rows.forEach((r) => {
+      if (!r.session || !r.session.trim()) {
+        rowsMissingSession.push(h.name || "Untitled Heading");
+      }
+    });
+  });
+
+  if (emptyHeadings.length > 0) {
+    return intl.formatMessage(
+      {
+        id: "USER.EXTRA_CHARGES.VALIDATION_NO_ROWS",
+        defaultMessage: 'Heading "{headings}" has no rows. Please add at least one row or remove the heading.',
+      },
+      { headings: emptyHeadings.join(", ") },
+    );
+  }
+
+  if (rowsMissingSession.length > 0) {
+    // de-dupe heading names in case multiple rows in the same heading are missing session
+    const uniqueHeadings = [...new Set(rowsMissingSession)];
+    return intl.formatMessage(
+      {
+        id: "USER.EXTRA_CHARGES.VALIDATION_NO_SESSION",
+        defaultMessage: 'Please select a Shift/Session for all rows under: {headings}',
+      },
+      { headings: uniqueHeadings.join(", ") },
+    );
+  }
+
+  return null;
+};
+
   const handleSave = async () => {
   try {
+
+     const validationError = validateHeadingsBeforeSave();
+    if (validationError) {
+      Swal.fire({
+        icon: "warning",
+        title: intl.formatMessage({
+          id: "USER.EXTRA_CHARGES.VALIDATION_TITLE",
+          defaultMessage: "Incomplete Entry",
+        }),
+        text: validationError,
+      });
+      return;
+    }
+
     const payload = {
       eventFunctionId: selectedFunctionId ? parseInt(selectedFunctionId) : -1,
       eventId: parseInt(eventId) || 0,
@@ -623,11 +696,48 @@ const deleteHeading = async (hId) => {
                   <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200">
                     <div className="flex items-center gap-2">
                       <FileText size={14} className="text-gray-500 flex-shrink-0" />
-                      <input
-                        className="font-semibold text-gray-800 bg-transparent border-none outline-none text-sm w-52 focus:bg-white focus:border focus:border-blue-300 focus:rounded px-1 transition-all"
-                        value={heading.name}
-                        onChange={(e) => updateHeadingName(heading.id, e.target.value)}
-                      />
+                      {renamingHeadingId === heading.id ? (
+                      <>
+                        <input
+                          autoFocus
+                          className="font-semibold text-gray-800 bg-white border border-blue-300 rounded text-sm w-52 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          value={renameDraft}
+                          onChange={(e) => setRenameDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") confirmRenameHeading();
+                            if (e.key === "Escape") cancelRenameHeading();
+                          }}
+                        />
+                        <button
+                          onClick={confirmRenameHeading}
+                          disabled={!renameDraft.trim()}
+                          className="w-6 h-6 flex items-center justify-center text-primary hover:bg-blue-50 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          title="Confirm rename"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={cancelRenameHeading}
+                          className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
+                          title="Cancel rename"
+                        >
+                          <X size={14} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-gray-800 text-sm">
+                          {heading.name}
+                        </span>
+                        <button
+                          onClick={() => startRenameHeading(heading)}
+                          className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-blue-50 rounded transition-colors"
+                          title="Rename heading"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      </>
+                    )}
                     </div>
                     <button
                       onClick={() => {
