@@ -1247,7 +1247,13 @@ export const GetDbAssignedDetails = (dbPlanningId) => {
 };
 
 export const GetUserlogs = (data, endDate, startDate, eventId) => {
-  return GET(`/user-logs/getUserLogs?user=${data}&endDate=${endDate}&startDate=${startDate}&eventId=${eventId}`);
+  const queryParams = new URLSearchParams({ user: String(data) });
+
+  if (endDate) queryParams.set("endDate", endDate);
+  if (startDate) queryParams.set("startDate", startDate);
+  if (eventId) queryParams.set("eventId", eventId);
+
+  return GET(`/user-logs/getUserLogs?${queryParams.toString()}`);
 };
 
 export const AssignDb = (payload) => {
