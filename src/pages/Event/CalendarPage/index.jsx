@@ -48,9 +48,15 @@ const [loadingEvents, setLoadingEvents] = useState(false);
   };
 
   let Id = localStorage.getItem("userId");
-console.log("RAW Id from localStorage:", JSON.stringify(Id), typeof Id);
-const isFunctionDateUser = Id === "683";
-console.log("isFunctionDateUser:", isFunctionDateUser);
+  const normalizedLocalUserId = Number(Id ?? 0);
+
+  const isFunctionDateUser = (eventItem) => {
+    const eventOwnerId = Number(
+      eventItem?.userId ?? eventItem?.managerId ?? eventItem?.createdBy ?? 0,
+    );
+    return eventOwnerId === 683 || normalizedLocalUserId === 683;
+  };
+
   const authStorage = JSON.parse(localStorage.getItem("auth-storage") || "{}");
 const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
 const isInquiryVisible = authStorage?.state?.user?.isInquiryVisible ?? false;
@@ -240,9 +246,10 @@ const FetchEventdetails = (month = currentMonth, year = currentYear, status = st
         eventdata
           .map((item, index) => {
             try {
-              // userId 233: derive the single start/end range from eventFunctions.
-              // All other users: keep using eventStartDateTime/eventEndDateTime.
-              const { start: rawStart, end: rawEnd } = isFunctionDateUser
+              // For user/manager 683, use the function-wise date range from eventFunctions.
+              // Otherwise keep using the top-level event start/end dates.
+              const shouldUseFunctionDates = isFunctionDateUser(item);
+              const { start: rawStart, end: rawEnd } = shouldUseFunctionDates
                 ? getFunctionWiseRange(
                     item.eventFunctions,
                     item.eventStartDateTime,
