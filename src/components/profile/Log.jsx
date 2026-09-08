@@ -19,8 +19,8 @@ import {
   EditOutlined,
   DeleteOutlined,  
 } from "@ant-design/icons";
-import { GetUserlogs, getUserById } from "@/services/apiServices";
-import { Spin, Empty, message } from "antd";
+import { GetAllMemberByUserId, GetUserlogs } from "@/services/apiServices";
+import { Spin, Empty, message, Select } from "antd";
 import dayjs from "dayjs";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -59,29 +59,73 @@ export default function Log() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState(null);
-const [endDate, setEndDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [selectedMemberEmail, setSelectedMemberEmail] = useState(null);
+  const [membersLoading, setMembersLoading] = useState(false);
 
 useEffect(() => {
   fetchUserLogs();
-}, [startDate, endDate]);
+}, [startDate, endDate, selectedMemberEmail]);
+
+useEffect(() => {
+  const fetchMembers = async () => {
+    let loggedInUser = null;
+    try {
+      loggedInUser = JSON.parse(localStorage.getItem("auth-storage") || "{}")?.state?.user || null;
+    } catch {
+      // Keep the member list usable if auth-storage contains invalid JSON.
+    }
+
+    const userId =
+      localStorage.getItem("mainId") ||
+      loggedInUser?.id ||
+      localStorage.getItem("userId");
+
+    const addLoggedInUser = (memberList) => {
+      const combinedMembers = loggedInUser?.email
+        ? [loggedInUser, ...memberList]
+        : memberList;
+
+      return combinedMembers.filter(
+        (member, index, list) =>
+          member?.email &&
+          list.findIndex(
+            (item) => item?.email?.toLowerCase() === member.email.toLowerCase(),
+          ) === index,
+      );
+    };
+
+    if (!userId) {
+      setMembers(addLoggedInUser([]));
+      return;
+    }
+
+    try {
+      setMembersLoading(true);
+      const response = await GetAllMemberByUserId(userId);
+      const memberList =
+        response?.data?.data?.userDetails?.UserDetails ||
+        response?.data?.data?.UserDetails ||
+        [];
+
+      setMembers(addLoggedInUser(Array.isArray(memberList) ? memberList : []));
+    } catch (error) {
+      console.error("Failed to load members:", error);
+      setMembers(addLoggedInUser([]));
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
+  fetchMembers();
+}, []);
 
  const fetchUserLogs = async () => {
   try {
     setLoading(true);
-    const userid = localStorage.getItem("mainId");
-
-    if (!userid) {
-      message.error("User ID not found");
-      return;
-    }
-
-    const res = await getUserById(userid);
-    const email = res?.data?.data?.["User Details"]?.[0]?.email;
-
-    if (!email) {
-      message.error("User not found");
-      return;
-    }
+    // User logs are loaded without an email filter until a member is selected.
+    const email = selectedMemberEmail || null;
 
     if (startDate && endDate && endDate < startDate) {
       message.error("End date cannot be before start date");
@@ -93,7 +137,7 @@ useEffect(() => {
 
   
 
-    const response = await GetUserlogs(email, formattedEnd, formattedStart,"");
+    const response = await GetUserlogs(email, formattedEnd, formattedStart, "");
 
   
 
@@ -323,14 +367,38 @@ if (type.includes("quotation"))              return "bg-blue-100  text-blue-700"
     </label>
     <button
       onClick={() => {
-  setStartDate(null);
-  setEndDate(null);
-}}
+        setStartDate(null);
+        setEndDate(null);
+        setSelectedMemberEmail(null);
+      }}
       className="flex items-center gap-1.5 bg-white hover:bg-gray-100 active:scale-95 transition-all text-gray-600 text-sm font-medium px-4 py-1.5 rounded-md shadow-sm border border-gray-300"
     >
      
      <RestFilled /> Reset
     </button>
+  </div>
+
+  {/* Member filter */}
+  <div className="flex flex-col gap-1 min-w-44">
+    <label className="text-[11px] font-semibold text-transparent uppercase tracking-wide select-none">
+      &nbsp;
+    </label>
+    <Select
+      value={selectedMemberEmail}
+      onChange={setSelectedMemberEmail}
+      allowClear
+      showSearch
+      loading={membersLoading}
+      placeholder="Select member"
+      optionFilterProp="label"
+      className="w-full"
+      options={members
+        .filter((member) => member.email)
+        .map((member) => ({
+          value: member.email,
+          label: `${member.firstName || ""} ${member.lastName || ""}`.trim() || "Unnamed member",
+        }))}
+    />
   </div>
 
 </div>
