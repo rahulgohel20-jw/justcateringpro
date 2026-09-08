@@ -295,6 +295,7 @@ const [isSotLocked, setIsSotLocked] = useState(false);
   const { hasModuleAccess } = useModuleAccess();
 
   const canAccessStock = hasModuleAccess("Stock");
+  const canAccessGeneralFix = hasModuleAccess("General Fix");
   
 
   const fetchEventData = async () => {
@@ -1930,7 +1931,7 @@ const handleSaveRemarksPopup = (updatedRemarks) => {
             <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-gray-200">
               
               <div className="flex flex-row items-end gap-2">
-                {canAccessStock && (
+                {canAccessGeneralFix && (
                 <button
                   type="button"
                   onClick={() => navigate(`/general-fix/${eventId}`)}
@@ -1938,7 +1939,7 @@ const handleSaveRemarksPopup = (updatedRemarks) => {
                 >
                   General Fix
                 </button>
-                )}
+                )} 
                 {canAccessStock && (
                 <button
                   onClick={handleGenerateSOT}
@@ -2427,18 +2428,19 @@ onChange={(e) => {
           setIsModalOpen={setIsMenuReport}
           eventId={eventId}
         />
-        <SelectMenureport
-          isSelectMenureport={isSelectMenureport}
-          setIsSelectMenuReport={setIsSelectMenuReport}
-          eventId={eventId}
-          onConfirm={(reportType) => {
-            setIsSelectMenuReport(false);
-            setSelectedReportType(reportType);
-            setMenuReportEventId(eventId);
-            setIsMenuReport(true);
-          }}
-          mode={mode}
-        />
+       <SelectMenureport
+  isSelectMenureport={isSelectMenureport}
+  setIsSelectMenuReport={setIsSelectMenuReport}
+  eventId={eventId}
+  onConfirm={(reportType) => {
+    setIsSelectMenuReport(false);
+    setSelectedReportType(reportType);
+    setMenuReportEventId(eventId);
+    setIsMenuReport(true);
+  }}
+  mode={mode}
+  excludeTypes={["Type 7"]}
+/>
         <AllCustomerToogle
           isModalOpen={isAllCustomerToogleOpen}
           setIsModalOpen={setIsAllCustomerToogleOpen}

@@ -54,6 +54,7 @@ const defaultOptions = {
   isAdvancePayment:false,
   isNotes:false,
   showLastPage:false,
+  showAddOnLabel:false,
 };
 
 const optionLabels = {
@@ -102,6 +103,7 @@ const optionLabels = {
   isAdvancePayment: "is Advance Payment",
   isNotes: "is Notes",
   showLastPage :"is Show Last Page ",
+  showAddOnLabel : "is Show Add On Label",
 };
 
 const AddReportConfig = ({
@@ -242,6 +244,8 @@ const AddReportConfig = ({
            isAdvancePayment: !!data.isAdvancePayment,
            isNotes: !!data.isNotes,
            showLastPage:!!data.showLastPage,
+           showAddOnLabel: !!data.showAddOnLabel,
+           
           });
         }
       } catch (error) {
@@ -369,6 +373,7 @@ const AddReportConfig = ({
    isAdvancePayment:booleanToNumber(options.isAdvancePayment),
    isNotes : booleanToNumber(options.isNotes),
    showLastPage:booleanToNumber(options.showLastPage),
+   showAddOnLabel:booleanToNumber(options.showAddOnLabel),
     };
 
     try {
