@@ -10,78 +10,99 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
   const containerRef = useRef(null);
   const skipNextTranslateRef = useRef(false); // ← NEW
 
-  useEffect(() => {
-    if (isOpen) {
-      skipNextTranslateRef.current = true; // ← mark this as a programmatic load, not user typing
-      if (typeof notes === "object" && notes !== null) {
-        setFormData({ english: notes.english || "", hindi: notes.hindi || "", gujarati: notes.gujarati || "" });
-      } else {
-        setFormData({ english: notes || "", hindi: "", gujarati: "" });
-      }
-      setTranslating(initialTranslating);
-      if (translateTimer.current) clearTimeout(translateTimer.current);
-    }
-  }, [isOpen, itemId, initialTranslating]);
+ useEffect(() => {
+  if (isOpen) {
+    skipNextTranslateRef.current = true;
 
-  useEffect(() => {
-    if (!isOpen) return;
+    let english, hindi, gujarati;
+    if (typeof notes === "object" && notes !== null) {
+      english = notes.english || "";
+      hindi = notes.hindi || "";
+      gujarati = notes.gujarati || "";
+    } else {
+      english = notes || "";
+      hindi = "";
+      gujarati = "";
+    }
+
+    // If English has no real text, don't trust stale hindi/gujarati — clear them too
+    const div = document.createElement("div");
+    div.innerHTML = english;
+    const plainEnglish = (div.textContent || div.innerText || "").trim();
+    if (!plainEnglish) {
+      hindi = "";
+      gujarati = "";
+    }
+
+    setFormData({ english, hindi, gujarati });
+    setTranslating(initialTranslating);
     if (translateTimer.current) clearTimeout(translateTimer.current);
+  }
+}, [isOpen, itemId, initialTranslating]);
+  useEffect(() => {
+  if (!isOpen) return;
+  if (translateTimer.current) clearTimeout(translateTimer.current);
 
-    if (skipNextTranslateRef.current) {
-      skipNextTranslateRef.current = false; // ← consume the flag, skip this run
-      return;
-    }
+  if (skipNextTranslateRef.current) {
+    skipNextTranslateRef.current = false;
+    return;
+  }
 
-    if (!formData.english?.trim()) {
-      setFormData((prev) => ({ ...prev, hindi: "", gujarati: "" }));
+  const div = document.createElement("div");
+  div.innerHTML = formData.english || "";
+  const plainEnglish = (div.textContent || div.innerText || "").trim();
+
+  if (!plainEnglish) {
+    setFormData((prev) => ({ ...prev, hindi: "", gujarati: "" }));
+    setTranslating(false);
+    return;
+  }
+
+  setTranslating(true);
+  translateTimer.current = setTimeout(async () => {
+    try {
+      const res = await Translateapi(plainEnglish);
+      const { regional, hindi } = extractTranslations(res.data);
+      setFormData((prev) => ({ ...prev, hindi, gujarati: regional }));
+    } catch (err) {
+      console.error("Translation error:", err);
+    } finally {
       setTranslating(false);
-      return;
     }
+  }, 600);
 
-    setTranslating(true);
-    translateTimer.current = setTimeout(async () => {
-      try {
-      const div = document.createElement("div");
-div.innerHTML = formData.english || "";
+  return () => clearTimeout(translateTimer.current);
+}, [formData.english]);
+  const stripTrailingNbsp = (str = "") =>
+  str.replace(/(&nbsp;|\u00A0|\s)+$/g, "");
 
-const plainEnglish = div.textContent || div.innerText || "";
+ // ── Find the underlying English input (textarea OR contentEditable div) ──
+const getEnglishEditor = () => {
+  if (!containerRef.current) return null;
+  return containerRef.current.querySelector('[name="english"]');
+};
 
-const res = await Translateapi(plainEnglish);
-        const { regional, hindi } = extractTranslations(res.data);
-        setFormData((prev) => ({ ...prev, hindi, gujarati: regional }));
-      } catch (err) {
-        console.error("Translation error:", err);
-      } finally {
-        setTranslating(false);
-      }
-    }, 600);
+// ── Insert a bullet point at the current cursor position ───────────────
+const handleAddBullet = () => {
+  const editor = getEnglishEditor();
 
-    return () => clearTimeout(translateTimer.current);
-  }, [formData.english])
+  if (!editor) {
+    setFormData((prev) => {
+      const trimmed = stripTrailingNbsp(prev.english || "");
+      return { ...prev, english: `${trimmed}${trimmed ? "\n" : ""}• ` };
+    });
+    return;
+  }
 
-  // ── Find the underlying English textarea rendered by MultiLangInputBox ──
-  const getEnglishTextarea = () => {
-    if (!containerRef.current) return null;
-    return containerRef.current.querySelector('textarea[name="english"]');
-  };
+  editor.focus();
 
-  // ── Insert a bullet point at the current cursor position ───────────────
-  const handleAddBullet = () => {
-    const textarea = getEnglishTextarea();
-
-    if (!textarea) {
-      setFormData((prev) => {
-        const trimmed = prev.english ? prev.english.replace(/\s+$/, "") : "";
-        return { ...prev, english: `${trimmed}${trimmed ? "\n" : ""}• ` };
-      });
-      return;
-    }
-
-    const start = textarea.selectionStart ?? formData.english.length;
-    const end = textarea.selectionEnd ?? formData.english.length;
+  // Plain <textarea> path (formatting disabled) — unchanged old logic
+  if (editor.tagName === "TEXTAREA") {
+    const start = editor.selectionStart ?? formData.english.length;
+    const end = editor.selectionEnd ?? formData.english.length;
     const current = formData.english || "";
 
-    const before = current.slice(0, start);
+    const before = stripTrailingNbsp(current.slice(0, start));
     const after = current.slice(end);
     const needsNewlineBefore = before.length > 0 && !before.endsWith("\n");
     const bullet = `${needsNewlineBefore ? "\n" : ""}• `;
@@ -91,15 +112,41 @@ const res = await Translateapi(plainEnglish);
     setFormData((prev) => ({ ...prev, english: newValue }));
 
     requestAnimationFrame(() => {
-      const ta = getEnglishTextarea();
+      const ta = getEnglishEditor();
       if (ta) {
         ta.focus();
         ta.setSelectionRange(newCursorPos, newCursorPos);
       }
     });
-  };
+    return;
+  }
+
+  // contentEditable <div> path (rich text on)
+  const sel = window.getSelection();
+  if (!sel) return;
+
+  if (sel.rangeCount === 0 || !editor.contains(sel.anchorNode)) {
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false); // put cursor at the end
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  const range = sel.getRangeAt(0);
+  const preRange = range.cloneRange();
+  preRange.selectNodeContents(editor);
+  preRange.setEnd(range.startContainer, range.startOffset);
+  const textBefore = preRange.toString();
+  const atLineStart = textBefore.length === 0 || textBefore.endsWith("\n");
+
+  document.execCommand("insertText", false, `${atLineStart ? "" : "\n"}• `);
+};
 
   if (!isOpen) return null;
+  
+const normalizeForSave = (html = "") =>
+  html.replace(/&nbsp;|\u00A0/g, " ").trim();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -139,6 +186,7 @@ const res = await Translateapi(plainEnglish);
           >
             Cancel
           </button>
+          
           <button
             type="button"
             className="bg-primary text-white px-5 py-2 rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
