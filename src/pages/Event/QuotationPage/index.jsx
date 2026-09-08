@@ -1065,27 +1065,7 @@ isExtraCharges: item.isExtraCharges === true,
             setCashPayment(parseFloat(quotationInfo.cashPayment) || 0);
             setChequePayment(parseFloat(quotationInfo.chequePayment) || 0);
             setTransportationCharge(parseFloat(quotationInfo.transportation) || 0);
-           setSecurityDeposits(
-  (quotationInfo.eventQuotationSecurityDeposit || []).map((d) => ({
-    id: d.id || 0,
-    amount: d.amount != null ? d.amount.toString() : "",
-    description: d.description || "",
-    paymentMode:
-      d.paymentMode === "CASH"
-        ? "Cash"
-        : d.paymentMode === "BANK_TRANSFER"
-          ? "Bank Transfer"
-          : "",
-    entryType: d.entryType === "PAYMENT" ? "PAYMENT" : "RECEIPT",  // ← new, defaults to RECEIPT
-    bankAccountId: d.bankAccountId || null,
-    cashAccountId: d.cashAccountId || null,
-    date:
-      d.paymentDateTime &&
-      dayjs(d.paymentDateTime, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY hh:mm a"]).isValid()
-        ? dayjs(d.paymentDateTime, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY hh:mm a"])
-        : null,
-  })),
-);
+   
            const rawIsDiscountPercent = quotationInfo.isDiscountPercent;
 const inferredIsPercent =
   rawIsDiscountPercent === true
@@ -1989,7 +1969,7 @@ const handleSaveSecurityDeposit = async (idx) => {
   }
 };
 
-const handleRemoveSecurityDeposit = (idx) => {
+const handleRemoveSecurityDeposit = (idx) => {   // ← THIS function, replace its body
   const dep = securityDeposits[idx];
 
   const removeLocally = () => {
@@ -1998,16 +1978,17 @@ const handleRemoveSecurityDeposit = (idx) => {
 
   if (!dep?.id || dep.id <= 0) {
     removeLocally();
-    return;
+    return Promise.resolve();
   }
 
-  deleteSecurityDeposit(dep.id)
+  return deleteSecurityDeposit(dep.id)
     .then((response) => {
       removeLocally();
       message.success(response?.data?.msg || "Security deposit deleted");
     })
     .catch((error) => {
       message.error(getErrorMessage(error, "Failed to delete security deposit"));
+      throw error;
     });
 };
 
@@ -4219,9 +4200,10 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
       </div>
     </>
   )}
-  <SecurityDepositModal
+<SecurityDepositModal
   open={isSecurityDepositOpen}
   onClose={() => setIsSecurityDepositOpen(false)}
+  eventId={eventId}                    // ← is this line actually there?
   securityDeposits={securityDeposits}
   bankList={bankList}
   cashAccountList={cashAccountList}
@@ -4231,6 +4213,7 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
   onChange={handleSecurityDepositChange}
   onSave={handleSaveSecurityDeposit}
   onRemove={handleRemoveSecurityDeposit}
+  onDepositsLoaded={setSecurityDeposits}  
   formatAccountLabel={formatAccountLabel}
 />
       </Fragment>

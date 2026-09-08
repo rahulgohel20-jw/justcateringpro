@@ -51,7 +51,6 @@ const langConfig = getLangConfig();
 
   useEffect(() => {
     if (eventId && eventFunctionId && userId) {
-      
       fetchItemdata();
     }
   }, [eventId, eventFunctionId, currentlang]);
@@ -71,8 +70,12 @@ const langConfig = getLangConfig();
     
 
      
+      const normalizedFunctionId = Array.isArray(eventFunctionId)
+        ? (eventFunctionId[0] ?? -1)
+        : eventFunctionId ?? -1;
+
       const res = await GetNamePlateByNamePlateType(
-        eventFunctionId, // Can be -1 for all functions
+        normalizedFunctionId, // Can be -1 for all functions
         eventId,
         0, // isCounterItem
         1, // isStandyItem
@@ -176,10 +179,14 @@ setCounters((prev) =>
     });
 
     try {
+      const normalizedFunctionIdForSave = Array.isArray(eventFunctionId)
+        ? (eventFunctionId[0] ?? -1)
+        : eventFunctionId ?? -1;
+
       const payload = {
         moduleType: "MAIN_STANDY",
         eventId,
-        eventFunctionId,
+        eventFunctionId: normalizedFunctionIdForSave,
         userId,
         isCounterItem: 0,
         isStandyItem: 1,
@@ -226,7 +233,10 @@ setCounters((prev) =>
     try {
       const formData = new FormData();
       formData.append("adminTemplateModuleId", selectedTemplateId);
-      formData.append("eventFunctionId", eventFunctionId);
+      const normalizedFunctionId = Array.isArray(eventFunctionId)
+        ? (eventFunctionId[0] ?? -1)
+        : eventFunctionId ?? -1;
+      formData.append("eventFunctionId", normalizedFunctionId);
       formData.append("eventId", eventId);
       formData.append("isCompanyDetails", 0);
       formData.append("lang", currentlang);

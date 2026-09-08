@@ -183,7 +183,10 @@ export const GetAllRawMaterial = (isAsc, page, pageSize, catId, Id, signal) => {
   );
 };
 
-
+// complete parameter of raw material all 
+export const getallrawmaterial = (isActive  , isAsc , pageNo , pageSize  , rawMateriaCatlId , rawMaterialName, unitid , userid) => {
+  return GET(`rawmaterial/getallbyuserid?isActive=${isActive}&isAsc=${isAsc}&pageNo=${pageNo}&pageSize=${pageSize}&rawMateriaCatlId=${rawMateriaCatlId}&rawMaterialName=${rawMaterialName}&unitid=${unitid}&userid=${userid}`);
+};
 
 export const GetItemRawMaterialByRawMaterialdata = (catId, userId) => {
   return GET(
@@ -204,6 +207,21 @@ export const SearchRawMaterial = (
 ) => {
   return GET(
     `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=0&unitid=0&userid=${Id}`,
+    signal,
+  );
+};
+
+export const GetRawMaterialByCategoryId = (
+  isAsc,
+  Id,
+  page,
+  pageSize,
+  itemName,
+  signal,
+  categoryId = 0,
+) => {
+  return GET(
+    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=${categoryId}&unitid=0&userid=${Id}`,
     signal,
   );
 };
@@ -544,7 +562,7 @@ export const AddNamePlate = (data) => {
   return POST(`/nameplate/addorupdate`, data);
 };
 
-// Add Role
+
 
 export const Addrole = (data) => {
   return POST(`/rolemaster/add`, data);
@@ -3757,3 +3775,7 @@ export const GetGeneralFix = (rawCatIds , eventFunctionIds ,eventId ) =>{
 export const AddUpdateGeneralFix = (data) => {
   return POST(`/eventfunctiongeneral/add-update`, data);
 };
+
+export const getAllSecurityDepositByEventId = (eventId) => {
+  return GET(`/quotation/getAllSecurityDepositByEventId?eventId=${eventId}`);
+};  
