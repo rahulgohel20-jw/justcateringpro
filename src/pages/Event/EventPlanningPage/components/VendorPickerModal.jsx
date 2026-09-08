@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import { X, Search, Plus, Check } from "lucide-react";
+import { Search, Plus, Check } from "lucide-react";
 import { SearchCustomerApi } from "@/services/apiServices";
 import AddVendor from "../../../../partials/modals/add-vendor/AddVendor";
+import { CustomModal } from "../../../../components/custom-modal/CustomModal";
 
 const isVendor = (party) => {
   const contactTypeName = (party?.contact?.contactType?.nameEnglish || "").toUpperCase();
@@ -16,8 +16,8 @@ const isVendor = (party) => {
 };
 
 /**
- * Centered modal for picking a vendor, with a search box and a "+" to
- * create a brand-new vendor on the fly via AddVendor.
+ * Vendor picker built on top of the shared CustomModal (antd),
+ * with a search box and a "+" to create a brand-new vendor via AddVendor.
  */
 const VendorPickerModal = ({ itemName, currentVendorId = 0, currentVendorName = "", onClose, onSave }) => {
   const userId = localStorage.getItem("userId");
@@ -31,6 +31,7 @@ const VendorPickerModal = ({ itemName, currentVendorId = 0, currentVendorName = 
 
   const debounceRef = useRef(null);
   const inputRef = useRef(null);
+  const isFirstRun = useRef(true);
 
   const fetchVendors = (search) => {
     setLoading(true);
@@ -44,29 +45,27 @@ const VendorPickerModal = ({ itemName, currentVendorId = 0, currentVendorName = 
   };
 
   useEffect(() => {
-    fetchVendors(""); // initial load: all vendors
+    fetchVendors("");
     inputRef.current?.focus();
   }, []);
 
   useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchVendors(term), 300);
     return () => clearTimeout(debounceRef.current);
   }, [term]);
 
-  // Close on Escape (but not while AddVendor is open on top)
-  useEffect(() => {
-    if (isAddVendorOpen) return;
-    const handleEsc = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handleEsc);
-    return () => document.removeEventListener("keydown", handleEsc);
-  }, [isAddVendorOpen, onClose]);
-
-  const handlePick = (v) => {
+  const handleSelect = (v) => {
     setSelected(v);
-    onSave({ vendorId: v.id, vendorName: v.nameEnglish });
+  };
+
+  const handleConfirmSave = () => {
+    if (!selected) return;
+    onSave({ vendorId: selected.id, vendorName: selected.nameEnglish });
     onClose();
   };
 
@@ -75,21 +74,39 @@ const VendorPickerModal = ({ itemName, currentVendorId = 0, currentVendorName = 
     fetchVendors(term);
   };
 
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div
-        className="bg-white rounded-xl shadow-xl w-full max-w-md p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold text-gray-800">
+  return (
+    <>
+      <CustomModal
+        open={true}
+        onClose={onClose}
+        width={448}
+        title={
+          <>
             Assign Vendor — <span className="text-primary font-bold">{itemName}</span>
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={16} />
-          </button>
-        </div>
-
+          </>
+        }
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm hover:bg-gray-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmSave}
+              disabled={!selected}
+              className={`px-4 py-2 rounded-lg text-sm font-medium text-white ${
+                selected ? "bg-primary hover:bg-primary/90" : "bg-gray-300 cursor-not-allowed"
+              }`}
+            >
+              Save
+            </button>
+          </div>
+        }
+      >
         <div className="flex items-center gap-2 mb-2">
           <div className="relative flex-1">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -122,7 +139,7 @@ const VendorPickerModal = ({ itemName, currentVendorId = 0, currentVendorName = 
             vendors.map((v) => (
               <div
                 key={v.id}
-                onClick={() => handlePick(v)}
+                onClick={() => handleSelect(v)}
                 className={`flex items-center justify-between px-3 py-2 text-sm cursor-pointer border-b border-gray-100 last:border-0 ${
                   selected?.id === v.id ? "bg-primary/10 text-primary font-semibold" : "hover:bg-gray-50"
                 }`}
@@ -136,17 +153,7 @@ const VendorPickerModal = ({ itemName, currentVendorId = 0, currentVendorName = 
             ))
           )}
         </div>
-
-        <div className="flex justify-end gap-2 mt-5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm hover:bg-gray-200"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
+      </CustomModal>
 
       {isAddVendorOpen && (
         <AddVendor
@@ -157,8 +164,7 @@ const VendorPickerModal = ({ itemName, currentVendorId = 0, currentVendorName = 
           refreshData={handleVendorCreated}
         />
       )}
-    </div>,
-    document.body,
+    </>
   );
 };
 

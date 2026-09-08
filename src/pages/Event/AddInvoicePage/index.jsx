@@ -2117,6 +2117,8 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
         onClose={() => setIsInvoiceThemeOpen(false)}
         eventId={eventId}
         isinvoice={0}
+         mobileNumber={invoiceData?.event?.mobileno || invoiceData?.event?.party?.mobileno}
+  partyName={invoiceData?.event?.party?.nameEnglish}
       />
       {isSaving && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">

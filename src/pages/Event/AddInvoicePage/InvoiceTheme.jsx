@@ -15,6 +15,7 @@ import {
   GetReportConfiguration,
   GetActiveFonts,
   GetUtility,
+  WhatsAppPdf,
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { useReportPermission } from "@/hooks/useReportPermission";
@@ -660,8 +661,33 @@ const [isShowLastPage, setIsShowLastPage] = useState(
   );
 };
 
+
+const getCompanyAuthInfo = () => {
+  try {
+    const authStorage = localStorage.getItem("auth-storage");
+    if (!authStorage) return { companyMobileNo: "", companyName: "" };
+    const parsed = JSON.parse(authStorage);
+    const user = parsed?.state?.user || {};
+    return {
+      companyMobileNo:
+        user.userBasicDetails?.officeNo ||
+        user.company?.mobileNo ||
+        user.mobileNo ||
+        user.mobile ||
+        "",
+      companyName:
+        user.userBasicDetails?.companyName ||
+        user.company?.nameEnglish ||
+        user.company?.name ||
+        "",
+    };
+  } catch {
+    return { companyMobileNo: "", companyName: "" };
+  }
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────────
-const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false }) => {
+const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobileNumber, partyName }) => {
   const [selectedThemes, setSelectedThemes] = useState({}); // { [moduleId]: themeId }
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1122,19 +1148,59 @@ const handleConfigGenerate = async (configData) => {
   }
 };
 
- const handleWhatsAppClick = () => {
-    setShowWhatsAppModal(true);
-  };
+const handleWhatsAppClick = () => {
+  const cleaned = (mobileNumber || "").replace(/\D/g, "");
+  const last10 = cleaned.slice(-10);
 
-  const handleWhatsAppSend = (mobile, recipientName) => {
-    const greeting = recipientName || "there";
-    const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${pdfUrl}`;
-    window.open(
-      `https://web.whatsapp.com/send?phone=${mobile}&text=${encodeURIComponent(message)}`,
-      "_blank",
-    );
-    setShowWhatsAppModal(false);
-  };
+  if (last10.length === 10) {
+    handleWhatsAppSend(`+91${last10}`, partyName);
+  } else {
+    setShowWhatsAppModal(true);
+  }
+};
+
+ const handleWhatsAppSend = async (mobile, recipientName) => {
+  const cleanedMobile = mobile.replace(/\D/g, "");
+
+  try {
+    const { companyMobileNo, companyName } = getCompanyAuthInfo();
+    const res = await WhatsAppPdf({
+      companyMobileNo,
+      companyName,
+      mobileNo: cleanedMobile,
+      moduleName: isinvoice === 0 ? "Invoice Report" : "Quotation Report",
+      partyName: recipientName || "",
+      url: pdfUrl,
+      userId: Number(userId) || 0,
+    });
+
+    if (res?.data?.success) {
+      Swal.fire({
+        title: "Success",
+        text: "Report sent successfully!",
+        icon: "success",
+        confirmButtonColor: "#005BA8",
+      });
+    } else {
+      Swal.fire({
+        title: "Error",
+        text: res?.data?.msg || "Failed to send report",
+        icon: "error",
+        confirmButtonColor: "#d33",
+      });
+    }
+  } catch (err) {
+    console.error("WhatsAppPdf notify failed:", err);
+    Swal.fire({
+      title: "Error",
+      text: err?.response?.data?.msg || "Failed to send report",
+      icon: "error",
+      confirmButtonColor: "#d33",
+    });
+  }
+
+  setShowWhatsAppModal(false);
+};
 
   const exclusiveModulesSelected = modules
     .filter((m) => selectedThemes[m.id] !== undefined)
