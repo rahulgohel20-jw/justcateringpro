@@ -8,6 +8,7 @@ import {
   GetEventMasterById,
   GetGeneralFix,
   AddUpdateGeneralFix,
+  
 } from "@/services/apiServices";
 import { usePermission } from "@/hooks/usePermission";
 import { Calendar } from "lucide-react";
@@ -15,6 +16,7 @@ import { toAbsoluteUrl } from "@/utils/Assets";
 import dayjs from "dayjs";
 import Swal from "sweetalert2";
 import SidebarGeneralFix from "./SidebarGeneralFix";
+import SelectMenureport from "@/partials/modals/menu-report/SelectMenureport";
 
 const GeneralFixPage = () => {
   const { eventId } = useParams();
@@ -83,6 +85,8 @@ const GeneralFixPage = () => {
   const permAgencyDistribution = usePermission("Labour Agency Order");
   const permPerDishCosting = usePermission("Per Dish Costing");
 
+ const [isSelectMenureportOpen, setIsSelectMenureportOpen] = useState(false);
+
 
 
 
@@ -93,6 +97,71 @@ const GeneralFixPage = () => {
     ({ currentLocation, nextLocation }) =>
       hasChanges && currentLocation.pathname !== nextLocation.pathname,
   );
+
+  const handleOpenGeneralFixReport = async () => {
+  if (!eventId) return;
+
+  setReportLoading(true);
+
+  try {
+    // 1. Find the "Raw Material Theme" module
+    const moduleRes = await GettemplatebyuserId();
+    const modules = (moduleRes?.data?.data || []).filter(
+      (m) => m.isActive && !m.isDelete
+    );
+    const rawMaterialModule = modules.find(
+      (m) => m.nameEnglish === "Raw Material Theme"
+    );
+
+    if (!rawMaterialModule) {
+      Swal.fire({
+        icon: "warning",
+        title: "Not Found",
+        text: "Raw Material Theme module not found.",
+      });
+      return;
+    }
+
+    // 2. Fetch templates for that module and find "Type 1"
+    const userId = localStorage.getItem("userId");
+    const templateRes = await GetAllCustomThemeByUserIdAndModuleId(
+      userId,
+      rawMaterialModule.id
+    );
+
+    const templates = templateRes?.data?.data || [];
+    const type1Template = templates.find(
+      (t) => t.templateMappingResponseDto?.nameEnglish === "Type 3"
+    );
+
+    if (!type1Template) {
+      Swal.fire({
+        icon: "warning",
+        title: "Not Found",
+        text: "Type 1 report is not configured for Raw Material Theme.",
+      });
+      return;
+    }
+
+    // 3. Open MenuReport directly with that template
+    setReportModuleId(rawMaterialModule.id);
+    setReportTemplateId(type1Template.id);
+    setReportMappingId(
+      type1Template.templateMappingResponseDto?.id || type1Template.id
+    );
+    setReportTemplateName(type1Template.templateMaster?.name || "Report");
+    setIsMenuReportOpen(true);
+  } catch (error) {
+    console.error("Error opening General Fix report:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Failed",
+      text: "Could not load the report. Please try again.",
+    });
+  } finally {
+    setReportLoading(false);
+  }
+};
 
 
   const confirmUnsavedChanges = async () => {
@@ -1148,6 +1217,13 @@ const GeneralFixPage = () => {
               />
             </div>
           </div>
+          <button
+  onClick={() => setIsSelectMenureportOpen(true)}
+  className="bg-[#05B723] text-white text-sm px-5 py-2 rounded-md transition"
+  title="Report"
+>
+  Report
+</button>
         </div>
 
         {/* =====================================================
@@ -1316,6 +1392,14 @@ const GeneralFixPage = () => {
   onClose={() => setIsRawSidebar(false)}
   selectedRow={selectedRow}
   onSave={handleSaveFromSidebar}
+/>
+
+<SelectMenureport
+  isSelectMenureport={isSelectMenureportOpen}
+  setIsSelectMenuReport={setIsSelectMenureportOpen}
+  eventId={eventId}
+  mode="raw"
+  restrictToType="Type 7"
 />
       </Container>
 

@@ -266,6 +266,7 @@ const languageOptions = [
     isAdvancePayment : "is Advance Payment",
     isNotes : "is Notes",
     showLastPage :"show Last Page",
+    showAddOnLabel : "Show Add On Label",
   };
 
   const fetchFonts = async () => {
@@ -464,6 +465,7 @@ if (!config) {
           isAdvancePayment:false,
           isNotes : false,
           showLastPage: false,
+          showAddOnLabel: false,
         });
         setVisibleOptions([]);
         return;
@@ -472,7 +474,7 @@ if (!config) {
         setReportType(config.type);
         setMappingType(config.mappingNameEnglish || null);
         setModuleType(config.moduleNameEnglish || null);
-        console.log("typwe", mappingType);
+        
         
         if (config.isRawMaterialCat === 1) {
           setisDropdownStatus(1);
@@ -547,7 +549,8 @@ is5Column:config.is5Column === 0 ,
 isContactNoVisible: config.isContactNoVisible === 0,
 isSignatureVisible : config.isSignatureVisible === 0,
 isAddMenu  : config.isAddMenu === 1,
-isAdvancePayment : config.isAdvancePayment === 0,
+isAdvancePayment : config.isAdvancePayment === 1,
+showAddOnLabel : config.showAddOnLabel === 0,
 isNotes : config.isNotes === 0,
 
   showLastPage:  false,
@@ -590,6 +593,7 @@ isSignatureVisible : config.isSignatureVisible ,
 isAddMenu : config.isAddMenu, 
 isAdvancePayment : config.isAdvancePayment,
 isNotes : config.isNotes,
+showAddOnLabel : config.showAddOnLabel,
  })
             .filter(([_, value]) => value)
             .map(([key]) => key),
@@ -891,6 +895,7 @@ useEffect(() => {
      isAddMenu: options.isAddMenu,
      isAdvancePayment: options.isAdvancePayment,
      isNotes : options.isNotes,
+     showAddOnLabel: options.showAddOnLabel,
      showLastPage: 1,
      isSignatureVisible : options.isSignatureVisible , 
       agencyId: selectedAgency,

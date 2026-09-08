@@ -25,6 +25,7 @@ const CalendarPage = () => {
   const [events, setEvents] = useState([]);
   const { hasModuleAccess } = useModuleAccess();
   const canAccessBanquet = hasModuleAccess("Banquet");
+  const canAccessFollowUp = hasModuleAccess("followup");
   const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
   const location = useLocation();
 const prefill = location.state || {};
@@ -454,7 +455,7 @@ const FetchEventdetails = (month = currentMonth, year = currentYear, status = st
               
                 )}
 
-                {isFollowUpPermission.view && (
+                {canAccessFollowUp && isFollowUpPermission.view && (
                 <button
   className="btn btn-light border border-primary text-primary text-sm py-2 px-4 flex items-center gap-2 rounded-lg hover:bg-primary hover:text-white transition"
   onClick={() => navigate("/followup-calendar")}

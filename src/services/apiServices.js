@@ -3226,8 +3226,8 @@ export const SearchItemDailyStockManage = (
 };
 
 
-export const upadtelockinquotation = (quotationId) => {
-  return PUT(`/quotation/lock-quotation?quotationId=${quotationId}`);
+export const upadtelockinquotation = (quotationId, isLock) => {
+  return PUT(`/quotation/lock-quotation?quotationId=${quotationId}&isLock=${isLock}`);
 };
 
 export const getEventVendorDatainviewmanger = (eventFunctionId , eventId , type) =>{

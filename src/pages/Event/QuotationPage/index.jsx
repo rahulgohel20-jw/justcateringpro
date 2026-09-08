@@ -466,6 +466,21 @@ const formatAccountLabel = (name, accountNumber) => {
           eventType = isDecor ? "DecorQuotation_Lock_Error" : "MenuQuotation_Lock_Error";
           break;
 
+          case "UNLOCK_SUCCESS":
+  actionLabel = "Unlocked";
+  lines.push(`Quotation ID: ${quotationId}`);
+  lines.push(`Grand Total: ₹${grandTotal}`);
+  lines.push(`Unlocked By: ${userEmail}`);
+  eventType = isDecor ? "DecorQuotation_Unlock" : "MenuQuotation_Unlock";
+  break;
+
+case "UNLOCK_ERROR":
+  actionLabel = "Unlock Failed";
+  lines.push(`Attempted By: ${userEmail}`);
+  if (extra) lines.push(`Error: ${extra}`);
+  eventType = isDecor ? "DecorQuotation_Unlock_Error" : "MenuQuotation_Unlock_Error";
+  break;
+
         default:
           actionLabel = "Action Performed";
           eventType = isDecor ? "DecorQuotation" : "MenuQuotation";
@@ -2221,91 +2236,114 @@ const baseAmount = parseFloat(chequePayment) || 0;
   }
 };
 
-  const handleLockQuotation = async () => {
-    if (!quotationId) return;
+ const handleLockQuotation = async (lock = true) => {
+  if (!quotationId) return;
 
   if (isEdited) {
-      Swal.fire({
-        title: "Unsaved Changes",
-        text: "You have unsaved changes. Please save your changes before locking the quotation.",
-        icon: "warning",
-        confirmButtonColor: "#005BA8",
-        background: "#f5faff",
-        color: "#003f73",
-        confirmButtonText: "Okay",
-        customClass: {
-          popup: "rounded-2xl shadow-xl",
-          title: "text-2xl font-bold",
-          confirmButton: "px-6 py-2 text-white font-semibold rounded-lg",
-        },
-      });
-      return;
-    }
-    if (isLocked) {
-      Swal.fire({
-        title: "Already Locked",
-        text: "This quotation is already locked.",
-        icon: "info",
-        confirmButtonColor: "#005BA8",
-        background: "#f5faff",
-        color: "#003f73",
-        customClass: {
-          popup: "rounded-2xl shadow-xl",
-          title: "text-2xl font-bold",
-          confirmButton: "px-6 py-2 text-white font-semibold rounded-lg",
-        },
-      });
-      return;
-    }
-
-    const result = await Swal.fire({
-      title: "Lock Quotation?",
-      text: "Once locked, this quotation cannot be edited again.",
+    Swal.fire({
+      title: "Unsaved Changes",
+      text: "You have unsaved changes. Please save your changes before locking the quotation.",
       icon: "warning",
-      showCancelButton: true,
       confirmButtonColor: "#005BA8",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, Lock",
-      cancelButtonText: "Cancel",
+      background: "#f5faff",
+      color: "#003f73",
+      confirmButtonText: "Okay",
+      customClass: {
+        popup: "rounded-2xl shadow-xl",
+        title: "text-2xl font-bold",
+        confirmButton: "px-6 py-2 text-white font-semibold rounded-lg",
+      },
+    });
+    return;
+  }
+
+  if (lock && isLocked) {
+    Swal.fire({
+      title: "Already Locked",
+      text: "This quotation is already locked.",
+      icon: "info",
+      confirmButtonColor: "#005BA8",
       background: "#f5faff",
       color: "#003f73",
       customClass: {
         popup: "rounded-2xl shadow-xl",
         title: "text-2xl font-bold",
         confirmButton: "px-6 py-2 text-white font-semibold rounded-lg",
-        cancelButton: "px-6 py-2 text-white font-semibold rounded-lg",
       },
     });
+    return;
+  }
 
-    if (!result.isConfirmed) return;
+  if (!lock && !isLocked) {
+    Swal.fire({
+      title: "Already Unlocked",
+      text: "This quotation is already unlocked.",
+      icon: "info",
+      confirmButtonColor: "#005BA8",
+      background: "#f5faff",
+      color: "#003f73",
+      customClass: {
+        popup: "rounded-2xl shadow-xl",
+        title: "text-2xl font-bold",
+        confirmButton: "px-6 py-2 text-white font-semibold rounded-lg",
+      },
+    });
+    return;
+  }
 
-    try {
-      const res = await upadtelockinquotation(quotationId);
-      const resData = res?.data;
+  const result = await Swal.fire({
+    title: lock ? "Lock Quotation?" : "Unlock Quotation?",
+    text: lock
+      ? "Once locked, this quotation cannot be edited again."
+      : "This will allow editing this quotation again.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#005BA8",
+    cancelButtonColor: "#d33",
+    confirmButtonText: lock ? "Yes, Lock" : "Yes, Unlock",
+    cancelButtonText: "Cancel",
+    background: "#f5faff",
+    color: "#003f73",
+    customClass: {
+      popup: "rounded-2xl shadow-xl",
+      title: "text-2xl font-bold",
+      confirmButton: "px-6 py-2 text-white font-semibold rounded-lg",
+      cancelButton: "px-6 py-2 text-white font-semibold rounded-lg",
+    },
+  });
 
-      if (resData?.success === true) {
-        setIsLocked(true);
-        await FetchGetQuotation(); 
-          sendQuotationLog({
-        status: "LOCK_SUCCESS",
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await upadtelockinquotation(quotationId, lock);
+    const resData = res?.data;
+
+    if (resData?.success === true) {
+      setIsLocked(lock);
+      await FetchGetQuotation();
+      sendQuotationLog({
+        status: lock ? "LOCK_SUCCESS" : "UNLOCK_SUCCESS",
         eventId,
         quotationId,
         quotationData,
         isDecor,
       });
-        Swal.fire({
-          title: "Locked!",
-          text: resData?.msg || "This quotation has been locked.",
-          icon: "success",
-          timer: 1500,
-          showConfirmButton: false,
-          background: "#f5faff",
-          color: "#003f73",
-        });
-      } else {
-
-        sendQuotationLog({
-        status: "LOCK_ERROR",
+      Swal.fire({
+        title: lock ? "Locked!" : "Unlocked!",
+        text:
+          resData?.msg ||
+          (lock
+            ? "This quotation has been locked."
+            : "This quotation has been unlocked."),
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+        background: "#f5faff",
+        color: "#003f73",
+      });
+    } else {
+      sendQuotationLog({
+        status: lock ? "LOCK_ERROR" : "UNLOCK_ERROR",
         eventId,
         quotationId,
         quotationData,
@@ -2313,35 +2351,9 @@ const baseAmount = parseFloat(chequePayment) || 0;
         extra: resData?.msg,
       });
 
-        Swal.fire({
-          title: "Cannot Lock",
-          text: resData?.msg || "Failed to lock quotation.",
-          icon: "error",
-          confirmButtonColor: "#d33",
-          background: "#fff5f5",
-          color: "#7a0000",
-          customClass: {
-            popup: "rounded-2xl shadow-xl",
-            title: "text-2xl font-bold",
-            confirmButton: "px-6 py-2 text-white font-semibold rounded-lg",
-          },
-        });
-      }
-    } catch (err) {
-      
-
-      sendQuotationLog({
-      status: "LOCK_ERROR",
-      eventId,
-      quotationId,
-      quotationData,
-      isDecor,
-      extra: getErrorMessage(err),
-    });
-
       Swal.fire({
-        title: "Error",
-        text: getErrorMessage(err, "Failed to lock quotation"),
+        title: lock ? "Cannot Lock" : "Cannot Unlock",
+        text: resData?.msg || `Failed to ${lock ? "lock" : "unlock"} quotation.`,
         icon: "error",
         confirmButtonColor: "#d33",
         background: "#fff5f5",
@@ -2353,7 +2365,31 @@ const baseAmount = parseFloat(chequePayment) || 0;
         },
       });
     }
-  };
+  } catch (err) {
+    sendQuotationLog({
+      status: lock ? "LOCK_ERROR" : "UNLOCK_ERROR",
+      eventId,
+      quotationId,
+      quotationData,
+      isDecor,
+      extra: getErrorMessage(err),
+    });
+
+    Swal.fire({
+      title: "Error",
+      text: getErrorMessage(err, `Failed to ${lock ? "lock" : "unlock"} quotation`),
+      icon: "error",
+      confirmButtonColor: "#d33",
+      background: "#fff5f5",
+      color: "#7a0000",
+      customClass: {
+        popup: "rounded-2xl shadow-xl",
+        title: "text-2xl font-bold",
+        confirmButton: "px-6 py-2 text-white font-semibold rounded-lg",
+      },
+    });
+  }
+};
 // Add this helper near your other handlers (e.g. near formatAmount)
 const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
 
@@ -2873,19 +2909,19 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
 
   {/* Lock button — HIDE for decor */}
   {!isDecor && permissionQuotation.add && (
-    <button
-  className={`btn w-full sm:w-auto ${isLocked ? "btn-danger" : "btn-primary"}`}
-  onClick={handleLockQuotation}
-  disabled={!quotationId}
->
-  {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
-  {isLocked ? (
-    <FormattedMessage id="COMMON.LOCKED" defaultMessage="Locked" />
-  ) : (
-    <FormattedMessage id="COMMON.LOCK" defaultMessage="Lock" />
-  )}
-</button>
-  )}
+  <button
+    className={`btn w-full sm:w-auto ${isLocked ? "btn-danger" : "btn-primary"}`}
+    onClick={() => handleLockQuotation(!isLocked)}
+    disabled={!quotationId}
+  >
+    {isLocked ? <Unlock size={16} /> : <Lock size={16} />}
+    {isLocked ? (
+      <FormattedMessage id="COMMON.UNLOCK" defaultMessage="Unlock" />
+    ) : (
+      <FormattedMessage id="COMMON.LOCK" defaultMessage="Lock" />
+    )}
+  </button>
+)}
 
   {/* {permissionQuotation.view && (
   <button className="btn btn-light w-full sm:w-auto" onClick={handleOpenHistory}>
