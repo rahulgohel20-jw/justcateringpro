@@ -154,6 +154,8 @@ const CrockeryCutleryReportModal = ({
           showLastPage: config.showLastPage === 0,
           isAdvancePayment : config.isAdvancePayment === 0,
           isNotes : config.isNotes == 0,
+          showAddOnLabel : config.showAddOnLabel === 0,
+          
         });
 
         setVisibleOptions(
@@ -178,6 +180,7 @@ const CrockeryCutleryReportModal = ({
             isAdvancePayment: config.isAdvancePayment,
             isNotes : config.isNotes,
             showLastPage: config.showLastPage,
+            showAddOnLabel: config.showAddOnLabel,
           })
             .filter(([_, value]) => value === 1)
             .map(([key]) => key),
@@ -388,6 +391,7 @@ const CrockeryCutleryReportModal = ({
        isContactNoVisible: options.isContactNoVisible,
        isAddMenu: options.isAddMenu,
        isAdvancePayment: options.isAdvancePayment,
+       showAddOnLabel: options.showAddOnLabel,
        isNotes : options.isNotes,
        showLastPage : option.showLastPage,
        isSignatureVisible: options.isSignatureVisible,

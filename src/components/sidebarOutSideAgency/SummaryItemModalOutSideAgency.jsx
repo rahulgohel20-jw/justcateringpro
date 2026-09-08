@@ -208,6 +208,7 @@ export default function SummaryItemModalOutsideAgency({
   formData.append("isAddMenu", 0);
   formData.append("isNotes", 0);
   formData.append("isAdvancePayment",0);
+  formData.append("showAddOnLabel",0);
   formData.append("showLastPage",0);
   formData.append("isSignatureVisible" ,0);
   formData.append("isDoc", 0);

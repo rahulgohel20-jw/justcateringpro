@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Trash2, Plus, ChevronDown, Search } from "lucide-react";
 import Swal from "sweetalert2";
-import { SearchRawMaterial, GetPermissableNonPermissable } from "@/services/apiServices";
+import { GetRawMaterialByCategoryId, GetPermissableNonPermissable } from "@/services/apiServices";
 
 const TABS = [
   { key: "permissables", label: "Permissable in Jain" },
@@ -22,9 +22,9 @@ const PermissableNonPermissableModal = ({
   onCategoryChange,
   selectedCategoryId: parentCategoryId = 0,
   userId,
-  eventFunctionId,   // ← NEW: needed to call the API
-  eventId,           // ← NEW: needed to call the API
-   initialData = null,
+  eventFunctionId,
+  eventId,
+  initialData = null,
 }) => {
   const [activeTab, setActiveTab] = useState("permissables");
   const [selectedRawMaterialIds, setSelectedRawMaterialIds] = useState([]);
@@ -38,7 +38,7 @@ const PermissableNonPermissableModal = ({
   const dropdownRef = useRef(null);
   const catDropdownRef = useRef(null);
 
-  // ── Permissable/Non-Permissable data fetch (moved here from parent) ──
+  // ── Permissable/Non-Permissable data fetch ──
   const [dataLoading, setDataLoading] = useState(false);
   const fetchAbortRef = useRef(null);
 
@@ -77,7 +77,7 @@ const PermissableNonPermissableModal = ({
     }
   }, [eventFunctionId, eventId, userId]);
 
-  // ── Raw material search (API-driven) ──
+  // ── Raw material search (API-driven, now category-aware) ──
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchPage, setSearchPage] = useState(1);
@@ -85,7 +85,7 @@ const PermissableNonPermissableModal = ({
   const searchAbortRef = useRef(null);
 
   const fetchRawMaterialSearch = useCallback(
-    async (query, page = 1, append = false) => {
+    async (query, page = 1, append = false, categoryId = 0) => {
       if (!userId) return;
 
       if (searchAbortRef.current) {
@@ -96,17 +96,23 @@ const PermissableNonPermissableModal = ({
 
       setSearchLoading(true);
       try {
-        const res = await SearchRawMaterial(
+        // ⚠️ ADJUST THIS: pass categoryId in whatever position/shape
+        // your real SearchRawMaterial signature expects. This assumes
+        // an extra trailing param — confirm against your apiServices.js.
+        const res = await GetRawMaterialByCategoryId(
           true,
           userId,
           page,
           RM_PAGE_SIZE,
           query || "",
           controller.signal,
+          categoryId || undefined,
         );
         const data = res?.data?.data || {};
         const items = data["Raw Material Details"] || [];
         const total = data.totalItems || 0;
+
+        
 
         setSearchResults((prev) => (append ? [...prev, ...items] : items));
         setSearchHasMore(page * RM_PAGE_SIZE < total);
@@ -124,7 +130,6 @@ const PermissableNonPermissableModal = ({
 
   const prevIsOpenRef = useRef(false);
 
-  // Reset local state + fetch fresh data every time the modal opens
   useEffect(() => {
     const justOpened = isOpen && !prevIsOpenRef.current;
     prevIsOpenRef.current = isOpen;
@@ -143,12 +148,9 @@ const PermissableNonPermissableModal = ({
       setSearchHasMore(true);
 
       if (initialData) {
-        // Seed from the parent's state — this may include edits the user
-        // made in a previous open of this modal that haven't hit "Save Menu" yet.
         setPermissables(initialData.permissables || []);
         setNotPermissables(initialData.notPermissables || []);
       } else {
-        // Nothing loaded yet in the parent — fall back to fetching fresh.
         setPermissables([]);
         setNotPermissables([]);
         fetchPermissableData();
@@ -169,20 +171,20 @@ const PermissableNonPermissableModal = ({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Sync category from parent WITHOUT touching the tab
   useEffect(() => {
     if (!isOpen) return;
     setSelectedCategoryId(parentCategoryId || "");
   }, [isOpen, parentCategoryId]);
 
-  // Debounced API search whenever the dropdown is open and the query changes
+  // Re-fetch whenever the search text OR the selected category changes,
+  // as long as the RM dropdown is open.
   useEffect(() => {
     if (!showRmDropdown) return;
     const timer = setTimeout(() => {
-      fetchRawMaterialSearch(rmSearch, 1, false);
+      fetchRawMaterialSearch(rmSearch, 1, false, selectedCategoryId);
     }, 300);
     return () => clearTimeout(timer);
-  }, [rmSearch, showRmDropdown, fetchRawMaterialSearch]);
+  }, [rmSearch, selectedCategoryId, showRmDropdown, fetchRawMaterialSearch]);
 
   const currentList = activeTab === "permissables" ? permissables : notPermissables;
 
@@ -192,9 +194,23 @@ const PermissableNonPermissableModal = ({
     return name.includes(catSearch.toLowerCase());
   });
 
+  // Fallback client-side filter — kept as a safety net in case the API
+  // doesn't actually scope by category server-side. If your API DOES
+  // filter correctly once the categoryId param above is wired up
+  // correctly, this filter becomes a no-op and can be simplified to
+  // just `searchResults`.
   const filteredRawMaterials = searchResults.filter((rm) => {
     if (!selectedCategoryId) return true;
-    return Number(rm.rawMaterialCat?.id) === Number(selectedCategoryId);
+    const catId =
+      rm.rawMaterialCat?.id ??
+      rm.rawMaterialCatId ??
+      rm.categoryId ??
+      rm.rawCatId ??
+      rm.category?.id;
+    // If we truly can't find a category field on the item, don't hide it —
+    // better to over-show than to silently filter everything out.
+    if (catId === undefined || catId === null) return true;
+    return Number(catId) === Number(selectedCategoryId);
   });
 
   const selectedCatObj = categories.find((c) => Number(c.id) === Number(selectedCategoryId));
@@ -208,7 +224,7 @@ const PermissableNonPermissableModal = ({
   const handleRmDropdownScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
     if (scrollHeight - scrollTop - clientHeight < 50 && searchHasMore && !searchLoading) {
-      fetchRawMaterialSearch(rmSearch, searchPage + 1, true);
+      fetchRawMaterialSearch(rmSearch, searchPage + 1, true, selectedCategoryId);
     }
   };
 
@@ -262,19 +278,19 @@ const PermissableNonPermissableModal = ({
   };
 
   const handleSave = () => {
-  onSave({
-    permissables: permissables.map((item) => ({
-      rawMaterialId: item.rawMaterialId,
-      rawMaterialName: item.rawMaterialName,
-      categoryName: item.categoryName,
-    })),
-    notPermissables: notPermissables.map((item) => ({
-      rawMaterialId: item.rawMaterialId,
-      rawMaterialName: item.rawMaterialName,
-      categoryName: item.categoryName,
-    })),
-  });
-};
+    onSave({
+      permissables: permissables.map((item) => ({
+        rawMaterialId: item.rawMaterialId,
+        rawMaterialName: item.rawMaterialName,
+        categoryName: item.categoryName,
+      })),
+      notPermissables: notPermissables.map((item) => ({
+        rawMaterialId: item.rawMaterialId,
+        rawMaterialName: item.rawMaterialName,
+        categoryName: item.categoryName,
+      })),
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -396,7 +412,7 @@ const PermissableNonPermissableModal = ({
                   onClick={() => {
                     setShowRmDropdown((prev) => {
                       const next = !prev;
-                      if (next) fetchRawMaterialSearch(rmSearch, 1, false);
+                      if (next) fetchRawMaterialSearch(rmSearch, 1, false, selectedCategoryId);
                       return next;
                     });
                     setShowCatDropdown(false);

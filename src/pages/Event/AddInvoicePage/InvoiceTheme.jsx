@@ -240,6 +240,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
             isAddMenu : config.isAddMenu,
             isAdvancePayment: config.isAdvancePayment,
             isNotes : config.isNotes,
+            showAddOnLabel: config.showAddOnLabel,
           })
             .filter(([, v]) => v)
             .map(([k]) => k);
@@ -284,6 +285,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
               isAddMenu:config.isAddMenu === 0,
               isAdvancePayment:config.isAdvancePayment === 0,
               isNotes: config.isNotes === 0,
+              showAddOnLabel: config.showAddOnLabel === 0
             },
           };
         } catch (e) {
@@ -961,6 +963,7 @@ isAdvancedPay:opts.isAdvancedPay ?? false,
           isSignatureVisible:opts.isSignatureVisible ?? false,
           isAddMenu:opts.isAddMenu ?? false,
           isAdvancePayment:opts.isAdvancePayment ?? false,
+          showAddOnLabel:opts.showAddOnLabel ?? false,
           isNotes:opts.isNotes ?? false,
   is3Column: opts.is3Column ?? false,
   isFunctionNextPage: opts.isFunctionNextPage ?? false,
@@ -1045,6 +1048,7 @@ const handleConfigGenerate = async (configData) => {
     const isAddMenu = nonExclusiveConfig?.isAddMenu ? 1 : 0;
     const isAdvancePayment = nonExclusiveConfig?.isAdvancePayment ? 1 : 0;
     const isNotes = nonExclusiveConfig?.isNotes ? 1 : 0;
+    const showAddOnLabel = nonExclusiveConfig?.showAddOnLabel ? 1 : 0;
 
     // ⬅ Exclusive Theme module — pass the theme record's OWN id (e.g. 18402),
     // not templateMaster.id (e.g. 183). Matched by nameEnglish so it can't be

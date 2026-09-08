@@ -211,6 +211,21 @@ export const SearchRawMaterial = (
   );
 };
 
+export const GetRawMaterialByCategoryId = (
+  isAsc,
+  Id,
+  page,
+  pageSize,
+  itemName,
+  signal,
+  categoryId = 0,
+) => {
+  return GET(
+    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=${categoryId}&unitid=0&userid=${Id}`,
+    signal,
+  );
+};
+
 export const DeleteRole = (Id) => {
   return DELETE(`/rolemaster/deletebyid?id=${Id}`);
 };
@@ -547,7 +562,7 @@ export const AddNamePlate = (data) => {
   return POST(`/nameplate/addorupdate`, data);
 };
 
-// Add Role
+
 
 export const Addrole = (data) => {
   return POST(`/rolemaster/add`, data);
@@ -1232,7 +1247,13 @@ export const GetDbAssignedDetails = (dbPlanningId) => {
 };
 
 export const GetUserlogs = (data, endDate, startDate, eventId) => {
-  return GET(`/user-logs/getUserLogs?user=${data}&endDate=${endDate}&startDate=${startDate}&eventId=${eventId}`);
+  const queryParams = new URLSearchParams({ user: String(data) });
+
+  if (endDate) queryParams.set("endDate", endDate);
+  if (startDate) queryParams.set("startDate", startDate);
+  if (eventId) queryParams.set("eventId", eventId);
+
+  return GET(`/user-logs/getUserLogs?${queryParams.toString()}`);
 };
 
 export const AssignDb = (payload) => {
@@ -3205,8 +3226,8 @@ export const SearchItemDailyStockManage = (
 };
 
 
-export const upadtelockinquotation = (quotationId) => {
-  return PUT(`/quotation/lock-quotation?quotationId=${quotationId}`);
+export const upadtelockinquotation = (quotationId, isLock) => {
+  return PUT(`/quotation/lock-quotation?quotationId=${quotationId}&isLock=${isLock}`);
 };
 
 export const getEventVendorDatainviewmanger = (eventFunctionId , eventId , type) =>{

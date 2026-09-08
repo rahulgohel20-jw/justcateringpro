@@ -29,6 +29,8 @@ export default function SelectMenureport({
   preSelectedAgencyId,
   customPackageId,          // NEW
   onPackageTemplateSelect, 
+  restrictToType,
+  excludeTypes,
 }) {
   const params = useParams();
   const finalEventId = eventId || params.eventId;
@@ -331,11 +333,14 @@ else if (mode === "allocation" && !ischef && !isOutside) {
     } else if (selectedTab?.nameEnglish === "Labour Agency Theme") {
       type = "labour";
     } 
-    else if (selectedTab?.nameEnglish === "Raw Material Theme") {
- 
-  type = template.name === "Datewise Raw Material Report"
-    ? "raw_material"
-    : "supplier";
+   
+
+else if (selectedTab?.nameEnglish === "Raw Material Theme") {
+  type =
+    template.name === "Datewise Raw Material Report" ||
+    template.type === "Type 7"
+      ? "raw_material"
+      : "supplier";
 }
 
     setAgencyType(type);
@@ -664,6 +669,13 @@ else if (mode === "allocation" && !ischef && !isOutside) {
                   const selectedTab = tabs.find((tab) => tab.key === activeTab);
                   if (!selectedTab) return true;
                   const tabName = selectedTab.nameEnglish;
+                   if (restrictToType && template.type !== restrictToType) {
+    return false;
+  }
+
+   if (excludeTypes?.includes(template.type)) {
+    return false;
+  }
                   if (
                     tabName === "Chef Agency Theme" &&
                     template.type === "Type 8"

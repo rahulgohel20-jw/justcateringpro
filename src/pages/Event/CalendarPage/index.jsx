@@ -16,6 +16,7 @@ import { useBanquetPermission } from "../../../hooks/useBanquetPermission";
 
 const CalendarPage = () => {
   const permissions = usePermission("Calendar");
+  const isFollowUpPermission = usePermission("Follow Up");
   const navigate = useNavigate();
   const intl = useIntl();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,6 +25,7 @@ const CalendarPage = () => {
   const [events, setEvents] = useState([]);
   const { hasModuleAccess } = useModuleAccess();
   const canAccessBanquet = hasModuleAccess("Banquet");
+  const canAccessFollowUp = hasModuleAccess("followup");
   const [isAvailabilityOpen, setIsAvailabilityOpen] = useState(false);
   const location = useLocation();
 const prefill = location.state || {};
@@ -459,6 +461,8 @@ const FetchEventdetails = (month = currentMonth, year = currentYear, status = st
 </button>
               
                 )}
+
+                {canAccessFollowUp && isFollowUpPermission.view && (
                 <button
   className="btn btn-light border border-primary text-primary text-sm py-2 px-4 flex items-center gap-2 rounded-lg hover:bg-primary hover:text-white transition"
   onClick={() => navigate("/followup-calendar")}
@@ -471,6 +475,7 @@ const FetchEventdetails = (month = currentMonth, year = currentYear, status = st
     />
   </span>
 </button>
+                )}
 
 {permissions.add && (
               
