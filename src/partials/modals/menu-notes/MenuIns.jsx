@@ -10,143 +10,206 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
   const containerRef = useRef(null);
   const skipNextTranslateRef = useRef(false); // ← NEW
 
- useEffect(() => {
-  if (isOpen) {
-    skipNextTranslateRef.current = true;
-
-    let english, hindi, gujarati;
-    if (typeof notes === "object" && notes !== null) {
-      english = notes.english || "";
-      hindi = notes.hindi || "";
-      gujarati = notes.gujarati || "";
-    } else {
-      english = notes || "";
-      hindi = "";
-      gujarati = "";
-    }
-
-    // If English has no real text, don't trust stale hindi/gujarati — clear them too
-    const div = document.createElement("div");
-    div.innerHTML = english;
-    const plainEnglish = (div.textContent || div.innerText || "").trim();
-    if (!plainEnglish) {
-      hindi = "";
-      gujarati = "";
-    }
-
-    setFormData({ english, hindi, gujarati });
-    setTranslating(initialTranslating);
-    if (translateTimer.current) clearTimeout(translateTimer.current);
-  }
-}, [isOpen, itemId, initialTranslating]);
   useEffect(() => {
-  if (!isOpen) return;
-  if (translateTimer.current) clearTimeout(translateTimer.current);
+    if (isOpen) {
+      skipNextTranslateRef.current = true;
 
-  if (skipNextTranslateRef.current) {
-    skipNextTranslateRef.current = false;
-    return;
-  }
-
-  const div = document.createElement("div");
-  div.innerHTML = formData.english || "";
-  const plainEnglish = (div.textContent || div.innerText || "").trim();
-
-  if (!plainEnglish) {
-    setFormData((prev) => ({ ...prev, hindi: "", gujarati: "" }));
-    setTranslating(false);
-    return;
-  }
-
-  setTranslating(true);
-  translateTimer.current = setTimeout(async () => {
-    try {
-      const res = await Translateapi(plainEnglish);
-      const { regional, hindi } = extractTranslations(res.data);
-      setFormData((prev) => ({ ...prev, hindi, gujarati: regional }));
-    } catch (err) {
-      console.error("Translation error:", err);
-    } finally {
-      setTranslating(false);
-    }
-  }, 600);
-
-  return () => clearTimeout(translateTimer.current);
-}, [formData.english]);
-  const stripTrailingNbsp = (str = "") =>
-  str.replace(/(&nbsp;|\u00A0|\s)+$/g, "");
-
- // ── Find the underlying English input (textarea OR contentEditable div) ──
-const getEnglishEditor = () => {
-  if (!containerRef.current) return null;
-  return containerRef.current.querySelector('[name="english"]');
-};
-
-// ── Insert a bullet point at the current cursor position ───────────────
-const handleAddBullet = () => {
-  const editor = getEnglishEditor();
-
-  if (!editor) {
-    setFormData((prev) => {
-      const trimmed = stripTrailingNbsp(prev.english || "");
-      return { ...prev, english: `${trimmed}${trimmed ? "\n" : ""}• ` };
-    });
-    return;
-  }
-
-  editor.focus();
-
-  // Plain <textarea> path (formatting disabled) — unchanged old logic
-  if (editor.tagName === "TEXTAREA") {
-    const start = editor.selectionStart ?? formData.english.length;
-    const end = editor.selectionEnd ?? formData.english.length;
-    const current = formData.english || "";
-
-    const before = stripTrailingNbsp(current.slice(0, start));
-    const after = current.slice(end);
-    const needsNewlineBefore = before.length > 0 && !before.endsWith("\n");
-    const bullet = `${needsNewlineBefore ? "\n" : ""}• `;
-    const newValue = `${before}${bullet}${after}`;
-    const newCursorPos = before.length + bullet.length;
-
-    setFormData((prev) => ({ ...prev, english: newValue }));
-
-    requestAnimationFrame(() => {
-      const ta = getEnglishEditor();
-      if (ta) {
-        ta.focus();
-        ta.setSelectionRange(newCursorPos, newCursorPos);
+      let english, hindi, gujarati;
+      if (typeof notes === "object" && notes !== null) {
+        english = notes.english || "";
+        hindi = notes.hindi || "";
+        gujarati = notes.gujarati || "";
+      } else {
+        english = notes || "";
+        hindi = "";
+        gujarati = "";
       }
+
+      // If English has no real text, don't trust stale hindi/gujarati — clear them too
+      const div = document.createElement("div");
+      div.innerHTML = english;
+      const plainEnglish = (div.textContent || div.innerText || "").trim();
+      if (!plainEnglish) {
+        hindi = "";
+        gujarati = "";
+      }
+
+      setFormData({ english, hindi: toEditorText(hindi), gujarati: toEditorText(gujarati) });
+      setTranslating(initialTranslating);
+      if (translateTimer.current) clearTimeout(translateTimer.current);
+    }
+  }, [isOpen, itemId, initialTranslating]);
+  useEffect(() => {
+    if (!isOpen) return;
+    if (translateTimer.current) clearTimeout(translateTimer.current);
+
+    if (skipNextTranslateRef.current) {
+      skipNextTranslateRef.current = false;
+      return;
+    }
+
+    const div = document.createElement("div");
+    div.innerHTML = formData.english || "";
+    const plainEnglish = (div.textContent || div.innerText || "").trim();
+
+    if (!plainEnglish) {
+      setFormData((prev) => ({ ...prev, hindi: "", gujarati: "" }));
+      setTranslating(false);
+      return;
+    }
+
+    setTranslating(true);
+    translateTimer.current = setTimeout(async () => {
+      try {
+        const { hindi, gujarati } = await translateInstruction(formData.english || "");
+        setFormData((prev) => ({ ...prev, hindi, gujarati }));
+      } catch (err) {
+        console.error("Translation error:", err);
+      } finally {
+        setTranslating(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(translateTimer.current);
+  }, [formData.english]);
+  const stripTrailingNbsp = (str = "") =>
+    str.replace(/(&nbsp;|\u00A0|\s)+$/g, "");
+
+  const toEditorText = (value = "") => {
+    if (!value) return "";
+    const str = String(value);
+    const htmlWithBr = str.replace(/\r\n?/g, "\n").replace(/\n/g, "<br>");
+    const div = document.createElement("div");
+    div.innerHTML = htmlWithBr;
+    div.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
+    div.querySelectorAll("div, p, li").forEach((block) => {
+      if (block.nextSibling) block.insertAdjacentText("afterend", "\n");
     });
-    return;
-  }
+    return div.textContent || div.innerText || "";
+  };
 
-  // contentEditable <div> path (rich text on)
-  const sel = window.getSelection();
-  if (!sel) return;
+  const toSavedHtml = (value = "") =>
+    String(value)
+      .replace(/\r\n?/g, "\n")
+      .replace(/\n/g, "<br>")
+      .replace(/(&nbsp;|\u00A0)/gi, " ")
+      .trim();
 
-  if (sel.rangeCount === 0 || !editor.contains(sel.anchorNode)) {
-    const range = document.createRange();
-    range.selectNodeContents(editor);
-    range.collapse(false); // put cursor at the end
+  // Translate each visual line independently. This retains newlines and bullet
+  // prefixes, which the translation service otherwise merges into one sentence.
+  const translateInstruction = async (english) => {
+    const translatedLines = await Promise.all(
+      toEditorText(english).split("\n").map(async (line) => {
+        const bullet = line.match(/^(\s*(•|·|▪|-|\*)\s*)/);
+        const prefix = bullet?.[0] || "";
+        const text = line.slice(prefix.length).trim();
+
+        if (!text) return { hindi: prefix.trimEnd(), gujarati: prefix.trimEnd() };
+
+        const res = await Translateapi(text);
+        const { regional, hindi } = extractTranslations(res.data);
+        return { hindi: `${prefix}${hindi || ""}`, gujarati: `${prefix}${regional || ""}` };
+      }),
+    );
+
+    return {
+      hindi: translatedLines.map((line) => line.hindi).join("\n"),
+      gujarati: translatedLines.map((line) => line.gujarati).join("\n"),
+    };
+  };
+
+  // ── Find the underlying English input (textarea OR contentEditable div) ──
+  const getEnglishEditor = () => {
+    if (!containerRef.current) return null;
+    return containerRef.current.querySelector('[name="english"]');
+  };
+
+  // ── Insert a bullet point at the current cursor position ───────────────
+  const handleAddBullet = () => {
+    const editor = getEnglishEditor();
+
+    if (!editor) {
+      setFormData((prev) => {
+        const trimmed = stripTrailingNbsp(prev.english || "");
+        return { ...prev, english: `${trimmed}${trimmed ? "\n" : ""}• ` };
+      });
+      return;
+    }
+
+    editor.focus();
+
+    // Plain <textarea> path (formatting disabled) — unchanged old logic
+    if (editor.tagName === "TEXTAREA") {
+      const start = editor.selectionStart ?? formData.english.length;
+      const end = editor.selectionEnd ?? formData.english.length;
+      const current = formData.english || "";
+
+      const before = stripTrailingNbsp(current.slice(0, start));
+      const after = current.slice(end);
+      const needsNewlineBefore = before.length > 0 && !before.endsWith("\n");
+      const bullet = `${needsNewlineBefore ? "\n" : ""}• `;
+      const newValue = `${before}${bullet}${after}`;
+      const newCursorPos = before.length + bullet.length;
+
+      setFormData((prev) => ({ ...prev, english: newValue }));
+
+      requestAnimationFrame(() => {
+        const ta = getEnglishEditor();
+        if (ta) {
+          ta.focus();
+          ta.setSelectionRange(newCursorPos, newCursorPos);
+        }
+      });
+      return;
+    }
+
+    // contentEditable <div> path (rich text on)
+    const sel = window.getSelection();
+    if (!sel) return;
+
+    if (sel.rangeCount === 0 || !editor.contains(sel.anchorNode)) {
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false); // put cursor at the end
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    const range = sel.getRangeAt(0);
+    const preRange = range.cloneRange();
+    preRange.selectNodeContents(editor);
+    preRange.setEnd(range.startContainer, range.startOffset);
+    const beforeContainer = document.createElement("div");
+    beforeContainer.appendChild(preRange.cloneContents());
+    beforeContainer.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
+    beforeContainer.querySelectorAll("div, p, li").forEach((block) => {
+      if (block.nextSibling) block.insertAdjacentText("afterend", "\n");
+    });
+    const textBefore = beforeContainer.textContent || beforeContainer.innerText || "";
+    const atLineStart = textBefore.length === 0 || textBefore.endsWith("\n");
+    const currentBlock = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? range.startContainer
+      : range.startContainer.parentElement;
+    const currentBlockIsEmpty = currentBlock?.textContent?.trim() === "";
+
+    // A browser newline can create <div>/<p> blocks, leaving large gaps between
+    // bullets. A <br> keeps every entry on a normal, compact line.
+    range.deleteContents();
+    const fragment = document.createDocumentFragment();
+    if (!atLineStart && !currentBlockIsEmpty) fragment.appendChild(document.createElement("br"));
+    const bulletText = document.createTextNode("• ");
+    fragment.appendChild(bulletText);
+    range.insertNode(fragment);
+
+    const cursor = document.createRange();
+    cursor.setStart(bulletText, bulletText.length);
+    cursor.collapse(true);
     sel.removeAllRanges();
-    sel.addRange(range);
-  }
-
-  const range = sel.getRangeAt(0);
-  const preRange = range.cloneRange();
-  preRange.selectNodeContents(editor);
-  preRange.setEnd(range.startContainer, range.startOffset);
-  const textBefore = preRange.toString();
-  const atLineStart = textBefore.length === 0 || textBefore.endsWith("\n");
-
-  document.execCommand("insertText", false, `${atLineStart ? "" : "\n"}• `);
-};
+    sel.addRange(cursor);
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  };
 
   if (!isOpen) return null;
-  
-const normalizeForSave = (html = "") =>
-  html.replace(/&nbsp;|\u00A0/g, " ").trim();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -160,6 +223,7 @@ const normalizeForSave = (html = "") =>
           <button
             type="button"
             onClick={handleAddBullet}
+            onMouseDown={(e) => e.preventDefault()}
             className="text-sm flex items-center gap-1 text-primary border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary/5 transition"
           >
             <span className="text-base leading-none">•</span> Add bullet point
@@ -186,11 +250,15 @@ const normalizeForSave = (html = "") =>
           >
             Cancel
           </button>
-          
+
           <button
             type="button"
             className="bg-primary text-white px-5 py-2 rounded-lg hover:bg-primary/90 transition disabled:opacity-50"
-            onClick={() => onSave({ english: formData.english, hindi: formData.hindi, gujarati: formData.gujarati })}
+            onClick={() => onSave({
+              english: toSavedHtml(formData.english),
+              hindi: toSavedHtml(formData.hindi),
+              gujarati: toSavedHtml(formData.gujarati),
+            })}
             disabled={translating}
           >
             {translating ? (

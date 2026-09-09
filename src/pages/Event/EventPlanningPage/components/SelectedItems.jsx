@@ -793,7 +793,7 @@ useEffect(() => {
     onBlur={() => { isTypingRef.current = false; }}
     onClick={(e) => e.stopPropagation()}
     onMouseDown={(e) => e.stopPropagation()}
-    className="item-instruction-editable w-full mt-1.5 min-h-[42px] bg-white border border-gray-200 rounded-md p-1.5 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-primary"
+    className="item-instruction-editable w-full mt-1.5 min-h-[42px] overflow-visible whitespace-pre-wrap break-words bg-white border border-gray-200 rounded-md p-1.5 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-primary"
   />
 )}
 {showInstructions && isDeleted && localInstruction && (

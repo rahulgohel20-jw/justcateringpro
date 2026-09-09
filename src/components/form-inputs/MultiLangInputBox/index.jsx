@@ -9,8 +9,7 @@ const trimPayloadWhitespace = (value = "") =>
     .replace(/<b>\s+/gi, "<b>")
     .replace(/\s+<\/b>/gi, "</b>")
     .replace(/<\/b>\s+/gi, "</b>")
-    .replace(/\s{2,}/g, " ")
-    .replace(/^\s+|\s+$/g, "");
+    .replace(/[ \t]{2,}/g, " ");
 
 const payloadToDisplayHtml = (text = "") =>
   trimPayloadWhitespace(text).replace(/\n/g, "<br>");
@@ -77,6 +76,10 @@ function RichTextEditable({ name, value, onChange }) {
       isInternalChange.current = false;
       return;
     }
+    // Prevent external state updates (e.g. background translation completion) from resetting DOM/cursor while editing
+    if (ref.current && document.activeElement === ref.current) {
+      return;
+    }
     if (ref.current) {
       const display = payloadToDisplayHtml(value || "");
       if (ref.current.innerHTML !== display) {
@@ -104,7 +107,14 @@ function RichTextEditable({ name, value, onChange }) {
     emitChange();
   };
 
- const handleKeyDown = (e) => {
+  const handleKeyDown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B")) {
+      e.preventDefault();
+      document.execCommand("bold", false, null);
+      emitChange();
+      return;
+    }
+
     if (e.key !== "Enter") return;
 
     const sel = window.getSelection();
@@ -115,22 +125,64 @@ function RichTextEditable({ name, value, onChange }) {
     preRange.selectNodeContents(ref.current);
     preRange.setEnd(range.startContainer, range.startOffset);
 
-    const textBefore = preRange.toString();
+    // Convert DOM nodes to text with \n for <br> and block elements
+    const tempDiv = document.createElement("div");
+    tempDiv.appendChild(preRange.cloneContents());
+    tempDiv.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
+    tempDiv.querySelectorAll("div, p, li").forEach((block) => {
+      if (block.nextSibling) block.insertAdjacentText("afterend", "\n");
+    });
+    const textBefore = tempDiv.textContent || tempDiv.innerText || "";
+
     const lineStart = textBefore.lastIndexOf("\n") + 1;
     const currentLine = textBefore.slice(lineStart);
 
-    const bulletMatch = currentLine.match(/^(\s*)•\s/);
+    const bulletMatch = currentLine.match(/^(\s*)(•|·|▪|-|\*)(\s*)/);
     if (!bulletMatch) return; // not on a bullet line — let Enter behave normally
 
     e.preventDefault();
 
-    // Enter on an empty bullet ("• " with nothing typed after it) exits the list
-    if (currentLine.trim() === "•") {
-      document.execCommand("insertText", false, "\n");
+    const indent = bulletMatch[1];
+    const bulletSymbol = bulletMatch[2];
+    const spacing = bulletMatch[3];
+    const bulletPrefix = `${indent}${bulletSymbol}${spacing || " "}`;
+
+    // Enter on an empty bullet ("•" or "• " with nothing typed after it) exits the list
+    if (currentLine.trim() === bulletSymbol) {
+      try {
+        const selRange = sel.getRangeAt(0);
+        if (selRange.startContainer && selRange.startContainer.nodeType === Node.TEXT_NODE) {
+          const offset = selRange.startOffset;
+          const deleteLength = currentLine.length;
+          const deleteRange = document.createRange();
+          deleteRange.setStart(selRange.startContainer, Math.max(0, offset - deleteLength));
+          deleteRange.setEnd(selRange.startContainer, offset);
+          deleteRange.deleteContents();
+        } else {
+          selRange.deleteContents();
+        }
+      } catch (err) {
+        console.error("Error removing bullet:", err);
+      }
+
+      emitChange();
       return;
     }
 
-    document.execCommand("insertText", false, `\n${bulletMatch[1]}• `);
+    range.deleteContents();
+    const fragment = document.createDocumentFragment();
+    const lineBreak = document.createElement("br");
+    const bulletText = document.createTextNode(bulletPrefix);
+    fragment.append(lineBreak, bulletText);
+    range.insertNode(fragment);
+
+    const cursor = document.createRange();
+    cursor.setStart(bulletText, bulletText.length);
+    cursor.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(cursor);
+
+    emitChange();
   };
 
   return (
@@ -160,6 +212,57 @@ const MultiLangInputBox = ({
 }) => {
   const langConfig = getLangConfig();
 
+  const handleTextareaKeyDown = (e) => {
+    if (e.key !== "Enter") return;
+
+    const textarea = e.target;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const value = textarea.value || "";
+
+    const textBefore = value.slice(0, start);
+    const lineStart = textBefore.lastIndexOf("\n") + 1;
+    const currentLine = textBefore.slice(lineStart);
+
+    const bulletMatch = currentLine.match(/^(\s*)(•|·|▪|-|\*)(\s*)/);
+    if (!bulletMatch) return;
+
+    e.preventDefault();
+
+    const indent = bulletMatch[1];
+    const bulletSymbol = bulletMatch[2];
+    const spacing = bulletMatch[3];
+    const bulletPrefix = `${indent}${bulletSymbol}${spacing || " "}`;
+
+    if (currentLine.trim() === bulletSymbol) {
+      const beforeLine = value.slice(0, lineStart);
+      const afterCursor = value.slice(end);
+      const newValue = beforeLine + afterCursor;
+
+      const name = textarea.name;
+      setFormData((prev) => ({ ...prev, [name]: newValue }));
+
+      requestAnimationFrame(() => {
+        textarea.focus();
+        textarea.setSelectionRange(lineStart, lineStart);
+      });
+      return;
+    }
+
+    const textAfter = value.slice(end);
+    const bulletInsert = `\n${bulletPrefix}`;
+    const newValue = textBefore + bulletInsert + textAfter;
+    const newCursorPos = start + bulletInsert.length;
+
+    const name = textarea.name;
+    setFormData((prev) => ({ ...prev, [name]: newValue }));
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    });
+  };
+
   const languages = [
     { key: keys.english, label: "English", lang: "en" },
     { key: keys.regional, label: langConfig.label, lang: langConfig.lang },
@@ -188,21 +291,6 @@ const MultiLangInputBox = ({
                   <span className="text-red-500 ms-0.5">*</span>
                 )}
               </label>
-
-              {/* Toolbar */}
-              {/* <div className="flex gap-1 rounded-t-lg border border-gray-300 bg-gray-50 p-2">
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    document.execCommand("bold", false, null);
-                  }}
-                  className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 bg-white font-bold hover:bg-gray-100"
-                  title="Bold"
-                >
-                  B
-                </button>
-              </div> */}
 
               {/* Editable content — THIS LINE CHANGED */}
               <RichTextEditable
@@ -243,6 +331,7 @@ const MultiLangInputBox = ({
                 placeholder={label}
                 rows={3}
                 value={formData[item.key] || ""}
+                onKeyDown={handleTextareaKeyDown}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
