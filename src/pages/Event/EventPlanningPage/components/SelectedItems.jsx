@@ -579,14 +579,16 @@ useEffect(() => {
                       </span>
                     )}
                     {subItem && (
-                      <span className="text-[9px] font-semibold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full leading-none">
-                        Sub: {subItem}
-                      </span>
+                      <span
+                        className="text-[9px] font-semibold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full leading-none"
+                        dangerouslySetInnerHTML={{ __html: `Sub: ${subItem}` }}
+                      />
                     )}
                     {item.itemHeading && (
-                      <span className="text-[9px] font-semibold bg-teal-100 text-teal-700 border border-teal-300 px-1.5 py-0.5 rounded-full leading-none">
-                        {item.itemHeading}
-                      </span>
+                      <span
+                        className="text-[9px] font-semibold bg-teal-100 text-teal-700 border border-teal-300 px-1.5 py-0.5 rounded-full leading-none"
+                        dangerouslySetInnerHTML={{ __html: item.itemHeading }}
+                      />
                     )}
                     {isDeleted && (
                       <span className="text-[9px] font-semibold bg-red-100 text-red-600 border border-red-300 px-1.5 py-0.5 rounded-full leading-none">
@@ -821,14 +823,18 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {} }) => {
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (!formData.english?.trim()) {
+    const div = document.createElement("div");
+    div.innerHTML = formData.english || "";
+    const plainEnglish = (div.textContent || div.innerText || "").trim();
+
+    if (!plainEnglish) {
       setFormData((prev) => ({ ...prev, gujarati: "", hindi: "" }));
       return;
     }
 
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await Translateapi(formData.english);
+        const res = await Translateapi(plainEnglish);
         const data = res?.data || {};
         setFormData((prev) => ({
           ...prev,
@@ -853,6 +859,7 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {} }) => {
         <MultiLangInputBox
           formData={formData}
           setFormData={setFormData}
+          enableFormatting={true}
           label="Sub Text"
           cols={1}
           keys={{ english: "english", regional: "gujarati", hindi: "hindi" }}
@@ -1631,9 +1638,10 @@ return (
                                     </span>
                                   )}
                                   {catSubText && (
-                                    <span className="text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full leading-none">
-                                      Sub: {catSubText}
-                                    </span>
+                                    <span
+                                      className="text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full leading-none"
+                                      dangerouslySetInnerHTML={{ __html: `Sub: ${catSubText}` }}
+                                    />
                                   )}
                                 </p>
                               </div>

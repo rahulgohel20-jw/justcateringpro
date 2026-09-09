@@ -9,6 +9,8 @@ const InputToTextLang = ({
   lang,
   className,
   error,
+  type = "text",
+  enableFormatting = false,
 }) => {
   // FIX: Convert placeholder safely to a string
   const safePlaceholder =
@@ -30,7 +32,7 @@ const InputToTextLang = ({
       </label>
 
       <SpeechToText
-        type="text"
+        type={type}
         name={name}
         placeholder={safePlaceholder} // ← FIX APPLIED HERE
         value={value}
@@ -38,6 +40,7 @@ const InputToTextLang = ({
         onChange={onChange}
         required={required}
         lang={lang}
+        enableFormatting={enableFormatting}
       />
 
       {error && <span className="text-red-500 text-sm">{error}</span>}
