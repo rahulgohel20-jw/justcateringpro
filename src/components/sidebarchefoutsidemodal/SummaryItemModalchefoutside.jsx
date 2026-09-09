@@ -431,6 +431,8 @@ formData.append("showAdditional", 0);
  formData.append("isAddMenu", 0);
  formData.append("isNotes",0);
  formData.append("isAdvancePayment",0);
+ formData.append("withOutBg",0);
+ formData.append("withVendor",0);
  formData.append("showAddOnLabel",0);
  formData.append("showLastPage", 0);
  formData.append("isSignatureVisible", 0);
