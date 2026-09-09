@@ -354,6 +354,9 @@ import AcceptMultipleSOT from "../pages/stockmanagement/store-ordering-tickets/a
 import TapInquiryListPage from "../pages/master/user-master/alluser/TapInquiryListPage.jsx";
 import FollowUpCalendarPage from "../pages/Event/CalendarPage/FollowUpCalendarPage.jsx";
 import InquiryList from "../pages/Event/Inquiry/InquiryList.jsx";
+import PurchaseApprovalRequest from "../pages/stockmanagement/PurchaseApproveRequest/index.jsx";
+import AddPurchaseApproveReq from "../pages/stockmanagement/PurchaseApproveRequest/AddPurchaseApproveReq.jsx";
+import PurchaseApprovalList from "../pages/stockmanagement/PurchaseApproveRequest/PurchaseApproveList.jsx";
 
 
 const AppRoutingSetup = () => {
@@ -754,6 +757,10 @@ const AppRoutingSetup = () => {
           <Route path="/report" element={<DynamicReports />} />
           <Route path="/quotation-function" element={<QuotationFunction />} />
           <Route path="/reportcustomise" element={<CustomiseReport />} />
+          
+<Route path= "/purchase-return-request" element={<PurchaseApprovalRequest/>}/>
+<Route path="/purchase/approval-request/add" element={<AddPurchaseApproveReq/>}/>
+<Route path="/purchase/approval-request-List" element={<PurchaseApprovalList/>}/>
           {/* Recipe Route */}
           <Route path="/recipe" element={<RecipeDashboard />} />
           <Route path="/recipe/explorerecipe" element={<ExploreRecipe />} />

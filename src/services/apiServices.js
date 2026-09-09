@@ -3790,3 +3790,33 @@ export const getAllSecurityDepositByEventId = (eventId) => {
 export const GetAllApprovedPurchase = (userId,page, size) => {
   return GET(`/purchase-approval/getAllApprovedRequest?userId=${userId}&page=${page}&size=${size}`);
 }; 
+
+export const generatePurchaseRequestCode = (userId) => {
+  return GET(`/purchase-approval/generate-purchase-request-code?userId=${userId}`);
+
+
+};
+
+export const addUpdatePurchaseRequest = (data) => {
+  return POST(`/purchase-approval/add-update` ,data);
+};
+
+export const getallpurchasereport = (userId ) => {
+  return GET(`/purchase-approval/getAll?userId=${userId}`);
+}
+
+export const getpurchaseapprovalbyid = (purchaseRequestId) => {
+  return GET(`/purchase-approval/getById?purchaseRequestId=${purchaseRequestId}`);
+
+};
+
+export const getRawMaterialbyPurchaseRequestId = (endDate ,rawMaterialCatId , startDate , page , size ,rawMaterialName , purchaseRequestId, isAllData) => {
+  return GET(`/purchase-approval/getRawMaterial?endDate=${endDate}&rawMaterialCatId=${rawMaterialCatId}&startDate=${startDate}&page=${page}&size=${size}&rawMaterialName=${rawMaterialName}&purchaseRequestId=${purchaseRequestId}&isAllData=${isAllData}`);
+};
+
+// complate raw matt
+export const GetAllRawMaterialcategory = (categoryTypeId , userid , isActive , categoryName) => {
+  return GET(
+    `/rawmaterialcategory/getallbyuserid?categoryTypeId=${categoryTypeId}&userid=${userid}&isActive=${isActive}&categoryName=${categoryName}`,
+  );
+}

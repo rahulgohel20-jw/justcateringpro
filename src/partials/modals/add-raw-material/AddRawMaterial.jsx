@@ -119,6 +119,8 @@ const AddRawMaterial = ({ isOpen, onClose, refreshData, rawmaterial }) => {
   nameHindi: "",
   rawCategoryId: "",
   dailyConsumption : "",
+  maxStock : "",
+  leadTime : "",
   unitid: "",
   supplierRate: "",
   priority: "",
@@ -152,6 +154,8 @@ const AddRawMaterial = ({ isOpen, onClose, refreshData, rawmaterial }) => {
       formData.append("userId", parseInt(id));
       formData.append("weightPer100Pax", parseFloat(values.weight) || 0);
       formData.append("dailyConsumption", values.dailyConsumption || "");
+      formData.append("MaxStock", values.maxStock || 0);
+      formData.append("LeadTime", values.leadTime || 0 );
       formData.append("opbStock", parseFloat(values.openingBalance) || 0);
       formData.append("minStock", parseFloat(values.closingQty) || 0);
       formData.append("expiryDate",  formatDate(values.expiryDate) || "");
@@ -332,6 +336,8 @@ formData.append("cess", parseFloat(values.cess) || 0);
           expiryDate: parseDate(rawmaterial.expiryDate),
           isCalculate: rawmaterial.isCalculate ?? false,
           dailyConsumption: rawmaterial.dailyConsumption || "",
+          maxStock: rawmaterial.maxStock || "",
+          leadTime: rawmaterial.leadTime || "",
            cgst: rawmaterial.cgst ?? "",
   sgst: rawmaterial.sgst ?? "",
   igst: rawmaterial.igst ?? "",
@@ -715,7 +721,7 @@ formData.append("cess", parseFloat(values.cess) || 0);
             )}
           </div>
 
-<div className="grid grid-cols-3 gap-x-4">
+<div className="grid grid-cols-5 gap-x-4">
   <div className="flex flex-col">
     <label className="form-label">
       <FormattedMessage id="COMMON.SUPPLIER_RATE" defaultMessage="Rate" />
@@ -768,6 +774,30 @@ formData.append("cess", parseFloat(values.cess) || 0);
         {formik.errors.priority}
       </span>
     )}
+  </div>
+   <div className="flex flex-col">
+    <label className="form-label">Max Stock</label>
+    <input
+      type="text"
+      name="maxStock"
+      value={formik.values.maxStock}
+      onChange={formik.handleChange}
+      onBlur={formik.handleBlur}
+      placeholder="Enter Max Stock"
+      className="input"
+    />
+  </div>
+   <div className="flex flex-col">
+    <label className="form-label">lead Time (In Days)</label>
+    <input
+      type="text"
+      name="leadTime"
+      value={formik.values.leadTime}
+      onChange={formik.handleChange}
+      onBlur={formik.handleBlur}
+      placeholder="Enter Lead Time"
+      className="input"
+    />
   </div>
 </div>
 
