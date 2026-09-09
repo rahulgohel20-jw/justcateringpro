@@ -648,7 +648,13 @@ const GeneralFixPage = () => {
   // =========================================================
   // Final Quantity Change
   // =========================================================
-  const handleFinalQtyChange = (itemId, value) => {
+    const handleFinalQtyChange = (itemId, value) => {
+ // "All Function" is disabled in the UI, but guard here too in case
+ // this is ever triggered programmatically.
+ if (selectedFunction === "all") return;
+
+ const activeFunctionId = Number(selectedFunctionIds[0]);
++
     setItems((previous) =>
       previous.map((item) => {
         if (getRowId(item) !== itemId) {
@@ -656,12 +662,41 @@ const GeneralFixPage = () => {
         }
 
         const finalQty = value === "" ? 0 : Number(value) || 0;
+     const newTotal = finalQty * (item.basePrice || 0);
+
+     // Keep the per-function breakdown in sync so SidebarGeneralFix
+     // shows the correct weight/price for THIS function if it's
+     // opened right after this edit.
+     const existingFnRaws = item.eventFunctionGeneralFixRaws || [];
+     const hasMatch = existingFnRaws.some(
+       (fn) => Number(fn.eventFunctionId) === activeFunctionId,
+     );
+
+     const updatedFnRaws = hasMatch
+       ? existingFnRaws.map((fn) =>
+           Number(fn.eventFunctionId) === activeFunctionId
+             ? { ...fn, weight: finalQty, price: newTotal }
+             : fn,
+         )
+       : [
+           ...existingFnRaws,
+           {
+             eventFunctionId: activeFunctionId,
+             id: 0,
+             weight: finalQty,
+             price: newTotal,
+             unitId: item.unitId,
+             rawCatId: item.rawCatId,
+             rawId: item.rawMaterialId,
+           },
+         ];
 
         return {
           ...item,
           finalQtyInput: value,
           finalQty,
-          total: finalQty * (item.basePrice || 0),
+       total: newTotal,
+       eventFunctionGeneralFixRaws: updatedFnRaws,
         };
       })
     );
@@ -1280,7 +1315,17 @@ const GeneralFixPage = () => {
     step="any"
     value={item.finalQtyInput}
     onChange={(event) => handleFinalQtyChange(rowId, event.target.value)}
-    className="w-[80px] border border-gray-300 rounded px-2 py-1"
+    disabled={selectedFunction === "all"}
+  title={
+    selectedFunction === "all"
+      ? "Select a specific function to edit quantity"
+      : ""
+  }
+  className={`w-[80px] border rounded px-2 py-1 ${
+    selectedFunction === "all"
+      ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+      : "border-gray-300"
+  }`}
   />
 </td>
 

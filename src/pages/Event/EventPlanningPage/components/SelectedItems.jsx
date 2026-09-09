@@ -566,7 +566,7 @@ useEffect(() => {
                 </span>
 
                 {/* Badges — wrap freely on their own line, never push the name around */}
-                {(isItemAddons || item.itemSpace > 0 || subItem || item.itemHeading || isDeleted) && (
+                {(isItemAddons || item.itemSpace > 0 || subItem || item.itemHeading || isDeleted || item.vendorName) && (
                   <div className="flex flex-wrap items-center gap-1 mt-1">
                     {isItemAddons && (
                       <span className="text-[9px] font-semibold bg-blue-100 text-primary border border-blue-300 px-1.5 py-0.5 rounded-full leading-none">
