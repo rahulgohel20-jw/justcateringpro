@@ -210,9 +210,10 @@ export const SearchRawMaterial = (
   itemName,
   signal,
   isPurchaseApproved = false,
+  purchaseApproveId = null,
 ) => {
   return GET(
-    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=0&unitid=0&userid=${Id}&isPurchaseApproved=${isPurchaseApproved}`,
+    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=0&unitid=0&userid=${Id}&isPurchaseApprove=${isPurchaseApproved}&purchaseApproveId=${purchaseApproveId}`,
     signal,
   );
 };

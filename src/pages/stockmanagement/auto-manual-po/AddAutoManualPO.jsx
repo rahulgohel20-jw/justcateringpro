@@ -193,9 +193,19 @@ searchTerm = "",
 page = 1,
 append = false,
 purchaseApprovedOverride = isPurchaseApproved,
+purchaseApproveIdOverride = selectedApprovedPurchaseId,
 ) => {
   page === 1 ? setLoadingItems(true) : setLoadingMore(true);
- SearchRawMaterial(true, userId, page, DROPDOWN_PAGE_SIZE, searchTerm, undefined, purchaseApprovedOverride)
+ SearchRawMaterial(
+   true,
+   userId,
+   page,
+   DROPDOWN_PAGE_SIZE,
+   searchTerm,
+   undefined,
+   purchaseApprovedOverride,
+   purchaseApprovedOverride ? purchaseApproveIdOverride || "" : "",
+ )
      .then((res) => {
       const data = res?.data?.data || {};
       const items = data["Raw Material Details"] || [];
@@ -219,6 +229,15 @@ useEffect(() => {
   }, 500);
   return () => clearTimeout(timer);
 }, [searchQuery, isPurchaseApproved]);
+
+
+useEffect(() => {
+  if (!isPurchaseApproved) return;
+  setDropdownPage(0);
+  setMenuItems([]);
+  setHasMore(false);
+  FetchSearchDropdown(searchQuery, 1, false, true, selectedApprovedPurchaseId);
+}, [selectedApprovedPurchaseId]);
 
 
 const calcTotal = (qty, price, other, cgst, sgst, igst) => {
@@ -585,7 +604,7 @@ if (response?.data?.success === true) {
        approvedPurchaseHasMore &&
        !approvedPurchaseLoadingMore
      ) {
-       fetchApprovedPurchases(approvedPurchasePage + 1, true);
+       FetchSearchDropdown(searchQuery, dropdownPage + 1, true, isPurchaseApproved, selectedApprovedPurchaseId);
      }
    }}
    notFoundContent={
