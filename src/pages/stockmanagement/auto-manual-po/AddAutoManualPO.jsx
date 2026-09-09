@@ -20,12 +20,13 @@ import {
   Search,
   Pencil,
 } from "lucide-react";
-import { Select } from "antd";
+import { Select, Switch  } from "antd";
 import { useLocation, useNavigate } from "react-router";
 import {
   GetAllRawMaterial,
   OutsideContactName,
   AddAutoManualPOApi,
+  GetAllApprovedPurchase,
 } from "@/services/apiServices";
 import AddContactName from "@/pages/master/MenuItemMaster/components/AddContactName";
 import Swal from "sweetalert2";
@@ -33,6 +34,7 @@ import AddRawMaterial from "@/partials/modals/add-raw-material/AddRawMaterial";
 import { Container } from "@/components/container";
 import { SearchRawMaterial } from "@/services/apiServices";
 import { usePermission } from "../../../hooks/usePermission";
+import { useModuleAccess } from "../../../hooks/useModuleAccess";
 
 
 
@@ -64,6 +66,18 @@ const [loadingMore, setLoadingMore] = useState(false);
 const [discountType, setDiscountType] = useState("percent");
 const DROPDOWN_PAGE_SIZE = 100;
 
+const [isPurchaseApproved, setIsPurchaseApproved] = useState(false);
+ const [selectedApprovedPurchaseId, setSelectedApprovedPurchaseId] = useState(null);
+ const [approvedPurchaseList, setApprovedPurchaseList] = useState([]);
+ const [approvedPurchaseLoading, setApprovedPurchaseLoading] = useState(false);
+ const [approvedPurchasePage, setApprovedPurchasePage] = useState(1);
+ const [approvedPurchaseHasMore, setApprovedPurchaseHasMore] = useState(false);
+ const [approvedPurchaseLoadingMore, setApprovedPurchaseLoadingMore] = useState(false);
+ const APPROVED_PURCHASE_PAGE_SIZE = 50;
+
+  const { hasModuleAccess } = useModuleAccess();
+ const canAccessPurchaseApprove = hasModuleAccess("Purchase Approve");
+
   const navigate = useNavigate();
   const [discount, setDiscount] = useState(0);
   const [adjustment, setAdjustment] = useState(0);
@@ -92,6 +106,9 @@ const todayStr = new Date().toISOString().split("T")[0];
     });
     setDiscount(editData.discountper || 0);
     setAdjustment(editData.adjustamount || 0);
+
+    setIsPurchaseApproved(!!editData.isPurchaseApprove);
+  setSelectedApprovedPurchaseId(editData.purchaseApproveRequestId || null);
 
     const prefilledItems = (editData.details || []).map((d) => ({
   rawMaterialId: d.rawMaterialId || 0,
@@ -131,10 +148,55 @@ const todayStr = new Date().toISOString().split("T")[0];
   };
 
 
-  const FetchSearchDropdown = (searchTerm = "", page = 1, append = false) => {
-  page === 1 ? setLoadingItems(true) : setLoadingMore(true);
-  SearchRawMaterial(true, userId, page, DROPDOWN_PAGE_SIZE, searchTerm)
+const fetchApprovedPurchases = (page = 0, append = false) => {
+  page === 0 ? setApprovedPurchaseLoading(true) : setApprovedPurchaseLoadingMore(true);
+  GetAllApprovedPurchase(userId, page, APPROVED_PURCHASE_PAGE_SIZE)
     .then((res) => {
+      const data = res?.data?.data || {};
+    const list = data.content || [];
+    setApprovedPurchaseList((prev) => (append ? [...prev, ...list] : list));
+    setApprovedPurchasePage(page);
+   
+    setApprovedPurchaseHasMore(data.last === false);
+    })
+    .catch(() => {
+      setApprovedPurchaseList([]);
+      setApprovedPurchaseHasMore(false);
+    })
+    .finally(() => {
+      setApprovedPurchaseLoading(false);
+      setApprovedPurchaseLoadingMore(false);
+    });
+};
+
+
+useEffect(() => {
+  if (isPurchaseApproved && approvedPurchaseList.length === 0) {
+    fetchApprovedPurchases(0, false);
+  }
+}, [isPurchaseApproved]);
+
+const handleTogglePurchaseApproved = (checked) => {
+  setIsPurchaseApproved(checked);
+  setSelectedApprovedPurchaseId(null);
+
+  setDropdownPage(0);
+  setMenuItems([]);
+  setHasMore(false);
+  FetchSearchDropdown(searchQuery, 1, false, checked); 
+};
+
+
+
+const FetchSearchDropdown = (
+searchTerm = "",
+page = 1,
+append = false,
+purchaseApprovedOverride = isPurchaseApproved,
+) => {
+  page === 1 ? setLoadingItems(true) : setLoadingMore(true);
+ SearchRawMaterial(true, userId, page, DROPDOWN_PAGE_SIZE, searchTerm, undefined, purchaseApprovedOverride)
+     .then((res) => {
       const data = res?.data?.data || {};
       const items = data["Raw Material Details"] || [];
       const total = data.totalItems || 0;
@@ -149,14 +211,14 @@ const todayStr = new Date().toISOString().split("T")[0];
 useEffect(() => {
   const timer = setTimeout(() => {
     if (searchQuery.trim()) {
-      setDropdownPage(1); setMenuItems([]); setHasMore(false);
-      FetchSearchDropdown(searchQuery, 1, false);
+      setDropdownPage(0); setMenuItems([]); setHasMore(false);
+      FetchSearchDropdown(searchQuery, 1, false, isPurchaseApproved);
     } else {
       setMenuItems([]); setHasMore(false);
     }
   }, 500);
   return () => clearTimeout(timer);
-}, [searchQuery]);
+}, [searchQuery, isPurchaseApproved]);
 
 
 const calcTotal = (qty, price, other, cgst, sgst, igst) => {
@@ -261,6 +323,17 @@ const handleSave = async () => {
     return;
   }
 
+  if (isPurchaseApproved && !selectedApprovedPurchaseId) {
+ Swal.fire({
+   icon: "warning",
+   title: "Validation",
+   text: "Please select an approved purchase request.",
+   confirmButtonColor: "#3085d6",
+ });
+ return;
+ }
+
+
   try {
     setSaving(true);
 
@@ -281,7 +354,9 @@ const handleSave = async () => {
       finalamount: finalAmount,
       status: "",                          
       sotId: null,                            
-      eventId: null,                          
+      eventId: null,   
+      isPurchaseApprove: isPurchaseApproved,
+     purchaseApproveRequestId: isPurchaseApproved ? selectedApprovedPurchaseId : 0,                       
       details: items.map((item) => ({
         id: 0,
         rawMaterialId: item.rawMaterialId || 0,
@@ -461,6 +536,76 @@ if (response?.data?.success === true) {
                   <option>Retail Invoice</option>
                 </select>
               </div>
+              <div>
+    {canAccessPurchaseApprove && (   
+      <div>
+
+   <label className={labelClass}>
+    <Tag size={16} /> Purchase Approved
+  </label>
+  <div className="flex items-center h-9">
+    <Switch
+      checked={isPurchaseApproved}
+      onChange={handleTogglePurchaseApproved}
+    />
+    <span className="ml-2 text-xs text-slate-500">
+      {isPurchaseApproved ? "On" : "Off"}
+    </span>
+  </div> 
+      </div>        
+    )}
+</div>
+
+{isPurchaseApproved && (
+  <div className="col-span-2">
+    <label className={labelClass}>
+      <FileText size={16} /> Approved Purchase Request
+      <span className="text-red-500">*</span>
+    </label>
+    <Select
+      showSearch={false}
+      placeholder="Select approved purchase request..."
+      style={{ width: "100%", height: "38px" }}
+      value={selectedApprovedPurchaseId || undefined}
+      loading={approvedPurchaseLoading}
+      status={!selectedApprovedPurchaseId ? "warning" : ""}
+      onChange={(val) => setSelectedApprovedPurchaseId(val)}
+      
+      options={approvedPurchaseList.map((p) => ({
+      value: p.id,
+      label: `${p.requestCode || `Request #${p.id}`}${
+        p.startDate ? ` (${p.startDate}${p.endDate && p.endDate !== p.startDate ? " – " + p.endDate : ""})` : ""
+      }`,
+    }))}
+      
+      onPopupScroll={(e) => {
+     const target = e.target;
+     if (
+       target.scrollTop + target.offsetHeight >= target.scrollHeight - 10 &&
+       approvedPurchaseHasMore &&
+       !approvedPurchaseLoadingMore
+     ) {
+       fetchApprovedPurchases(approvedPurchasePage + 1, true);
+     }
+   }}
+   notFoundContent={
+     approvedPurchaseLoading
+       ? "Loading..."
+       : "No approved requests found"
+   }
+   dropdownRender={(menu) => (
+     <>
+       {menu}
+       {approvedPurchaseLoadingMore && (
+         <div className="text-center text-xs text-slate-400 py-2">
+           Loading more…
+         </div>
+       )}
+     </>
+   )}
+    />
+  </div>
+)}
   
               <div className="col-span-3">
                 <label className={labelClass}>
@@ -515,7 +660,7 @@ if (response?.data?.success === true) {
         filterOption={false}
         onSearch={(val) => setSearchQuery(val)}
         onDropdownVisibleChange={(open) => {
-          if (open && menuItems.length === 0) FetchSearchDropdown("", 1, false);
+          if (open && menuItems.length === 0) FetchSearchDropdown("", 1, false, isPurchaseApproved);
         }}
         onSelect={(value, option) => {
           handleSelectItem(option.raw);
