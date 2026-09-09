@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Mic, Square } from "lucide-react";
+import RichTextEditable from "@/components/form-inputs/RichTextEditable";
+
 const SpeechToText = ({
   name,
   placeholder,
@@ -8,6 +10,7 @@ const SpeechToText = ({
   type = "input", // 'input' | 'textarea'
   className = "",
   lang = "en-US",
+  enableFormatting = false,
 }) => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -77,6 +80,19 @@ const SpeechToText = ({
     }
   };
   const renderField = () => {
+    if (enableFormatting) {
+      return (
+        <RichTextEditable
+          name={name}
+          placeholder={placeholder}
+          value={value}
+          onChange={(val) => onChange({ target: { name, value: val } })}
+          minHeight={type === "textarea" ? "min-h-[100px]" : "min-h-[42px]"}
+          className="flex-1"
+        />
+      );
+    }
+
     const commonProps = {
       className: `input ${className}`,
       name,
