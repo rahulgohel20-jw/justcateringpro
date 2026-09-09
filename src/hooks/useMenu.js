@@ -22,7 +22,7 @@ const HEADER_OWNED_TITLES = [
 ];
 
 const applyUpgradedModules = (menuItems, upgradedModules, currentUser) => {
-  const GATED_MODULES = ["Account", "Stock", "CRM", "AI Menu", "Menu Share Link", "Banquet" , "Captain Recipe" , "Assign Manager", "Food Taste Festival", "Event Flow", "Decor", "Menu Extra Features" , "kyc" , "followup" , "Security Deposit"];
+  const GATED_MODULES = ["Account", "Stock", "CRM", "AI Menu", "Menu Share Link", "Banquet" , "Captain Recipe" , "Assign Manager", "Food Taste Festival", "Event Flow", "Decor", "Menu Extra Features" , "kyc" , "followup" , "Security Deposit" , "Purchase Approve"];
 
   const modules =
     upgradedModules?.length > 0
