@@ -821,6 +821,27 @@ import { QRCodeCanvas } from "qrcode.react";
           },
           [selectedFunction],
           );
+          const handleCategoryHeadingSave = useCallback(
+  (catName, value) => {
+    if (!selectedFunction) return;
+    setIsDirty(true);
+    setSelectedByFunction((prev) => {
+      const bucket = prev[selectedFunction];
+      if (!bucket) return prev;
+      return {
+        ...prev,
+        [selectedFunction]: {
+          ...bucket,
+          categoryHeadings: {
+            ...(bucket.categoryHeadings || {}),
+            [catName]: value,
+          },
+        },
+      };
+    });
+  },
+  [selectedFunction],
+);
 
           const handleItemSubSave = useCallback(
           (catName, itemId, value) => {
@@ -1651,6 +1672,7 @@ try {
           const categoryImagesMap = {};
           const categorySpacesMap = {};
           const subCatTextMap = {};
+          const categoryHeadingsMap = {}; 
           const loadedAddonState = {};
             const categoryIdsMap = {};    
 
@@ -1673,6 +1695,7 @@ try {
           categorySpacesMap[norm.catName] = norm.space;
           subCatTextMap[norm.catName] = norm.subCat;
           categoryIdsMap[norm.catName] = norm.catId;
+          categoryHeadingsMap[norm.catName] = norm.catHeading;
 
 
             if (
@@ -1716,6 +1739,7 @@ setPrimaryItemsByFunction((prev) => ({ ...prev, [selectedFunction]: loadedPrimar
             categoryNotes: categoryNotesMap,
             categorySlogans: categorySlogansMap,
             categorySubTexts: subCatTextMap,
+            categoryHeadings: categoryHeadingsMap,   
             categoryRenames: categoryRenamesMap,
             categoryIds: categoryIdsMap,
           };
@@ -1728,6 +1752,7 @@ setPrimaryItemsByFunction((prev) => ({ ...prev, [selectedFunction]: loadedPrimar
               categoryNotes: categoryNotesMap,
               categorySlogans: categorySlogansMap,
               categorySubTexts: subCatTextMap,
+              categoryHeadings: categoryHeadingsMap,
               categoryRenames: categoryRenamesMap,
               categoryIds: categoryIdsMap,
             },
@@ -2941,6 +2966,7 @@ reportNameGujarati: categoryNameGujarati || selectedCategoryInfo.reportNameGujar
           categoryNotes:    bucket.categoryNotes,
           categorySlogans:  bucket.categorySlogans,
           categorySubTexts: bucket.categorySubTexts,
+          categoryHeadings: bucket.categoryHeadings, 
           categoryImages:   categoryImagesByFunction[selectedFunction] || {},
           categorySpaces:   categorySpacesByFunction[selectedFunction] || {},
           categoryRenames:  selectedByFunction[selectedFunction]?.categoryRenames || {},
@@ -4369,6 +4395,7 @@ const buildFullChangeSummary = (prev, next) => {
               functionId={selectedFunction}
               onSubCatSave={handleSubCatSave}
               onItemSubSave={handleItemSubSave}
+              onCategoryHeadingSave={handleCategoryHeadingSave} 
               onItemHeadingSave={handleItemHeadingSave} 
               data={{
                 ...(selectedByFunction[selectedFunction] || { categoriesOrder: [], categories: {} }),
