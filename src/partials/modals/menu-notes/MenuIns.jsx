@@ -3,7 +3,7 @@ import { Translateapi } from "../../../services/apiServices";
 import { extractTranslations } from "../../../utils/langConfig";
 import MultiLangInputBox from "../../../components/form-inputs/MultiLangInputbox";
 
-const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslating = false }) => {
+const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslating = false, mode = "menu"  }) => {
   const [formData, setFormData] = useState({ english: "", gujarati: "", hindi: "" });
   const [translating, setTranslating] = useState(false);
   const translateTimer = useRef(null);
@@ -218,7 +218,7 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
           <h2 className="text-xl font-semibold">Item Instruction</h2>
           <button onClick={onClose} className="text-2xl text-gray-600">&times;</button>
         </div>
-
+      {mode === "decor" && (
         <div className="flex justify-end mb-2">
           <button
             type="button"
@@ -229,6 +229,7 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
             <span className="text-base leading-none">•</span> Add bullet point
           </button>
         </div>
+      )}
 
         <div ref={containerRef}>
           <MultiLangInputBox

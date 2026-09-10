@@ -4600,6 +4600,7 @@ const buildFullChangeSummary = (prev, next) => {
               notes={itemNotes}
               onSave={handleInsSave}
               initialTranslating={insTranslating} 
+              mode={mode}
             />
             <MenuNotes
               isOpen={showNoteModal}
