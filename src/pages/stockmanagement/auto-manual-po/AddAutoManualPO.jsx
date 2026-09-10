@@ -280,6 +280,7 @@ const updateItem = (index, field, value) => {
 };
 
   const handleAddItem = (item, index = null) => {
+    if (!item) return; 
     if (index !== null) {
       setItems((prev) =>
         prev.map((it, i) =>
@@ -298,7 +299,7 @@ const updateItem = (index, field, value) => {
   };
 
   const totalAmount = items.reduce(
-    (sum, item) => sum + parseFloat(item.total_price || 0),
+    (sum, item) => sum + parseFloat(item?.total_price || 0),
     0,
   );
   const discountAmount =
@@ -735,8 +736,9 @@ if (response?.data?.success === true) {
           </tr>
         ) : (
           items.map((item, i) => {
-            const base = (parseFloat(item.qty) || 0) * (parseFloat(item.price_per_unit) || 0);
-            const gstRate = (parseFloat(item.cgst) || 0) + (parseFloat(item.sgst) || 0) + (parseFloat(item.igst) || 0);
+           if (!item) return null; // skip any corrupted/undefined row entirely
+         const base = (parseFloat(item.qty) || 0) * (parseFloat(item.price_per_unit) || 0);
+         const gstRate = (parseFloat(item.cgst) || 0) + (parseFloat(item.sgst) || 0) + (parseFloat(item.igst) || 0);
             const gstAmt = (base * gstRate) / 100;
             return (
               <tr key={i} className="border-b border-slate-50 hover:bg-blue-50/20 transition-colors group">
@@ -794,7 +796,7 @@ if (response?.data?.success === true) {
           const gstRate = (parseFloat(item.cgst) || 0) + (parseFloat(item.sgst) || 0) + (parseFloat(item.igst) || 0);
           return s + (base * gstRate) / 100;
         }, 0);
-        const totalOther = items.reduce((s, item) => s + (parseFloat(item.other_charges) || 0), 0);
+        const totalOther = items.reduce((s, item) => s + (parseFloat(item?.other_charges) || 0), 0);
         return (
           <tfoot>
             <tr className="bg-slate-50/80 border-t border-slate-200">

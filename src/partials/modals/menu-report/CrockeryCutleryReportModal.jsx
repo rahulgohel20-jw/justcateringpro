@@ -157,6 +157,7 @@ const CrockeryCutleryReportModal = ({
           showAddOnLabel : config.showAddOnLabel === 0,
           withOutBg : config.withOutBg === 0,
           withVendor : config.withVendor === 0,
+          isAllItemTogether : config.isAllItemTogether === 0,
         });
 
         setVisibleOptions(
@@ -184,6 +185,7 @@ const CrockeryCutleryReportModal = ({
             showAddOnLabel: config.showAddOnLabel,
             withOutBg: config.withOutBg,
             withVendor: config.withVendor,
+            isAllItemTogether:config.isAllItemTogether,
           })
             .filter(([_, value]) => value === 1)
             .map(([key]) => key),
@@ -397,6 +399,7 @@ const CrockeryCutleryReportModal = ({
        showAddOnLabel: options.showAddOnLabel,
        withOutBg: options.withOutBg,
        withVendor: options.withVendor,
+       isAllItemTogether:options.isAllItemTogether,
        isNotes : options.isNotes,
        showLastPage : option.showLastPage,
        isSignatureVisible: options.isSignatureVisible,

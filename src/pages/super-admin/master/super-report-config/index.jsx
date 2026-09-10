@@ -67,6 +67,7 @@ const SuperReportConfig = () => {
         is5Column:item.is5Column,
         isSignatureVisible:item.isSignatureVisible,
         showLastPage:item.showLastPage,
+        isAllItemTogether:item.isAllItemTogether,
             }));
 
      

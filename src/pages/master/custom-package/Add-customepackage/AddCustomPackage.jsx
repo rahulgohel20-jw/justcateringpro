@@ -11,6 +11,7 @@ import {
   GetAllCategoryformenu,
   Getmenuitemsusingcatidanditemname,
   Translateapi,
+  GetCustomPackageapi
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import AddMenuItem from "../../../../partials/modals/add-menu-item/AddMenuItem";
@@ -36,7 +37,10 @@ function AddCustomPackage() {
   const [activeMobileTab, setActiveMobileTab] = useState(0);
   const debounceRef = useRef(null);
   const [isDirty, setIsDirty] = useState(false);
-
+const [existingPackages, setExistingPackages] = useState([]);
+const [loadingPackages, setLoadingPackages] = useState(false);
+const [loadingCopy, setLoadingCopy] = useState(false);
+const [copyFromId, setCopyFromId] = useState("");
   const [notesModal, setNotesModal] = useState({
     isOpen: false,
     itemIndex: null,
@@ -223,7 +227,124 @@ function AddCustomPackage() {
     }
   };
 
+  useEffect(() => {
+  fetchExistingPackages();
+}, []);
+
+const fetchExistingPackages = async () => {
+  setLoadingPackages(true);
+  try {
+    const userId = localStorage.getItem("userId") || 1;
+    const res = await GetCustomPackageapi(userId);
+    const pkgs = res?.data?.data?.["Package Details"] || [];
+    // Don't offer the package currently being edited as a copy source
+    setExistingPackages(packageId ? pkgs.filter((p) => String(p.id) !== String(packageId)) : pkgs);
+  } catch (err) {
+    console.error("Error loading existing packages:", err);
+    setExistingPackages([]);
+  } finally {
+    setLoadingPackages(false);
+  }
+};
+
   const refreshMenuItems = () => setMenuRefreshKey((prev) => prev + 1);
+
+  const handleCopyFromPackage = (e) => {
+  const val = e.target.value;
+  setCopyFromId(val);
+
+  // Empty value = "Cancel" — just resets the selector, doesn't touch the form
+  if (!val) return;
+
+  const applyCopy = async () => {
+    setLoadingCopy(true);
+    try {
+      const response = await GetCustomPackageById(val);
+      if (response?.data?.success && response.data.data["Package Details"]?.[0]) {
+        const packageData = response.data.data["Package Details"][0];
+
+        setFormData({
+          nameEnglish: packageData.nameEnglish || "",
+          nameGujarati: packageData.nameGujarati || "",
+          nameHindi: packageData.nameHindi || "",
+          price: packageData.price?.toString() || "",
+        });
+
+        const sortedDetails = [...(packageData.customPackageDetails || [])].sort(
+          (a, b) => a.menuSortOrder - b.menuSortOrder,
+        );
+        setCategoryOrder(sortedDetails.map((d) => String(d.menuId)));
+
+        const categoryFetches = await Promise.all(
+          sortedDetails.map((detail) =>
+            Getmenuitemsusingcatidanditemname({
+              page: 1, size: 100,
+              userId: localStorage.getItem("userId") || 1,
+              menuCatId: detail.menuId,
+            })
+              .then((res) => ({ categoryId: String(detail.menuId), items: res.data?.data?.items || [] }))
+              .catch(() => ({ categoryId: String(detail.menuId), items: [] })),
+          ),
+        );
+        const categoryItemsMap = {};
+        categoryFetches.forEach(({ categoryId, items }) => { categoryItemsMap[categoryId] = items; });
+
+        const itemsToSelect = [];
+        const counts = {};
+        const restoredCategoryIds = new Set();
+
+        for (const detail of sortedDetails) {
+          const categoryId = String(detail.menuId);
+          restoredCategoryIds.add(categoryId);
+          if (detail.anyItem) counts[categoryId] = detail.anyItem;
+
+          const sortedItems = [...(detail.customPackageMenuItemDetails || [])].sort(
+            (a, b) => a.itemSortOrder - b.itemSortOrder,
+          );
+          const fetchedItems = categoryItemsMap[categoryId] || [];
+
+          for (const item of sortedItems) {
+            const fullItem = fetchedItems.find((i) => i.id === item.menuItemId);
+            itemsToSelect.push(
+              fullItem
+                ? { ...fullItem, rate: item.itemPrice || 0, category: categoryId, itemsNotes: item.itemInstruction || "", itemSlogan: "" }
+                : { id: item.menuItemId, nameEnglish: item.itemName, rate: item.itemPrice || 0, category: categoryId, itemsNotes: item.itemInstruction || "", itemSlogan: "", menuCategory: { id: detail.menuId, nameEnglish: detail.menuName } },
+            );
+          }
+        }
+
+        setSelectedItems(itemsToSelect);
+        setCategoryItemCounts(counts);
+        setSelectedCategories(restoredCategoryIds);
+        setIsDirty(true);
+      }
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Error", text: "Failed to copy package data" });
+    } finally {
+      setLoadingCopy(false);
+      setCopyFromId(""); // reset selector — it's a one-time "load template" action, not a persistent link
+    }
+  };
+
+  if (isDirty) {
+    Swal.fire({
+      title: "Replace current selection?",
+      text: "Copying a package will overwrite the name, price, categories, and items you've already set up.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, copy it",
+      cancelButtonText: "No, keep mine",
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      reverseButtons: true,
+    }).then((result) => {
+      if (result.isConfirmed) applyCopy();
+      else setCopyFromId("");
+    });
+  } else {
+    applyCopy();
+  }
+};
 
   // ─── Category toggle ──────────────────────────────────────────────────────────
 // ─── Category toggle ──────────────────────────────────────────────────────────
@@ -424,42 +545,63 @@ const allCategoryIds = [
 
       {/* ── Top Header Bar (mirrors menu planning header) ── */}
       <div className="flex-shrink-0 px-4 py-2 border-b bg-white shadow-sm">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          {/* Left: title + breadcrumb */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate("/master/custom-package")}
-              className="btn btn-sm border border-gray-300 text-gray-600 bg-white hover:bg-gray-100 flex items-center gap-1"
-            >
-              <i className="ki-filled ki-left text-sm" />
-              Back
-            </button>
-            <h2 className="text-lg font-semibold text-gray-900">
-              {packageId ? "Edit Package" : "Add Package"}
-            </h2>
-          </div>
+       <div className="flex items-center justify-between flex-wrap gap-2">
+  {/* Left: title + breadcrumb */}
+  <div className="flex items-center gap-3">
+    <button
+      onClick={() => navigate("/master/custom-package")}
+      className="btn btn-sm border border-gray-300 text-gray-600 bg-white hover:bg-gray-100 flex items-center gap-1"
+    >
+      <i className="ki-filled ki-left text-sm" />
+      Back
+    </button>
+    <h2 className="text-lg font-semibold text-gray-900">
+      {packageId ? "Edit Package" : "Add Package"}
+    </h2>
+  </div>
 
-          {/* Right: stats + action buttons */}
-          <div className="flex items-center gap-3 flex-wrap">
-            
+  {/* Right: copy selector + action buttons */}
+  <div className="flex items-center gap-3 flex-wrap">
+    {/* Copy from existing package — compact inline version */}
+    <div className="flex items-center gap-2">
+      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
+        Copy from
+      </label>
+      <select
+        className="input h-9 text-sm w-48"
+        value={copyFromId}
+        onChange={handleCopyFromPackage}
+        disabled={loadingPackages || loadingCopy}
+      >
+        <option value="">
+          {loadingCopy ? "Copying…" : loadingPackages ? "Loading…" : "Select package…"}
+        </option>
+        {existingPackages.map((pkg) => (
+          <option key={pkg.id} value={pkg.id}>
+            {pkg.nameEnglish || `Package #${pkg.id}`}
+          </option>
+        ))}
+      </select>
+    </div>
 
-            <button
-              onClick={handleCancel}
-              className="btn border border-gray-300 text-gray-600 bg-white hover:bg-gray-100 text-sm px-4 py-2 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="btn bg-primary text-white text-sm px-6 py-2 rounded-lg hover:opacity-90 font-semibold"
-            >
-              {packageId ? "Update Package" : "Save Package"}
-            </button>
-          </div>
-        </div>
+    <button
+      onClick={handleCancel}
+      className="btn border border-gray-300 text-gray-600 bg-white hover:bg-gray-100 text-sm px-4 py-2 rounded-lg"
+    >
+      Cancel
+    </button>
+    <button
+      onClick={handleSave}
+      className="btn bg-primary text-white text-sm px-6 py-2 rounded-lg hover:opacity-90 font-semibold"
+    >
+      {packageId ? "Update Package" : "Save Package"}
+    </button>
+  </div>
+</div>
 
         {/* ── Package info row (name + price inline) ── */}
         <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+          
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
             {/* MultiLangInputBox spans 3 cols */}
             <div className="md:col-span-3">
@@ -519,6 +661,15 @@ const allCategoryIds = [
 
       {/* ── Main 3-panel layout (mirrors menu planning grid) ── */}
       <div className="flex-1 overflow-hidden">
+  {/* Overlay shown while a copied package's items are being fetched & applied */}
+  {loadingCopy && (
+    <div className="absolute inset-0 z-20 bg-white/80 backdrop-blur-[1px] flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-3" />
+        <p className="text-sm text-gray-600 font-medium">Copying package items…</p>
+      </div>
+    </div>
+  )}
 
         {/* DESKTOP: 3 panels side by side */}
         <div
