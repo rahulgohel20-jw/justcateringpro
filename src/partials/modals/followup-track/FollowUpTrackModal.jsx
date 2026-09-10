@@ -13,8 +13,11 @@ const FollowUpTrackModal = ({
   onClose,
   eventId,
   userId,
-  canEdit = true,
+  canAdd = true,         
+  canEdit = true,         
+  canDelete = true,       
   eventInfo = null, 
+  
 }) => {
   const [followUpList, setFollowUpList] = useState([]);
   const [followUpLoading, setFollowUpLoading] = useState(false);
@@ -187,7 +190,7 @@ const fetchFollowUps = useCallback(async () => {
 
         <div className="px-6 py-5 flex flex-col gap-4">
           <div className="flex justify-end">
-            {canEdit && (
+            {canAdd && (
               <button
                 type="button"
                 onClick={openAddForm}
@@ -207,6 +210,7 @@ const fetchFollowUps = useCallback(async () => {
   data={followUpList}
   columns={getFollowUpColumns({
     canEdit,
+    canDelete,
     onEdit: openEditForm,
     onDelete: handleDeleteFollowUp,
   })}
