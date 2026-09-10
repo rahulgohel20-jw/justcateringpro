@@ -85,7 +85,7 @@ const CustomPackageMaster = () => {
 const [isSelectReportOpen, setIsSelectReportOpen] = useState(false);
 const [isMenuReportOpen, setIsMenuReportOpen] = useState(false);   // NEW
 const [menuReportTemplate, setMenuReportTemplate] = useState(null);
-
+const [loadingTable, setLoadingTable] = useState(false);
   // Fetch the template ID for "Custome Package Theme" once on mount
  
 
@@ -210,26 +210,29 @@ const generatePdf = async () => {
     });
   };
 
-  const fetchPackages = async () => {
-    try {
-      const Id = localStorage.getItem("userId");
-      if (!Id) {
-        Swal.fire("Error", "User ID not found!", "error");
-        return;
-      }
-
-      const res = await GetCustomPackageapi(Id);
-      const allPackages = res?.data?.data?.["Package Details"] || [];
-
-      setOriginalData(allPackages);
-
-      const formatted = formatPackageData(allPackages);
-      setTableData(formatted);
-    } catch (err) {
-      console.error("Failed to fetch packages:", err);
-      Swal.fire("Error", "Failed to fetch package data.", "error");
+ const fetchPackages = async () => {
+  setLoadingTable(true);
+  try {
+    const Id = localStorage.getItem("userId");
+    if (!Id) {
+      Swal.fire("Error", "User ID not found!", "error");
+      return;
     }
-  };
+
+    const res = await GetCustomPackageapi(Id);
+    const allPackages = res?.data?.data?.["Package Details"] || [];
+
+    setOriginalData(allPackages);
+
+    const formatted = formatPackageData(allPackages);
+    setTableData(formatted);
+  } catch (err) {
+    console.error("Failed to fetch packages:", err);
+    Swal.fire("Error", "Failed to fetch package data.", "error");
+  } finally {
+    setLoadingTable(false);
+  }
+};  
 
   useEffect(() => {
     fetchPackages();
@@ -397,17 +400,24 @@ const generatePdf = async () => {
           )}
         </div>
 
-        <TableComponent
-          columns={columns(
-            handleEdit,
-            deletePackage,
-            statusHandler,
-            permissions,
-            handleDownloadPdf,
-          )}
-          data={tableData}
-          paginationSize={10}
-        />
+       {loadingTable ? (
+  <div className="flex items-center justify-center py-20">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+    <span className="ml-3 text-sm text-gray-500">Loading packages…</span>
+  </div>
+) : (
+  <TableComponent
+    columns={columns(
+      handleEdit,
+      deletePackage,
+      statusHandler,
+      permissions,
+      handleDownloadPdf,
+    )}
+    data={tableData}
+    paginationSize={10}
+  />
+)}
 
         {/* Font Selection Modal */}
         <Modal
