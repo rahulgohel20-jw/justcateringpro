@@ -269,6 +269,7 @@ const languageOptions = [
     showAddOnLabel : "Show Add On Label",
     withOutBg : "With Out Background",
     withVendor : "With Vendor",
+    isAllItemTogether :"Is All Item Together",
   };
 
   const fetchFonts = async () => {
@@ -470,6 +471,7 @@ if (!config) {
           showAddOnLabel: false,
           withOutBg: false,
           withVendor: false,
+          isAllItemTogether: false,
         });
         setVisibleOptions([]);
         return;
@@ -557,6 +559,7 @@ if (!config) {
           showAddOnLabel : config.showAddOnLabel === 0,
           withOutBg : config.withOutBg === 0,
           withVendor : config.withVendor === 0,
+          isAllItemTogether: config.isAllItemTogether === 0,
           isNotes : config.isNotes === 0,
 
   showLastPage:  false,
@@ -602,6 +605,7 @@ isNotes : config.isNotes,
 showAddOnLabel : config.showAddOnLabel,
 withOutBg : config.withOutBg,
 withVendor : config.withVendor,
+isAllItemTogether: config.isAllItemTogether,
  })
             .filter(([_, value]) => value)
             .map(([key]) => key),
@@ -904,6 +908,7 @@ useEffect(() => {
      isAdvancePayment: options.isAdvancePayment,
      withOutBg: options.withOutBg,
      withVendor: options.withVendor,
+     isAllItemTogether:options.isAllItemTogether,
      isNotes : options.isNotes,
      showAddOnLabel: options.showAddOnLabel,
      showLastPage: 1,

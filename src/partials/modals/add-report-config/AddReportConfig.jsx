@@ -57,6 +57,7 @@ const defaultOptions = {
   isNotes:false,
   showLastPage:false,
   showAddOnLabel:false,
+  isAllItemTogether:false,
 };
 
 const optionLabels = {
@@ -107,7 +108,8 @@ const optionLabels = {
   showLastPage :"is Show Last Page ",
   showAddOnLabel : "is Show Add On Label",
   withOutBg : "With Out Background",
-  withVendor : "With Vendor"
+  withVendor : "With Vendor",
+  isAllItemTogether : "Is All Item Together",
 };
 
 const AddReportConfig = ({
@@ -251,6 +253,7 @@ const AddReportConfig = ({
            showAddOnLabel: !!data.showAddOnLabel,
             withOutBg: !!data.withOutBg,
             withVendor: !!data.withVendor,
+            isAllItemTogether: !!data.isAllItemTogether,
            
           });
         }
@@ -382,6 +385,7 @@ const AddReportConfig = ({
    showAddOnLabel:booleanToNumber(options.showAddOnLabel),
     withOutBg:booleanToNumber(options.withOutBg),
     withVendor:booleanToNumber(options.withVendor),
+    isAllItemTogether:booleanToNumber(options.isAllItemTogether),
     };
 
     try {
