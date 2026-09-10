@@ -241,6 +241,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
             isAddMenu : config.isAddMenu,
             isAdvancePayment: config.isAdvancePayment,
             withOutBg: config.withOutBg,
+            isAllItemTogether: config.isAllItemTogether ,
             withVendor: config.withVendor,
             isNotes : config.isNotes,
             showAddOnLabel: config.showAddOnLabel,
@@ -288,6 +289,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
               isAddMenu:config.isAddMenu === 0,
               isAdvancePayment:config.isAdvancePayment === 0,
               withOutBg: config.withOutBg === 0,
+              isAllItemTogether: config.isAllItemTogether === 0,
               withVendor: config.withVendor === 0,
               isNotes: config.isNotes === 0,
               showAddOnLabel: config.showAddOnLabel === 0
@@ -994,8 +996,9 @@ isAdvancedPay:opts.isAdvancedPay ?? false,
           isAddMenu:opts.isAddMenu ?? false,
           isAdvancePayment:opts.isAdvancePayment ?? false,
           showAddOnLabel:opts.showAddOnLabel ?? false,
-          withOutBg: config.withOutBg === 0,
-          withVendor: config.withVendor === 0,
+          withOutBg: opts.withOutBg === 0,
+          isAllItemTogether: opts.isAllItemTogether ?? false,
+          withVendor: opts.withVendor === 0,
           isNotes:opts.isNotes ?? false,
   is3Column: opts.is3Column ?? false,
   isFunctionNextPage: opts.isFunctionNextPage ?? false,
@@ -1083,6 +1086,7 @@ const handleConfigGenerate = async (configData) => {
     const showAddOnLabel = nonExclusiveConfig?.showAddOnLabel ? 1 : 0;
     const withOutBg = nonExclusiveConfig?.withOutBg === 0 ? 0 : 1;
     const withVendor = nonExclusiveConfig?.withVendor === 0 ? 0 : 1;
+    const isAllItemTogether = nonExclusiveConfig?.isAllItemTogether ? 1 : 0;
 
     // ⬅ Exclusive Theme module — pass the theme record's OWN id (e.g. 18402),
     // not templateMaster.id (e.g. 183). Matched by nameEnglish so it can't be

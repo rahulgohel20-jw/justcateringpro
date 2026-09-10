@@ -223,6 +223,13 @@ export const columns = (
 
   },
 },
+{
+  accessorKey:"isAllItemTogether",
+  header:"isAllItemTogether",
+  cell:({row}) => {
+    return <YesNoIcon value={row.original.isAllItemTogether}/>;
+  },
+},
  {
     accessorKey: "action",
     header: "Action",
