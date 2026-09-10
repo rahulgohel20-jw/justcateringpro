@@ -94,6 +94,7 @@ const { hasModuleAccess } = useModuleAccess();
   const [loadingItems, setLoadingItems] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [godownOptions, setGodownOptions] = useState([]);
+  const [rawMaterialLoading, setRawMaterialLoading] = useState(false);
   const {
     captainTableData,
     setCaptainTableData,
@@ -181,6 +182,7 @@ const [isCopyCaptainRecipe, setIsCopyCaptainRecipe] = useState(false);
   useEffect(() => {
     if (!userId) return; 
     const loadInitial = async () => {
+      setRawMaterialLoading(true);
       try {
         const [rawRes, catRes, godownRes] = await Promise.all([
           getRawMaterial(),
@@ -220,6 +222,10 @@ const [isCopyCaptainRecipe, setIsCopyCaptainRecipe] = useState(false);
         console.error(error);
         message.error("Failed to load initial data");
       }
+
+      finally {
+      setRawMaterialLoading(false);
+       }
     };
 
     loadInitial();
@@ -456,7 +462,7 @@ setInstructionHindi(editData.instructionHindi || "");
 
   const refreshData = async () => {
     setIsRefreshing(true);
-
+    setRawMaterialLoading(true);
     try {
       const [rawRes, catRes, godownRes] = await Promise.all([
         getRawMaterial(),
@@ -504,6 +510,7 @@ setInstructionHindi(editData.instructionHindi || "");
       message.error("Failed to refresh data");
     } finally {
       setIsRefreshing(false);
+      setRawMaterialLoading(false);
     }
   };
 
@@ -1165,6 +1172,10 @@ setInstructionHindi(editData.instructionHindi || "");
                     optionFilterProp="label"
                     placeholder="Select Raw Material"
                     className="bg-[#F8FAFC] h-10 w-full"
+                    loading={rawMaterialLoading}
+                  notFoundContent={
+                    rawMaterialLoading ? "Loading raw materials…" : "No items found"
+                  }
                     value={selectedRaw}
                     onSearch={(val) => setRawSearchText(val)}
                     onBlur={() => setRawSearchText("")}
@@ -1175,9 +1186,7 @@ setInstructionHindi(editData.instructionHindi || "");
                         );
                         const isCurrentlySelected =
                           item.rawMaterialId === selectedRaw;
-                        // If user is searching, or this is the item currently
-                        // being edited (selectedRaw), always show it —
-                        // otherwise hide already-added items.
+                        
                         return rawSearchText || isCurrentlySelected
                           ? true
                           : !isAdded;

@@ -210,7 +210,7 @@ export const SearchRawMaterial = (
   itemName,
   signal,
   isPurchaseApproved = false,
-  purchaseApproveId = null,
+  purchaseApproveId = "",
 ) => {
   return GET(
     `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=0&unitid=0&userid=${Id}&isPurchaseApprove=${isPurchaseApproved}&purchaseApproveId=${purchaseApproveId}`,
@@ -1253,12 +1253,13 @@ export const GetDbAssignedDetails = (dbPlanningId) => {
   return GET(`/excel-parsing/getById?db_planning_id=${dbPlanningId}`);
 };
 
-export const GetUserlogs = (data, endDate, startDate, eventId) => {
-  const queryParams = new URLSearchParams({ user: String(data) });
-
+export const GetUserlogs = (data, endDate, startDate, eventId, userId) => {
+  const queryParams = new URLSearchParams();
+  if (data) queryParams.set("user", data);
   if (endDate) queryParams.set("endDate", endDate);
   if (startDate) queryParams.set("startDate", startDate);
   if (eventId) queryParams.set("eventId", eventId);
+   if (userId) queryParams.set("userId", userId);
 
   return GET(`/user-logs/getUserLogs?${queryParams.toString()}`);
 };

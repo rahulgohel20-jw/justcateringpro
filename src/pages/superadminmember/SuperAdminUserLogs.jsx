@@ -11,6 +11,7 @@ export default function SuperAdminUserLogs() {
   const [loading, setLoading] = useState(false);
   const location = useLocation();
   const { email } = location.state || {};
+  const userId = localStorage.getItem("userId") || JSON.parse(localStorage.getItem("auth-storage") || "{}")?.state?.user?.id;
 
   useEffect(() => {
     const fetchUserLogs = async () => {
@@ -18,7 +19,7 @@ export default function SuperAdminUserLogs() {
 
       setLoading(true);
       try {
-        const response = await GetUserlogs(email); // ✅ API call
+        const response = await GetUserlogs(email, "", "", "", userId); // ✅ API call
 
         // The real data is nested: response.data.data
         const apiData = response?.data?.data || [];
