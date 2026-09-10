@@ -1173,7 +1173,7 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
             </div>
 
            
-{exclusive === true && (
+{(exclusive === true || moduleType === "Decoration Theme") && (
   <div className="grid grid-cols-3 gap-4">
     <div>
       <label className="block font-medium mb-2 text-gray-700">
@@ -1221,6 +1221,7 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
 )}
 
 {(exclusive === true ||
+  moduleType === "Decoration Theme" ||
   (moduleType === "Back Office Theme" && mappingType === "Type 12")) && (
   <div className="grid grid-cols-3 gap-4">
     <div>
