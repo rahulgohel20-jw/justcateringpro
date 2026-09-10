@@ -75,7 +75,7 @@ const [isEventHistoryOpen, setIsEventHistoryOpen] = useState(false);
 const [eventHistoryLogs, setEventHistoryLogs] = useState([]);
 const [eventHistoryLoading, setEventHistoryLoading] = useState(false);
 const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
-
+const userId = localStorage.getItem("userId");
 const [contextMenu, setContextMenu] = useState(null); 
 
 const handleItemContextMenu = (e, item) => {
@@ -269,7 +269,7 @@ const handleOpenEventHistory = async () => {
   setEventHistoryLoading(true);
   try {
     const email = getUserEmail();
-    const res = await GetUserlogs("", "", "", safeEventId);
+    const res = await GetUserlogs("", "", "", safeEventId, userId);
     const allLogs = res?.data?.data || [];
     // Show every log tied to this event — menu planning, quotation, invoice,
     // deletion, etc. — sorted newest first.

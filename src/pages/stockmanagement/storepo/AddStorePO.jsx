@@ -985,7 +985,11 @@ useEffect(() => {
       placeholder="Select Godown Type"
       style={{ width: "100%", height: "38px" }}
       value={selectedGodownType}
- 
+      onChange={(value) => setSelectedGodownType(value)}
+  options={godownTypes.map((t) => ({
+    label: t.nameEnglish,
+    value: t.id,
+  }))}
     
       filterOption={(input, option) =>
         (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
