@@ -19,7 +19,7 @@ import {
   EditOutlined,
   DeleteOutlined,  
 } from "@ant-design/icons";
-import { GetAllMemberByUserId, GetUserlogs } from "@/services/apiServices";
+import { GetAllMemberByUserId, GetUserlogs, GenerateDateWiseLogReport } from "@/services/apiServices";
 import { Spin, Empty, message, Select } from "antd";
 import dayjs from "dayjs";
 import DatePicker from "react-datepicker";
@@ -63,6 +63,7 @@ export default function Log() {
   const [members, setMembers] = useState([]);
   const [selectedMemberEmail, setSelectedMemberEmail] = useState(null);
   const [membersLoading, setMembersLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
 
 useEffect(() => {
   fetchUserLogs();
@@ -190,6 +191,55 @@ useEffect(() => {
     setLoading(false);
   }
 };
+
+  // ── Download report ────────────────────────────────────────────────────────
+  const handleDownloadReport = async () => {
+    try {
+      setReportLoading(true);
+      const formattedStart = startDate ? dayjs(startDate).format("DD/MM/YYYY") : "";
+      const formattedEnd   = endDate   ? dayjs(endDate).format("DD/MM/YYYY")   : "";
+
+      let loggedInEmail = "";
+      try {
+        loggedInEmail = JSON.parse(localStorage.getItem("auth-storage") || "{}")?.state?.user?.email || "";
+      } catch { /* ignore */ }
+
+      const response = await GenerateDateWiseLogReport(
+        formattedStart,
+        formattedEnd,
+        loggedInEmail,
+        selectedMemberEmail || "",
+        localStorage.getItem("userId") || "",
+      );
+
+      // Handle blob (PDF/Excel) or JSON redirect URL
+      const contentType = response?.headers?.["content-type"] || "";
+      if (contentType.includes("application/json")) {
+        const url = response?.data?.report_path || response?.data?.data || response?.data?.url;
+        if (url) {
+          window.open(url, "_blank");
+        } else {
+          message.success(response?.data?.msg || "Report generated successfully");
+        }
+      } else {
+        // Blob response — trigger download
+        const blob = new Blob([response.data], { type: contentType });
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `log-report-${dayjs().format("DDMMYYYY")}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(blobUrl);
+      }
+    } catch (err) {
+      console.error("Report generation failed:", err);
+      message.error(err?.response?.data?.message || "Failed to generate report");
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   // ── Normalize eventType for matching (case-insensitive, trim)
   const normalizeType = (eventType) =>
@@ -375,6 +425,30 @@ if (type.includes("quotation"))              return "bg-blue-100  text-blue-700"
     >
      
      <RestFilled /> Reset
+    </button>
+  </div>
+
+  {/* Download Report Button */}
+  <div className="flex flex-col gap-1">
+    <label className="text-[11px] font-semibold text-transparent uppercase tracking-wide select-none">
+      &nbsp;
+    </label>
+    <button
+      onClick={handleDownloadReport}
+      disabled={reportLoading}
+      className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 active:scale-95 transition-all text-white text-sm font-medium px-4 py-1.5 rounded-md shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+    >
+      {reportLoading ? (
+        <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+        </svg>
+      ) : (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+        </svg>
+      )}
+      {reportLoading ? "Generating..." : "Report"}
     </button>
   </div>
 

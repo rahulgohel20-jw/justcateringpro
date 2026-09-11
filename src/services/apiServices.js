@@ -3779,3 +3779,13 @@ export const AddUpdateGeneralFix = (data) => {
 export const getAllSecurityDepositByEventId = (eventId) => {
   return GET(`/quotation/getAllSecurityDepositByEventId?eventId=${eventId}`);
 };  
+
+export const GenerateDateWiseLogReport = (startDate, endDate, email, memberEmail, userId) => {
+  const params = new URLSearchParams();
+  params.append("startDate",   startDate   || "");
+  params.append("endDate",     endDate     || "");
+  params.append("email",       email       || "");
+  params.append("memberEmail", memberEmail || "");
+  params.append("userId",      userId      || "");
+  return GET(`/report/generate-date-wise-log-report?${params.toString()}`);
+};
