@@ -1219,8 +1219,8 @@ const deleteHeading = async (hId) => {
   disabled={!getHeadingText(newHeadingDraft)}
   className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
 >
-  <Plus size={13} />
-  <FormattedMessage id="USER.EXTRA_CHARGES.ADD_BTN" defaultMessage="Add" />
+  <Check size={13} />
+  <FormattedMessage id="USER.EXTRA_CHARGES.ADD_BTN" defaultMessage="Save" />
 </button>
                     <button
                       onClick={cancelAddHeading}
