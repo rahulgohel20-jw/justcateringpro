@@ -2269,14 +2269,15 @@ reportNameGujarati: categoryNameGujarati || selectedCategoryInfo.reportNameGujar
           });
 
           return {
-          ...prev,
-          [functionId]: {
-          categoriesOrder: newOrder,
-          categories: cats,
-          categoryNotes: b.categoryNotes || {},
-          categorySlogans: updatedCategorySlogans,
-          categoryIds: updatedCategoryIds,
-          },
+            ...prev,
+            [functionId]: {
+              ...b,
+              categoriesOrder: newOrder,
+              categories: cats,
+              categoryNotes: b.categoryNotes || {},
+              categorySlogans: updatedCategorySlogans,
+              categoryIds: updatedCategoryIds,
+            },
           };
 
             });
@@ -2651,6 +2652,7 @@ reportNameGujarati: categoryNameGujarati || selectedCategoryInfo.reportNameGujar
             const packageItemsFlat = [];
             const categoryLimits = {};
               const categoryIdsMap = {}; 
+              const itemReportNamesMap = {};
             (pkg.customPackageDetails || []).forEach((menu) => {
           const catName = menu.menuName || `Menu ${menu.menuId || ""}`;
           const catNameHindi = menu.menuNameHindi || catName;
@@ -2666,27 +2668,32 @@ reportNameGujarati: categoryNameGujarati || selectedCategoryInfo.reportNameGujar
 
               categoryLimits[catName] = anyCount;
 
-              const items = (menu.customPackageMenuItemDetails || []).map((it) => ({
-                id: Number(it.menuItemId || it.id || 0),
-                nameEnglish: it.itemName || "",
-                nameHindi: it.itemNameHindi || it.itemName || "",
-                nameGujarati: it.itemNameGujarati || it.itemName || "",
-                imagePath: "",
-                rate: Number(it.itemPrice || 0),
-                menuCategoryName: catName,
-                menuCategoryNameHindi: catNameHindi,
-                menuCategoryNameGujarati: catNameGujarati,
-                catId,
-                isPackageItem: true,
-                packageId: pkg.id,
-                packageName: pkg.nameEnglish,
-          //         reportNameEnglish: catReportName,
-          // reportNameHindi: catReportNameHindi,
-          // reportNameGujarati: catReportNameGujarati,
-                  reportNameEnglish: menu.reportNameEnglish || catName,
-          reportNameHindi: menu.reportNameHindi || catNameHindi,
-          reportNameGujarati: menu.reportNameGujarati || catNameGujarati,
-              }));
+              const items = (menu.customPackageMenuItemDetails || []).map((it) => {
+  const itemId = Number(it.menuItemId || it.id || 0);
+  const itemNickE = (it.itemNickNameEnglish || "").trim();
+  const itemNickH = (it.itemNickNameHindi || "").trim();
+  const itemNickG = (it.itemNickNameGujarati || "").trim();
+
+  return {
+    id: itemId,
+    nameEnglish: it.itemName || "",
+    nameHindi: it.itemNameHindi || it.itemName || "",
+    nameGujarati: it.itemNameGujarati || it.itemName || "",
+    nicknames: { english: itemNickE, hindi: itemNickH, gujarati: itemNickG }, // still kept for rename modal prefill
+    imagePath: "",
+    rate: Number(it.itemPrice || 0),
+    menuCategoryName: catName,
+    menuCategoryNameHindi: catNameHindi,
+    menuCategoryNameGujarati: catNameGujarati,
+    catId,
+    isPackageItem: true,
+    packageId: pkg.id,
+    packageName: pkg.nameEnglish,
+    reportNameEnglish: menu.reportNameEnglish || catName,
+    reportNameHindi: menu.reportNameHindi || catNameHindi,
+    reportNameGujarati: menu.reportNameGujarati || catNameGujarati,
+  };
+});
 
               packageItemsFlat.push(...items);
 
@@ -2743,22 +2750,36 @@ reportNameGujarati: categoryNameGujarati || selectedCategoryInfo.reportNameGujar
           }
           });
 
+          const itemRenamesMap = {};
+(pkg.customPackageDetails || []).forEach((menu) => {
+  (menu.customPackageMenuItemDetails || []).forEach((it) => {
+    const itemId = Number(it.menuItemId || it.id || 0);
+    const nickE = (it.itemNickNameEnglish || "").trim();
+    const nickH = (it.itemNickNameHindi || "").trim();
+    const nickG = (it.itemNickNameGujarati || "").trim();
+    if (itemId && (nickE || nickH || nickG)) {
+      itemRenamesMap[itemId] = { english: nickE, hindi: nickH, gujarati: nickG };
+    }
+  });
+});
+
 
             setSelectedByFunction((prev) => ({
           ...prev,
           [selectedFunction]: {
-          categoriesOrder: order,
-          categories,
-          categoryNotes: prev[selectedFunction]?.categoryNotes || {},
-          categorySlogans: prev[selectedFunction]?.categorySlogans || {},
-          categoryReportNames: categoryReportNamesMap,
-          categoryRenames: categoryRenamesMap,       // ← ADD THIS
-          itemRenames: prev[selectedFunction]?.itemRenames || {},
-          categorySubTexts: prev[selectedFunction]?.categorySubTexts || {},
-          categoryIds: categoryIdsMap,
-          },
-          _menuPrepId: prev?._menuPrepId || 0,
-          }));
+    categoriesOrder: order,
+    categories,
+    categoryNotes: prev[selectedFunction]?.categoryNotes || {},
+    categorySlogans: prev[selectedFunction]?.categorySlogans || {},
+    categoryReportNames: categoryReportNamesMap,
+    categoryRenames: categoryRenamesMap,
+    itemRenames: prev[selectedFunction]?.itemRenames || {},   // ← unchanged, no nickname seeding
+    itemReportNames: itemReportNamesMap,                      // ← NEW
+    categorySubTexts: prev[selectedFunction]?.categorySubTexts || {},
+    categoryIds: categoryIdsMap,
+  },
+  _menuPrepId: prev?._menuPrepId || 0,
+}));
 
             setHasExistingData(true);
             setIsDirty(true);
@@ -2973,6 +2994,7 @@ reportNameGujarati: categoryNameGujarati || selectedCategoryInfo.reportNameGujar
           categoryIds:      bucket.categoryIds || {},
           primaryItems:     primaryItemsByFunction[selectedFunction] || {},
           itemRenames:      selectedByFunction[selectedFunction]?.itemRenames || {},
+          itemReportNames:  selectedByFunction[selectedFunction]?.itemReportNames || {}, 
           addonState:       addonState[selectedFunction] || {},
           packageApplied:   packageAppliedForFunction[selectedFunction] || false,
           packageInfo:      packageInfoByFunction[selectedFunction]     || null,

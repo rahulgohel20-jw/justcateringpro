@@ -134,9 +134,12 @@ function resolveName(nickname, original) {
 function normaliseItem(rawItem, fields, isPackage = false) {
   return {
     id:                   Number(rawItem[fields.itemId] ?? rawItem.id ?? 0),
-  nameEnglish:  resolveName(rawItem[fields.itemNicknameEnglish],  rawItem[fields.itemName] || rawItem.menuItemName || ""),
-nameHindi:    resolveName(rawItem[fields.itemNicknameHindi],    rawItem[fields.itemNameHindi] || rawItem[fields.itemName] || ""),
-nameGujarati: resolveName(rawItem[fields.itemNicknameGujarati], rawItem[fields.itemNameGujarati] || rawItem[fields.itemName] || ""),
+//   nameEnglish:  resolveName(rawItem[fields.itemNicknameEnglish],  rawItem[fields.itemName] || rawItem.menuItemName || ""),
+// nameHindi:    resolveName(rawItem[fields.itemNicknameHindi],    rawItem[fields.itemNameHindi] || rawItem[fields.itemName] || ""),
+// nameGujarati: resolveName(rawItem[fields.itemNicknameGujarati], rawItem[fields.itemNameGujarati] || rawItem[fields.itemName] || ""),
+nameEnglish:  rawItem[fields.itemName] || rawItem.menuItemName || "",
+    nameHindi:    rawItem[fields.itemNameHindi] || rawItem[fields.itemName] || "",
+    nameGujarati: rawItem[fields.itemNameGujarati] || rawItem[fields.itemName] || "",
 nicknames: {
   english:  rawItem[fields.itemNicknameEnglish]  || "",
   hindi:    rawItem[fields.itemNicknameHindi]    || "",
@@ -312,9 +315,14 @@ const items = dedupedSourceItems.map((it) => {
 
     return {
       id: rawId,
-      nameEnglish:          resolveName(it[fields.itemNicknameEnglish]  || flat[fields.itemNicknameEnglish],  it[fields.itemName] || flat[fields.itemName] || ""),
-nameHindi:            resolveName(it[fields.itemNicknameHindi]    || flat[fields.itemNicknameHindi],    it[fields.itemNameHindi] || flat[fields.itemNameHindi] || it[fields.itemName] || ""),
-nameGujarati:         resolveName(it[fields.itemNicknameGujarati] || flat[fields.itemNicknameGujarati], it[fields.itemNameGujarati] || flat[fields.itemNameGujarati] || it[fields.itemName] || ""),
+      nameEnglish:          it[fields.itemName] || flat[fields.itemName] || "",
+      nameHindi:            it[fields.itemNameHindi] || flat[fields.itemNameHindi] || it[fields.itemName] || "",
+      nameGujarati:         it[fields.itemNameGujarati] || flat[fields.itemNameGujarati] || it[fields.itemName] || "",
+ nicknames: {
+    english:  it[fields.itemNicknameEnglish]  || flat[fields.itemNicknameEnglish]  || "",
+    hindi:    it[fields.itemNicknameHindi]    || flat[fields.itemNicknameHindi]    || "",
+    gujarati: it[fields.itemNicknameGujarati] || flat[fields.itemNicknameGujarati] || "",
+  },
       imagePath:            it.imagePath                 || flat.imagePath                 || "",
 rate: (() => {
   const savedPrice =
@@ -508,9 +516,21 @@ changedAfterCompletion:   allItems[0]?.changedAfterCompletion ?? null,
         menuItemName:         item.nameEnglish || "",
         menuItemNameHindi:    item.nameHindi   || item.nameEnglish || "",
         menuItemNameGujarati: item.nameGujarati|| item.nameEnglish || "",
-          itemNickNameEnglish:    resolveName(state.itemRenames?.[item.id]?.english,  item.nameEnglish || ""),
-itemNickNameHindi:      resolveName(state.itemRenames?.[item.id]?.hindi,    item.nameHindi   || item.nameEnglish || ""),
-itemNickNameGujarati:   resolveName(state.itemRenames?.[item.id]?.gujarati, item.nameGujarati|| item.nameEnglish || ""),
+//           itemNickNameEnglish:    resolveName(state.itemRenames?.[item.id]?.english,  item.nameEnglish || ""),
+// itemNickNameHindi:      resolveName(state.itemRenames?.[item.id]?.hindi,    item.nameHindi   || item.nameEnglish || ""),
+// itemNickNameGujarati:   resolveName(state.itemRenames?.[item.id]?.gujarati, item.nameGujarati|| item.nameEnglish || ""),
+itemNickNameEnglish: resolveName(
+  state.itemRenames?.[item.id]?.english,
+  item.nicknames?.english || item.nameEnglish || ""
+),
+itemNickNameHindi: resolveName(
+  state.itemRenames?.[item.id]?.hindi,
+  item.nicknames?.hindi || item.nameHindi || item.nameEnglish || ""
+),
+itemNickNameGujarati: resolveName(
+  state.itemRenames?.[item.id]?.gujarati,
+  item.nicknames?.gujarati || item.nameGujarati || item.nameEnglish || ""
+),
   isCatImage:             !!state.primaryItems?.[catName]?.[item.id],
 
         isItemAddons:         !!addonState?.[catName]?.items?.[item.id],

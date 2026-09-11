@@ -453,13 +453,13 @@ useEffect(() => {
           initialSpace={item.itemSpace || 0}
         />
       )}
-      {!isDeleted && showRenameModal && (
+ {!isDeleted && showRenameModal && (
   <RenameItemCat
     label={displayItemName}
     initialValues={{
-      english: item.nameEnglish || "",
-      hindi: item.nameHindi || "",
-      gujarati: item.nameGujarati || "",
+      english: item.nicknames?.english || item.nameEnglish || "",
+      hindi: item.nicknames?.hindi || item.nameHindi || "",
+      gujarati: item.nicknames?.gujarati || item.nameGujarati || "",
     }}
     onClose={() => setShowRenameModal(false)}
     onLiveChange={(val) => onRenameItemSave(catName, item.id, val)}
