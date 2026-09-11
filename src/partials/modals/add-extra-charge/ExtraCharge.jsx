@@ -103,9 +103,12 @@ const startRenameHeading = (heading) => {
 };
 
 const confirmRenameHeading = () => {
-  const plainName = renameDraft.trim();
-  if (!plainName) return;
-  updateHeadingName(renamingHeadingId, plainName);
+  // Use the helper to check if there's actual content
+  const plainText = getPlainTextFromHtml(renameDraft);
+  
+  if (!plainText) return;
+  
+  updateHeadingName(renamingHeadingId, renameDraft);
   setRenamingHeadingId(null);
   setRenameDraft("");
 };
@@ -200,11 +203,38 @@ const getFunctionDateTime = (funcId) => {
 
 
 // Decode HTML entities from API-stored strings (e.g. &amp; → &, &nbsp; → space)
+// BUT preserve formatting tags like <b>, <i>, <u>, <strong>, <em>
 const decodeHtmlEntities = (str) => {
   if (!str) return "";
   const tmp = document.createElement("div");
   tmp.innerHTML = str;
+  // Return the innerHTML to preserve HTML tags but decode entities
+  return tmp.innerHTML;
+};
+
+// Helper to get plain text from HTML (for validation)
+const getPlainTextFromHtml = (html) => {
+  if (!html) return "";
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
   return (tmp.textContent || tmp.innerText || "").trim();
+};
+
+// Clean HTML before sending to backend - decode entities but keep tags
+const cleanHtmlForBackend = (html) => {
+  if (!html) return "";
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  // Get the innerHTML which will have decoded entities
+  let cleaned = tmp.innerHTML;
+  // Replace common encoded entities that shouldn't be sent
+  cleaned = cleaned.replace(/&amp;/g, '&');
+  cleaned = cleaned.replace(/&lt;/g, '<');
+  cleaned = cleaned.replace(/&gt;/g, '>');
+  cleaned = cleaned.replace(/&quot;/g, '"');
+  cleaned = cleaned.replace(/&#39;/g, "'");
+  cleaned = cleaned.replace(/&nbsp;/g, ' ');
+  return cleaned;
 };
 
 const mapHeadings = (headingsArr) =>
@@ -408,13 +438,16 @@ const validateHeadingsBeforeSave = () => {
   const rowsMissingSession = [];
 
   headings.forEach((h) => {
+    // Get plain text version of heading name for display in messages
+    const displayName = getPlainTextFromHtml(h.name) || "Untitled Heading";
+    
     if (!h.rows || h.rows.length === 0) {
-      emptyHeadings.push(h.name || "Untitled Heading");
+      emptyHeadings.push(displayName);
       return;
     }
     h.rows.forEach((r) => {
       if (!r.session || !r.session.trim()) {
-        rowsMissingSession.push(h.name || "Untitled Heading");
+        rowsMissingSession.push(displayName);
       }
     });
   });
@@ -467,8 +500,8 @@ const validateHeadingsBeforeSave = () => {
       grandTotal: grandTotal,
       headings: headings.map((h) => ({
         id: h._isNew ? 0 : (h.id || 0),
-        headingName: h.name,
-        subHeadingName: h.subHeadingName || "",
+        headingName: cleanHtmlForBackend(h.name),
+        subHeadingName: cleanHtmlForBackend(h.subHeadingName) || "",
         headingTotal: getHeadingTotal(h),
         rows: h.rows.map((r) => ({
           id: r._isNew ? 0 : (r.id || 0),
@@ -733,6 +766,31 @@ const deleteHeading = async (hId) => {
   if (!isOpen) return null;
 
   return (
+    <>
+      <style>{`
+        .heading-editor b,
+        .heading-editor strong {
+          font-weight: 700 !important;
+        }
+        .heading-editor i,
+        .heading-editor em {
+          font-style: italic !important;
+        }
+        .heading-editor u {
+          text-decoration: underline !important;
+        }
+        .heading-display b,
+        .heading-display strong {
+          font-weight: 700 !important;
+        }
+        .heading-display i,
+        .heading-display em {
+          font-style: italic !important;
+        }
+        .heading-display u {
+          text-decoration: underline !important;
+        }
+      `}</style>
     <div className="fixed inset-0 z-20 flex items-center justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
@@ -816,19 +874,111 @@ const deleteHeading = async (hId) => {
                       <FileText size={14} className="text-gray-500 flex-shrink-0" />
                       {renamingHeadingId === heading.id ? (
                       <>
-                        <input
-                          type="text"
-                          autoFocus
+                        <div
+                          ref={(el) => {
+                            if (el && renamingHeadingId === heading.id) {
+                              // Only set content if it's different (avoid resetting on every render)
+                              if (el.innerHTML !== renameDraft) {
+                                const selection = window.getSelection();
+                                const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+                                const cursorOffset = range ? range.startOffset : 0;
+                                const focusNode = range ? range.startContainer : null;
+                                
+                                el.innerHTML = renameDraft;
+                                
+                                // Restore cursor position if we were already editing
+                                if (focusNode && el.contains(focusNode)) {
+                                  try {
+                                    const newRange = document.createRange();
+                                    newRange.setStart(focusNode, Math.min(cursorOffset, focusNode.length || 0));
+                                    newRange.collapse(true);
+                                    selection.removeAllRanges();
+                                    selection.addRange(newRange);
+                                  } catch (e) {
+                                    // If cursor restoration fails, just focus at the end
+                                    el.focus();
+                                  }
+                                } else {
+                                  // First time - select all text
+                                  el.focus();
+                                  const range = document.createRange();
+                                  const sel = window.getSelection();
+                                  range.selectNodeContents(el);
+                                  sel.removeAllRanges();
+                                  sel.addRange(range);
+                                }
+                              }
+                            }
+                          }}
+                          contentEditable
+                          suppressContentEditableWarning
                           aria-label="Rename heading"
-                          className="font-normal text-gray-800 bg-white border border-blue-300 rounded text-sm w-52 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          value={renameDraft}
-                          onChange={(e) => setRenameDraft(e.target.value)}
+                          className="heading-editor font-normal text-gray-800 bg-white border border-blue-300 rounded text-sm w-52 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          style={{ minHeight: '28px' }}
+                          onInput={(e) => {
+                            // Save cursor position before updating state
+                            const selection = window.getSelection();
+                            if (selection.rangeCount > 0) {
+                              const range = selection.getRangeAt(0);
+                              const cursorOffset = range.startOffset;
+                              const focusNode = range.startContainer;
+                              
+                              setRenameDraft(e.currentTarget.innerHTML);
+                              
+                              // Restore cursor after state update
+                              requestAnimationFrame(() => {
+                                try {
+                                  if (focusNode && e.currentTarget.contains(focusNode)) {
+                                    const newRange = document.createRange();
+                                    newRange.setStart(focusNode, Math.min(cursorOffset, focusNode.length || 0));
+                                    newRange.collapse(true);
+                                    selection.removeAllRanges();
+                                    selection.addRange(newRange);
+                                  }
+                                } catch (err) {
+                                  // Silently fail if cursor restoration doesn't work
+                                }
+                              });
+                            } else {
+                              setRenameDraft(e.currentTarget.innerHTML);
+                            }
+                          }}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") {
+                            if (e.key === "Enter" && !e.shiftKey) {
                               e.preventDefault();
                               confirmRenameHeading();
                             }
-                            if (e.key === "Escape") cancelRenameHeading();
+                            if (e.key === "Escape") {
+                              e.preventDefault();
+                              cancelRenameHeading();
+                            }
+                            // Allow Ctrl+B for bold
+                            if ((e.key === "b" || e.key === "B") && (e.ctrlKey || e.metaKey)) {
+                              e.preventDefault();
+                              try {
+                                document.execCommand("bold", false, null);
+                              } catch (err) {
+                                console.error("Bold command failed:", err);
+                              }
+                            }
+                            // Allow Ctrl+I for italic
+                            if ((e.key === "i" || e.key === "I") && (e.ctrlKey || e.metaKey)) {
+                              e.preventDefault();
+                              try {
+                                document.execCommand("italic", false, null);
+                              } catch (err) {
+                                console.error("Italic command failed:", err);
+                              }
+                            }
+                            // Allow Ctrl+U for underline
+                            if ((e.key === "u" || e.key === "U") && (e.ctrlKey || e.metaKey)) {
+                              e.preventDefault();
+                              try {
+                                document.execCommand("underline", false, null);
+                              } catch (err) {
+                                console.error("Underline command failed:", err);
+                              }
+                            }
                           }}
                         />
                         <button
@@ -850,10 +1000,9 @@ const deleteHeading = async (hId) => {
                     ) : (
                       <>
                         <span
-                          className="font-normal text-gray-800 text-sm"
-                        >
-                          {heading.name}
-                        </span>
+                          className="heading-display font-normal text-gray-800 text-sm"
+                          dangerouslySetInnerHTML={{ __html: heading.name }}
+                        />
                         <button
                           onClick={() => startRenameHeading(heading)}
                           className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-blue-50 rounded transition-colors"
@@ -1295,6 +1444,7 @@ const deleteHeading = async (hId) => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

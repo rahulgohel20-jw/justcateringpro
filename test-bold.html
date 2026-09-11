@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .heading-editor b,
+        .heading-editor strong {
+            font-weight: 700 !important;
+        }
+        .heading-display b,
+        .heading-display strong {
+            font-weight: 700 !important;
+        }
+    </style>
+</head>
+<body>
+    <h2>Test Bold Rendering</h2>
+    
+    <div class="heading-editor" contenteditable style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+        Click here and type, then press Ctrl+B to make text <b>bold</b>
+    </div>
+    
+    <div class="heading-display" style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+        Display with <b>bold text</b> and <strong>strong text</strong>
+    </div>
+    
+    <script>
+        document.querySelector('.heading-editor').addEventListener('keydown', (e) => {
+            if ((e.key === 'b' || e.key === 'B') && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                try {
+                    document.execCommand('bold', false, null);
+                } catch (err) {
+                    console.error('Bold command failed:', err);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
