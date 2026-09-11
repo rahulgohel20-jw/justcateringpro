@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Trash2, Plus, FileText, ChevronDown, Save, Pencil, Check } from "lucide-react";import { AddExtraCharges, GetExtraCharges,DeleteExtraChargeRow,
-  DeleteExtraChargeHeading,AddLogs  } from "@/services/apiServices";
+import { X, Trash2, Plus, FileText, ChevronDown, Save, Pencil, Check } from "lucide-react";
+import { AddExtraCharges, GetExtraCharges, DeleteExtraChargeRow,
+  DeleteExtraChargeHeading, AddLogs, GetEventMasterById } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { TimePicker } from "antd";
 import dayjs from "dayjs";
@@ -28,6 +29,9 @@ useEffect(() => {
   const [selectedFunctionDateTime, setSelectedFunctionDateTime] = useState({ date: "", startTime: "" , endTime: "", });
   const userId = localStorage.getItem("userId");
 
+  // ── Fetched event functions (for session auto-fill) ───────────────────────
+  const [fetchedEventFunctions, setFetchedEventFunctions] = useState([]);
+
   const getHeadingTotal = (heading) =>
     heading.rows.reduce((sum, r) => sum + calcTotal(r.rate, r.person), 0);
 
@@ -48,6 +52,17 @@ const [editingSubHeadingFor, setEditingSubHeadingFor] = useState(null);
 const [editSubHeadingDraft, setEditSubHeadingDraft] = useState("");
 
   const initialHeadingsRef = useRef([]);
+
+// ── Fetch event functions from API when modal opens ───────────────────────
+useEffect(() => {
+  if (!isOpen || !eventId) return;
+  GetEventMasterById(eventId)
+    .then((res) => {
+      const funcs = res?.data?.data?.["Event Details"]?.[0]?.eventFunctions || [];
+      setFetchedEventFunctions(funcs);
+    })
+    .catch(() => {/* silently ignore — will fall back to eventData prop */});
+}, [isOpen, eventId]);
 
 const userEmail = (() => {
   try {
@@ -240,10 +255,27 @@ useEffect(() => {
   const eventFunctions = eventData?.eventFunctions || []; 
 
   const getFunctionShiftName = (funcId) => {
-    const func = eventFunctions.find(
+    // prefer freshly-fetched data, fall back to prop
+    const allFuncs = fetchedEventFunctions.length > 0
+      ? fetchedEventFunctions
+      : eventFunctions;
+
+    const func = allFuncs.find(
       (f) => String(f.id) === String(funcId) || String(f.function?.id) === String(funcId),
     );
-    return func?.shiftName || func?.shift?.name || "";
+    if (!func) return "";
+
+    // banquetHallShifts[0].shiftName  (main API shape)
+    const fromShifts = func.banquetHallShifts?.[0]?.shiftName;
+    if (fromShifts) return fromShifts;
+
+    // legacy / other shapes
+    return (
+      func.shiftName ||
+      func.shift?.name ||
+      func.function?.shiftName ||
+      ""
+    );
   };
 
   const calcTotal = (rate, persons) => (Number(rate) || 0) * (Number(persons) || 0);
