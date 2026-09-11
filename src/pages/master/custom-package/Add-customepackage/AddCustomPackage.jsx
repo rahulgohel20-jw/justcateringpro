@@ -16,8 +16,9 @@ import {
 import Swal from "sweetalert2";
 import AddMenuItem from "../../../../partials/modals/add-menu-item/AddMenuItem";
 import MenuNotes from "../../../../partials/modals/menu-notes/MenuNotes";
-import MultiLangInputBox from "../../../../components/form-inputs/MultiLangInputBox";
+import MenuNickName from "../../../../partials/modals/menu-nickname/MenuNickName";
 import { extractTranslations } from "@/utils/langConfig";
+import MultiLangInputBox from "../../../../components/form-inputs/MultiLangInputbox";
 
 function AddCustomPackage() {
   const [searchParams] = useSearchParams();
@@ -46,6 +47,17 @@ const [copyFromId, setCopyFromId] = useState("");
     itemIndex: null,
     notes: { itemsNotes: "", itemSlogan: "" },
   });
+
+  // ─── Nick name modal (shared for category + item) ────────────────────────────
+  const emptyNicknameValues = { nickNameEnglish: "", nickNameGujarati: "", nickNameHindi: "" };
+  const [nicknameModal, setNicknameModal] = useState({
+    isOpen: false,
+    target: null, // { type: "category", id } | { type: "item", index }
+    values: emptyNicknameValues,
+  });
+  // Per-category nicknames, keyed by categoryId. Item nicknames live directly
+  // on the item object (itemNickNameEnglish/Gujarati/Hindi), same as itemsNotes.
+  const [categoryNicknames, setCategoryNicknames] = useState({});
 
   const [formData, setFormData] = useState({
     nameEnglish: "",
@@ -132,6 +144,61 @@ const [copyFromId, setCopyFromId] = useState("");
     });
   };
 
+  // ─── Nick name handlers ───────────────────────────────────────────────────────
+  const closeNicknameModal = () =>
+    setNicknameModal({ isOpen: false, target: null, values: emptyNicknameValues });
+
+const handleOpenCategoryNickname = (categoryId) => {
+  const existing = categoryNicknames[categoryId] || {};
+  const cat = categories.find((c) => String(c.id) === String(categoryId));
+
+  setNicknameModal({
+    isOpen: true,
+    target: { type: "category", id: categoryId },
+    values: {
+      nickNameEnglish: existing.nickNameEnglish || cat?.reportNameEnglish || cat?.nameEnglish || "",
+      nickNameGujarati: existing.nickNameGujarati || cat?.reportNameGujarati || cat?.nameGujarati || "",
+      nickNameHindi: existing.nickNameHindi || cat?.reportNameHindi || cat?.nameHindi || "",
+    },
+  });
+};
+
+  const handleOpenItemNickname = (index) => {
+  const item = selectedItems[index];
+
+  setNicknameModal({
+    isOpen: true,
+    target: { type: "item", index },
+    values: {
+      nickNameEnglish: item?.itemNickNameEnglish || item?.nameEnglish || item?.itemName || "",
+      nickNameGujarati: item?.itemNickNameGujarati || item?.nameGujarati || item?.nameEnglish || item?.itemName || "",
+      nickNameHindi: item?.itemNickNameHindi || item?.nameHindi || item?.nameEnglish || item?.itemName || "",
+    },
+  });
+};
+  const handleSaveNickname = (values) => {
+    setIsDirty(true); // ✅
+    if (nicknameModal.target?.type === "category") {
+      const categoryId = nicknameModal.target.id;
+      setCategoryNicknames((prev) => ({ ...prev, [categoryId]: values }));
+    } else if (nicknameModal.target?.type === "item") {
+      const index = nicknameModal.target.index;
+      setSelectedItems((prev) =>
+        prev.map((item, idx) =>
+          idx === index
+            ? {
+                ...item,
+                itemNickNameEnglish: values.nickNameEnglish,
+                itemNickNameGujarati: values.nickNameGujarati,
+                itemNickNameHindi: values.nickNameHindi,
+              }
+            : item,
+        ),
+      );
+    }
+    closeNicknameModal();
+  };
+
   // ─── Load existing package ────────────────────────────────────────────────────
   const loadPackageData = async (id) => {
     setIsLoadingPackage(true);
@@ -150,6 +217,7 @@ const [copyFromId, setCopyFromId] = useState("");
 
         const itemsToSelect = [];
         const counts = {};
+        const catNicknames = {};
         const restoredCategoryIds = new Set();
         const sortedDetails = [...packageData.customPackageDetails].sort(
           (a, b) => a.menuSortOrder - b.menuSortOrder,
@@ -178,6 +246,13 @@ const [copyFromId, setCopyFromId] = useState("");
           const categoryId = String(detail.menuId);
           restoredCategoryIds.add(categoryId);
           if (detail.anyItem) counts[categoryId] = detail.anyItem;
+          if (detail.catNickNameEnglish || detail.catNickNameGujarati || detail.catNickNameHindi) {
+            catNicknames[categoryId] = {
+              nickNameEnglish: detail.catNickNameEnglish || "",
+              nickNameGujarati: detail.catNickNameGujarati || "",
+              nickNameHindi: detail.catNickNameHindi || "",
+            };
+          }
 
           const sortedItems = [...detail.customPackageMenuItemDetails].sort(
             (a, b) => a.itemSortOrder - b.itemSortOrder,
@@ -186,16 +261,22 @@ const [copyFromId, setCopyFromId] = useState("");
 
           for (const item of sortedItems) {
             const fullItem = fetchedItems.find((i) => i.id === item.menuItemId);
+            const nicknameFields = {
+              itemNickNameEnglish: item.itemNickNameEnglish || "",
+              itemNickNameGujarati: item.itemNickNameGujarati || "",
+              itemNickNameHindi: item.itemNickNameHindi || "",
+            };
             itemsToSelect.push(
               fullItem
-                ? { ...fullItem, rate: item.itemPrice || 0, category: categoryId, itemsNotes: item.itemInstruction || "", itemSlogan: "" }
-                : { id: item.menuItemId, nameEnglish: item.itemName, rate: item.itemPrice || 0, category: categoryId, itemsNotes: item.itemInstruction || "", itemSlogan: "", menuCategory: { id: detail.menuId, nameEnglish: detail.menuName } },
+                ? { ...fullItem, rate: item.itemPrice || 0, category: categoryId, itemsNotes: item.itemInstruction || "", itemSlogan: "", ...nicknameFields }
+                : { id: item.menuItemId, nameEnglish: item.itemName, rate: item.itemPrice || 0, category: categoryId, itemsNotes: item.itemInstruction || "", itemSlogan: "", menuCategory: { id: detail.menuId, nameEnglish: detail.menuName }, ...nicknameFields },
             );
           }
         }
 
         setSelectedItems(itemsToSelect);
         setCategoryItemCounts(counts);
+        setCategoryNicknames(catNicknames);
         setSelectedCategories(restoredCategoryIds);
         setIsDirty(false); 
       }
@@ -291,12 +372,20 @@ const fetchExistingPackages = async () => {
 
         const itemsToSelect = [];
         const counts = {};
+        const catNicknames = {};
         const restoredCategoryIds = new Set();
 
         for (const detail of sortedDetails) {
           const categoryId = String(detail.menuId);
           restoredCategoryIds.add(categoryId);
           if (detail.anyItem) counts[categoryId] = detail.anyItem;
+          if (detail.catNickNameEnglish || detail.catNickNameGujarati || detail.catNickNameHindi) {
+            catNicknames[categoryId] = {
+              nickNameEnglish: detail.catNickNameEnglish || "",
+              nickNameGujarati: detail.catNickNameGujarati || "",
+              nickNameHindi: detail.catNickNameHindi || "",
+            };
+          }
 
           const sortedItems = [...(detail.customPackageMenuItemDetails || [])].sort(
             (a, b) => a.itemSortOrder - b.itemSortOrder,
@@ -305,16 +394,22 @@ const fetchExistingPackages = async () => {
 
           for (const item of sortedItems) {
             const fullItem = fetchedItems.find((i) => i.id === item.menuItemId);
+            const nicknameFields = {
+              itemNickNameEnglish: item.itemNickNameEnglish || "",
+              itemNickNameGujarati: item.itemNickNameGujarati || "",
+              itemNickNameHindi: item.itemNickNameHindi || "",
+            };
             itemsToSelect.push(
               fullItem
-                ? { ...fullItem, rate: item.itemPrice || 0, category: categoryId, itemsNotes: item.itemInstruction || "", itemSlogan: "" }
-                : { id: item.menuItemId, nameEnglish: item.itemName, rate: item.itemPrice || 0, category: categoryId, itemsNotes: item.itemInstruction || "", itemSlogan: "", menuCategory: { id: detail.menuId, nameEnglish: detail.menuName } },
+                ? { ...fullItem, rate: item.itemPrice || 0, category: categoryId, itemsNotes: item.itemInstruction || "", itemSlogan: "", ...nicknameFields }
+                : { id: item.menuItemId, nameEnglish: item.itemName, rate: item.itemPrice || 0, category: categoryId, itemsNotes: item.itemInstruction || "", itemSlogan: "", menuCategory: { id: detail.menuId, nameEnglish: detail.menuName }, ...nicknameFields },
             );
           }
         }
 
         setSelectedItems(itemsToSelect);
         setCategoryItemCounts(counts);
+        setCategoryNicknames(catNicknames);
         setSelectedCategories(restoredCategoryIds);
         setIsDirty(true);
       }
@@ -361,6 +456,11 @@ const handleToggleCategory = (categoryId) => {
         const nextCounts = { ...prevCounts };
         delete nextCounts[id];
         return nextCounts;
+      });
+      setCategoryNicknames((prevNicknames) => {
+        const nextNicknames = { ...prevNicknames };
+        delete nextNicknames[id];
+        return nextNicknames;
       });
     } else {
       next.add(id);
@@ -425,7 +525,7 @@ const handleInputChange = (e) => {
     const cat = String(item.category);
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(item);
-  });
+  }); 
 
 const existingOrderIds = categoryOrder.map(String);
 const allKnownCategoryIds = [
@@ -444,28 +544,37 @@ const allCategoryIds = [
 ];
 
   const customPackageDetails = allCategoryIds.map((catId, index) => {
-    const items = grouped[catId] || [];
-    const countEntry = categoryItemCounts[catId];
-    const anyItem = typeof countEntry === "object" ? Number(countEntry?.anyItem || 0) : Number(countEntry || 0);
-    const menuInstruction = typeof countEntry === "object" ? countEntry?.menuInstruction || "" : "";
+  const items = grouped[catId] || [];
+  const countEntry = categoryItemCounts[catId];
+  const anyItem = typeof countEntry === "object" ? Number(countEntry?.anyItem || 0) : Number(countEntry || 0);
+  const menuInstruction = typeof countEntry === "object" ? countEntry?.menuInstruction || "" : "";
+  const catNickname = categoryNicknames[catId] || {};
 
-    return {
-      anyItem,
-      menuId: Number(catId),
-      menuName: categoryMap[catId] || "Category",
-      menuInstruction,
-      menuSortOrder: index + 1, // use actual position in allCategoryIds, not stale categoryOrder.indexOf
-      customPackageMenuItemDetails: items.map((it, i) => ({
-        id: it.id || 0,
-        itemInstruction: it.itemsNotes || "",
-        itemName: it.itemName || it.nameEnglish,
-        itemPrice: Number(it.rate || 0),
-        itemSortOrder: i + 1,
-        menuItemId: Number(it.id),
-        userId,
-      })),
-    };
-  });
+  const cat = categories.find((c) => String(c.id) === String(catId));
+
+  return {
+    anyItem,
+    menuId: Number(catId),
+    menuName: categoryMap[catId] || "Category",
+    menuInstruction,
+    catNickNameEnglish: catNickname.nickNameEnglish || cat?.reportNameEnglish || "",
+    catNickNameGujarati: catNickname.nickNameGujarati || cat?.reportNameGujarati || "",
+    catNickNameHindi: catNickname.nickNameHindi || cat?.reportNameHindi || "",
+    menuSortOrder: index + 1,
+    customPackageMenuItemDetails: items.map((it, i) => ({
+      id: it.id || 0,
+      itemInstruction: it.itemsNotes || "",
+      itemName: it.itemName || it.nameEnglish,
+      itemNickNameEnglish: it.itemNickNameEnglish || "",
+      itemNickNameGujarati: it.itemNickNameGujarati || "",
+      itemNickNameHindi: it.itemNickNameHindi || "",
+      itemPrice: Number(it.rate || 0),
+      itemSortOrder: i + 1,
+      menuItemId: Number(it.id),
+      userId,
+    })),
+  };
+});
 
   return {
     nameEnglish: formData.nameEnglish,
@@ -523,6 +632,18 @@ const allCategoryIds = [
     categories.forEach((cat) => { map[cat.id] = cat.nameEnglish; });
     return map;
   }, [categories]);
+
+  const categoryReportNames = useMemo(() => {
+  const map = {};
+  categories.forEach((cat) => {
+    map[cat.id] = {
+      english: cat.reportNameEnglish || "",
+      hindi: cat.reportNameHindi || "",
+      gujarati: cat.reportNameGujarati || "",
+    };
+  });
+  return map;
+}, [categories]);
 
   const selectedCount = selectedItems.length;
   const categoryCount = selectedCategories.size;
@@ -738,6 +859,7 @@ const allCategoryIds = [
                 onUpdateRate={handleUpdateRate}
                 categoryMap={categoryMap}
                 categoryItemCounts={categoryItemCounts}
+                  categoryReportNames={categoryReportNames}
                 onReorder={handleReorder}
                 onOpenNotes={handleOpenNotes}
                 categoryOrder={categoryOrder}
@@ -745,6 +867,9 @@ const allCategoryIds = [
                 onOpenCategoryNotes={handleOpenCategoryNotes}
                 selectedCategories={selectedCategories}
                 onRemoveCategory={handleToggleCategory}
+                categoryNicknames={categoryNicknames}
+                onOpenCategoryNickname={handleOpenCategoryNickname}
+                onOpenItemNickname={handleOpenItemNickname}
               />
             </div>
           </div>
@@ -795,6 +920,9 @@ const allCategoryIds = [
                 onOpenCategoryNotes={handleOpenCategoryNotes}
                 selectedCategories={selectedCategories}
                 onRemoveCategory={handleToggleCategory}
+                categoryNicknames={categoryNicknames}
+                onOpenCategoryNickname={handleOpenCategoryNickname}
+                onOpenItemNickname={handleOpenItemNickname}
               />
             </div>
           )}
@@ -840,6 +968,15 @@ const allCategoryIds = [
           notes={notesModal.notes}
           onClose={() => setNotesModal({ isOpen: false, itemIndex: null, notes: null })}
           onSave={handleSaveNotes}
+        />
+      )}
+      {nicknameModal.isOpen && (
+        <MenuNickName
+          isOpen={nicknameModal.isOpen}
+          title={nicknameModal.target?.type === "category" ? "Category Nick Name" : "Item Nick Name"}
+          initialValues={nicknameModal.values || emptyNicknameValues}   // ← guard here
+          onClose={closeNicknameModal}
+          onSave={handleSaveNickname}
         />
       )}
     </div>

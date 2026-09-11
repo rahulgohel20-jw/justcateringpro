@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Trash2, GripVertical, Package } from "lucide-react";
+import { Eye, EyeOff, Trash2, GripVertical, Package, Tag } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
@@ -9,12 +9,16 @@ export default function SelectedItemPackage({
   categoryMap = {},
   onReorder,
   categoryItemCounts,
+    categoryReportNames = {},
   onOpenNotes,
   categoryOrder: externalCategoryOrder,
   onReorderCategories,
   onOpenCategoryNotes,
   selectedCategories = new Set(),
   onRemoveCategory,
+  categoryNicknames = {},
+  onOpenCategoryNickname,
+  onOpenItemNickname,
 }) {
   const [showRates, setShowRates] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({});
@@ -178,6 +182,10 @@ export default function SelectedItemPackage({
                   const count =
                     typeof countEntry === "object" ? countEntry?.anyItem : countEntry || null;
                   const isExpanded = expandedCategories[catId] ?? true;
+                  const catNickname = categoryNicknames[catId];
+                 const catReport = categoryReportNames[catId];
+const displayNickname = catNickname?.nickNameEnglish || catReport?.english || "";
+const hasCatNickname = !!displayNickname;
 
                   return (
                     <Draggable
@@ -207,7 +215,12 @@ export default function SelectedItemPackage({
                                 <span className="text-xs font-bold text-gray-700 uppercase tracking-wide truncate">
                                   {catName}
                                 </span>
-                                {count > 0 && (
+                                {hasCatNickname && (
+                                  <span className="text-[10px] font-semibold bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-full leading-none flex-shrink-0 truncate max-w-[100px]">
+                                    {displayNickname}
+                                  </span>
+                                )}
+                                  {count > 0 && (
                                   <span className="text-[10px] font-semibold bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full leading-none flex-shrink-0">
                                     Any {count}
                                   </span>
@@ -221,6 +234,20 @@ export default function SelectedItemPackage({
                             </div>
 
                             <div className="flex items-center gap-1 flex-shrink-0">
+                              {/* Nick name */}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onOpenCategoryNickname?.(catId); }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                title={hasCatNickname ? "Edit nick name" : "Add nick name"}
+                                className={`p-1 rounded-lg transition-colors
+                                  ${hasCatNickname
+                                    ? "text-purple-500 hover:bg-purple-100"
+                                    : "text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                                  }`}
+                              >
+                                <Tag className="w-3.5 h-3.5" />
+                              </button>
+
                               {/* Remove category */}
                               <button
                                 onClick={(e) => { e.stopPropagation(); onRemoveCategory?.(catId); }}
@@ -259,7 +286,9 @@ export default function SelectedItemPackage({
                                     </div>
                                   )}
 
-                                  {items.map((item, itemIndex) => (
+                                  {items.map((item, itemIndex) => {
+                                    const hasItemNickname = !!item.itemNickNameEnglish;
+                                    return (
                                     <Draggable
                                       key={`item-${item.id}-${item.currentIndex}`}
                                       draggableId={`item-${item.id}-${item.currentIndex}`}
@@ -296,6 +325,11 @@ export default function SelectedItemPackage({
                                             <p className="text-xs font-semibold text-gray-800 truncate leading-tight">
                                               {item.nameEnglish || item.name}
                                             </p>
+                                            {hasItemNickname && (
+                                              <p className="text-[10px] text-purple-500 truncate leading-tight mt-0.5">
+                                                {item.itemNickNameEnglish}
+                                              </p>
+                                            )}
 
                                             {showRates && (
                                               <div className="flex items-center gap-1.5 mt-1">
@@ -312,6 +346,20 @@ export default function SelectedItemPackage({
                                             )}
                                           </div>
 
+                                          {/* Nick name */}
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); onOpenItemNickname?.(item.currentIndex); }}
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                            title={hasItemNickname ? "Edit nick name" : "Add nick name"}
+                                            className={`p-1 rounded-lg flex-shrink-0 transition-colors
+                                              ${hasItemNickname
+                                                ? "text-purple-500 hover:bg-purple-100"
+                                                : "text-gray-300 hover:bg-gray-100 hover:text-gray-500"
+                                              }`}
+                                          >
+                                            <Tag className="w-3.5 h-3.5" />
+                                          </button>
+
                                           {/* Remove */}
                                           <button
                                             onClick={(e) => { e.stopPropagation(); onRemoveItem(item.currentIndex); }}
@@ -323,7 +371,8 @@ export default function SelectedItemPackage({
                                         </div>
                                       )}
                                     </Draggable>
-                                  ))}
+                                    );
+                                  })}
                                   {provided.placeholder}
                                 </div>
                               )}
