@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Trash2, Plus, FileText, ChevronDown, Save, Pencil, Check } from "lucide-react";import { AddExtraCharges, GetExtraCharges,DeleteExtraChargeRow,
-  DeleteExtraChargeHeading,AddLogs  } from "@/services/apiServices";
+import { X, Trash2, Plus, FileText, ChevronDown, Save, Pencil, Check } from "lucide-react";
+import { AddExtraCharges, GetExtraCharges, DeleteExtraChargeRow,
+  DeleteExtraChargeHeading, AddLogs, GetEventMasterById } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { TimePicker } from "antd";
 import dayjs from "dayjs";
@@ -28,6 +29,9 @@ useEffect(() => {
   const [selectedFunctionDateTime, setSelectedFunctionDateTime] = useState({ date: "", startTime: "" , endTime: "", });
   const userId = localStorage.getItem("userId");
 
+  // ── Fetched event functions (for session auto-fill) ───────────────────────
+  const [fetchedEventFunctions, setFetchedEventFunctions] = useState([]);
+
   const getHeadingTotal = (heading) =>
     heading.rows.reduce((sum, r) => sum + calcTotal(r.rate, r.person), 0);
 
@@ -39,7 +43,26 @@ useEffect(() => {
 const [renamingHeadingId, setRenamingHeadingId] = useState(null);
 const [renameDraft, setRenameDraft] = useState("");
 
+// ── Sub-heading state ──────────────────────────────────────────────────────
+// showSubHeadingInputFor: headingId whose inline input is open (add mode)
+const [showSubHeadingInputFor, setShowSubHeadingInputFor] = useState(null);
+const [subHeadingDraft, setSubHeadingDraft] = useState("");
+// editingSubHeadingFor: headingId whose sub-heading is being renamed inline
+const [editingSubHeadingFor, setEditingSubHeadingFor] = useState(null);
+const [editSubHeadingDraft, setEditSubHeadingDraft] = useState("");
+
   const initialHeadingsRef = useRef([]);
+
+// ── Fetch event functions from API when modal opens ───────────────────────
+useEffect(() => {
+  if (!isOpen || !eventId) return;
+  GetEventMasterById(eventId)
+    .then((res) => {
+      const funcs = res?.data?.data?.["Event Details"]?.[0]?.eventFunctions || [];
+      setFetchedEventFunctions(funcs);
+    })
+    .catch(() => {/* silently ignore — will fall back to eventData prop */});
+}, [isOpen, eventId]);
 
 const userEmail = (() => {
   try {
@@ -80,8 +103,8 @@ const startRenameHeading = (heading) => {
 };
 
 const confirmRenameHeading = () => {
-  if (!renameDraft.trim()) return; // don't allow blank names
-  updateHeadingName(renamingHeadingId, renameDraft.trim());
+  if (!getHeadingText(renameDraft)) return; // don't allow blank names
+  updateHeadingName(renamingHeadingId, renameDraft);
   setRenamingHeadingId(null);
   setRenameDraft("");
 };
@@ -169,7 +192,7 @@ const getFunctionDateTime = (funcId) => {
   date: parseDateFromApi(r.chargeDate),
   startTime: parseTimeFromApi(r.chargeStartTime),
   endTime: parseTimeFromApi(r.chargeEndTime),
-  session: r.session || "",
+  session: r.session || getFunctionShiftName(selectedFunctionId),
   person: r.personItem || "",
   rate: r.rate || 0,
 });
@@ -178,8 +201,9 @@ const getFunctionDateTime = (funcId) => {
 const mapHeadings = (headingsArr) =>
   headingsArr.map((h) => ({
     id: h.id,
-    _isNew: false,         // ← explicitly NOT new
+    _isNew: false,
     name: h.headingName || "",
+    subHeadingName: h.subHeadingName || "",
     headingTotal: h.headingTotal || 0,
     rows: (h.rows || []).map(mapRow),
   }));
@@ -230,6 +254,30 @@ useEffect(() => {
 
   const eventFunctions = eventData?.eventFunctions || []; 
 
+  const getFunctionShiftName = (funcId) => {
+    // prefer freshly-fetched data, fall back to prop
+    const allFuncs = fetchedEventFunctions.length > 0
+      ? fetchedEventFunctions
+      : eventFunctions;
+
+    const func = allFuncs.find(
+      (f) => String(f.id) === String(funcId) || String(f.function?.id) === String(funcId),
+    );
+    if (!func) return "";
+
+    // banquetHallShifts[0].shiftName  (main API shape)
+    const fromShifts = func.banquetHallShifts?.[0]?.shiftName;
+    if (fromShifts) return fromShifts;
+
+    // legacy / other shapes
+    return (
+      func.shiftName ||
+      func.shift?.name ||
+      func.function?.shiftName ||
+      ""
+    );
+  };
+
   const calcTotal = (rate, persons) => (Number(rate) || 0) * (Number(persons) || 0);
 
   const grandTotal = headings.reduce(
@@ -241,22 +289,22 @@ useEffect(() => {
     "₹ " + Number(val).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
   const confirmAddHeading = () => {
-  if (!newHeadingDraft.trim()) return;
+  if (!getHeadingText(newHeadingDraft)) return;
   setHeadings((prev) => [
     ...prev,
     {
       id: Date.now(),
-      _isNew: true,          // ← mark as new
-      name: newHeadingDraft.trim(),
+      _isNew: true,
+      name: newHeadingDraft,
+      subHeadingName: "",
       rows: [
         {
           id: Date.now() + 1,
-          _isNew: true,      // ← mark as new
-              date: selectedFunctionDateTime.date,       // ← was ""
-          startTime: selectedFunctionDateTime.startTime, 
-            endTime: selectedFunctionDateTime.endTime, 
-     
-          session: "",
+          _isNew: true,
+          date: selectedFunctionDateTime.date,
+          startTime: selectedFunctionDateTime.startTime,
+          endTime: selectedFunctionDateTime.endTime,
+          session: getFunctionShiftName(selectedFunctionId),
           person: "",
           rate: 0,
         },
@@ -410,6 +458,7 @@ const validateHeadingsBeforeSave = () => {
       headings: headings.map((h) => ({
         id: h._isNew ? 0 : (h.id || 0),
         headingName: h.name,
+        subHeadingName: h.subHeadingName || "",
         headingTotal: getHeadingTotal(h),
         rows: h.rows.map((r) => ({
           id: r._isNew ? 0 : (r.id || 0),
@@ -490,6 +539,9 @@ const validateHeadingsBeforeSave = () => {
     setShowNewHeadingRow(false);
   };
 
+  const getHeadingText = (value) =>
+    value.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+
 const deleteHeading = async (hId) => {
   const heading = headings.find((h) => h.id === hId);
 
@@ -540,7 +592,7 @@ const deleteHeading = async (hId) => {
                  date: selectedFunctionDateTime.date,        
                 startTime: selectedFunctionDateTime.startTime, 
                endTime: selectedFunctionDateTime.endTime,
-                session: "",
+                session: getFunctionShiftName(selectedFunctionId),
                 person: "",
                 rate: 0,
               },
@@ -611,6 +663,57 @@ const deleteHeading = async (hId) => {
 
   const updateHeadingName = (hId, name) =>
     setHeadings((prev) => prev.map((h) => (h.id === hId ? { ...h, name } : h)));
+
+  // ── Sub-heading helpers ────────────────────────────────────────────────────
+  const openSubHeadingInput = (hId) => {
+    // close any edit mode first
+    setEditingSubHeadingFor(null);
+    setEditSubHeadingDraft("");
+    setSubHeadingDraft("");
+    setShowSubHeadingInputFor(hId);
+  };
+
+  const confirmAddSubHeading = (hId) => {
+    const text = subHeadingDraft.trim();
+    if (!text) return;
+    setHeadings((prev) =>
+      prev.map((h) => (h.id === hId ? { ...h, subHeadingName: text } : h))
+    );
+    setShowSubHeadingInputFor(null);
+    setSubHeadingDraft("");
+  };
+
+  const cancelAddSubHeading = () => {
+    setShowSubHeadingInputFor(null);
+    setSubHeadingDraft("");
+  };
+
+  const startEditSubHeading = (hId, currentName) => {
+    setShowSubHeadingInputFor(null);
+    setEditingSubHeadingFor(hId);
+    setEditSubHeadingDraft(currentName);
+  };
+
+  const confirmEditSubHeading = (hId) => {
+    const text = editSubHeadingDraft.trim();
+    if (!text) return;
+    setHeadings((prev) =>
+      prev.map((h) => (h.id === hId ? { ...h, subHeadingName: text } : h))
+    );
+    setEditingSubHeadingFor(null);
+    setEditSubHeadingDraft("");
+  };
+
+  const cancelEditSubHeading = () => {
+    setEditingSubHeadingFor(null);
+    setEditSubHeadingDraft("");
+  };
+
+  const deleteSubHeading = (hId) => {
+    setHeadings((prev) =>
+      prev.map((h) => (h.id === hId ? { ...h, subHeadingName: "" } : h))
+    );
+  };
 
   if (!isOpen) return null;
 
@@ -698,19 +801,26 @@ const deleteHeading = async (hId) => {
                       <FileText size={14} className="text-gray-500 flex-shrink-0" />
                       {renamingHeadingId === heading.id ? (
                       <>
-                        <input
+                        <div
+                          contentEditable
+                          suppressContentEditableWarning
+                          role="textbox"
+                          aria-label="Rename heading"
                           autoFocus
-                          className="font-semibold text-gray-800 bg-white border border-blue-300 rounded text-sm w-52 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          value={renameDraft}
-                          onChange={(e) => setRenameDraft(e.target.value)}
+                          className="font-normal text-gray-800 bg-white border border-blue-300 rounded text-sm w-52 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          dangerouslySetInnerHTML={{ __html: renameDraft }}
+                          onInput={(e) => setRenameDraft(e.currentTarget.innerHTML)}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") confirmRenameHeading();
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              confirmRenameHeading();
+                            }
                             if (e.key === "Escape") cancelRenameHeading();
                           }}
                         />
                         <button
                           onClick={confirmRenameHeading}
-                          disabled={!renameDraft.trim()}
+                          disabled={!getHeadingText(renameDraft)}
                           className="w-6 h-6 flex items-center justify-center text-primary hover:bg-blue-50 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                           title="Confirm rename"
                         >
@@ -726,9 +836,10 @@ const deleteHeading = async (hId) => {
                       </>
                     ) : (
                       <>
-                        <span className="font-semibold text-gray-800 text-sm">
-                          {heading.name}
-                        </span>
+                        <span
+                          className="font-normal text-gray-800 text-sm"
+                          dangerouslySetInnerHTML={{ __html: heading.name }}
+                        />
                         <button
                           onClick={() => startRenameHeading(heading)}
                           className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-blue-50 rounded transition-colors"
@@ -739,6 +850,15 @@ const deleteHeading = async (hId) => {
                       </>
                     )}
                     </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openSubHeadingInput(heading.id)}
+                        className="flex items-center gap-1 text-xs text-primary border border-primary px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-colors font-medium"
+                        title="Add Sub Heading"
+                      >
+                        <Plus size={13} />
+                        <FormattedMessage id="USER.EXTRA_CHARGES.ADD_SUB_HEADING_BTN" defaultMessage="Add Sub Heading" />
+                      </button>
                     <button
                       onClick={() => {
   Swal.fire({
@@ -767,7 +887,98 @@ const deleteHeading = async (hId) => {
                     >
                       <Trash2 size={14} />
                     </button>
+                    </div>
                   </div>
+
+                  {/* Sub-heading: inline add input */}
+                  {showSubHeadingInputFor === heading.id && (
+                    <div className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 border-b border-indigo-100">
+                      <span className="text-xs text-indigo-400 font-semibold shrink-0">Sub Heading:</span>
+                      <input
+                        type="text"
+                        autoFocus
+                        className="flex-1 text-xs border border-indigo-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                        placeholder="Enter sub heading name..."
+                        value={subHeadingDraft}
+                        onChange={(e) => setSubHeadingDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); confirmAddSubHeading(heading.id); }
+                          if (e.key === "Escape") cancelAddSubHeading();
+                        }}
+                      />
+                      <button
+                        onClick={() => confirmAddSubHeading(heading.id)}
+                        disabled={!subHeadingDraft.trim()}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Check size={13} />
+                        Add
+                      </button>
+                      <button
+                        onClick={cancelAddSubHeading}
+                        className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Sub-heading: display / edit / delete */}
+                  {heading.subHeadingName && showSubHeadingInputFor !== heading.id && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border-b border-indigo-100">
+                      <span className="text-xs text-indigo-400 font-semibold shrink-0">Sub Heading:</span>
+                      {editingSubHeadingFor === heading.id ? (
+                        <>
+                          <input
+                            type="text"
+                            autoFocus
+                            className="flex-1 text-xs border border-indigo-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                            value={editSubHeadingDraft}
+                            onChange={(e) => setEditSubHeadingDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") { e.preventDefault(); confirmEditSubHeading(heading.id); }
+                              if (e.key === "Escape") cancelEditSubHeading();
+                            }}
+                          />
+                          <button
+                            onClick={() => confirmEditSubHeading(heading.id)}
+                            disabled={!editSubHeadingDraft.trim()}
+                            className="w-6 h-6 flex items-center justify-center text-indigo-600 hover:bg-indigo-100 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            title="Confirm"
+                          >
+                            <Check size={13} />
+                          </button>
+                          <button
+                            onClick={cancelEditSubHeading}
+                            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded transition-colors"
+                            title="Cancel"
+                          >
+                            <X size={13} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-xs text-indigo-700 font-medium flex-1">
+                            {heading.subHeadingName}
+                          </span>
+                          <button
+                            onClick={() => startEditSubHeading(heading.id, heading.subHeadingName)}
+                            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-100 rounded transition-colors"
+                            title="Edit sub heading"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                          <button
+                            onClick={() => deleteSubHeading(heading.id)}
+                            className="w-6 h-6 flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                            title="Remove sub heading"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
 
                   {/* Table */}
                   <div className="overflow-x-auto">
@@ -980,27 +1191,36 @@ const deleteHeading = async (hId) => {
                 <div className="border-2 border-blue-300 border-dashed rounded-xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 bg-blue-50">
                     <FileText size={15} className="text-blue-400 flex-shrink-0" />
-                    <input
-  autoFocus
-  className="flex-1 text-sm font-semibold text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:font-normal placeholder:text-gray-400"
-  placeholder={intl.formatMessage({
-    id: "USER.EXTRA_CHARGES.HEADING_NAME_PLACEHOLDER",
-    defaultMessage: "Enter heading name...",
-  })}
-  value={newHeadingDraft}
-  onChange={(e) => setNewHeadingDraft(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") confirmAddHeading();
-    if (e.key === "Escape") cancelAddHeading();
-  }}
-/>
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      role="textbox"
+                      aria-label={intl.formatMessage({
+                        id: "USER.EXTRA_CHARGES.HEADING_NAME_PLACEHOLDER",
+                        defaultMessage: "Enter heading name...",
+                      })}
+                      data-placeholder={intl.formatMessage({
+                        id: "USER.EXTRA_CHARGES.HEADING_NAME_PLACEHOLDER",
+                        defaultMessage: "Enter heading name...",
+                      })}
+                      autoFocus
+                      className="flex-1 text-sm font-normal text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+                      onInput={(e) => setNewHeadingDraft(e.currentTarget.innerHTML)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          confirmAddHeading();
+                        }
+                        if (e.key === "Escape") cancelAddHeading();
+                      }}
+                    />
 <button
   onClick={confirmAddHeading}
-  disabled={!newHeadingDraft.trim()}
+  disabled={!getHeadingText(newHeadingDraft)}
   className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
 >
-  <Plus size={13} />
-  <FormattedMessage id="USER.EXTRA_CHARGES.ADD_BTN" defaultMessage="Add" />
+  <Check size={13} />
+  <FormattedMessage id="USER.EXTRA_CHARGES.ADD_BTN" defaultMessage="Save" />
 </button>
                     <button
                       onClick={cancelAddHeading}
