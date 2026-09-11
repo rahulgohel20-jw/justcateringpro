@@ -210,6 +210,8 @@ const RawMaterial = () => {
     expiryDate: raw.expiryDate || "",
     isCalculate: raw.isApplyCal ?? false,
     dailyConsumption: raw.dailyConsumption || "",
+    maxStock: raw.maxStock || "",
+    leadTime: raw.leadTime || "",
     cgst: raw.cgst ?? "",
   sgst: raw.sgst ?? "",
   igst: raw.igst ?? "",

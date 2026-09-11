@@ -64,6 +64,7 @@ export default function Log() {
   const [selectedMemberEmail, setSelectedMemberEmail] = useState(null);
   const [membersLoading, setMembersLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
+  const userId = localStorage.getItem("userId")
 
 useEffect(() => {
   fetchUserLogs();
@@ -125,7 +126,6 @@ useEffect(() => {
  const fetchUserLogs = async () => {
   try {
     setLoading(true);
-    // User logs are loaded without an email filter until a member is selected.
     const email = selectedMemberEmail || null;
 
     if (startDate && endDate && endDate < startDate) {
@@ -138,7 +138,7 @@ useEffect(() => {
 
   
 
-    const response = await GetUserlogs(email, formattedEnd, formattedStart, "");
+    const response = await GetUserlogs(email, formattedEnd, formattedStart, "", userId);
 
   
 

@@ -2402,7 +2402,7 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
         setHistoryLogs([]);
         return;
       }
-      const res = await GetUserlogs(email, "", "", eventId);
+      const res = await GetUserlogs(email, "", "", eventId, userId);
       const allLogs = res?.data?.data || [];
 
       const prefix = isDecor ? "DecorQuotation" : "MenuQuotation";

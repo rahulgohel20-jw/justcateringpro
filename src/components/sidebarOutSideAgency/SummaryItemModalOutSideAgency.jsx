@@ -10,6 +10,7 @@ import {
 import SelectMenureport from "../../partials/modals/menu-report/SelectMenureport";
 import { FormattedMessage } from "react-intl";
 import { WhatsAppPdf } from "../../services/apiServices";
+import { Tooltip } from "antd";
 
 
 const WhatsAppIcon = () => (
@@ -208,6 +209,9 @@ export default function SummaryItemModalOutsideAgency({
   formData.append("isAddMenu", 0);
   formData.append("isNotes", 0);
   formData.append("isAdvancePayment",0);
+  formData.append("withOutBg",0);
+ formData.append("withVendor",0);
+ formData.append("isAllItemTogether",0);
   formData.append("showAddOnLabel",0);
   formData.append("showLastPage",0);
   formData.append("isSignatureVisible" ,0);
@@ -248,6 +252,14 @@ export default function SummaryItemModalOutsideAgency({
   formData.append("sloganFontSize", -1);
 
   return formData;
+};
+
+
+const handleWhatsAppWebClick = (item, index) => {
+  setSelectedItemForLang(item);
+  setSelectedIndexForLang(index);
+  setGeneratingType("whatsapp-web");
+  setShowLangSelect(true);
 };
 
   // ── WhatsApp: open lang modal ─────────────────────────────────────────────
@@ -318,20 +330,24 @@ const notifyWhatsApp = async (url) => {
     const data = await AddExclusiveReport(formData);
 
     if (data?.data?.success) {
-      item._cachedPdfUrl = data?.data?.report_path;
+  item._cachedPdfUrl = data?.data?.report_path;
 
-      if (actionType === "whatsapp") {
-        await notifyWhatsApp(data?.data?.report_path);
-        // const phone = item.number || item.mobile || item.contactNumber || "";
-        // const greeting = item.contactName || "there";
-        // const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${data?.data?.report_path}`;
-        // window.open(`https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`, "_blank");
-      } else {
-        window.open(data?.data?.report_path, "_blank");
-      }
-    } else {
-      errorMsgPopup(data?.data?.msg || "Failed to generate report");
-    }
+  if (actionType === "whatsapp") {
+    await notifyWhatsApp(data?.data?.report_path);
+  } else if (actionType === "whatsapp-web") {
+    const phone = item.number || item.mobile || item.contactNumber || "";
+    const greeting = item.contactName || "there";
+    const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${data?.data?.report_path}`;
+    window.open(
+      `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
+      "_blank"
+    );
+  } else {
+    window.open(data?.data?.report_path, "_blank");
+  }
+} else {
+  errorMsgPopup(data?.data?.msg || "Failed to generate report");
+}
   } catch (err) {
   console.error(err);
   setSuccessMessage(err?.response?.data?.msg || "Something went wrong");
@@ -508,38 +524,56 @@ const notifyWhatsApp = async (url) => {
                                 {/* Action Buttons */}
                                 <div className="flex justify-center gap-2">
                                   {/* WhatsApp Button */}
-                                  <button
-                                    onClick={() => handleWhatsAppClick(agency, index)}
-                                    disabled={generatingPdf}
-                                    className="p-2 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Send via WhatsApp"
-                                  >
-                                    {generatingPdf && generatingRowIndex === index && generatingType === "whatsapp" ? (
-                                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                                      </svg>
-                                    ) : (
-                                      <WhatsAppIcon />
-                                    )}
-                                  </button>
+                                 <Tooltip title="Send via WhatsApp">
+  <button
+    onClick={() => handleWhatsAppClick(agency, index)}
+    disabled={generatingPdf}
+    className="p-2 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {generatingPdf && generatingRowIndex === index && generatingType === "whatsapp" ? (
+      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+      </svg>
+    ) : (
+      <WhatsAppIcon />
+    )}
+  </button>
+</Tooltip>
 
-                                  {/* PDF Button */}
-                                  <button
-                                    onClick={() => handlePdfClick(agency, index)}
-                                    disabled={generatingPdf}
-                                    className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Download PDF"
-                                  >
-                                    {generatingPdf && generatingRowIndex === index && generatingType === "pdf" ? (
-                                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                                      </svg>
-                                    ) : (
-                                      <DownloadIcon />
-                                    )}
-                                  </button>
+<Tooltip title="Open in Web WhatsApp">
+  <button
+    onClick={() => handleWhatsAppWebClick(agency, index)}
+    disabled={generatingPdf}
+    className="p-2 rounded-full bg-emerald-400 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {generatingPdf && generatingRowIndex === index && generatingType === "whatsapp-web" ? (
+      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+      </svg>
+    ) : (
+      <WhatsAppIcon />
+    )}
+  </button>
+</Tooltip>
+
+<Tooltip title="Download PDF">
+  <button
+    onClick={() => handlePdfClick(agency, index)}
+    disabled={generatingPdf}
+    className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {generatingPdf && generatingRowIndex === index && generatingType === "pdf" ? (
+      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+      </svg>
+    ) : (
+      <DownloadIcon />
+    )}
+  </button>
+</Tooltip>
 
                                   {/* Expand Button */}
                                   <button

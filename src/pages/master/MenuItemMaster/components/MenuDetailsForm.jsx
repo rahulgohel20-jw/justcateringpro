@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   Form,
   Input,
@@ -32,6 +32,7 @@ import {
   getCaptainReceipeById,
   Getunit,
   getMenuItemCaptainReceipeByMenuId,
+  SearchRawMaterial,
 } from "@/services/apiServices";
 import AddMenuCategory from "@/partials/modals/add-menu-category/AddMenuCategory";
 import AddMenuSubCategory from "@/partials/modals/add-menu-sub-category/AddMenuSubCategory";
@@ -78,8 +79,7 @@ const MenuDetailsForm = ({
   const langConfig = getLangConfig();
 const { hasModuleAccess } = useModuleAccess();
   const canAccesscaptainRecipe = hasModuleAccess("Captain Recipe");
-  const { getRawMaterial, getCategories, getSubCategories } =
-    useMenuApi(userId);
+const { getCategories, getSubCategories } = useMenuApi(userId);
 
   const [fileList, setFileList] = useState([]);
   const [menuCategory, setMenuCategory] = useState([]);
@@ -94,6 +94,14 @@ const { hasModuleAccess } = useModuleAccess();
   const [loadingItems, setLoadingItems] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [godownOptions, setGodownOptions] = useState([]);
+  const [rawMaterialLoading, setRawMaterialLoading] = useState(false);
+  const [rawMaterialPage, setRawMaterialPage] = useState(1);
+ const [rawMaterialHasMore, setRawMaterialHasMore] = useState(false);
+ const [rawMaterialLoadingMore, setRawMaterialLoadingMore] = useState(false);
+ const RAW_MATERIAL_PAGE_SIZE = 100;
+ const rawSearchDebounceRef = useRef(null);
+const skipNextRawFetchRef = useRef(false);
+
   const {
     captainTableData,
     setCaptainTableData,
@@ -135,6 +143,7 @@ const { hasModuleAccess } = useModuleAccess();
     handleAddRecipe,
     handleDeleteRow,
     handleEditRow,
+    convertWeightBetweenUnits, 
   } = useRecipe(rawmaterialList, defaultData, captainTableData);
   const [captainUnitOptions, setCaptainUnitOptions] = useState([]);
   const [englishInstruction, setEnglishInstruction] = useState("");
@@ -148,6 +157,50 @@ const [instructionHindi, setInstructionHindi] = useState("");
 
 
 const [isCopyCaptainRecipe, setIsCopyCaptainRecipe] = useState(false); 
+
+
+
+  const fetchRawMaterialsSearch = useCallback(
+  (searchTerm = "", page = 1, append = false) => {
+    if (!userId) return;
+    page === 1 ? setRawMaterialLoading(true) : setRawMaterialLoadingMore(true);
+
+    SearchRawMaterial(true, userId, page, RAW_MATERIAL_PAGE_SIZE, searchTerm)
+      .then((res) => {
+        const data = res?.data?.data || {};
+        const rawItems = data["Raw Material Details"] || [];
+        const total = data.totalItems || 0;
+
+        const mapped = rawItems.map((item) => ({
+          rawMaterialId: item?.id,
+          category: item?.rawMaterialCat?.nameEnglish,
+          name: item?.nameEnglish,
+          unitId: item.unit?.id,
+          unit: item.unit?.nameEnglish,
+          supplierRate: item.supplierRate,
+          unitHierarchy: item.unitHierarchy,
+        }));
+
+        setRawmaterialList((prev) => (append ? [...prev, ...mapped] : mapped));
+        setRawMaterialPage(page);
+        setRawMaterialHasMore(page * RAW_MATERIAL_PAGE_SIZE < total);
+      })
+      .catch((error) => {
+        console.error("Failed to search raw materials:", error);
+        if (!append) setRawmaterialList([]);
+        setRawMaterialHasMore(false);
+      })
+      .finally(() => {
+        setRawMaterialLoading(false);
+        setRawMaterialLoadingMore(false);
+      });
+  },
+  [userId],
+);
+
+
+
+
 
   useEffect(() => {
     setIsSaveOnly(false);
@@ -178,27 +231,37 @@ const [isCopyCaptainRecipe, setIsCopyCaptainRecipe] = useState(false);
     loadCaptainRecipes();
   }, [userId]);
 
+
+
+  useEffect(() => {
+  if (!userId) return;
+
+  if (skipNextRawFetchRef.current) {
+    skipNextRawFetchRef.current = false;  // ← consume the flag, skip this run
+    return;
+  }
+
+  if (rawSearchDebounceRef.current) clearTimeout(rawSearchDebounceRef.current);
+
+  rawSearchDebounceRef.current = setTimeout(() => {
+    fetchRawMaterialsSearch(rawSearchText, 1, false);
+  }, 400);
+
+  return () => clearTimeout(rawSearchDebounceRef.current);
+}, [rawSearchText, userId, fetchRawMaterialsSearch]);
+
   useEffect(() => {
     if (!userId) return; 
     const loadInitial = async () => {
+      setRawMaterialLoading(true);
       try {
-        const [rawRes, catRes, godownRes] = await Promise.all([
-          getRawMaterial(),
-          getCategories(),
-          GETallGodown(userId),
-        ]);
+        const [catRes, godownRes] = await Promise.all([
+       getCategories(),
+       GETallGodown(userId),
+     ]);
 
-        const rawData =
-          rawRes?.data?.data?.["Raw Material Details"]?.map((item) => ({
-            rawMaterialId: item?.id,
-            category: item?.rawMaterialCat?.nameEnglish,
-            name: item?.nameEnglish,
-            unitId: item.unit?.id,
-            unit: item.unit?.nameEnglish,
-            supplierRate: item.supplierRate,
-            unitHierarchy: item.unitHierarchy,
-          })) || [];
-        setRawmaterialList(rawData);
+    
+     fetchRawMaterialsSearch("", 1, false);
 
         const catData =
           catRes?.data?.data?.["Menu Category Details"]?.map((item) => ({
@@ -219,11 +282,13 @@ const [isCopyCaptainRecipe, setIsCopyCaptainRecipe] = useState(false);
       } catch (error) {
         console.error(error);
         message.error("Failed to load initial data");
+      } finally {
+      
+       }
       }
-    };
 
     loadInitial();
-  }, [getRawMaterial, getCategories]);
+  }, [getCategories, fetchRawMaterialsSearch]);
 
   useEffect(() => {
     if (!editData?.menuCategory?.id) return;
@@ -364,6 +429,10 @@ setInstructionHindi(editData.instructionHindi || "");
     godownOptions,
     godownsLoaded,
   ]);
+
+
+
+
   const SyncRawMaterial = async () => {
     if (!editData?.id) {
       message.warning("No menu item selected for sync");
@@ -456,25 +525,15 @@ setInstructionHindi(editData.instructionHindi || "");
 
   const refreshData = async () => {
     setIsRefreshing(true);
-
+   
     try {
-      const [rawRes, catRes, godownRes] = await Promise.all([
-        getRawMaterial(),
-        getCategories(),
-        GETallGodown(userId),
-      ]);
+      const [catRes, godownRes] = await Promise.all([
+       getCategories(),
+       GETallGodown(userId),
+     ]);
 
-      const rawData =
-        rawRes?.data?.data?.["Raw Material Details"]?.map((item) => ({
-          rawMaterialId: item.id,
-          category: item?.rawMaterialCat?.nameEnglish,
-          name: item.nameEnglish,
-          unitId: item.unit?.id,
-          unit: item.unit?.nameEnglish,
-          supplierRate: item.supplierRate,
-          unitHierarchy: item.unitHierarchy,
-        })) || [];
-      setRawmaterialList(rawData);
+     fetchRawMaterialsSearch(rawSearchText, 1, false);
+
 
       const catData =
         catRes?.data?.data?.["Menu Category Details"]?.map((item) => ({
@@ -504,6 +563,7 @@ setInstructionHindi(editData.instructionHindi || "");
       message.error("Failed to refresh data");
     } finally {
       setIsRefreshing(false);
+      
     }
   };
 
@@ -1165,9 +1225,24 @@ setInstructionHindi(editData.instructionHindi || "");
                     optionFilterProp="label"
                     placeholder="Select Raw Material"
                     className="bg-[#F8FAFC] h-10 w-full"
+                    loading={rawMaterialLoading}
+                  notFoundContent={
+                    rawMaterialLoading ? "Loading raw materials…" : "No items found"
+                  }
                     value={selectedRaw}
                     onSearch={(val) => setRawSearchText(val)}
                     onBlur={() => setRawSearchText("")}
+                    filterOption={false}
+                onPopupScroll={(e) => {
+                  const target = e.target;
+                  if (
+                    target.scrollTop + target.offsetHeight >= target.scrollHeight - 10 &&
+                    rawMaterialHasMore &&
+                    !rawMaterialLoadingMore
+                  ) {
+                    fetchRawMaterialsSearch(rawSearchText, rawMaterialPage + 1, true);
+                  }
+                }}
                     options={rawmaterialList
                       .filter((item) => {
                         const isAdded = tableData.some(
@@ -1175,9 +1250,7 @@ setInstructionHindi(editData.instructionHindi || "");
                         );
                         const isCurrentlySelected =
                           item.rawMaterialId === selectedRaw;
-                        // If user is searching, or this is the item currently
-                        // being edited (selectedRaw), always show it —
-                        // otherwise hide already-added items.
+                        
                         return rawSearchText || isCurrentlySelected
                           ? true
                           : !isAdded;
@@ -1188,7 +1261,8 @@ setInstructionHindi(editData.instructionHindi || "");
                       }))}
                     onChange={(value) => {
                       setSelectedRaw(value);
-                      setRawSearchText(""); // ← reset search after selection
+                      skipNextRawFetchRef.current = true;
+                      setRawSearchText("");
                       const found = rawmaterialList.find(
                         (r) => r.rawMaterialId === value,
                       );
@@ -1202,7 +1276,8 @@ setInstructionHindi(editData.instructionHindi || "");
                           })) || []),
                         ];
                         setUnitOptions(unitList);
-                        setUnit(parent.unitId);
+                        
+                        setUnit(found.unitId ?? parent.unitId);
                       }
                     }}
                   />
@@ -1236,12 +1311,19 @@ setInstructionHindi(editData.instructionHindi || "");
                   Unit
                 </label>
                 <Select
-                  placeholder="Select Unit"
-                  className="bg-[#F8FAFC] h-10"
-                  value={unit}
-                  onChange={(value) => setUnit(value)}
-                  options={unitOptions}
-                />
+  placeholder="Select Unit"
+  className="bg-[#F8FAFC] h-10"
+  value={unit}
+  onChange={(value) => {
+    const raw = rawmaterialList.find((r) => r.rawMaterialId === selectedRaw);
+    if (raw && unit && weight) {
+      const converted = convertWeightBetweenUnits(raw, parseFloat(weight), unit, value);
+      setWeight(String(converted));
+    }
+    setUnit(value);
+  }}
+  options={unitOptions}
+/>
               </div>
             </div>
 

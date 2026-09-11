@@ -399,10 +399,10 @@ const typeOptions = allowedStockTypes.map((t) => ({
     //   Swal.fire({ icon: "warning", title: "Validation", text: "Please select a party.", confirmButtonColor: "#3085d6" });
     //   return;
     // }
-    if (!form.stock_type_id) {
-      Swal.fire({ icon: "warning", title: "Validation", text: "Please select a stock type.", confirmButtonColor: "#3085d6" });
-      return;
-    }
+    // if (!form.stock_type_id) {
+    //   Swal.fire({ icon: "warning", title: "Validation", text: "Please select a stock type.", confirmButtonColor: "#3085d6" });
+    //   return;
+    // }
 
     if (isBackDateLocked && form.date) {
   const todayStr = new Date().toISOString().split("T")[0];

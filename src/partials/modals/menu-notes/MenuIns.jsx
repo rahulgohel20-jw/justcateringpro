@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Translateapi } from "../../../services/apiServices";
 import { extractTranslations } from "../../../utils/langConfig";
 import MultiLangInputBox from "../../../components/form-inputs/MultiLangInputbox";
+import { displayHtmlToPayload, sanitizeToAllowedTags } from "../../../components/form-inputs/RichTextEditable/index"
 
-const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslating = false }) => {
+const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslating = false, mode = "menu"  }) => {
   const [formData, setFormData] = useState({ english: "", gujarati: "", hindi: "" });
   const [translating, setTranslating] = useState(false);
   const translateTimer = useRef(null);
@@ -11,34 +12,42 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
   const skipNextTranslateRef = useRef(false); // ← NEW
 
   useEffect(() => {
-    if (isOpen) {
-      skipNextTranslateRef.current = true;
+  if (isOpen) {
+    skipNextTranslateRef.current = true;
 
-      let english, hindi, gujarati;
-      if (typeof notes === "object" && notes !== null) {
-        english = notes.english || "";
-        hindi = notes.hindi || "";
-        gujarati = notes.gujarati || "";
-      } else {
-        english = notes || "";
-        hindi = "";
-        gujarati = "";
-      }
-
-      // If English has no real text, don't trust stale hindi/gujarati — clear them too
-      const div = document.createElement("div");
-      div.innerHTML = english;
-      const plainEnglish = (div.textContent || div.innerText || "").trim();
-      if (!plainEnglish) {
-        hindi = "";
-        gujarati = "";
-      }
-
-      setFormData({ english, hindi: toEditorText(hindi), gujarati: toEditorText(gujarati) });
-      setTranslating(initialTranslating);
-      if (translateTimer.current) clearTimeout(translateTimer.current);
+    let english, hindi, gujarati;
+    if (typeof notes === "object" && notes !== null) {
+      english = notes.english || "";
+      hindi = notes.hindi || "";
+      gujarati = notes.gujarati || "";
+    } else {
+      english = notes || "";
+      hindi = "";
+      gujarati = "";
     }
-  }, [isOpen, itemId, initialTranslating]);
+
+    // Legacy-data safety net: strip any disallowed tags (e.g. <i> saved
+    // before formatting was locked down) the moment old notes are loaded,
+    // so opening + re-saving without edits can no longer carry them forward.
+    english = displayHtmlToPayload(english);
+    hindi = displayHtmlToPayload(hindi);
+    gujarati = displayHtmlToPayload(gujarati);
+
+    // If English has no real text, don't trust stale hindi/gujarati — clear them too
+    const div = document.createElement("div");
+    div.innerHTML = english;
+    const plainEnglish = (div.textContent || div.innerText || "").trim();
+    if (!plainEnglish) {
+      hindi = "";
+      gujarati = "";
+    }
+
+    setFormData({ english, hindi: toEditorText(hindi), gujarati: toEditorText(gujarati) });
+    setTranslating(initialTranslating);
+    if (translateTimer.current) clearTimeout(translateTimer.current);
+  }
+}, [isOpen, itemId, initialTranslating]);
+
   useEffect(() => {
     if (!isOpen) return;
     if (translateTimer.current) clearTimeout(translateTimer.current);
@@ -88,13 +97,18 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
     return div.textContent || div.innerText || "";
   };
 
-  const toSavedHtml = (value = "") =>
-    String(value)
-      .replace(/\r\n?/g, "\n")
-      .replace(/\n/g, "<br>")
-      .replace(/(&nbsp;|\u00A0)/gi, " ")
-      .trim();
+ const toSavedHtml = (value = "") => {
+  const str = String(value).replace(/\r\n?/g, "\n");
+  const lines = str.split("\n");
 
+  const hasBullet = lines.some((line) => /^\s*(•|·|▪|-|\*)\s*/.test(line));
+  const joined = hasBullet ? lines.join("<br>") : lines.join("\n");
+
+  return sanitizeToAllowedTags(joined)   // ← final safety net before save
+    .replace(/(&nbsp;|\u00A0)/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .trim();
+};
   // Translate each visual line independently. This retains newlines and bullet
   // prefixes, which the translation service otherwise merges into one sentence.
   const translateInstruction = async (english) => {
@@ -218,7 +232,7 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
           <h2 className="text-xl font-semibold">Item Instruction</h2>
           <button onClick={onClose} className="text-2xl text-gray-600">&times;</button>
         </div>
-
+      {mode === "decor" && (
         <div className="flex justify-end mb-2">
           <button
             type="button"
@@ -229,6 +243,7 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
             <span className="text-base leading-none">•</span> Add bullet point
           </button>
         </div>
+      )}
 
         <div ref={containerRef}>
           <MultiLangInputBox

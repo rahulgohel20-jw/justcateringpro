@@ -176,6 +176,9 @@ export const GetAllRawMaterials = (page, pageSize, catId, rawName, Id) => {
 };
 
 
+
+
+
 export const GetAllRawMaterial = (isAsc, page, pageSize, catId, Id, signal) => {
   return GET(
     `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMateriaCatlId=${catId}&unitid=0&userid=${Id}`,
@@ -193,6 +196,8 @@ export const GetItemRawMaterialByRawMaterialdata = (catId, userId) => {
     `/menuitems/getitemrawmaterialbyrawmaterial?rawMaterialId=${catId}&userId=${userId}`,
   );
 };
+
+
 export const UpdateItemRawMaterialWeight = (data) => {
   return PUT(`/menuitems/updateitemrawmaterialweight`, data);
 };
@@ -204,9 +209,11 @@ export const SearchRawMaterial = (
   pageSize,
   itemName,
   signal,
+  isPurchaseApproved = false,
+  purchaseApproveId = "",
 ) => {
   return GET(
-    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=0&unitid=0&userid=${Id}`,
+    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=0&unitid=0&userid=${Id}&isPurchaseApprove=${isPurchaseApproved}&purchaseApproveId=${purchaseApproveId}`,
     signal,
   );
 };
@@ -1246,12 +1253,13 @@ export const GetDbAssignedDetails = (dbPlanningId) => {
   return GET(`/excel-parsing/getById?db_planning_id=${dbPlanningId}`);
 };
 
-export const GetUserlogs = (data, endDate, startDate, eventId) => {
-  const queryParams = new URLSearchParams({ user: String(data) });
-
+export const GetUserlogs = (data, endDate, startDate, eventId, userId) => {
+  const queryParams = new URLSearchParams();
+  if (data) queryParams.set("user", data);
   if (endDate) queryParams.set("endDate", endDate);
   if (startDate) queryParams.set("startDate", startDate);
   if (eventId) queryParams.set("eventId", eventId);
+   if (userId) queryParams.set("userId", userId);
 
   return GET(`/user-logs/getUserLogs?${queryParams.toString()}`);
 };
@@ -3789,3 +3797,37 @@ export const GenerateDateWiseLogReport = (startDate, endDate, email, memberEmail
   params.append("userId",      userId      || "");
   return GET(`/report/generate-date-wise-log-report?${params.toString()}`);
 };
+
+export const GetAllApprovedPurchase = (userId,page, size) => {
+  return GET(`/purchase-approval/getAllApprovedRequest?userId=${userId}&page=${page}&size=${size}`);
+}; 
+
+export const generatePurchaseRequestCode = (userId) => {
+  return GET(`/purchase-approval/generate-purchase-request-code?userId=${userId}`);
+
+
+};
+
+export const addUpdatePurchaseRequest = (data) => {
+  return POST(`/purchase-approval/add-update` ,data);
+};
+
+export const getallpurchasereport = (userId ) => {
+  return GET(`/purchase-approval/getAll?userId=${userId}`);
+}
+
+export const getpurchaseapprovalbyid = (purchaseRequestId) => {
+  return GET(`/purchase-approval/getById?purchaseRequestId=${purchaseRequestId}`);
+
+};
+
+export const getRawMaterialbyPurchaseRequestId = (endDate ,rawMaterialCatId , startDate , page , size ,rawMaterialName , purchaseRequestId, isAllData) => {
+  return GET(`/purchase-approval/getRawMaterial?endDate=${endDate}&rawMaterialCatId=${rawMaterialCatId}&startDate=${startDate}&page=${page}&size=${size}&rawMaterialName=${rawMaterialName}&purchaseRequestId=${purchaseRequestId}&isAllData=${isAllData}`);
+};
+
+// complate raw matt
+export const GetAllRawMaterialcategory = (categoryTypeId , userid , isActive , categoryName) => {
+  return GET(
+    `/rawmaterialcategory/getallbyuserid?categoryTypeId=${categoryTypeId}&userid=${userid}&isActive=${isActive}&categoryName=${categoryName}`,
+  );
+}

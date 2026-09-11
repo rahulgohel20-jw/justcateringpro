@@ -97,10 +97,10 @@ const langConfig = getLangConfig();
           id: item.id ?? -1,
           menuItemId: item.menuItemId,
           sequence: item.sequence ?? index + 1,
-          isChecked: item.isChecked === 1,
+          isChecked: true,
           copies: item.itemCount ?? 0,
-          isStandyChecked: item.isStandyChecked === 1 || item.isChecked === 1,
-          // all languages
+          isStandyChecked: true,
+          
           itemNameEnglish: item.itemNameEnglish || "",
           itemNameHindi: item.itemNameHindi || item.itemNameEnglish,
           itemNameGujarati: item.itemNameGujarati || item.itemNameEnglish,

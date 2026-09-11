@@ -1079,6 +1079,51 @@ id="COMMON.ITEMRAWMATERIALUNITCHANGE"              defaultMessage="Item Raw Mate
       ],
     },
 
+
+     {
+        title: (
+          <div className="w-full flex justify-between items-center">
+            <FormattedMessage
+              id="COMMON.STOCK_MANAGEMENT"
+              defaultMessage="Purchase Approve"
+            />
+          </div>
+        ),
+        icon: "ki-filled ki-verify text-primary text-lg",
+        
+        moduleName: "Purchase Approve",
+        disabled: false,
+        children: [
+          {
+            title: (
+              <FormattedMessage
+                id="COMMON.RAW_MATERIAL_OPB"
+                defaultMessage="Purchase Approve Request"
+              />
+            ),
+            path: "/purchase-return-request",
+            pageName: "Purchase Approve Request",
+          },
+  {
+            title: (
+              <FormattedMessage
+                id="COMMON.RAW_MATERIAL_OPB"
+                defaultMessage="Purchase Approve "
+              />
+            ),
+            path: "/purchase/approval-request-List",
+            pageName: "Purchase Approve",
+          },
+          
+        
+        
+        
+        
+
+          
+        ],
+      },
+
     {
       title: (
         <div className="w-full flex justify-between items-center">
@@ -1246,6 +1291,10 @@ id="COMMON.ITEMRAWMATERIALUNITCHANGE"              defaultMessage="Item Raw Mate
         // },
       ],
     },
+
+    
+ 
+	
 
     // {
     //   title: (

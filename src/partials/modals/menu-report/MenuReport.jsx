@@ -25,7 +25,7 @@ import { TeamOutlined, AppstoreOutlined } from "@ant-design/icons";
 import { useModuleAccess } from "../../../hooks/useModuleAccess";  
 import { WhatsAppPdf } from "../../../services/apiServices";
 
-const WhatsAppModal = ({ isOpen, onClose, onSend, mobileNumber }) => {
+const WhatsAppModal = ({ isOpen, onClose, onSend, mobileNumber, mode = "api" }) => {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [error, setError] = useState("");
@@ -65,7 +65,7 @@ const WhatsAppModal = ({ isOpen, onClose, onSend, mobileNumber }) => {
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
           </svg>
           <h2 className="text-white font-semibold text-lg">
-            Share via WhatsApp
+            {mode === "web" ? "Open in WhatsApp Web" : "Share via WhatsApp"}
           </h2>
         </div>
 
@@ -138,9 +138,9 @@ const WhatsAppModal = ({ isOpen, onClose, onSend, mobileNumber }) => {
             className="px-5 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              <path d="M17.472 14.382c..." />
             </svg>
-            Send
+            {mode === "web" ? "Open WhatsApp" : "Send"}
           </button>
         </div>
       </div>
@@ -235,6 +235,7 @@ const isDefaultHalfPaxOn = defaultHalfPaxOnUserIds.includes(String(userId));
   const [selectedStatus, setSelectedStatus] = useState([]);
   const isPrintingRef = useRef(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [whatsAppSendMode, setWhatsAppSendMode] = useState("api");
   const [fonts, setFonts] = useState([]);
   const [fontsLoading, setFontsLoading] = useState(false);
   const [catFontId, setcatFontId] = useState(-1);
@@ -267,6 +268,9 @@ const languageOptions = [
     isNotes : "is Notes",
     showLastPage :"show Last Page",
     showAddOnLabel : "Show Add On Label",
+    withOutBg : "With Out Background",
+    withVendor : "With Vendor",
+    isAllItemTogether :"Is All Item Together",
   };
 
   const fetchFonts = async () => {
@@ -466,6 +470,9 @@ if (!config) {
           isNotes : false,
           showLastPage: false,
           showAddOnLabel: false,
+          withOutBg: false,
+          withVendor: false,
+          isAllItemTogether: false,
         });
         setVisibleOptions([]);
         return;
@@ -543,15 +550,18 @@ if (!config) {
           isShowEventRemarks:config.isShowEventRemarks === 0 , 
           showAdditional:config.showAdditional === 0 ,
           isAgencyNextPage:config.isAgencyNextPage === 1, 
-storeIssueWise: canAccessStock ? config.storeIssueWise === 0 : false,
-isAddStoreIssue:canAccessStock ? config.isAddStoreIssue ===0 : false,
-is5Column:config.is5Column === 0 , 
-isContactNoVisible: config.isContactNoVisible === 0,
-isSignatureVisible : config.isSignatureVisible === 0,
-isAddMenu  : config.isAddMenu === 1,
-isAdvancePayment : config.isAdvancePayment === 1,
-showAddOnLabel : config.showAddOnLabel === 0,
-isNotes : config.isNotes === 0,
+          storeIssueWise: canAccessStock ? config.storeIssueWise === 0 : false,
+          isAddStoreIssue:canAccessStock ? config.isAddStoreIssue ===0 : false,
+          is5Column:config.is5Column === 0 , 
+          isContactNoVisible: config.isContactNoVisible === 0,
+          isSignatureVisible : config.isSignatureVisible === 0,
+          isAddMenu  : config.isAddMenu === 1,
+          isAdvancePayment : config.isAdvancePayment === 1,
+          showAddOnLabel : config.showAddOnLabel === 0,
+          withOutBg : config.withOutBg === 0,
+          withVendor : config.withVendor === 0,
+          isAllItemTogether: config.isAllItemTogether === 0,
+          isNotes : config.isNotes === 0,
 
   showLastPage:  false,
         });
@@ -594,6 +604,9 @@ isAddMenu : config.isAddMenu,
 isAdvancePayment : config.isAdvancePayment,
 isNotes : config.isNotes,
 showAddOnLabel : config.showAddOnLabel,
+withOutBg : config.withOutBg,
+withVendor : config.withVendor,
+isAllItemTogether: config.isAllItemTogether,
  })
             .filter(([_, value]) => value)
             .map(([key]) => key),
@@ -759,6 +772,16 @@ useEffect(() => {
     isAdminModuleReport,
   ]);
 
+
+  const openWebWhatsApp = (mobile, recipientName) => {
+  const greeting = recipientName || eventName || "there";
+  const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${pdfUrl}`;
+  const cleanedMobile = mobile.replace(/\D/g, "");
+  const waUrl = `https://wa.me/${cleanedMobile}?text=${encodeURIComponent(message)}`;
+  window.open(waUrl, "_blank", "noopener,noreferrer");
+  setShowWhatsAppModal(false);
+};
+
   const formatAdminDate = (dateString) => {
     if (!dateString) return null;
     const [year, month, day] = dateString.split("-");
@@ -894,6 +917,9 @@ useEffect(() => {
      isContactNoVisible: options.isContactNoVisible,
      isAddMenu: options.isAddMenu,
      isAdvancePayment: options.isAdvancePayment,
+     withOutBg: options.withOutBg,
+     withVendor: options.withVendor,
+     isAllItemTogether:options.isAllItemTogether,
      isNotes : options.isNotes,
      showAddOnLabel: options.showAddOnLabel,
      showLastPage: 1,
@@ -985,12 +1011,12 @@ if ((options.isDoc || options.isExcel) && !isPdf) {
 } else {
     setPdfUrl(data.report_path);
 
-    // ── NEW: auto-send WhatsApp if we already have the number ──
+    
     if (agencyContact?.contactNo) {
       await handleWhatsAppSend(
         `+91${agencyContact.contactNo.replace(/\D/g, "")}`,
         agencyContact.nameEnglish || "",
-        data.report_path, // pass explicitly since state update is async
+        data.report_path, 
       );
     }
   }
@@ -1024,17 +1050,22 @@ if ((options.isDoc || options.isExcel) && !isPdf) {
     setItemFontSize(null);
     setSloganFontSize(null);
     setAutoAgencyContact(null);
+     setWhatsAppSendMode("api");
   };
 
-const handleWhatsAppShare = () => {
+const handleWhatsAppShare = (mode = "api") => {
+  setWhatsAppSendMode(mode);
+
   if (selectedAgency.length === 1) {
     const agency = agencies.find((a) => a.id === selectedAgency[0]);
     if (agency?.contactNo) {
-      handleWhatsAppSend(
-        `+91${agency.contactNo.replace(/\D/g, "")}`,
-        agency.nameEnglish || "",
-      );
-      return; 
+      const fullNumber = `+91${agency.contactNo.replace(/\D/g, "")}`;
+      if (mode === "web") {
+        openWebWhatsApp(fullNumber, agency.nameEnglish || "");
+      } else {
+        handleWhatsAppSend(fullNumber, agency.nameEnglish || "");
+      }
+      return;
     }
   }
   setShowWhatsAppModal(true);
@@ -1090,11 +1121,12 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
   return (
     <>
       <WhatsAppModal
-        isOpen={showWhatsAppModal}
-        onClose={() => setShowWhatsAppModal(false)}
-        onSend={handleWhatsAppSend}
-        mobileNumber={mobileNumber}
-      />
+  isOpen={showWhatsAppModal}
+  onClose={() => setShowWhatsAppModal(false)}
+  onSend={whatsAppSendMode === "web" ? openWebWhatsApp : handleWhatsAppSend}
+  mobileNumber={mobileNumber}
+  mode={whatsAppSendMode}
+/>
       <CustomModal
         open={isModalOpen}
         title={selectedTemplateName || "Report"}
@@ -1113,13 +1145,22 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
               </button>
               
 {pdfUrl && !pdfUrl.toLowerCase().endsWith(".docx") && !pdfUrl.toLowerCase().endsWith(".xlsx") && (
-                <button
-                  onClick={handleWhatsAppShare}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-                >
-                  Share on WhatsApp
-                </button>
-              )}
+  <>
+    <button
+      onClick={() => handleWhatsAppShare("api")}
+      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+    >
+      Share on WhatsApp
+    </button>
+    <button
+      onClick={() => handleWhatsAppShare("web")}
+      className="px-4 py-2 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition"
+      title="Opens web.whatsapp.com with the message pre-filled — you send it manually"
+    >
+      Web WhatsApp
+    </button>
+  </>
+)}
             </div>
           ) : (
             <button
