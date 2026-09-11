@@ -90,30 +90,33 @@ const AddRawMaterial = ({
     }, 350);
   };
 
-  const handleSelectMaterial = (item) => {
-    if (isAlreadyAdded(item)) {
-      setErrors((prev) => ({
-        ...prev,
-        material: "This material is already added.",
-      }));
-      setShowDropdown(false);
-      return;
-    }
-    setSelectedMaterial({
-      id: item.id,
-      name: item.nameEnglish || item.name || "",
-      unitId: item.units?.id || item.unitId || unitId,
-      unitName: item.units?.nameEnglish || "",
-      unitHierarchy: item.unitHierarchy || null,
-      supplierRate: item.supplierRate || 0,
-    });
-    setSearchTerm(item.nameEnglish || item.name || "");
-
-    if (item.unitHierarchy?.unitId) setUnitId(item.unitHierarchy.unitId);
-    else if (item.unit?.id) setUnitId(item.unit.id);
+ const handleSelectMaterial = (item) => {
+  if (isAlreadyAdded(item)) {
+    setErrors((prev) => ({
+      ...prev,
+      material: "This material is already added.",
+    }));
     setShowDropdown(false);
-    setErrors((prev) => ({ ...prev, material: "" }));
-  };
+    return;
+  }
+
+  const nativeUnitId = item.unit?.id || item.units?.id || unitId;
+
+  setSelectedMaterial({
+    id: item.id,
+    name: item.nameEnglish || item.name || "",
+    unitId: nativeUnitId,
+    unitName: item.unit?.nameEnglish || item.units?.nameEnglish || "",
+    unitHierarchy: item.unitHierarchy || null,
+    supplierRate: item.supplierRate || 0,
+  });
+  setSearchTerm(item.nameEnglish || item.name || "");
+
+  // ✅ default the dropdown to the item's own unit, not the hierarchy's parent
+  setUnitId(nativeUnitId);
+  setShowDropdown(false);
+  setErrors((prev) => ({ ...prev, material: "" }));
+};
 
   const validate = () => {
     const newErrors = {};
@@ -127,22 +130,62 @@ const AddRawMaterial = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const getEffectiveRate = () => {
+  const getRatePerUnit = (baseRate, hierarchy, nativeUnitId, targetUnitId) => {
+  if (!hierarchy || nativeUnitId === targetUnitId) return baseRate;
+
+  // price per parent unit
+  let pricePerParent;
+  if (nativeUnitId === hierarchy.unitId) {
+    pricePerParent = baseRate;
+  } else {
+    const nativeChild = hierarchy.children?.find((c) => c.unitId === nativeUnitId);
+    pricePerParent = nativeChild?.equivalentValue
+      ? baseRate * nativeChild.equivalentValue
+      : baseRate;
+  }
+
+  // price per target unit
+  if (targetUnitId === hierarchy.unitId) {
+    return pricePerParent;
+  }
+  const targetChild = hierarchy.children?.find((c) => c.unitId === targetUnitId);
+  return targetChild?.equivalentValue
+    ? pricePerParent / targetChild.equivalentValue
+    : pricePerParent;
+};
+
+
+const convertQtyBetweenUnits = (hierarchy, qtyValue, fromUnitId, toUnitId) => {
+  if (!hierarchy || fromUnitId === toUnitId) return qtyValue;
+
+  // Step 1: convert `fromUnitId` qty into parent-unit terms
+  let qtyInParent;
+  if (fromUnitId === hierarchy.unitId) {
+    qtyInParent = qtyValue;
+  } else {
+    const fromChild = hierarchy.children?.find((c) => c.unitId === fromUnitId);
+    qtyInParent = fromChild?.equivalentValue
+      ? qtyValue / fromChild.equivalentValue
+      : qtyValue;
+  }
+
+  // Step 2: convert parent-unit terms into `toUnitId`
+  if (toUnitId === hierarchy.unitId) {
+    return qtyInParent;
+  }
+  const toChild = hierarchy.children?.find((c) => c.unitId === toUnitId);
+  return toChild?.equivalentValue
+    ? qtyInParent * toChild.equivalentValue
+    : qtyInParent;
+};
+
+const getEffectiveRate = () => {
   const baseRate = selectedMaterial?.supplierRate || 0;
   const hierarchy = selectedMaterial?.unitHierarchy;
-  if (!hierarchy) return baseRate;
+  const nativeUnitId = selectedMaterial?.unitId;
 
-  // Parent/base unit selected → rate as-is
-  if (Number(unitId) === hierarchy.unitId) return baseRate;
-
-  // Child unit selected → divide by its equivalentValue
-  const child = (hierarchy.children || []).find(
-    (c) => c.unitId === Number(unitId),
-  );
-  if (child?.equivalentValue) {
-    return baseRate / child.equivalentValue;
-  }
-  return baseRate;
+  if (!hierarchy || !nativeUnitId) return baseRate;
+  return getRatePerUnit(baseRate, hierarchy, nativeUnitId, Number(unitId));
 };
 
 const effectiveRate = getEffectiveRate();
@@ -308,14 +351,27 @@ const effectiveRate = getEffectiveRate();
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Unit <span className="text-red-500">*</span>
           </label>
-          <select
-            className={`w-full border ${errors.unitId ? "border-red-500" : "border-gray-300"} rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400`}
-            value={unitId}
-            onChange={(e) => {
-              setUnitId(Number(e.target.value));
-              setErrors((prev) => ({ ...prev, unitId: "" }));
-            }}
-          >
+         <select
+  className={`w-full border ${errors.unitId ? "border-red-500" : "border-gray-300"} rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400`}
+  value={unitId}
+  onChange={(e) => {
+    const newUnitId = Number(e.target.value);
+    const hierarchy = selectedMaterial?.unitHierarchy;
+
+    if (hierarchy && qty) {
+      const converted = convertQtyBetweenUnits(
+        hierarchy,
+        parseFloat(qty),
+        Number(unitId),
+        newUnitId,
+      );
+      setQty(String(converted));
+    }
+
+    setUnitId(newUnitId);
+    setErrors((prev) => ({ ...prev, unitId: "" }));
+  }}
+>
             {selectedMaterial?.unitHierarchy
               ? [
                   // Parent unit

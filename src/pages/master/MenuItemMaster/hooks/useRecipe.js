@@ -35,31 +35,75 @@ useEffect(() => {
   setDishCosting(total > 0 ? total / 100 : 0);
 }, [tableData, captainTableData]);
 
-  const calculateRate = (raw, weightValue, selectedUnitId) => {
+    const calculateRate = (raw, weightValue, selectedUnitId) => {
     const supplierRate = raw?.supplierRate || 0;
     const unitHierarchy = raw?.unitHierarchy;
+    const nativeUnitId = raw?.unitId; // unit the supplierRate is actually priced in
 
-    if (!unitHierarchy) {
+    if (!unitHierarchy || !nativeUnitId) {
       return weightValue * supplierRate;
     }
 
-    const isParentUnit = unitHierarchy.unitId === selectedUnitId;
-
-    if (isParentUnit) {
+    if (selectedUnitId === nativeUnitId) {
+      // already in the native unit — no conversion needed
       return weightValue * supplierRate;
+    }
+
+    // Step 1: convert selected unit's weight into "parent unit" terms
+    let weightInParentUnits;
+    if (selectedUnitId === unitHierarchy.unitId) {
+      weightInParentUnits = weightValue;
     } else {
-      const childUnit = unitHierarchy.children?.find(
+      const selectedChild = unitHierarchy.children?.find(
         (c) => c.unitId === selectedUnitId
       );
-
-      if (childUnit && childUnit.equivalentValue > 0) {
-        const weightInParent = weightValue / childUnit.equivalentValue;
-        return weightInParent * supplierRate;
-      } else {
-        return weightValue * supplierRate;
-      }
+      weightInParentUnits = selectedChild?.equivalentValue
+        ? weightValue / selectedChild.equivalentValue
+        : weightValue;
     }
+
+    // Step 2: convert parent-unit terms into the native unit
+    let weightInNativeUnit;
+    if (nativeUnitId === unitHierarchy.unitId) {
+      weightInNativeUnit = weightInParentUnits;
+    } else {
+      const nativeChild = unitHierarchy.children?.find(
+        (c) => c.unitId === nativeUnitId
+      );
+      weightInNativeUnit = nativeChild?.equivalentValue
+        ? weightInParentUnits * nativeChild.equivalentValue
+        : weightInParentUnits;
+    }
+
+    return weightInNativeUnit * supplierRate;
   };
+
+
+
+  const convertWeightBetweenUnits = (raw, weightValue, fromUnitId, toUnitId) => {
+  const unitHierarchy = raw?.unitHierarchy;
+  if (!unitHierarchy || fromUnitId === toUnitId) return weightValue;
+
+  // Step 1: convert `fromUnitId` weight into parent-unit terms
+  let weightInParent;
+  if (fromUnitId === unitHierarchy.unitId) {
+    weightInParent = weightValue;
+  } else {
+    const fromChild = unitHierarchy.children?.find((c) => c.unitId === fromUnitId);
+    weightInParent = fromChild?.equivalentValue
+      ? weightValue / fromChild.equivalentValue
+      : weightValue;
+  }
+
+  // Step 2: convert parent-unit terms into `toUnitId`
+  if (toUnitId === unitHierarchy.unitId) {
+    return weightInParent;
+  }
+  const toChild = unitHierarchy.children?.find((c) => c.unitId === toUnitId);
+  return toChild?.equivalentValue
+    ? weightInParent * toChild.equivalentValue
+    : weightInParent;
+};
 
   const handleAddRecipe = () => {
     if (!selectedRaw || !weight || !unit) {
@@ -203,5 +247,7 @@ setRowCounter((prev) => prev + 1);
     handleAddRecipe,
     handleDeleteRow,
     handleEditRow,
+    calculateRate,         
+  convertWeightBetweenUnits,
   };
 }

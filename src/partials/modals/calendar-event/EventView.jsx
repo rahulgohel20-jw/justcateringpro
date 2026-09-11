@@ -44,6 +44,7 @@ const EventViewModal = ({
   onEventsUpdated,
 }) => {
   const permissions = usePermission("Calendar");
+  const permFollowUp = usePermission("Follow Up");
 
   const permissionMenuPlanning = usePermission("Menu Planning");
   const permissionMenuExecution = usePermission("Menu Execution");
@@ -75,7 +76,7 @@ const [isEventHistoryOpen, setIsEventHistoryOpen] = useState(false);
 const [eventHistoryLogs, setEventHistoryLogs] = useState([]);
 const [eventHistoryLoading, setEventHistoryLoading] = useState(false);
 const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
-
+const userId = localStorage.getItem("userId");
 const [contextMenu, setContextMenu] = useState(null); 
 
 const handleItemContextMenu = (e, item) => {
@@ -269,7 +270,7 @@ const handleOpenEventHistory = async () => {
   setEventHistoryLoading(true);
   try {
     const email = getUserEmail();
-    const res = await GetUserlogs("", "", "", safeEventId);
+    const res = await GetUserlogs("", "", "", safeEventId, userId);
     const allLogs = res?.data?.data || [];
     // Show every log tied to this event — menu planning, quotation, invoice,
     // deletion, etc. — sorted newest first.
@@ -971,7 +972,10 @@ const handleSaveRemarks = async (data) => {
   onClose={() => setIsFollowUpModalOpen(false)}
   eventId={safeEventId}
   userId={localStorage.getItem("userId")}
-  canEdit={permissions.edit}
+  canAdd={permFollowUp.add}
+  canEdit={permFollowUp.edit}
+  canDelete={permFollowUp.delete}
+
   eventInfo={{
     customerName: translatedTitle || eventData?.event?._def?.title || "",
     mobile: eventDataAll?.mobile || "",

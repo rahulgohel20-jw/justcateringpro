@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FormattedMessage } from "react-intl";
 import { toAbsoluteUrl } from "@/utils";
 import { GetOutsideSummary, AddExclusiveReport, WhatsAppPdf } from "@/services/apiServices";
+import { Tooltip } from "antd";
 
 const WhatsAppIcon = () => (
   <svg
@@ -56,6 +57,8 @@ export default function SummaryItemModalInHousecook({
   const [whatsAppLoadingIndex, setWhatsAppLoadingIndex] = useState(null);
   const [pdfLoadingIndex, setPdfLoadingIndex] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [webWhatsAppLoading, setWebWhatsAppLoading] = useState(false);
+const [webWhatsAppLoadingIndex, setWebWhatsAppLoadingIndex] = useState(null);
   // ──────────────────────────────────────────────────────────────────────────
 
   const isShowingAllFunctions = eventFunctionId === -1;
@@ -140,6 +143,29 @@ export default function SummaryItemModalInHousecook({
       return null;
     }
   };
+
+  const handleWebWhatsApp = async (contact, index) => {
+  const mobile = (contact.number || "").replace(/\D/g, "");
+  if (!mobile || mobile.length < 10) {
+    console.error("No valid WhatsApp number found for this contact.");
+    return;
+  }
+
+  setWebWhatsAppLoading(true);
+  setWebWhatsAppLoadingIndex(index);
+
+  try {
+    const pdfUrl = await handlereport(contact);
+    if (!pdfUrl) return;
+
+    const greeting = contact.contactName || "there";
+    const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${pdfUrl}`;
+    window.open(`https://wa.me/${mobile}?text=${encodeURIComponent(message)}`, "_blank");
+  } finally {
+    setWebWhatsAppLoading(false);
+    setWebWhatsAppLoadingIndex(null);
+  }
+};
 
   // PDF button — open in new tab
   const handlePdfClick = async (contact, index) => {
@@ -398,83 +424,57 @@ export default function SummaryItemModalInHousecook({
                                 {/* Actions */}
                                 <div className="flex justify-start gap-5 p-2 rounded-md transition-all duration-300">
                                   <div className="flex gap-2">
-                                    {/* WhatsApp Button */}
-                                    <button
-                                      onClick={() =>
-                                        handleWhatsApp(contact, index)
-                                      }
-                                      disabled={
-                                        whatsAppLoading &&
-                                        whatsAppLoadingIndex === index
-                                      }
-                                      className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                      title="Send via WhatsApp"
-                                    >
-                                      {whatsAppLoading &&
-                                      whatsAppLoadingIndex === index ? (
-                                        <svg
-                                          className="w-5 h-5 animate-spin"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <circle
-                                            className="opacity-25"
-                                            cx="12"
-                                            cy="12"
-                                            r="10"
-                                            stroke="currentColor"
-                                            strokeWidth="4"
-                                          />
-                                          <path
-                                            className="opacity-75"
-                                            fill="currentColor"
-                                            d="M4 12a8 8 0 018-8v8H4z"
-                                          />
-                                        </svg>
-                                      ) : (
-                                        <WhatsAppIcon />
-                                      )}
-                                    </button>
+                                    
+                                    <Tooltip title="Send via WhatsApp">
+  <button
+    onClick={() => handleWhatsApp(contact, index)}
+    disabled={whatsAppLoading && whatsAppLoadingIndex === index}
+    className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {whatsAppLoading && whatsAppLoadingIndex === index ? (
+      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+      </svg>
+    ) : (
+      <WhatsAppIcon />
+    )}
+  </button>
+</Tooltip>
 
-                                    {/* PDF Button */}
-                                    <button
-                                      onClick={() =>
-                                        handlePdfClick(contact, index)
-                                      }
-                                      disabled={pdfLoadingIndex === index}
-                                      className="p-1.1 text-white transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                                      title="Open PDF"
-                                    >
-                                      {pdfLoadingIndex === index ? (
-                                        <svg
-                                          className="w-6 h-6 animate-spin text-gray-500"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <circle
-                                            className="opacity-25"
-                                            cx="12"
-                                            cy="12"
-                                            r="10"
-                                            stroke="currentColor"
-                                            strokeWidth="4"
-                                          />
-                                          <path
-                                            className="opacity-75"
-                                            fill="currentColor"
-                                            d="M4 12a8 8 0 018-8v8H4z"
-                                          />
-                                        </svg>
-                                      ) : (
-                                        <img
-                                          src={toAbsoluteUrl(
-                                            "/media/icons/PDFIcon.png",
-                                          )}
-                                          alt="PDF Icon"
-                                          className="w-6 h-6 object-contain"
-                                        />
-                                      )}
-                                    </button>
+<Tooltip title="Open in Web WhatsApp">
+  <button
+    onClick={() => handleWebWhatsApp(contact, index)}
+    disabled={webWhatsAppLoading && webWhatsAppLoadingIndex === index}
+    className="p-1.5 rounded-full bg-emerald-400 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {webWhatsAppLoading && webWhatsAppLoadingIndex === index ? (
+      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+      </svg>
+    ) : (
+      <WhatsAppIcon />
+    )}
+  </button>
+</Tooltip>
+
+<Tooltip title="Open PDF">
+  <button
+    onClick={() => handlePdfClick(contact, index)}
+    disabled={pdfLoadingIndex === index}
+    className="p-1.1 text-white transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {pdfLoadingIndex === index ? (
+      <svg className="w-6 h-6 animate-spin text-gray-500" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+      </svg>
+    ) : (
+      <img src={toAbsoluteUrl("/media/icons/PDFIcon.png")} alt="PDF Icon" className="w-6 h-6 object-contain" />
+    )}
+  </button>
+</Tooltip>
 
                                     {/* Expand Button */}
                                     <button

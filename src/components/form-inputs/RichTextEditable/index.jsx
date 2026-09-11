@@ -9,9 +9,22 @@ export const trimPayloadWhitespace = (value = "") =>
     .replace(/<\/b>\s+/gi, "</b>")
     .replace(/[ \t]{2,}/g, " ");
 
-export const payloadToDisplayHtml = (text = "") =>
-  trimPayloadWhitespace(text).replace(/\n/g, "<br>");
+// Hard whitelist: only bare <b>, </b>, and <br> ever survive. Now exported
+// so callers loading legacy saved values (which may predate this lockdown)
+// can run the same sanitizer before ever displaying/re-saving them.
+export const sanitizeToAllowedTags = (html = "") =>
+  html.replace(/<(\/?)(\w+)([^>]*)>/gi, (match, closingSlash, tag) => {
+    const lower = tag.toLowerCase();
+    if (lower === "b") return closingSlash ? "</b>" : "<b>";
+    if (lower === "br") return "<br>";
+    return "";
+  });
 
+// Now sanitizes too — previously this only handled whitespace/newlines,
+// which meant a legacy value like "<i>text</i>" loaded straight into the
+// editor's visible DOM untouched, since this is what sets ref.current.innerHTML.
+export const payloadToDisplayHtml = (text = "") =>
+  sanitizeToAllowedTags(trimPayloadWhitespace(text)).replace(/\n/g, "<br>");
 // editable div's raw innerHTML -> payload (only <b> survives, everything else -> \n or plain text)
 export const displayHtmlToPayload = (html) => {
   const doc = new DOMParser().parseFromString(html || "", "text/html");
@@ -92,29 +105,39 @@ export default function RichTextEditable({
     }
   };
 
-  const handlePaste = (e) => {
+ const handlePaste = (e) => {
+  e.preventDefault();
+  const html = e.clipboardData.getData("text/html");
+  const plain = e.clipboardData.getData("text/plain");
+
+  if (html) {
+    const cleanPayload = displayHtmlToPayload(html)
+      .replace(/\n{2,}/g, "\n")   // ← collapse runs of blank lines from pasted blocks
+      .replace(/^\n+|\n+$/g, ""); // ← drop leading/trailing blank lines too
+    document.execCommand("insertHTML", false, payloadToDisplayHtml(cleanPayload));
+  } else {
+    document.execCommand("insertText", false, plain);
+  }
+  emitChange();
+};
+
+const handleKeyDown = (e) => {
+  if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B")) {
     e.preventDefault();
-    const html = e.clipboardData.getData("text/html");
-    const plain = e.clipboardData.getData("text/plain");
-
-    if (html) {
-      const cleanPayload = displayHtmlToPayload(html);
-      document.execCommand("insertHTML", false, payloadToDisplayHtml(cleanPayload));
-    } else {
-      document.execCommand("insertText", false, plain);
-    }
+    document.execCommand("bold", false, null);
     emitChange();
-  };
+    return;
+  }
 
-  const handleKeyDown = (e) => {
-    if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B")) {
-      e.preventDefault();
-      document.execCommand("bold", false, null);
-      emitChange();
-      return;
-    }
+  // ← ADD THIS BLOCK: block native italic/underline shortcuts entirely,
+  // so the browser never inserts <i>/<u> into the DOM in the first place.
+  // Only bold is an allowed style in this editor.
+  if ((e.ctrlKey || e.metaKey) && (e.key === "i" || e.key === "I" || e.key === "u" || e.key === "U")) {
+    e.preventDefault();
+    return;
+  }
 
-    if (e.key !== "Enter") return;
+  if (e.key !== "Enter") return;
 
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;

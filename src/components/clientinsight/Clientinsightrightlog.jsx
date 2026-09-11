@@ -104,6 +104,7 @@ export default function ClientInsightRightLog({ selectedUser }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [stats, setStats] = useState({ total: 0, events: 0, invoices: 0 });
+  const userId = localStorage.getItem("userId");
 
   useEffect(() => {
     if (!selectedUser?.email) {
@@ -154,7 +155,7 @@ export default function ClientInsightRightLog({ selectedUser }) {
       const end = formatToDDMMYYYY(endDate);
       const start = formatToDDMMYYYY(startDate);
 
-      const res = await GetUserlogs(selectedUser.email, end, start);
+      const res = await GetUserlogs(selectedUser.email, end, start, "", userId);
       const data = res?.data?.data || res?.data?.logs || [];
 
       setLogs(data);
