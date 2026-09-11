@@ -103,8 +103,9 @@ const startRenameHeading = (heading) => {
 };
 
 const confirmRenameHeading = () => {
-  if (!getHeadingText(renameDraft)) return; // don't allow blank names
-  updateHeadingName(renamingHeadingId, renameDraft);
+  const plainName = renameDraft.trim();
+  if (!plainName) return;
+  updateHeadingName(renamingHeadingId, plainName);
   setRenamingHeadingId(null);
   setRenameDraft("");
 };
@@ -198,12 +199,20 @@ const getFunctionDateTime = (funcId) => {
 });
 
 
+// Decode HTML entities from API-stored strings (e.g. &amp; → &, &nbsp; → space)
+const decodeHtmlEntities = (str) => {
+  if (!str) return "";
+  const tmp = document.createElement("div");
+  tmp.innerHTML = str;
+  return (tmp.textContent || tmp.innerText || "").trim();
+};
+
 const mapHeadings = (headingsArr) =>
   headingsArr.map((h) => ({
     id: h.id,
     _isNew: false,
-    name: h.headingName || "",
-    subHeadingName: h.subHeadingName || "",
+    name: decodeHtmlEntities(h.headingName),
+    subHeadingName: decodeHtmlEntities(h.subHeadingName),
     headingTotal: h.headingTotal || 0,
     rows: (h.rows || []).map(mapRow),
   }));
@@ -289,13 +298,14 @@ useEffect(() => {
     "₹ " + Number(val).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
   const confirmAddHeading = () => {
-  if (!getHeadingText(newHeadingDraft)) return;
+  const plainName = newHeadingDraft.trim();
+  if (!plainName) return;
   setHeadings((prev) => [
     ...prev,
     {
       id: Date.now(),
       _isNew: true,
-      name: newHeadingDraft,
+      name: plainName,
       subHeadingName: "",
       rows: [
         {
@@ -539,8 +549,13 @@ const validateHeadingsBeforeSave = () => {
     setShowNewHeadingRow(false);
   };
 
-  const getHeadingText = (value) =>
-    value.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+  const getHeadingText = (value) => {
+    if (!value) return "";
+    // Use a temporary div to let the browser decode all HTML entities
+    const tmp = document.createElement("div");
+    tmp.innerHTML = value;
+    return (tmp.textContent || tmp.innerText || "").trim();
+  };
 
 const deleteHeading = async (hId) => {
   const heading = headings.find((h) => h.id === hId);
@@ -801,15 +816,13 @@ const deleteHeading = async (hId) => {
                       <FileText size={14} className="text-gray-500 flex-shrink-0" />
                       {renamingHeadingId === heading.id ? (
                       <>
-                        <div
-                          contentEditable
-                          suppressContentEditableWarning
-                          role="textbox"
-                          aria-label="Rename heading"
+                        <input
+                          type="text"
                           autoFocus
+                          aria-label="Rename heading"
                           className="font-normal text-gray-800 bg-white border border-blue-300 rounded text-sm w-52 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          dangerouslySetInnerHTML={{ __html: renameDraft }}
-                          onInput={(e) => setRenameDraft(e.currentTarget.innerHTML)}
+                          value={renameDraft}
+                          onChange={(e) => setRenameDraft(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
@@ -820,7 +833,7 @@ const deleteHeading = async (hId) => {
                         />
                         <button
                           onClick={confirmRenameHeading}
-                          disabled={!getHeadingText(renameDraft)}
+                          disabled={!renameDraft.trim()}
                           className="w-6 h-6 flex items-center justify-center text-primary hover:bg-blue-50 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                           title="Confirm rename"
                         >
@@ -838,8 +851,9 @@ const deleteHeading = async (hId) => {
                       <>
                         <span
                           className="font-normal text-gray-800 text-sm"
-                          dangerouslySetInnerHTML={{ __html: heading.name }}
-                        />
+                        >
+                          {heading.name}
+                        </span>
                         <button
                           onClick={() => startRenameHeading(heading)}
                           className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-primary hover:bg-blue-50 rounded transition-colors"
@@ -1191,21 +1205,20 @@ const deleteHeading = async (hId) => {
                 <div className="border-2 border-blue-300 border-dashed rounded-xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 bg-blue-50">
                     <FileText size={15} className="text-blue-400 flex-shrink-0" />
-                    <div
-                      contentEditable
-                      suppressContentEditableWarning
-                      role="textbox"
+                    <input
+                      type="text"
+                      autoFocus
                       aria-label={intl.formatMessage({
                         id: "USER.EXTRA_CHARGES.HEADING_NAME_PLACEHOLDER",
                         defaultMessage: "Enter heading name...",
                       })}
-                      data-placeholder={intl.formatMessage({
+                      placeholder={intl.formatMessage({
                         id: "USER.EXTRA_CHARGES.HEADING_NAME_PLACEHOLDER",
                         defaultMessage: "Enter heading name...",
                       })}
-                      autoFocus
-                      className="flex-1 text-sm font-normal text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
-                      onInput={(e) => setNewHeadingDraft(e.currentTarget.innerHTML)}
+                      className="flex-1 text-sm font-normal text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-gray-400"
+                      value={newHeadingDraft}
+                      onChange={(e) => setNewHeadingDraft(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -1216,7 +1229,7 @@ const deleteHeading = async (hId) => {
                     />
 <button
   onClick={confirmAddHeading}
-  disabled={!getHeadingText(newHeadingDraft)}
+  disabled={!newHeadingDraft.trim()}
   className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
 >
   <Check size={13} />
