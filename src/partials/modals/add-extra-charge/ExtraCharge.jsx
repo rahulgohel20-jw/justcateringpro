@@ -328,14 +328,14 @@ useEffect(() => {
     "₹ " + Number(val).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
   const confirmAddHeading = () => {
-  const plainName = newHeadingDraft.trim();
-  if (!plainName) return;
+  const plainText = getPlainTextFromHtml(newHeadingDraft);
+  if (!plainText) return;
   setHeadings((prev) => [
     ...prev,
     {
       id: Date.now(),
       _isNew: true,
-      name: plainName,
+      name: newHeadingDraft,  // Keep the HTML with formatting
       subHeadingName: "",
       rows: [
         {
@@ -1354,31 +1354,91 @@ const deleteHeading = async (hId) => {
                 <div className="border-2 border-blue-300 border-dashed rounded-xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 bg-blue-50">
                     <FileText size={15} className="text-blue-400 flex-shrink-0" />
-                    <input
-                      type="text"
-                      autoFocus
+                    <div
+                      ref={(el) => {
+                        if (el && showNewHeadingRow && !newHeadingDraft) {
+                          el.focus();
+                        }
+                      }}
+                      contentEditable
+                      suppressContentEditableWarning
                       aria-label={intl.formatMessage({
                         id: "USER.EXTRA_CHARGES.HEADING_NAME_PLACEHOLDER",
                         defaultMessage: "Enter heading name...",
                       })}
-                      placeholder={intl.formatMessage({
+                      data-placeholder={intl.formatMessage({
                         id: "USER.EXTRA_CHARGES.HEADING_NAME_PLACEHOLDER",
                         defaultMessage: "Enter heading name...",
                       })}
-                      className="flex-1 text-sm font-normal text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-gray-400"
-                      value={newHeadingDraft}
-                      onChange={(e) => setNewHeadingDraft(e.target.value)}
+                      className="heading-editor flex-1 text-sm font-normal text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+                      style={{ minHeight: '32px' }}
+                      onInput={(e) => {
+                        const selection = window.getSelection();
+                        if (selection.rangeCount > 0) {
+                          const range = selection.getRangeAt(0);
+                          const cursorOffset = range.startOffset;
+                          const focusNode = range.startContainer;
+                          
+                          setNewHeadingDraft(e.currentTarget.innerHTML);
+                          
+                          requestAnimationFrame(() => {
+                            try {
+                              if (focusNode && e.currentTarget.contains(focusNode)) {
+                                const newRange = document.createRange();
+                                newRange.setStart(focusNode, Math.min(cursorOffset, focusNode.length || 0));
+                                newRange.collapse(true);
+                                selection.removeAllRanges();
+                                selection.addRange(newRange);
+                              }
+                            } catch (err) {
+                              // Silently fail
+                            }
+                          });
+                        } else {
+                          setNewHeadingDraft(e.currentTarget.innerHTML);
+                        }
+                      }}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
                           confirmAddHeading();
                         }
-                        if (e.key === "Escape") cancelAddHeading();
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          cancelAddHeading();
+                        }
+                        // Allow Ctrl+B for bold
+                        if ((e.key === "b" || e.key === "B") && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          try {
+                            document.execCommand("bold", false, null);
+                          } catch (err) {
+                            console.error("Bold command failed:", err);
+                          }
+                        }
+                        // Allow Ctrl+I for italic
+                        if ((e.key === "i" || e.key === "I") && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          try {
+                            document.execCommand("italic", false, null);
+                          } catch (err) {
+                            console.error("Italic command failed:", err);
+                          }
+                        }
+                        // Allow Ctrl+U for underline
+                        if ((e.key === "u" || e.key === "U") && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          try {
+                            document.execCommand("underline", false, null);
+                          } catch (err) {
+                            console.error("Underline command failed:", err);
+                          }
+                        }
                       }}
                     />
 <button
   onClick={confirmAddHeading}
-  disabled={!newHeadingDraft.trim()}
+  disabled={!getPlainTextFromHtml(newHeadingDraft).trim()}
   className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
 >
   <Check size={13} />
