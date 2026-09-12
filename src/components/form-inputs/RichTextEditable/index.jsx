@@ -165,70 +165,87 @@ export default function RichTextEditable({
   updateBoldState();
 };
 
-  const applyBoldPerLine = () => {
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-    const range = sel.getRangeAt(0);
+ const applyBoldPerLine = () => {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
 
-    if (range.collapsed) {
-      document.execCommand("bold", false, null);
-      emitChange();
-      const active = updateBoldState();
+  if (range.collapsed) {
+    document.execCommand("bold", false, null);
+    emitChange();
+    const active = updateBoldState();
     showToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
     return;
-    }
+  }
 
-    const fragment = range.cloneContents();
-    const container = document.createElement("div");
-    container.appendChild(fragment);
+  const allBold = document.queryCommandState("bold");
 
-    const lines = container.innerHTML.split(/<br\s*\/?>/i);
+  const fragment = range.cloneContents();
+  const container = document.createElement("div");
+  container.appendChild(fragment);
 
-    const isLineFullyBold = (lineHtml) => {
-      const tmp = document.createElement("div");
-      tmp.innerHTML = lineHtml;
-      const text = tmp.textContent || "";
-      if (!text.trim()) return true;
-      return /^\s*<b>[\s\S]*<\/b>\s*$/i.test(lineHtml);
-    };
+  const lines = container.innerHTML.split(/<br\s*\/?>/i);
 
-    const allBold = lines.every(isLineFullyBold);
+  const processedLines = lines.map((lineHtml) => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = lineHtml;
+    if (!(tmp.textContent || "").trim()) return lineHtml;
 
-    const processedLines = lines.map((lineHtml) => {
-      const tmp = document.createElement("div");
-      tmp.innerHTML = lineHtml;
-      if (!(tmp.textContent || "").trim()) return lineHtml;
+    const stripped = lineHtml.replace(/<\/?b>/gi, "");
+    return allBold ? stripped : `<b>${stripped}</b>`;
+  });
 
-      if (allBold) {
-        return lineHtml.replace(/^\s*<b>([\s\S]*)<\/b>\s*$/i, "$1");
-      }
-      const stripped = lineHtml.replace(/<\/?b>/gi, "");
-      return `<b>${stripped}</b>`;
-    });
+  const newHtml = processedLines.join("<br>");
 
-    const newHtml = processedLines.join("<br>");
+  range.deleteContents();
 
-    range.deleteContents();
-    const wrapper = document.createElement("div");
-    wrapper.innerHTML = newHtml;
-    const frag = document.createDocumentFragment();
-    let lastNode = null;
-    while (wrapper.firstChild) {
-      lastNode = wrapper.firstChild;
-      frag.appendChild(lastNode);
-    }
-    range.insertNode(frag);
+  // deleteContents() can leave a now-empty <b>/<strong> wrapper behind at the
+  // collapsed insertion point (e.g. after removing all the text that was
+  // entirely inside a single <b>...</b>). If we insert into that spot as-is,
+  // the new (unbolded) content lands right back inside the empty tag,
+  // silently re-bolding it. Walk up and remove any empty formatting
+  // ancestors before inserting, so the new content lands as a plain sibling.
+  let node = range.startContainer;
+while (node && node !== ref.current) {
+  const parent = node.parentNode;
+  if (!parent) break;
+  if (
+    node.nodeType === 1 &&
+    (node.tagName === "B" || node.tagName === "STRONG") &&
+    (node.textContent || "").length === 0
+  ) {
+    const idx = Array.from(parent.childNodes).indexOf(node);
+    parent.removeChild(node);
+    range.setStart(parent, idx);
+    range.setEnd(parent, idx);
+    node = parent;
+  } else {
+    node = parent;
+  }
+}
 
-    if (lastNode) {
-      const newRange = document.createRange();
-      newRange.setStartAfter(lastNode);
-      newRange.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(newRange);
-    }
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = newHtml;
+  const frag = document.createDocumentFragment();
+  let lastNode = null;
+  while (wrapper.firstChild) {
+    lastNode = wrapper.firstChild;
+    frag.appendChild(lastNode);
+  }
+  range.insertNode(frag);
 
-    emitChange();
-  };
+  if (lastNode) {
+    const newRange = document.createRange();
+    newRange.setStartAfter(lastNode);
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+  }
+
+  emitChange();
+  const active = updateBoldState();
+  showToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
+};
 
   const handleKeyDown = (e) => {
     if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B")) {
