@@ -182,7 +182,7 @@ useEffect(() => {
   if (alloc.selectOutsideAgency && alloc.outsideItem) {
     values.qty                  = alloc.outsideItem.quantityPer100Person;
     values.unit                 = alloc.outsideItem.unit?.id;
-    values.outside_price        = alloc.outsideItem.pricePerHelper;
+    values.outside_price        = alloc.outsideItem.basePrice;
     values.contactCategory      = alloc.outsideItem.contactCategory?.id;
     values.outside_contactName  = alloc.party?.id;
     values.outside_remarks      = alloc.remarks;
@@ -357,12 +357,12 @@ if (activeTab === "chef") {
       ? editData.menuItemAllocationConfigs.chefLabourItem.id : 0,
     allocation_type: v["counter wise"] || "plate_wise",
     counterNo:       Number(v.counterno) || 0,       // Pax in plate_wise
-    pricePerLabour:  Number(v.chef_price) || 0,      // Price in plate_wise
+    
+    pricePerLabour:  Number(v.chef_price) || 0,
     pricePerHelper:  v["counter wise"] === "counter_wise"
       ? Number(v.pricePerHelper) || 0 : 0,
     helperNo:        v["counter wise"] === "counter_wise"
       ? Number(v.helperNo) || 0 : 0,
-    
   };
 } else if (activeTab === "outside") {
  
@@ -376,7 +376,7 @@ if (activeTab === "chef") {
             : 0,
         quantityPer100Person: Number(v.qty) || 0,
         unitId: v.unit,
-        pricePerHelper: Number(v.outside_price) || 0,
+        basePrice: Number(v.outside_price) || 0,
         contactCategoryId: v.contactCategory,
       };
    

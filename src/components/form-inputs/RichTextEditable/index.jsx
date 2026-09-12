@@ -10,9 +10,6 @@ export const trimPayloadWhitespace = (value = "") =>
     .replace(/<b>\s*<\/b>/gi, "")
     .replace(/[ \t]{2,}/g, " ");
 
-// Hard whitelist: only bare <b>, </b>, and <br> ever survive. Now exported
-// so callers loading legacy saved values (which may predate this lockdown)
-// can run the same sanitizer before ever displaying/re-saving them.
 export const sanitizeToAllowedTags = (html = "") =>
   html.replace(/<(\/?)(\w+)([^>]*)>/gi, (match, closingSlash, tag) => {
     const lower = tag.toLowerCase();
@@ -21,12 +18,9 @@ export const sanitizeToAllowedTags = (html = "") =>
     return "";
   });
 
-// Now sanitizes too — previously this only handled whitespace/newlines,
-// which meant a legacy value like "<i>text</i>" loaded straight into the
-// editor's visible DOM untouched, since this is what sets ref.current.innerHTML.
 export const payloadToDisplayHtml = (text = "") =>
   sanitizeToAllowedTags(trimPayloadWhitespace(text)).replace(/\n/g, "<br>");
-// editable div's raw innerHTML -> payload (only <b> survives, everything else -> \n or plain text)
+
 export const displayHtmlToPayload = (html) => {
   const doc = new DOMParser().parseFromString(html || "", "text/html");
   const blockTags = new Set(["div", "p", "li"]);
@@ -154,10 +148,10 @@ export default function RichTextEditable({
     }
   };
 
- const handlePaste = (e) => {
-  e.preventDefault();
-  const html = e.clipboardData.getData("text/html");
-  const plain = e.clipboardData.getData("text/plain");
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const html = e.clipboardData.getData("text/html");
+    const plain = e.clipboardData.getData("text/plain");
 
   if (html) {
     const cleanPayload = displayHtmlToPayload(html)
@@ -171,25 +165,84 @@ export default function RichTextEditable({
   updateBoldState();
 };
 
-const handleKeyDown = (e) => {
-  if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B")) {
-    e.preventDefault();
-    document.execCommand("bold", false, null);
-    emitChange();
-    const active = updateBoldState();
+  const applyBoldPerLine = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+
+    if (range.collapsed) {
+      document.execCommand("bold", false, null);
+      emitChange();
+      const active = updateBoldState();
     showToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
     return;
-  }
+    }
 
-  // ← ADD THIS BLOCK: block native italic/underline shortcuts entirely,
-  // so the browser never inserts <i>/<u> into the DOM in the first place.
-  // Only bold is an allowed style in this editor.
-  if ((e.ctrlKey || e.metaKey) && (e.key === "i" || e.key === "I" || e.key === "u" || e.key === "U")) {
-    e.preventDefault();
-    return;
-  }
+    const fragment = range.cloneContents();
+    const container = document.createElement("div");
+    container.appendChild(fragment);
 
-  if (e.key !== "Enter") return;
+    const lines = container.innerHTML.split(/<br\s*\/?>/i);
+
+    const isLineFullyBold = (lineHtml) => {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = lineHtml;
+      const text = tmp.textContent || "";
+      if (!text.trim()) return true;
+      return /^\s*<b>[\s\S]*<\/b>\s*$/i.test(lineHtml);
+    };
+
+    const allBold = lines.every(isLineFullyBold);
+
+    const processedLines = lines.map((lineHtml) => {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = lineHtml;
+      if (!(tmp.textContent || "").trim()) return lineHtml;
+
+      if (allBold) {
+        return lineHtml.replace(/^\s*<b>([\s\S]*)<\/b>\s*$/i, "$1");
+      }
+      const stripped = lineHtml.replace(/<\/?b>/gi, "");
+      return `<b>${stripped}</b>`;
+    });
+
+    const newHtml = processedLines.join("<br>");
+
+    range.deleteContents();
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = newHtml;
+    const frag = document.createDocumentFragment();
+    let lastNode = null;
+    while (wrapper.firstChild) {
+      lastNode = wrapper.firstChild;
+      frag.appendChild(lastNode);
+    }
+    range.insertNode(frag);
+
+    if (lastNode) {
+      const newRange = document.createRange();
+      newRange.setStartAfter(lastNode);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+    }
+
+    emitChange();
+  };
+
+  const handleKeyDown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B")) {
+      e.preventDefault();
+      applyBoldPerLine();
+      return;
+    }
+
+    if ((e.ctrlKey || e.metaKey) && (e.key === "i" || e.key === "I" || e.key === "u" || e.key === "U")) {
+      e.preventDefault();
+      return;
+    }
+
+    if (e.key !== "Enter") return;
 
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
