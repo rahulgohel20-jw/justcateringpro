@@ -1040,7 +1040,7 @@ export const updateunit = (id, data) => {
 };
 
 export const Translateapi = (data) => {
-  return GET(`/transliterate?text=${data}`);
+  return GET(`/transliterate?text=${encodeURIComponent(data)}`);
 };
 
 export const GetCustomPackageapi = (id) => {
