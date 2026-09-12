@@ -46,7 +46,7 @@ const validationSchema = Yup.object().shape({
     .min(0, "Must be >= 0")
     .nullable(),
   closingQty: Yup.number()
-    .typeError("Closing Qty must be number")
+    .typeError("Min Qty must be number")
     .min(0, "Must be >= 0")
     .nullable(),
   expiryDate: Yup.date().nullable(),
