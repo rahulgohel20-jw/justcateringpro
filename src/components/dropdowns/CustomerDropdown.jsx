@@ -1,8 +1,17 @@
 import { Select } from "antd";
 
 const CustomerDropdown = ({ value, onChange, options = [], ...rest }) => {
+  // Normalize values so Ant Design always compares strings
+  const normalizedOptions = options.map((opt) => ({
+    ...opt,
+    value: String(opt.value),
+    label: opt.label || opt.customername || "",
+  }));
+
   const handleChange = (val) => {
-    const selectedCustomer = options.find((opt) => opt.value === val);
+    const selectedCustomer = normalizedOptions.find(
+      (opt) => opt.value === String(val)
+    );
 
     onChange({
       target: {
@@ -17,15 +26,26 @@ const CustomerDropdown = ({ value, onChange, options = [], ...rest }) => {
     <Select
       showSearch
       allowClear
-      value={value || undefined}  
-      className="w-full border-none shadow-none focus:outline-none"
+
+      // IMPORTANT: normalize selected ID
+      value={value !== null && value !== undefined ? String(value) : undefined}
+
       onChange={handleChange}
       placeholder="Please select"
+      className="w-full border-none shadow-none focus:outline-none"
       style={{ width: "100%" }}
-      options={options}
+
+      // Use customer name as displayed selected text
+      optionLabelProp="label"
+
+      options={normalizedOptions}
+
       filterOption={(input, option) =>
-        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+        String(option?.label || "")
+          .toLowerCase()
+          .includes(input.toLowerCase())
       }
+
       {...rest}
     />
   );

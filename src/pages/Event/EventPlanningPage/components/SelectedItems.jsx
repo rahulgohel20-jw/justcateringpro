@@ -814,14 +814,99 @@ useEffect(() => {
 };
 
 const SubTextModal = ({ label, onClose, onSave, initialValues = {}, mode = "menu" }) => {
+  const cleanText = (val = "") => {
+    if (typeof val !== "string") return val || "";
+    return val.replace(/&amp;/gi, "&");
+  };
+
   const [formData, setFormData] = useState({
-    english: initialValues.english || "",
-    gujarati: initialValues.gujarati || "",
-    hindi: initialValues.hindi || "",
+    english: cleanText(initialValues.english),
+    gujarati: cleanText(initialValues.gujarati),
+    hindi: cleanText(initialValues.hindi),
   });
 
    const [isTranslating, setIsTranslating] = useState(false);
   const debounceRef = useRef(null);
+
+  const translateWithFormatting = async (englishHtml) => {
+    const div = document.createElement("div");
+    div.innerHTML = englishHtml || "";
+    const plainEnglish = (div.textContent || div.innerText || "").trim();
+
+    if (!plainEnglish) {
+      return { gujarati: "", hindi: "" };
+    }
+
+    const segments = [];
+    Array.from(div.childNodes).forEach((node) => {
+      const isBold =
+        node.nodeType === 1 &&
+        (node.tagName === "B" || node.tagName === "STRONG" || node.style?.fontWeight === "bold");
+      const isBr = node.nodeType === 1 && node.tagName === "BR";
+
+      segments.push({
+        bold: isBold,
+        isBr,
+        text: isBr ? "\n" : (node.textContent || ""),
+      });
+    });
+
+    const hasBold = segments.some((s) => s.bold);
+
+    if (!hasBold) {
+      const res = await Translateapi(plainEnglish);
+      const data = res?.data || {};
+      return {
+        gujarati: cleanText(data.gujarati || ""),
+        hindi: cleanText(data.hindi || ""),
+      };
+    }
+
+    const translatedSegments = await Promise.all(
+      segments.map(async (seg) => {
+        if (seg.isBr) {
+          return { ...seg, gujText: "<br>", hinText: "<br>" };
+        }
+        if (!seg.text || !seg.text.trim()) {
+          return { ...seg, gujText: seg.text, hinText: seg.text };
+        }
+
+        const matchLeading = seg.text.match(/^\s*/);
+        const matchTrailing = seg.text.match(/\s*$/);
+        const leadingSpace = matchLeading ? matchLeading[0] : "";
+        const trailingSpace = matchTrailing ? matchTrailing[0] : "";
+        const coreText = seg.text.trim();
+
+        if (!coreText) {
+          return { ...seg, gujText: seg.text, hinText: seg.text };
+        }
+
+        try {
+          const res = await Translateapi(coreText);
+          const data = res?.data || {};
+          const guj = cleanText(data.gujarati || coreText);
+          const hin = cleanText(data.hindi || coreText);
+          return {
+            ...seg,
+            gujText: `${leadingSpace}${guj}${trailingSpace}`,
+            hinText: `${leadingSpace}${hin}${trailingSpace}`,
+          };
+        } catch (err) {
+          return {
+            ...seg,
+            gujText: seg.text,
+            hinText: seg.text,
+          };
+        }
+      })
+    );
+
+    const wrap = (bold, text) => (bold ? `<b>${text}</b>` : text);
+    const gujarati = translatedSegments.map((s) => wrap(s.bold, s.gujText)).join("");
+    const hindi = translatedSegments.map((s) => wrap(s.bold, s.hinText)).join("");
+
+    return { gujarati, hindi };
+  };
 
   // ── Translation ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -839,17 +924,15 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {}, mode = "menu
     setIsTranslating(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await Translateapi(plainEnglish);
-        const data = res?.data || {};
+        const { gujarati, hindi } = await translateWithFormatting(formData.english);
         setFormData((prev) => ({
           ...prev,
-          gujarati: data.gujarati || "",
-          hindi: data.hindi || "",
+          gujarati,
+          hindi,
         }));
       } catch (err) {
         console.error("Translation error:", err);
-      }
-      finally {
+      } finally {
         setIsTranslating(false); 
       }
     }, 500);
@@ -885,7 +968,11 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {}, mode = "menu
             type="button"
             disabled={isTranslating} 
             onClick={() => {
-              onSave({ english: formData.english, hindi: formData.hindi, gujarati: formData.gujarati });
+              onSave({
+                english: cleanText(formData.english),
+                hindi: cleanText(formData.hindi),
+                gujarati: cleanText(formData.gujarati),
+              });
               onClose();
             }}
             className="px-4 py-2 rounded-lg bg-primary text-white text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed" 
@@ -1098,25 +1185,21 @@ useEffect(() => {
   );
 
   const getLocalizedItemName = useMemo(
-    () => (item) => {
-      const field =
-        { en: "nameEnglish", hi: "nameHindi", gu: "nameGujarati" }[
-          currentLanguage
-        ] || "nameEnglish";
-      // First try the rename/nickname from itemRenames, then fall back to original name
-      const renameKey = { en: "english", hi: "hindi", gu: "gujarati" }[currentLanguage] || "english";
-      const rename = data.itemRenames?.[item.id]?.[renameKey];
-      if (rename) return rename;
-      return (
-        item[field] ||
-        item.nameEnglish ||
-        item.menuItemName ||
-        item.menuItemNameEnglish ||
-        ""
-      );
-    },
-    [currentLanguage, data.itemRenames],
-  );
+  () => (item) => {
+    const field =
+      { en: "nameEnglish", hi: "nameHindi", gu: "nameGujarati" }[
+        currentLanguage
+      ] || "nameEnglish";
+    return (
+      item[field] ||
+      item.nameEnglish ||
+      item.menuItemName ||
+      item.menuItemNameEnglish ||
+      ""
+    );
+  },
+  [currentLanguage],
+);
 
 
 //  const getLocalizedCategoryName = useMemo(

@@ -1,16 +1,15 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 
 export const trimPayloadWhitespace = (value = "") =>
   String(value)
     .replace(/&nbsp;/gi, " ")
     .replace(/\u00a0/g, " ")
-    .replace(/<b>\s+/gi, "<b>")
-    .replace(/\s+<\/b>/gi, "</b>")
+    .replace(/&amp;/gi, "&")
+    .replace(/<b>\s+/gi, " <b>")
+    .replace(/\s+<\/b>/gi, "</b> ")
+    .replace(/<b>\s*<\/b>/gi, "")
     .replace(/[ \t]{2,}/g, " ");
 
-// Hard whitelist: only bare <b>, </b>, and <br> ever survive. Now exported
-// so callers loading legacy saved values (which may predate this lockdown)
-// can run the same sanitizer before ever displaying/re-saving them.
 export const sanitizeToAllowedTags = (html = "") =>
   html.replace(/<(\/?)(\w+)([^>]*)>/gi, (match, closingSlash, tag) => {
     const lower = tag.toLowerCase();
@@ -19,12 +18,9 @@ export const sanitizeToAllowedTags = (html = "") =>
     return "";
   });
 
-// Now sanitizes too — previously this only handled whitespace/newlines,
-// which meant a legacy value like "<i>text</i>" loaded straight into the
-// editor's visible DOM untouched, since this is what sets ref.current.innerHTML.
 export const payloadToDisplayHtml = (text = "") =>
   sanitizeToAllowedTags(trimPayloadWhitespace(text)).replace(/\n/g, "<br>");
-// editable div's raw innerHTML -> payload (only <b> survives, everything else -> \n or plain text)
+
 export const displayHtmlToPayload = (html) => {
   const doc = new DOMParser().parseFromString(html || "", "text/html");
   const blockTags = new Set(["div", "p", "li"]);
@@ -67,7 +63,7 @@ export const displayHtmlToPayload = (html) => {
   };
 
   Array.from(doc.body.childNodes).forEach(walk);
-  return trimPayloadWhitespace(doc.body.innerHTML);
+  return trimPayloadWhitespace(doc.body.innerHTML).replace(/&amp;/gi, "&");
 };
 
 export default function RichTextEditable({
@@ -80,6 +76,54 @@ export default function RichTextEditable({
 }) {
   const ref = useRef(null);
   const isInternalChange = useRef(false);
+  const [isBold, setIsBold] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [toast, setToast] = useState(null); // { message: string, type: 'active' | 'inactive' }
+  const toastTimerRef = useRef(null);
+
+  const showToast = (message, type = "active") => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ message, type });
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+    }, 2200);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  const updateBoldState = () => {
+    if (!ref.current) return false;
+    try {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || !ref.current.contains(sel.anchorNode)) {
+        setIsBold(false);
+        return false;
+      }
+      const active = Boolean(document.queryCommandState("bold"));
+      setIsBold(active);
+      return active;
+    } catch {
+      return false;
+    }
+  };
+
+  const toggleBold = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (ref.current) {
+      ref.current.focus();
+    }
+    document.execCommand("bold", false, null);
+    emitChange();
+    const active = updateBoldState();
+    showToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
+  };
 
   useEffect(() => {
     if (isInternalChange.current) {
@@ -104,10 +148,10 @@ export default function RichTextEditable({
     }
   };
 
- const handlePaste = (e) => {
-  e.preventDefault();
-  const html = e.clipboardData.getData("text/html");
-  const plain = e.clipboardData.getData("text/plain");
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const html = e.clipboardData.getData("text/html");
+    const plain = e.clipboardData.getData("text/plain");
 
   if (html) {
     const cleanPayload = displayHtmlToPayload(html)
@@ -118,25 +162,87 @@ export default function RichTextEditable({
     document.execCommand("insertText", false, plain);
   }
   emitChange();
+  updateBoldState();
 };
 
-const handleKeyDown = (e) => {
-  if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B")) {
-    e.preventDefault();
-    document.execCommand("bold", false, null);
+  const applyBoldPerLine = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+
+    if (range.collapsed) {
+      document.execCommand("bold", false, null);
+      emitChange();
+      const active = updateBoldState();
+    showToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
+    return;
+    }
+
+    const fragment = range.cloneContents();
+    const container = document.createElement("div");
+    container.appendChild(fragment);
+
+    const lines = container.innerHTML.split(/<br\s*\/?>/i);
+
+    const isLineFullyBold = (lineHtml) => {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = lineHtml;
+      const text = tmp.textContent || "";
+      if (!text.trim()) return true;
+      return /^\s*<b>[\s\S]*<\/b>\s*$/i.test(lineHtml);
+    };
+
+    const allBold = lines.every(isLineFullyBold);
+
+    const processedLines = lines.map((lineHtml) => {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = lineHtml;
+      if (!(tmp.textContent || "").trim()) return lineHtml;
+
+      if (allBold) {
+        return lineHtml.replace(/^\s*<b>([\s\S]*)<\/b>\s*$/i, "$1");
+      }
+      const stripped = lineHtml.replace(/<\/?b>/gi, "");
+      return `<b>${stripped}</b>`;
+    });
+
+    const newHtml = processedLines.join("<br>");
+
+    range.deleteContents();
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = newHtml;
+    const frag = document.createDocumentFragment();
+    let lastNode = null;
+    while (wrapper.firstChild) {
+      lastNode = wrapper.firstChild;
+      frag.appendChild(lastNode);
+    }
+    range.insertNode(frag);
+
+    if (lastNode) {
+      const newRange = document.createRange();
+      newRange.setStartAfter(lastNode);
+      newRange.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+    }
+
     emitChange();
-    return;
-  }
+  };
 
-  // ← ADD THIS BLOCK: block native italic/underline shortcuts entirely,
-  // so the browser never inserts <i>/<u> into the DOM in the first place.
-  // Only bold is an allowed style in this editor.
-  if ((e.ctrlKey || e.metaKey) && (e.key === "i" || e.key === "I" || e.key === "u" || e.key === "U")) {
-    e.preventDefault();
-    return;
-  }
+  const handleKeyDown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B")) {
+      e.preventDefault();
+      applyBoldPerLine();
+      return;
+    }
 
-  if (e.key !== "Enter") return;
+    if ((e.ctrlKey || e.metaKey) && (e.key === "i" || e.key === "I" || e.key === "u" || e.key === "U")) {
+      e.preventDefault();
+      return;
+    }
+
+    if (e.key !== "Enter") return;
 
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
@@ -204,17 +310,62 @@ const handleKeyDown = (e) => {
     emitChange();
   };
 
+  const badgePosition = "bottom-full mb-1.5 right-0";
+
   return (
-    <div
-      ref={ref}
-      name={name}
-      contentEditable
-      onPaste={handlePaste}
-      onKeyDown={handleKeyDown}
-      suppressContentEditableWarning
-      data-placeholder={placeholder}
-      className={`${minHeight} w-full rounded-lg border border-gray-300 p-2 text-sm outline-none focus:ring-2 focus:ring-primary bg-white empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none ${className}`}
-      onInput={emitChange}
-    />
+    <div className={`relative ${className}`}>
+      {/* Toast / Status indicator cleanly positioned outside the input box on top-right */}
+      {toast && (
+        <div
+          className={`absolute ${badgePosition} z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold shadow-xs pointer-events-none select-none transition-all duration-200 ${
+            toast.type === "active"
+              ? "bg-primary/10 text-primary border border-primary/30"
+              : "bg-gray-100 text-gray-500 border border-gray-300"
+          }`}
+        >
+          <span className={`font-black text-[11px] ${toast.type === "active" ? "text-primary" : "text-gray-400 line-through"}`}>
+            B
+          </span>
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* Persistent indicator badge when Bold is Active (if no toast is showing) */}
+      {!toast && isBold && isFocused && (
+        <button
+          type="button"
+          onMouseDown={toggleBold}
+          title="Bold is active. Click or press Ctrl+B to turn off."
+          className={`absolute ${badgePosition} z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary border border-primary/30 cursor-pointer select-none hover:bg-primary/20 transition-all`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          <span className="font-black text-[11px]">B</span>
+          <span>Bold Active</span>
+        </button>
+      )}
+
+      <div
+        ref={ref}
+        name={name}
+        contentEditable
+        onPaste={handlePaste}
+        onKeyDown={handleKeyDown}
+        onFocus={() => {
+          setIsFocused(true);
+          setTimeout(updateBoldState, 20);
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+          setIsBold(false);
+          setToast(null);
+        }}
+        onKeyUp={updateBoldState}
+        onMouseUp={updateBoldState}
+        suppressContentEditableWarning
+        data-placeholder={placeholder}
+        className={`${minHeight} w-full rounded-lg border border-gray-300 p-2 text-sm outline-none focus:ring-2 focus:ring-primary bg-white whitespace-pre-wrap break-words empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none`}
+        onInput={emitChange}
+      />
+    </div>
   );
 }

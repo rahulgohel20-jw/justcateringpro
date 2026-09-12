@@ -19,7 +19,30 @@ const SsoLogin = () => {
 
       try {
         await loginWithToken(token, userId);
-        navigate("/add-event", { replace: true });
+
+        const partyId = searchParams.get("partyId");
+        const redirectTo = searchParams.get("redirectTo");
+
+        if (redirectTo === "add-event" && partyId) {
+          navigate("/add-event", {
+            replace: true,
+            state: {
+              fromLeadConvert: true,
+              partyId,
+              leadId: searchParams.get("leadId") || "",
+              clientName: searchParams.get("clientName") || "",
+              contactNumber: searchParams.get("contactNumber") || "",
+              emailId: searchParams.get("emailId") || "",
+              cityName: searchParams.get("cityName") || "",
+              eventTypeId: searchParams.get("eventTypeId") || "",
+              eventTypeName: searchParams.get("eventTypeName") || "",
+              inquiryDate: searchParams.get("inquiryDate") || "",
+              leadCode: searchParams.get("leadCode") || "",
+            },
+          });
+        } else {
+          navigate("/add-event", { replace: true });
+        }
       } catch (err) {
         console.error("SSO login failed:", err);
         navigate("/auth/login", { replace: true });

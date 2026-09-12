@@ -53,6 +53,7 @@ const [isVenueTranslating, setIsVenueTranslating] = useState(false);
 
   const eventPrefillAppliedRef = useRef(false);
   const functionPrefillAppliedRef = useRef(false);
+  const eventTypeAutoMatchedRef = useRef(false);
 
 
 
@@ -65,64 +66,67 @@ const [isVenueTranslating, setIsVenueTranslating] = useState(false);
 
   const selectedDateFromCalendar = location.state?.event_date;
 
-  const initialFormData = useMemo(() => {
-    const today = dayjs();
-    const defaultStartTime = today.hour(8).minute(0).second(0);
-    const defaultEndTime = today.hour(12).minute(0).second(0);
+ const initialFormData = useMemo(() => {
+  const today = dayjs();
+  const defaultStartTime = today.hour(8).minute(0).second(0);
+  const defaultEndTime = today.hour(12).minute(0).second(0);
 
+  const leadPrefill = location.state?.fromLeadConvert ? location.state : null;
 
-
-
-
-
-
-    return {
-      inquiryDate: dayjs().format("DD/MM/YYYY"),
-      eventStartDateTime: defaultStartTime.format("DD/MM/YYYY hh:mm A"),
-      eventEndDateTime: defaultEndTime.format("DD/MM/YYYY hh:mm A"),
-      billingNameEnglish: "",
-      prefix: "Mr.",
-      billingNameGujarati: "",
-      billingNameHindi: "",
-      cordinatorPersonNameEnglish: "",
-cordinatorPersonNameGujarati: "",
-cordinatorPersonNameHindi: "",
-cordinatorPersonContactNo: "",
-      venueId: "",
-      eventTypeId: "",
-      managerId: "",
-      partyId: "",
-      customer_name: "",
-      address: "",
-      mobileno: "",
-      eventFunction: [],
-      mealTypeId: "",
-      meal_notes: "",
-      meal_notes_gujarati: "",
-      meal_notes_hindi: "",
-      remarksGujarati: "",
-      service: "",
-      serviceGujarati: "",
-      serviceHindi: "",
-      theme: "",
-      themeGujarati: "",
-      themeHindi: "",
-      remark: "",
-      banquetId: "ODC",
-      shiftId: "",
-      permissable_item: "",
-not_permissable_item: "",
-internal_staff_discussion: "",
-rate_discussion: "",
-
-    };
-  }, []);
+  return {
+    inquiryDate: leadPrefill?.inquiryDate
+      ? (() => {
+          // incoming format is DD/MM/YYYY from the CRM lead
+          const parsed = dayjs(leadPrefill.inquiryDate, "DD/MM/YYYY");
+          return parsed.isValid() ? parsed.format("DD/MM/YYYY") : dayjs().format("DD/MM/YYYY");
+        })()
+      : dayjs().format("DD/MM/YYYY"),
+    eventStartDateTime: defaultStartTime.format("DD/MM/YYYY hh:mm A"),
+    eventEndDateTime: defaultEndTime.format("DD/MM/YYYY hh:mm A"),
+    billingNameEnglish: "",
+    prefix: "Mr.",
+    billingNameGujarati: "",
+    billingNameHindi: "",
+    cordinatorPersonNameEnglish: "",
+    cordinatorPersonNameGujarati: "",
+    cordinatorPersonNameHindi: "",
+    cordinatorPersonContactNo: "",
+    venueId: "",
+    eventTypeId: "", 
+    leadEventTypeName: leadPrefill?.eventTypeName?.trim() || "", 
+    managerId: "",
+    partyId: leadPrefill?.partyId || "",
+    customer_name: leadPrefill?.clientName || "",
+    address: leadPrefill?.cityName || "",
+    mobileno: leadPrefill?.contactNumber || "",
+    eventFunction: [],
+    mealTypeId: "",
+    meal_notes: "",
+    meal_notes_gujarati: "",
+    meal_notes_hindi: "",
+    remarksGujarati: "",
+    service: "",
+    serviceGujarati: "",
+    serviceHindi: "",
+    theme: "",
+    themeGujarati: "",
+    themeHindi: "",
+    remark: "",
+    banquetId: "ODC",
+    shiftId: "",
+    permissable_item: "",
+    not_permissable_item: "",
+    internal_staff_discussion: "",
+    rate_discussion: "",
+  };
+}, []);
 
   const [formData, setFormData] = useState(initialFormData);
   const [current, setCurrent] = useState(0);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [shiftRefreshTrigger, setShiftRefreshTrigger] = useState(0);
+  const [eventTypes, setEventTypes] = useState([]);
 
 const isPro = useMemo(() => {
   try {
@@ -164,6 +168,33 @@ const dynamicStepSchemas = useMemo(
     Cancel: "2",
     Tentative: "3",
   };
+
+
+useEffect(() => {
+  if (eventTypeAutoMatchedRef.current) return;
+
+  if (
+    !formData.leadEventTypeName ||
+    eventTypes.length === 0
+  ) {
+    return;
+  }
+
+  const match = eventTypes.find(
+    (opt) =>
+      opt.label?.trim().toLowerCase() ===
+      formData.leadEventTypeName.trim().toLowerCase()
+  );
+
+  if (match) {
+    eventTypeAutoMatchedRef.current = true;
+
+    setFormData((prev) => ({
+      ...prev,
+      eventTypeId: match.value,
+    }));
+  }
+}, [eventTypes, formData.leadEventTypeName]);
 
   // ── Set dates from calendar ─────────────────────────────────────────────
   useEffect(() => {
@@ -366,6 +397,9 @@ cordinatorPersonContactNo: event.cordinatorPersonContactNo || "",
       return validationErrors;
     }
   }, []);
+
+
+  
 
  const validateStep = useCallback(
   async (step) => {
@@ -886,6 +920,7 @@ const sendLog = useCallback(
     originalShiftId={originalShiftId}
     prefillAppliedRef={eventPrefillAppliedRef}
     enableAdvancedDateSync={ENABLE_ADVANCED_DATE_SYNC}
+    setParentEventTypes={setEventTypes}
   />
 ),        icon: <i className="ki-filled ki-calendar"></i>,
       },
