@@ -136,10 +136,18 @@ const handleEdit = (id) => {
   // ── Filtering ─────────────────────────────────────────────────────────
   const filteredRequests = useMemo(() => {
     return requests.filter((r) => {
+      const searchableText = [
+        r.requestCode,
+        r.startDate,
+        r.endDate,
+        r.requestBy,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
       const matchesSearch =
-        !searchTerm ||
-        r.requestCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.remarks.toLowerCase().includes(searchTerm.toLowerCase());
+        !searchTerm || searchableText.includes(searchTerm.toLowerCase());
       const matchesUser = userFilter === "all" || r.generatedBy === userFilter;
       return matchesSearch && matchesUser;
     });
@@ -393,7 +401,8 @@ const isApproved = String(request.status ?? "").toUpperCase() === "APPROVED";
   open={viewModalOpen}
   onCancel={() => setViewModalOpen(false)}
   footer={null}
-  width={900}
+  centered
+  width={1200}
 >
   {viewLoading ? (
     <div className="flex flex-col items-center justify-center gap-3 py-10 text-sm text-slate-400">

@@ -90,7 +90,9 @@ const AddPurchaseApproveReq = () => {
   const isEditMode = mode === "edit";
   const isExistingRequest = isApproveMode || isEditMode;
   const existingRequestId = location.state?.requestId ?? null;
-
+const ADD_EDIT_REDIRECT_PATH = "/purchase-return-request";
+const APPROVE_REDIRECT_PATH = "/purchase/approval-request-List";
+const redirectPath = isApproveMode ? APPROVE_REDIRECT_PATH : ADD_EDIT_REDIRECT_PATH;
   // ── Whole-request identity (for the save/update payload) ────────────────
   const [requestId, setRequestId] = useState(
     isExistingRequest ? existingRequestId : NEW_REQUEST_ID
@@ -106,7 +108,7 @@ const AddPurchaseApproveReq = () => {
     let isCurrent = true;
     setRequestCodeLoading(true);
 
-    generatePurchaseRequestCode(mainId)
+    generatePurchaseRequestCode(userId)
       .then((res) => {
         if (!isCurrent) return;
         const code = res?.data?.data ?? res?.data ?? res;
@@ -478,6 +480,9 @@ const handleRowChange = (id, field, value) => {
       timer: 2000,
       showConfirmButton: false,
     });
+     if (isSuccess) {
+      navigate(redirectPath);
+    }
   } catch (err) {
     console.error("Failed to save purchase request:", err);
     const errorMsg = err?.response?.data?.msg ?? err?.message ?? "Something went wrong.";
@@ -507,7 +512,7 @@ const handleSaveRequest = async () => {
       showConfirmButton: false,
     });
 
-    if (isSuccess) navigate(-1); // only leave the page on actual success
+    if (isSuccess) navigate(redirectPath); // only leave the page on actual success
   } catch (err) {
     console.error("Failed to save purchase request:", err);
     const errorMsg = err?.response?.data?.msg ?? err?.message ?? "Something went wrong.";
@@ -770,7 +775,7 @@ const handleSaveRequest = async () => {
               </div>
             </div>
             <button
-              onClick={() => navigate(-1)}
+           onClick={() => navigate(redirectPath)} 
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-semibold hover:bg-slate-700 transition-colors shadow-sm"
             >
               <ArrowLeft size={16} /> Back
@@ -966,7 +971,7 @@ const handleSaveRequest = async () => {
         {/* ── Footer Actions ── */}
         <div className="flex justify-end gap-3 pb-8">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(redirectPath)}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm"
           >
             Cancel

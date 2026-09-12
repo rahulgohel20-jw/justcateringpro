@@ -263,16 +263,13 @@ const todayStr = new Date().toISOString().split("T")[0];
   // For "ALL", nothing fetches until the user actually types something.
   useEffect(() => {
     if (!selectedCategoryId) return;
-    if (selectedCategoryId === "ALL" && !searchQuery.trim()) {
-      setMenuItems([]);
-      setHasMore(false);
-      return;
-    }
+
     const timer = setTimeout(() => {
       setDropdownPage(1);
       setMenuItems([]);
       FetchSearchDropdown(1, false, selectedCategoryId);
     }, 400);
+
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, selectedCategoryId]);
@@ -662,9 +659,9 @@ const typeOptions = allowedStockTypes.map((t) => ({
                 allowClear
                 placeholder="Filter by category"
                 style={{ width: 220, height: "34px" }}
-                value={selectedCategoryId || undefined}
+                value={selectedCategoryId || "ALL"}
                 onChange={(value) => {
-                  const catId = value ?? null;
+                  const catId = value ?? "ALL";
                   setSelectedCategoryId(catId);
                   setSearchQuery("");
                   setMenuItems([]);
