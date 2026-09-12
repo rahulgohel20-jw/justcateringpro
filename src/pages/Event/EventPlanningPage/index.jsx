@@ -804,6 +804,14 @@ import { QRCodeCanvas } from "qrcode.react";
           (catName, value) => {
             if (!selectedFunction) return;
             setIsDirty(true);
+            const cleanVal =
+              typeof value === "object" && value !== null
+                ? {
+                    english: (value.english || "").replace(/&amp;/gi, "&"),
+                    hindi: (value.hindi || "").replace(/&amp;/gi, "&"),
+                    gujarati: (value.gujarati || "").replace(/&amp;/gi, "&"),
+                  }
+                : value;
             setSelectedByFunction((prev) => {
               const bucket = prev[selectedFunction];
               if (!bucket) return prev;
@@ -813,7 +821,7 @@ import { QRCodeCanvas } from "qrcode.react";
                   ...bucket,
                   categorySubTexts: {
                     ...(bucket.categorySubTexts || {}),
-                    [catName]: value,
+                    [catName]: cleanVal,
                   },
                 },
               };
@@ -825,6 +833,14 @@ import { QRCodeCanvas } from "qrcode.react";
   (catName, value) => {
     if (!selectedFunction) return;
     setIsDirty(true);
+    const cleanVal =
+      typeof value === "object" && value !== null
+        ? {
+            english: (value.english || "").replace(/&amp;/gi, "&"),
+            hindi: (value.hindi || "").replace(/&amp;/gi, "&"),
+            gujarati: (value.gujarati || "").replace(/&amp;/gi, "&"),
+          }
+        : value;
     setSelectedByFunction((prev) => {
       const bucket = prev[selectedFunction];
       if (!bucket) return prev;
@@ -834,7 +850,7 @@ import { QRCodeCanvas } from "qrcode.react";
           ...bucket,
           categoryHeadings: {
             ...(bucket.categoryHeadings || {}),
-            [catName]: value,
+            [catName]: cleanVal,
           },
         },
       };
@@ -847,6 +863,14 @@ import { QRCodeCanvas } from "qrcode.react";
           (catName, itemId, value) => {
             if (!selectedFunction) return;
             setIsDirty(true);
+            const cleanVal =
+              typeof value === "object" && value !== null
+                ? {
+                    english: (value.english || "").replace(/&amp;/gi, "&"),
+                    hindi: (value.hindi || "").replace(/&amp;/gi, "&"),
+                    gujarati: (value.gujarati || "").replace(/&amp;/gi, "&"),
+                  }
+                : value;
             setSelectedByFunction((prev) => {
               const bucket = prev[selectedFunction];
               if (!bucket) return prev;
@@ -855,9 +879,9 @@ import { QRCodeCanvas } from "qrcode.react";
                 Number(item.id) === Number(itemId)
                   ? {
                       ...item,
-                      subItem: value.english,
-                      subItemHindi: value.hindi,
-                      subItemGujarati: value.gujarati,
+                      subItem: cleanVal.english,
+                      subItemHindi: cleanVal.hindi,
+                      subItemGujarati: cleanVal.gujarati,
                     }
                   : item,
               );
@@ -871,6 +895,14 @@ import { QRCodeCanvas } from "qrcode.react";
           (catName, itemId, value) => {
           if (!selectedFunction) return;
           setIsDirty(true);
+          const cleanVal =
+            typeof value === "object" && value !== null
+              ? {
+                  english: (value.english || "").replace(/&amp;/gi, "&"),
+                  hindi: (value.hindi || "").replace(/&amp;/gi, "&"),
+                  gujarati: (value.gujarati || "").replace(/&amp;/gi, "&"),
+                }
+              : value;
           setSelectedByFunction((prev) => {
             const bucket = prev[selectedFunction];
             if (!bucket) return prev;
@@ -879,9 +911,9 @@ import { QRCodeCanvas } from "qrcode.react";
               Number(item.id) === Number(itemId)
                 ? {
                     ...item,
-                    itemHeading: value.english,
-                    itemHeadingHindi: value.hindi,
-                    itemHeadingGujarati: value.gujarati,
+                    itemHeading: cleanVal.english,
+                    itemHeadingHindi: cleanVal.hindi,
+                    itemHeadingGujarati: cleanVal.gujarati,
                   }
                 : item,
             );
