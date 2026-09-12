@@ -63,106 +63,114 @@ const ClientDetailsStep = ({
     }
   };
 
-  const handleCustomerChange = (selectedId) => {
-    const selectedCustomer = customer.find(
-      (c) => c.value === selectedId["target"].value,
-    );
+ const handleCustomerChange = (selectedId) => {
+  const selectedValue = selectedId?.target?.value;
 
+  const selectedCustomer = customer.find(
+    (c) => String(c.value) === String(selectedValue)
+  );
+
+  setFormData((prev) => {
     if (selectedCustomer) {
-      setFormData({
-        ...formData,
+      return {
+        ...prev,
         partyId: selectedCustomer.value,
         customer_name: selectedCustomer.customername,
         mobileno: selectedCustomer.mobile || "",
         address: selectedCustomer.address || "",
-        // billingNameEnglish: formData.billingNameEnglish?.trim()
-        //   ? formData.billingNameEnglish
-        //   : selectedCustomer.nameEnglish || selectedCustomer.customername || "",
-        // billingNameGujarati: formData.billingNameGujarati?.trim()
-        //   ? formData.billingNameGujarati
-        //   : selectedCustomer.nameGujarati || "",
-        // billingNameHindi: formData.billingNameHindi?.trim()
-        //   ? formData.billingNameHindi
-        //   : selectedCustomer.nameHindi || "",
-      });
-    } else {
-      setFormData({
-        ...formData,
-        partyId: "",
-        customer_name: "",
-        mobileno: "",
-        address: "",
-        reference: "",
-        billingNameEnglish: "",
-        billingNameGujarati: "",
-        billingNameHindi: "",
-        cordinatorPersonContactNo:"",
-        cordinatorPersonNameEnglish: "",
-        cordinatorPersonNameGujarati: "", 
-        cordinatorPersonNameHindi :"" ,
-
-      });
+      };
     }
-  };
+
+    return {
+      ...prev,
+      partyId: "",
+      customer_name: "",
+      mobileno: "",
+      address: "",
+      reference: "",
+      billingNameEnglish: "",
+      billingNameGujarati: "",
+      billingNameHindi: "",
+      cordinatorPersonContactNo: "",
+      cordinatorPersonNameEnglish: "",
+      cordinatorPersonNameGujarati: "",
+      cordinatorPersonNameHindi: "",
+    };
+  });
+};
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+  const { name, value } = e.target;
 
-    if (errors && errors[name]) {
-    }
-  };
+  setFormData((prev) => ({
+    ...prev,
+    [name]: value,
+  }));
+};
 
-  const 
-  FetchCustomerName = (autoSelectLatest = false) => {
-    GetAllCustomer(Id)
-      .then((res) => {
-        const partyDetails = res.data.data["Party Details"];
+  const FetchCustomerName = (autoSelectLatest = false) => {
+  GetAllCustomer(Id)
+    .then((res) => {
+      const partyDetails =
+        res?.data?.data?.["Party Details"] || [];
 
-        const onlyCustomers = partyDetails.filter(
-          (p) =>
-            p.contact?.contactType?.nameEnglish?.trim().toLowerCase() ===
-            "customer",
-        );
+      const onlyCustomers = partyDetails.filter(
+        (p) =>
+          p?.contact?.contactType?.nameEnglish
+            ?.trim()
+            .toLowerCase() === "customer"
+      );
 
-        const customername = onlyCustomers.map((customer, index) => {
-          const localizedName = getLocalizedField(customer, "name");
-          const localizedAddress = getLocalizedField(customer, "address");
+      const customername = onlyCustomers.map(
+        (customer, index) => {
+          const localizedName = getLocalizedField(
+            customer,
+            "name"
+          );
+
+          const localizedAddress = getLocalizedField(
+            customer,
+            "address"
+          );
 
           return {
             sr_no: index + 1,
             value: customer.id,
-            label: `${localizedName}`,
+            label: localizedName,
             mobile: customer.mobileno,
             address: localizedAddress,
             customername: localizedName,
+
             nameEnglish: customer.nameEnglish,
             nameHindi: customer.nameHindi,
             nameGujarati: customer.nameGujarati,
+
             addressEnglish: customer.addressEnglish,
             addressHindi: customer.addressHindi,
             addressGujarati: customer.addressGujarati,
           };
-        });
-
-        setCustomer(customername);
-
-        if (autoSelectLatest && customername.length > 0) {
-          const latestCustomer = customername[customername.length - 1];
-
-          setFormData((prev) => ({
-            ...prev,
-            partyId: latestCustomer.value,
-            customer_name: latestCustomer.customername,
-            mobileno: latestCustomer.mobile || "",
-            address: latestCustomer.address || "",
-          }));
         }
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-  };
+      );
+
+      setCustomer(customername);
+
+      if (autoSelectLatest && customername.length > 0) {
+        const latestCustomer =
+          customername[customername.length - 1];
+
+        setFormData((prev) => ({
+          ...prev,
+          partyId: latestCustomer.value,
+          customer_name: latestCustomer.customername,
+          mobileno: latestCustomer.mobile || "",
+          address: latestCustomer.address || "",
+        }));
+      }
+    })
+    .catch((error) => {
+      console.error("Error fetching customers:", error);
+    });
+};
 
   useEffect(() => {
     if (!formData.billingNameEnglish?.trim()) {
