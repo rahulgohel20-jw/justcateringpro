@@ -92,7 +92,7 @@ const MultiLangInputBox = ({
         // ==========================================
         if (type === "textarea" && enableFormatting) {
           return (
-            <div key={item.key} className="flex flex-col gap-1">
+            <div key={item.key} className="flex flex-col gap-1.5">
               <label className="text-sm font-normal text-black">
                 {label} ({item.label})
                 {required && index === 0 && (

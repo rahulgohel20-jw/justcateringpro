@@ -988,160 +988,159 @@ const deleteHeading = async (hId) => {
                       <FileText size={14} className="text-gray-500 flex-shrink-0" />
                       {renamingHeadingId === heading.id ? (
                         <>
-                          <div className="relative flex items-center">
-                            {/* Toast / Status indicator cleanly positioned inside the right side of the input box */}
-                            {renameToast && (
-                              <div
-                                className={`absolute top-1/2 -translate-y-1/2 right-2.5 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold shadow-xs pointer-events-none select-none transition-all duration-200 ${
-                                  renameToast.type === "active"
-                                    ? "bg-primary/10 text-primary border border-primary/30"
-                                    : "bg-gray-100 text-gray-500 border border-gray-300"
-                                }`}
-                              >
-                                <span className={`font-black text-[11px] ${renameToast.type === "active" ? "text-primary" : "text-gray-400 line-through"}`}>
-                                  B
-                                </span>
-                                <span>{renameToast.message}</span>
-                              </div>
-                            )}
-
-                            {/* Persistent indicator badge when Bold is Active */}
-                            {!renameToast && isRenameBold && isRenameFocused && (
-                              <button
-                                type="button"
-                                onMouseDown={toggleRenameBold}
-                                title="Bold is active. Click or press Ctrl+B to turn off."
-                                className="absolute top-1/2 -translate-y-1/2 right-2.5 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary border border-primary/30 cursor-pointer select-none hover:bg-primary/20 transition-all"
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                                <span className="font-black text-[11px]">B</span>
-                                <span>Bold Active</span>
-                              </button>
-                            )}
-
-                            <div
-                              ref={(el) => {
-                                renameInputRef.current = el;
-                                if (el && renamingHeadingId === heading.id) {
-                                  // Only set content if it's different (avoid resetting on every render)
-                                  if (el.innerHTML !== renameDraft) {
-                                    const selection = window.getSelection();
-                                    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-                                    const cursorOffset = range ? range.startOffset : 0;
-                                    const focusNode = range ? range.startContainer : null;
-                                    
-                                    el.innerHTML = renameDraft;
-                                    
-                                    // Restore cursor position if we were already editing
-                                    if (focusNode && el.contains(focusNode)) {
-                                      try {
-                                        const newRange = document.createRange();
-                                        newRange.setStart(focusNode, Math.min(cursorOffset, focusNode.length || 0));
-                                        newRange.collapse(true);
-                                        selection.removeAllRanges();
-                                        selection.addRange(newRange);
-                                      } catch (e) {
-                                        // If cursor restoration fails, just focus at the end
-                                        el.focus();
-                                      }
-                                    } else {
-                                      // First time - select all text
-                                      el.focus();
-                                      const range = document.createRange();
-                                      const sel = window.getSelection();
-                                      range.selectNodeContents(el);
-                                      sel.removeAllRanges();
-                                      sel.addRange(range);
-                                    }
-                                  }
-                                }
-                              }}
-                              contentEditable
-                              suppressContentEditableWarning
-                              aria-label="Rename heading"
-                              className={`heading-editor font-normal text-gray-800 bg-white border border-blue-300 rounded text-sm w-56 px-2 py-1 ${(isRenameBold && isRenameFocused) || renameToast ? "pr-24" : ""} focus:outline-none focus:ring-2 focus:ring-blue-400`}
-                              style={{ minHeight: '28px' }}
-                              onFocus={() => {
-                                setIsRenameFocused(true);
-                                setTimeout(updateRenameBoldState, 20);
-                              }}
-                              onBlur={() => {
-                                setIsRenameFocused(false);
-                                setIsRenameBold(false);
-                                setRenameToast(null);
-                              }}
-                              onKeyUp={updateRenameBoldState}
-                              onMouseUp={updateRenameBoldState}
-                              onInput={(e) => {
-                                // Save cursor position before updating state
-                                const selection = window.getSelection();
-                                if (selection.rangeCount > 0) {
-                                  const range = selection.getRangeAt(0);
-                                  const cursorOffset = range.startOffset;
-                                  const focusNode = range.startContainer;
+                          <div
+                            ref={(el) => {
+                              renameInputRef.current = el;
+                              if (el && renamingHeadingId === heading.id) {
+                                // Only set content if it's different (avoid resetting on every render)
+                                if (el.innerHTML !== renameDraft) {
+                                  const selection = window.getSelection();
+                                  const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+                                  const cursorOffset = range ? range.startOffset : 0;
+                                  const focusNode = range ? range.startContainer : null;
                                   
-                                  setRenameDraft(e.currentTarget.innerHTML);
+                                  el.innerHTML = renameDraft;
                                   
-                                  // Restore cursor after state update
-                                  requestAnimationFrame(() => {
+                                  // Restore cursor position if we were already editing
+                                  if (focusNode && el.contains(focusNode)) {
                                     try {
-                                      if (focusNode && e.currentTarget.contains(focusNode)) {
-                                        const newRange = document.createRange();
-                                        newRange.setStart(focusNode, Math.min(cursorOffset, focusNode.length || 0));
-                                        newRange.collapse(true);
-                                        selection.removeAllRanges();
-                                        selection.addRange(newRange);
-                                      }
-                                    } catch (err) {
-                                      // Silently fail if cursor restoration doesn't work
+                                      const newRange = document.createRange();
+                                      newRange.setStart(focusNode, Math.min(cursorOffset, focusNode.length || 0));
+                                      newRange.collapse(true);
+                                      selection.removeAllRanges();
+                                      selection.addRange(newRange);
+                                    } catch (e) {
+                                      // If cursor restoration fails, just focus at the end
+                                      el.focus();
                                     }
-                                  });
-                                } else {
-                                  setRenameDraft(e.currentTarget.innerHTML);
-                                }
-                                updateRenameBoldState();
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                  e.preventDefault();
-                                  confirmRenameHeading();
-                                }
-                                if (e.key === "Escape") {
-                                  e.preventDefault();
-                                  cancelRenameHeading();
-                                }
-                                // Allow Ctrl+B for bold
-                                if ((e.key === "b" || e.key === "B") && (e.ctrlKey || e.metaKey)) {
-                                  e.preventDefault();
-                                  try {
-                                    document.execCommand("bold", false, null);
-                                  } catch (err) {
-                                    console.error("Bold command failed:", err);
-                                  }
-                                  const active = updateRenameBoldState();
-                                  showRenameToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
-                                }
-                                // Allow Ctrl+I for italic
-                                if ((e.key === "i" || e.key === "I") && (e.ctrlKey || e.metaKey)) {
-                                  e.preventDefault();
-                                  try {
-                                    document.execCommand("italic", false, null);
-                                  } catch (err) {
-                                    console.error("Italic command failed:", err);
+                                  } else {
+                                    // First time - select all text
+                                    el.focus();
+                                    const range = document.createRange();
+                                    const sel = window.getSelection();
+                                    range.selectNodeContents(el);
+                                    sel.removeAllRanges();
+                                    sel.addRange(range);
                                   }
                                 }
-                                // Allow Ctrl+U for underline
-                                if ((e.key === "u" || e.key === "U") && (e.ctrlKey || e.metaKey)) {
-                                  e.preventDefault();
+                              }
+                            }}
+                            contentEditable
+                            suppressContentEditableWarning
+                            aria-label="Rename heading"
+                            className="heading-editor font-normal text-gray-800 bg-white border border-blue-300 rounded text-sm w-52 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            style={{ minHeight: '28px' }}
+                            onFocus={() => {
+                              setIsRenameFocused(true);
+                              setTimeout(updateRenameBoldState, 20);
+                            }}
+                            onBlur={() => {
+                              setIsRenameFocused(false);
+                              setIsRenameBold(false);
+                              setRenameToast(null);
+                            }}
+                            onKeyUp={updateRenameBoldState}
+                            onMouseUp={updateRenameBoldState}
+                            onInput={(e) => {
+                              // Save cursor position before updating state
+                              const selection = window.getSelection();
+                              if (selection.rangeCount > 0) {
+                                const range = selection.getRangeAt(0);
+                                const cursorOffset = range.startOffset;
+                                const focusNode = range.startContainer;
+                                
+                                setRenameDraft(e.currentTarget.innerHTML);
+                                
+                                // Restore cursor after state update
+                                requestAnimationFrame(() => {
                                   try {
-                                    document.execCommand("underline", false, null);
+                                    if (focusNode && e.currentTarget.contains(focusNode)) {
+                                      const newRange = document.createRange();
+                                      newRange.setStart(focusNode, Math.min(cursorOffset, focusNode.length || 0));
+                                      newRange.collapse(true);
+                                      selection.removeAllRanges();
+                                      selection.addRange(newRange);
+                                    }
                                   } catch (err) {
-                                    console.error("Underline command failed:", err);
+                                    // Silently fail if cursor restoration doesn't work
                                   }
+                                });
+                              } else {
+                                setRenameDraft(e.currentTarget.innerHTML);
+                              }
+                              updateRenameBoldState();
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                confirmRenameHeading();
+                              }
+                              if (e.key === "Escape") {
+                                e.preventDefault();
+                                cancelRenameHeading();
+                              }
+                              // Allow Ctrl+B for bold
+                              if ((e.key === "b" || e.key === "B") && (e.ctrlKey || e.metaKey)) {
+                                e.preventDefault();
+                                try {
+                                  document.execCommand("bold", false, null);
+                                } catch (err) {
+                                  console.error("Bold command failed:", err);
                                 }
-                              }}
-                            />
-                          </div>
+                                const active = updateRenameBoldState();
+                                showRenameToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
+                              }
+                              // Allow Ctrl+I for italic
+                              if ((e.key === "i" || e.key === "I") && (e.ctrlKey || e.metaKey)) {
+                                e.preventDefault();
+                                try {
+                                  document.execCommand("italic", false, null);
+                                } catch (err) {
+                                  console.error("Italic command failed:", err);
+                                }
+                              }
+                              // Allow Ctrl+U for underline
+                              if ((e.key === "u" || e.key === "U") && (e.ctrlKey || e.metaKey)) {
+                                e.preventDefault();
+                                try {
+                                  document.execCommand("underline", false, null);
+                                } catch (err) {
+                                  console.error("Underline command failed:", err);
+                                }
+                              }
+                            }}
+                          />
+
+                          {/* Toast / Status indicator cleanly positioned outside the input box */}
+                          {renameToast && (
+                            <div
+                              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold shadow-xs pointer-events-none select-none transition-all duration-200 shrink-0 ${
+                                renameToast.type === "active"
+                                  ? "bg-primary/10 text-primary border border-primary/30"
+                                  : "bg-gray-100 text-gray-500 border border-gray-300"
+                              }`}
+                            >
+                              <span className={`font-black text-[11px] ${renameToast.type === "active" ? "text-primary" : "text-gray-400 line-through"}`}>
+                                B
+                              </span>
+                              <span>{renameToast.message}</span>
+                            </div>
+                          )}
+
+                          {/* Persistent indicator badge when Bold is Active */}
+                          {!renameToast && isRenameBold && isRenameFocused && (
+                            <button
+                              type="button"
+                              onMouseDown={toggleRenameBold}
+                              title="Bold is active. Click or press Ctrl+B to turn off."
+                              className="flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold shrink-0 bg-primary/10 text-primary border border-primary/30 cursor-pointer select-none hover:bg-primary/20 transition-all"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                              <span className="font-black text-[11px]">B</span>
+                              <span>Bold Active</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={confirmRenameHeading}
                             disabled={!renameDraft.trim()}
@@ -1515,135 +1514,133 @@ const deleteHeading = async (hId) => {
                 <div className="border-2 border-blue-300 border-dashed rounded-xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3 bg-blue-50">
                     <FileText size={15} className="text-blue-400 flex-shrink-0" />
-                    <div className="relative flex-1 flex items-center">
-                      {/* Toast / Status indicator cleanly positioned inside the right side of the input box */}
-                      {newHeadingToast && (
-                        <div
-                          className={`absolute top-1/2 -translate-y-1/2 right-2.5 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold shadow-xs pointer-events-none select-none transition-all duration-200 ${
-                            newHeadingToast.type === "active"
-                              ? "bg-primary/10 text-primary border border-primary/30"
-                              : "bg-gray-100 text-gray-500 border border-gray-300"
-                          }`}
-                        >
-                          <span className={`font-black text-[11px] ${newHeadingToast.type === "active" ? "text-primary" : "text-gray-400 line-through"}`}>
-                            B
-                          </span>
-                          <span>{newHeadingToast.message}</span>
-                        </div>
-                      )}
-
-                      {/* Persistent indicator badge when Bold is Active */}
-                      {!newHeadingToast && isNewHeadingBold && isNewHeadingFocused && (
-                        <button
-                          type="button"
-                          onMouseDown={toggleNewHeadingBold}
-                          title="Bold is active. Click or press Ctrl+B to turn off."
-                          className="absolute top-1/2 -translate-y-1/2 right-2.5 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary border border-primary/30 cursor-pointer select-none hover:bg-primary/20 transition-all"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                          <span className="font-black text-[11px]">B</span>
-                          <span>Bold Active</span>
-                        </button>
-                      )}
-
-                      <div
-                        ref={(el) => {
-                          newHeadingInputRef.current = el;
-                          if (el && showNewHeadingRow && !newHeadingDraft) {
-                            el.focus();
-                          }
-                        }}
-                        contentEditable
-                        suppressContentEditableWarning
-                        aria-label={intl.formatMessage({
-                          id: "USER.EXTRA_CHARGES.HEADING_NAME_PLACEHOLDER",
-                          defaultMessage: "Enter heading name...",
-                        })}
-                        data-placeholder={intl.formatMessage({
-                          id: "USER.EXTRA_CHARGES.HEADING_NAME_PLACEHOLDER",
-                          defaultMessage: "Enter heading name...",
-                        })}
-                        className={`heading-editor w-full text-sm font-normal text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 ${(isNewHeadingBold && isNewHeadingFocused) || newHeadingToast ? "pr-24" : ""} focus:outline-none focus:ring-2 focus:ring-blue-400 empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400`}
-                        style={{ minHeight: '32px' }}
-                        onFocus={() => {
-                          setIsNewHeadingFocused(true);
-                          setTimeout(updateNewHeadingBoldState, 20);
-                        }}
-                        onBlur={() => {
-                          setIsNewHeadingFocused(false);
-                          setIsNewHeadingBold(false);
-                          setNewHeadingToast(null);
-                        }}
-                        onKeyUp={updateNewHeadingBoldState}
-                        onMouseUp={updateNewHeadingBoldState}
-                        onInput={(e) => {
-                          const selection = window.getSelection();
-                          if (selection.rangeCount > 0) {
-                            const range = selection.getRangeAt(0);
-                            const cursorOffset = range.startOffset;
-                            const focusNode = range.startContainer;
-                            
-                            setNewHeadingDraft(e.currentTarget.innerHTML);
-                            
-                            requestAnimationFrame(() => {
-                              try {
-                                if (focusNode && e.currentTarget.contains(focusNode)) {
-                                  const newRange = document.createRange();
-                                  newRange.setStart(focusNode, Math.min(cursorOffset, focusNode.length || 0));
-                                  newRange.collapse(true);
-                                  selection.removeAllRanges();
-                                  selection.addRange(newRange);
-                                }
-                              } catch (err) {
-                                // Silently fail
+                    <div
+                      ref={(el) => {
+                        newHeadingInputRef.current = el;
+                        if (el && showNewHeadingRow && !newHeadingDraft) {
+                          el.focus();
+                        }
+                      }}
+                      contentEditable
+                      suppressContentEditableWarning
+                      aria-label={intl.formatMessage({
+                        id: "USER.EXTRA_CHARGES.HEADING_NAME_PLACEHOLDER",
+                        defaultMessage: "Enter heading name...",
+                      })}
+                      data-placeholder={intl.formatMessage({
+                        id: "USER.EXTRA_CHARGES.HEADING_NAME_PLACEHOLDER",
+                        defaultMessage: "Enter heading name...",
+                      })}
+                      className="heading-editor flex-1 text-sm font-normal text-gray-800 bg-white border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400 empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+                      style={{ minHeight: '32px' }}
+                      onFocus={() => {
+                        setIsNewHeadingFocused(true);
+                        setTimeout(updateNewHeadingBoldState, 20);
+                      }}
+                      onBlur={() => {
+                        setIsNewHeadingFocused(false);
+                        setIsNewHeadingBold(false);
+                        setNewHeadingToast(null);
+                      }}
+                      onKeyUp={updateNewHeadingBoldState}
+                      onMouseUp={updateNewHeadingBoldState}
+                      onInput={(e) => {
+                        const selection = window.getSelection();
+                        if (selection.rangeCount > 0) {
+                          const range = selection.getRangeAt(0);
+                          const cursorOffset = range.startOffset;
+                          const focusNode = range.startContainer;
+                          
+                          setNewHeadingDraft(e.currentTarget.innerHTML);
+                          
+                          requestAnimationFrame(() => {
+                            try {
+                              if (focusNode && e.currentTarget.contains(focusNode)) {
+                                const newRange = document.createRange();
+                                newRange.setStart(focusNode, Math.min(cursorOffset, focusNode.length || 0));
+                                newRange.collapse(true);
+                                selection.removeAllRanges();
+                                selection.addRange(newRange);
                               }
-                            });
-                          } else {
-                            setNewHeadingDraft(e.currentTarget.innerHTML);
-                          }
-                          updateNewHeadingBoldState();
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            confirmAddHeading();
-                          }
-                          if (e.key === "Escape") {
-                            e.preventDefault();
-                            cancelAddHeading();
-                          }
-                          // Allow Ctrl+B for bold
-                          if ((e.key === "b" || e.key === "B") && (e.ctrlKey || e.metaKey)) {
-                            e.preventDefault();
-                            try {
-                              document.execCommand("bold", false, null);
                             } catch (err) {
-                              console.error("Bold command failed:", err);
+                              // Silently fail
                             }
-                            const active = updateNewHeadingBoldState();
-                            showNewHeadingToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
+                          });
+                        } else {
+                          setNewHeadingDraft(e.currentTarget.innerHTML);
+                        }
+                        updateNewHeadingBoldState();
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          confirmAddHeading();
+                        }
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          cancelAddHeading();
+                        }
+                        // Allow Ctrl+B for bold
+                        if ((e.key === "b" || e.key === "B") && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          try {
+                            document.execCommand("bold", false, null);
+                          } catch (err) {
+                            console.error("Bold command failed:", err);
                           }
-                          // Allow Ctrl+I for italic
-                          if ((e.key === "i" || e.key === "I") && (e.ctrlKey || e.metaKey)) {
-                            e.preventDefault();
-                            try {
-                              document.execCommand("italic", false, null);
-                            } catch (err) {
-                              console.error("Italic command failed:", err);
-                            }
+                          const active = updateNewHeadingBoldState();
+                          showNewHeadingToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
+                        }
+                        // Allow Ctrl+I for italic
+                        if ((e.key === "i" || e.key === "I") && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          try {
+                            document.execCommand("italic", false, null);
+                          } catch (err) {
+                            console.error("Italic command failed:", err);
                           }
-                          // Allow Ctrl+U for underline
-                          if ((e.key === "u" || e.key === "U") && (e.ctrlKey || e.metaKey)) {
-                            e.preventDefault();
-                            try {
-                              document.execCommand("underline", false, null);
-                            } catch (err) {
-                              console.error("Underline command failed:", err);
-                            }
+                        }
+                        // Allow Ctrl+U for underline
+                        if ((e.key === "u" || e.key === "U") && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          try {
+                            document.execCommand("underline", false, null);
+                          } catch (err) {
+                            console.error("Underline command failed:", err);
                           }
-                        }}
-                      />
-                    </div>
+                        }
+                      }}
+                    />
+
+                    {/* Toast / Status indicator cleanly positioned outside the input box */}
+                    {newHeadingToast && (
+                      <div
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold shadow-xs pointer-events-none select-none transition-all duration-200 shrink-0 ${
+                          newHeadingToast.type === "active"
+                            ? "bg-primary/10 text-primary border border-primary/30"
+                            : "bg-gray-100 text-gray-500 border border-gray-300"
+                        }`}
+                      >
+                        <span className={`font-black text-[11px] ${newHeadingToast.type === "active" ? "text-primary" : "text-gray-400 line-through"}`}>
+                          B
+                        </span>
+                        <span>{newHeadingToast.message}</span>
+                      </div>
+                    )}
+
+                    {/* Persistent indicator badge when Bold is Active */}
+                    {!newHeadingToast && isNewHeadingBold && isNewHeadingFocused && (
+                      <button
+                        type="button"
+                        onMouseDown={toggleNewHeadingBold}
+                        title="Bold is active. Click or press Ctrl+B to turn off."
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-semibold shrink-0 bg-primary/10 text-primary border border-primary/30 cursor-pointer select-none hover:bg-primary/20 transition-all"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                        <span className="font-black text-[11px]">B</span>
+                        <span>Bold Active</span>
+                      </button>
+                    )}
 <button
   onClick={confirmAddHeading}
   disabled={!getPlainTextFromHtml(newHeadingDraft).trim()}
