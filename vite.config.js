@@ -23,10 +23,9 @@ export default defineConfig({
   server: {
     proxy: {
       "/v1/api": {
-        target: "http://103.1.101.244:9091",
+        target: "http://103.1.101.244:5101",
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
   },

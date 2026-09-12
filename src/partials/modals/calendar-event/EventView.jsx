@@ -44,6 +44,7 @@ const EventViewModal = ({
   onEventsUpdated,
 }) => {
   const permissions = usePermission("Calendar");
+  const permFollowUp = usePermission("Follow Up");
 
   const permissionMenuPlanning = usePermission("Menu Planning");
   const permissionMenuExecution = usePermission("Menu Execution");
@@ -971,7 +972,10 @@ const handleSaveRemarks = async (data) => {
   onClose={() => setIsFollowUpModalOpen(false)}
   eventId={safeEventId}
   userId={localStorage.getItem("userId")}
-  canEdit={permissions.edit}
+  canAdd={permFollowUp.add}
+  canEdit={permFollowUp.edit}
+  canDelete={permFollowUp.delete}
+
   eventInfo={{
     customerName: translatedTitle || eventData?.event?._def?.title || "",
     mobile: eventDataAll?.mobile || "",

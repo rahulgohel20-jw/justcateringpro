@@ -453,13 +453,13 @@ useEffect(() => {
           initialSpace={item.itemSpace || 0}
         />
       )}
-      {!isDeleted && showRenameModal && (
+ {!isDeleted && showRenameModal && (
   <RenameItemCat
     label={displayItemName}
     initialValues={{
-      english: item.nameEnglish || "",
-      hindi: item.nameHindi || "",
-      gujarati: item.nameGujarati || "",
+      english: item.nicknames?.english || item.nameEnglish || "",
+      hindi: item.nicknames?.hindi || item.nameHindi || "",
+      gujarati: item.nicknames?.gujarati || item.nameGujarati || "",
     }}
     onClose={() => setShowRenameModal(false)}
     onLiveChange={(val) => onRenameItemSave(catName, item.id, val)}
@@ -819,6 +819,8 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {}, mode = "menu
     gujarati: initialValues.gujarati || "",
     hindi: initialValues.hindi || "",
   });
+
+   const [isTranslating, setIsTranslating] = useState(false);
   const debounceRef = useRef(null);
 
   // ── Translation ──────────────────────────────────────────────────────────
@@ -831,9 +833,10 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {}, mode = "menu
 
     if (!plainEnglish) {
       setFormData((prev) => ({ ...prev, gujarati: "", hindi: "" }));
+      setIsTranslating(false);
       return;
     }
-
+    setIsTranslating(true);
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await Translateapi(plainEnglish);
@@ -845,6 +848,9 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {}, mode = "menu
         }));
       } catch (err) {
         console.error("Translation error:", err);
+      }
+      finally {
+        setIsTranslating(false); 
       }
     }, 500);
 
@@ -877,13 +883,14 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {}, mode = "menu
           </button>
           <button
             type="button"
+            disabled={isTranslating} 
             onClick={() => {
               onSave({ english: formData.english, hindi: formData.hindi, gujarati: formData.gujarati });
               onClose();
             }}
-            className="px-4 py-2 rounded-lg bg-primary text-white text-sm hover:opacity-90"
+            className="px-4 py-2 rounded-lg bg-primary text-white text-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed" 
           >
-            Save
+            {isTranslating ? "Translating..." : "Save"} 
           </button>
         </div>
       </div>
@@ -917,6 +924,7 @@ const SelectedItems = ({
   categoryImages = {},
   onSubCatSave = () => {},
   onItemSubSave = () => {},
+  onCategoryHeadingSave = () => {},
   onItemHeadingSave = () => {}, 
   primaryItems = {},
   onSelectPrimaryItem = () => {},
@@ -956,6 +964,7 @@ const [itemInstructions, setItemInstructions] = useState({});
   const scrollContainerRef = useRef(null);
   const [itemImageModal, setItemImageModal] = useState(null); // { catName, item }
 const [itemImageUploading, setItemImageUploading] = useState(false);
+const [headingCatModal, setHeadingCatModal] = useState(null);
 
 
 
@@ -1386,6 +1395,14 @@ if (loading) {
     initialValues={data.categorySubTexts?.[subCatModal] || {}}
   />
 )}
+      {headingCatModal && (
+        <SubTextModal
+          label={`Category Heading — ${headingCatModal}`}
+          onClose={() => setHeadingCatModal(null)}
+          onSave={(val) => { onCategoryHeadingSave(headingCatModal, val); setHeadingCatModal(null); }}
+          initialValues={data.categoryHeadings?.[headingCatModal] || {}}
+        />
+      )}
   {itemImageModal && mode === "decor" && (
   <ItemImageModal
     itemName={getLocalizedItemName(itemImageModal.item)}
@@ -1436,6 +1453,7 @@ const anyCount = packageCategoryLimits[catName] || 0;
 const subLangKey = { en: "english", hi: "hindi", gu: "gujarati" }[currentLanguage] || "english";
 
 const catSubText = data.categorySubTexts?.[catName]?.[subLangKey] || "";
+const catHeadingText = data.categoryHeadings?.[catName]?.[subLangKey] || "";
 
 const catSpace = data.categorySpaces?.[catName] || 0;
 const catStatus = items[0]?.categoryStatus || "NORMAL";  
@@ -1516,6 +1534,17 @@ return (
                                     <Plus size={14} />
                                   </span>
                                 </button>
+
+                                {mode === "menu" && (
+                                  <button
+                                    type="button"
+                                    title="Set Category Heading"
+                                    className="p-1 rounded hover:bg-gray-100"
+                                    onClick={(e) => { e.stopPropagation(); setHeadingCatModal(catName); }}
+                                  >
+                                    <Heading size={18} className="text-teal-800 bg-teal-100 rounded-full p-0.5" />
+                                  </button>
+                                )}
 
                                 {/* Background Image */}
                                 <button
@@ -1643,6 +1672,12 @@ return (
                                     <span
                                       className="text-[10px] font-semibold bg-amber-100 text-amber-700 border border-amber-300 px-1.5 py-0.5 rounded-full leading-none"
                                       dangerouslySetInnerHTML={{ __html: `Sub: ${catSubText}` }}
+                                    />
+                                  )}
+                                  {catHeadingText && (
+                                    <span
+                                      className="text-[10px] font-semibold bg-teal-100 text-teal-700 border border-teal-300 px-1.5 py-0.5 rounded-full leading-none"
+                                      dangerouslySetInnerHTML={{ __html: catHeadingText }}
                                     />
                                   )}
                                 </p>

@@ -11,6 +11,7 @@ import {
 import SelectMenureport from "../../partials/modals/menu-report/SelectMenureport";
 import { createPortal } from "react-dom";
 import { WhatsAppPdf } from "../../services/apiServices";
+import { Tooltip } from "antd";
 
 
 
@@ -249,6 +250,12 @@ const getCompanyAuthInfo = () => {
   }
 };
 
+const PdfIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+  </svg>
+);
+
 export default function SummaryItemModalchefoutside({
   open,
   onClose,
@@ -276,6 +283,7 @@ export default function SummaryItemModalchefoutside({
   const [showLangSelect, setShowLangSelect] = useState(false);
 const [selectedItemForLang, setSelectedItemForLang] = useState(null);
 const [selectedIndexForLang, setSelectedIndexForLang] = useState(null);
+const [waSendMode, setWaSendMode] = useState("api");
 
   const userId = localStorage.getItem("userId");
 
@@ -312,11 +320,10 @@ const [selectedIndexForLang, setSelectedIndexForLang] = useState(null);
   }, [open, eventFunctionId, eventId, type]);
 
 
-  const handleLangSelect = (lang) => {
+ const handleLangSelect = (lang) => {
   setShowLangSelect(false);
-
   if (selectedItemForLang !== null) {
-    handleWhatsAppClick(selectedItemForLang, selectedIndexForLang, lang);
+    handleWhatsAppClick(selectedItemForLang, selectedIndexForLang, lang, waSendMode);
   }
 };
 
@@ -343,7 +350,7 @@ const [selectedIndexForLang, setSelectedIndexForLang] = useState(null);
   const toggleItems = (index) => {
     setExpandedItems((prev) => ({ ...prev, [index]: !prev[index] }));
   };
-const handleWhatsAppClick = async (item, index, lang = 0) => {
+const handleWhatsAppClick = async (item, index, lang = 0, mode = "api") => {
   
 
  
@@ -461,41 +468,40 @@ formData.append("sloganFontSize", -1);
    const data = await AddExclusiveReport(formData);
 
 if (data?.data?.success) {
-  item._cachedPdfUrl = data?.data?.report_path;
+      item._cachedPdfUrl = data?.data?.report_path;
+      const phoneRaw = item.number || item.mobile || item.contactNumber || "";
 
-  // ── NEW: notify via WhatsAppPdf API ──
-  try {
-    const { companyMobileNo, companyName } = getCompanyAuthInfo();
-    const phoneRaw = item.number || item.mobile || item.contactNumber || "";
-    const wres = await WhatsAppPdf({
-      companyMobileNo,
-      companyName,
-      mobileNo: phoneRaw.replace(/\D/g, ""),
-      moduleName: "Order Report",
-      partyName: item.contactName || "",
-      url: data?.data?.report_path,
-      userId: Number(userId) || 0,
-    });
-    if(wres?.data?.success) {
-        setSuccessMessage("Report sent successfully!");
-        } else {
-          setSuccessMessage("Report not sent!");
+      if (mode === "web") {
+        const greeting = item.contactName || "there";
+        const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${data?.data?.report_path}`;
+        window.open(
+          `https://wa.me/${phoneRaw.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
+          "_blank"
+        );
+      } else {
+        try {
+          const { companyMobileNo, companyName } = getCompanyAuthInfo();
+          const wres = await WhatsAppPdf({
+            companyMobileNo,
+            companyName,
+            mobileNo: phoneRaw.replace(/\D/g, ""),
+            moduleName: "Order Report",
+            partyName: item.contactName || "",
+            url: data?.data?.report_path,
+            userId: Number(userId) || 0,
+          });
+          if (wres?.data?.success) {
+            setSuccessMessage("Report sent successfully!");
+          } else {
+            setSuccessMessage("Report not sent!");
+          }
+        } catch (whatsAppErr) {
+          console.error("WhatsAppPdf notify failed:", whatsAppErr);
         }
-  } catch (whatsAppErr) {
-    console.error("WhatsAppPdf notify failed:", whatsAppErr);
-    // non-blocking — don't stop the wa.me flow if this fails
-  }
-
-  // const phone = item.number || item.mobile || item.contactNumber || "";
-  // const greeting = item.contactName || "there";
-  // const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${data?.data?.report_path}`;
-  // window.open(
-  //   `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
-  //   "_blank"
-  // );
-} else {
-  errorMsgPopup(data?.data?.msg || "Failed to generate report");
-}
+      }
+    } else {
+      errorMsgPopup(data?.data?.msg || "Failed to generate report");
+    }
   } catch (err) {
     errorMsgPopup(err?.response?.data?.msg || "Something went wrong");
   } finally {
@@ -503,7 +509,6 @@ if (data?.data?.success) {
     setGeneratingRowIndex(null);
   }
 };
-
 
 
 
@@ -676,43 +681,63 @@ if (data?.data?.success) {
 
                                 <div className="flex items-center justify-center space-x-2">
                                   {/* ── WhatsApp: generate PDF → preview → send ── */}
-                                  <button
-                                   onClick={() => {
-                                    setSelectedItemForLang(item);
-                                    setSelectedIndexForLang(index);
-                                    setShowLangSelect(true);
-                                  }}
-                                    disabled={generatingPdf}
-                                    className="p-2 rounded-full bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Generate & Share via WhatsApp"
-                                  >
-                                    {generatingPdf && generatingRowIndex === index ? (
-                                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                                      </svg>
-                                    ) : (
-                                      <WhatsAppIcon />
-                                    )}
-                                  </button>
+                                  <Tooltip title="Send via WhatsApp (API)">
+  <button
+    onClick={() => {
+      setWaSendMode("api");
+      setSelectedItemForLang(item);
+      setSelectedIndexForLang(index);
+      setShowLangSelect(true);
+    }}
+    disabled={generatingPdf}
+    className="p-2 rounded-full bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {generatingPdf && generatingRowIndex === index && waSendMode === "api" ? (
+      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+      </svg>
+    ) : (
+      <WhatsAppIcon />
+    )}
+  </button>
+</Tooltip>
 
+<Tooltip title="Open in Web WhatsApp">
+  <button
+    onClick={() => {
+      setWaSendMode("web");
+      setSelectedItemForLang(item);
+      setSelectedIndexForLang(index);
+      setShowLangSelect(true);
+    }}
+    disabled={generatingPdf}
+    className="p-2 rounded-full bg-emerald-400 hover:bg-emerald-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {generatingPdf && generatingRowIndex === index && waSendMode === "web" ? (
+      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+      </svg>
+    ) : (
+      <WhatsAppIcon />
+    )}
+  </button>
+</Tooltip>
+                         
 
-
-                                  {/* PDF button → SelectMenureport */}
-                                  <button
-                                    className="p-2 flex items-center justify-center"
-                                   onClick={() => {
-  setSelectedMobile(item.number || null);
-  setSelectedAgencyId(item.contactId || null); 
-  setIsSelectMenuReport(true);
-}}
-                                  >
-                                    <img
-                                      src={toAbsoluteUrl("/media/icons/PDFIcon.png")}
-                                      className="w-6 h-6 object-contain"
-                                      alt="PDF Icon"
-                                    />
-                                  </button>
+<Tooltip title="Generate PDF">
+  <button
+    onClick={() => {
+      setSelectedMobile(item.number || null);
+      setSelectedAgencyId(item.contactId || null);
+      setIsSelectMenuReport(true);
+    }}
+    className="p-2 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors flex items-center justify-center"
+  >
+    <PdfIcon />
+  </button>
+</Tooltip>
 
                                   {/* Expand toggle */}
                                   <button onClick={() => toggleItems(index)} className="text-blue-600 hover:text-gray-600 transition-transform">

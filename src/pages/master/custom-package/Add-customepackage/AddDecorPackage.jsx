@@ -10,11 +10,11 @@ import {
   Translateapi,
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
-import MultiLangInputBox from "../../../../components/form-inputs/MultiLangInputBox";
 import { extractTranslations } from "@/utils/langConfig";
 import { GetDecorPackageById } from "../../../../services/apiServices";
 import { FormattedMessage, useIntl } from "react-intl";
 import { getLangConfig } from "@/utils/langConfig";
+import MultiLangInputBox from "../../../../components/form-inputs/MultiLangInputbox";
 
 function AddDecorPackage() {
   const [searchParams] = useSearchParams();
