@@ -310,14 +310,11 @@ export default function RichTextEditable({
     emitChange();
   };
 
-  const isTextarea = minHeight.includes("100") || minHeight.includes("textarea");
-  const badgePosition = isTextarea
-    ? "top-2.5 right-2.5"
-    : "top-1/2 -translate-y-1/2 right-2.5";
+  const badgePosition = "bottom-full mb-1.5 right-0";
 
   return (
     <div className={`relative ${className}`}>
-      {/* Toast / Status indicator cleanly positioned inside the right side of the input box */}
+      {/* Toast / Status indicator cleanly positioned outside the input box on top-right */}
       {toast && (
         <div
           className={`absolute ${badgePosition} z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold shadow-xs pointer-events-none select-none transition-all duration-200 ${
@@ -366,7 +363,7 @@ export default function RichTextEditable({
         onMouseUp={updateBoldState}
         suppressContentEditableWarning
         data-placeholder={placeholder}
-        className={`${minHeight} w-full rounded-lg border border-gray-300 p-2 ${(isBold && isFocused) || toast ? "pr-24" : ""} text-sm outline-none focus:ring-2 focus:ring-primary bg-white whitespace-pre-wrap break-words empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none`}
+        className={`${minHeight} w-full rounded-lg border border-gray-300 p-2 text-sm outline-none focus:ring-2 focus:ring-primary bg-white whitespace-pre-wrap break-words empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none`}
         onInput={emitChange}
       />
     </div>

@@ -253,7 +253,7 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
           <button onClick={onClose} className="text-2xl text-gray-600">&times;</button>
         </div>
       {mode === "decor" && (
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-end mb-4">
           <button
             type="button"
             onClick={handleAddBullet}
