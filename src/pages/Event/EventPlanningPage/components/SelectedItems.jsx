@@ -1098,25 +1098,21 @@ useEffect(() => {
   );
 
   const getLocalizedItemName = useMemo(
-    () => (item) => {
-      const field =
-        { en: "nameEnglish", hi: "nameHindi", gu: "nameGujarati" }[
-          currentLanguage
-        ] || "nameEnglish";
-      // First try the rename/nickname from itemRenames, then fall back to original name
-      const renameKey = { en: "english", hi: "hindi", gu: "gujarati" }[currentLanguage] || "english";
-      const rename = data.itemRenames?.[item.id]?.[renameKey];
-      if (rename) return rename;
-      return (
-        item[field] ||
-        item.nameEnglish ||
-        item.menuItemName ||
-        item.menuItemNameEnglish ||
-        ""
-      );
-    },
-    [currentLanguage, data.itemRenames],
-  );
+  () => (item) => {
+    const field =
+      { en: "nameEnglish", hi: "nameHindi", gu: "nameGujarati" }[
+        currentLanguage
+      ] || "nameEnglish";
+    return (
+      item[field] ||
+      item.nameEnglish ||
+      item.menuItemName ||
+      item.menuItemNameEnglish ||
+      ""
+    );
+  },
+  [currentLanguage],
+);
 
 
 //  const getLocalizedCategoryName = useMemo(

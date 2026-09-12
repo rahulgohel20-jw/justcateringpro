@@ -2415,47 +2415,44 @@ reportNameGujarati: categoryNameGujarati || selectedCategoryInfo.reportNameGujar
           return () => window.removeEventListener("keydown", handleKeyDown);
           }, [selectedCategoryId, bulkSelectByPackageType]);
 
-          const onRemoveSelectedItem = useCallback(
-          (functionId, categoryName, itemId) => {
-            setIsDirty(true);
-            setSelectedByFunction((prev) => {
-              const bucket = prev[functionId];
-              if (!bucket) return prev;
+        const onRemoveSelectedItem = useCallback(
+  (functionId, categoryName, itemId) => {
+    setIsDirty(true);
+    setSelectedByFunction((prev) => {
+      const bucket = prev[functionId];
+      if (!bucket) return prev;
 
-              const categories = { ...bucket.categories };
-              const updated = (categories[categoryName] || []).filter(
-                (i) => Number(i.id) !== Number(itemId),
-              );
+      const categories = { ...bucket.categories };
+      const updated = (categories[categoryName] || []).filter(
+        (i) => Number(i.id) !== Number(itemId),
+      );
 
-            
-              const isPackageCategory =
-                packageAppliedForFunction[functionId] &&
-                (packageCategoriesByFunction[functionId] || []).includes(
-                  categoryName,
-                );
+      const isPackageCategory =
+        packageAppliedForFunction[functionId] &&
+        (packageCategoriesByFunction[functionId] || []).includes(
+          categoryName,
+        );
 
-              if (updated.length === 0 && !isPackageCategory) {
-                delete categories[categoryName];
-              } else {
-                categories[categoryName] = updated;
-              }
+      if (updated.length === 0 && !isPackageCategory) {
+        delete categories[categoryName];
+      } else {
+        categories[categoryName] = updated;
+      }
 
-              return {
-                ...prev,
-                [functionId]: {
-                  categoriesOrder: isPackageCategory
-                    ? bucket.categoriesOrder
-                    : bucket.categoriesOrder.filter((c) => categories[c]),
-                  categories,
-                  categoryNotes: bucket.categoryNotes || {},
-                  categorySlogans: bucket.categorySlogans || {},
-                },
-              };
-            });
-          },
-          [packageAppliedForFunction, packageCategoriesByFunction],
-          );
-
+      return {
+        ...prev,
+        [functionId]: {
+          ...bucket,
+          categoriesOrder: isPackageCategory
+            ? bucket.categoriesOrder
+            : bucket.categoriesOrder.filter((c) => categories[c]),
+          categories,
+        },
+      };
+    });
+  },
+  [packageAppliedForFunction, packageCategoriesByFunction],
+);
           const onDragEndSelected = useCallback((functionId, newState) => {
           setIsDirty(true);
           setSelectedByFunction((prev) => {

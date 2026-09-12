@@ -112,20 +112,20 @@ formData.append(
     );
 
     // Chef Labour Item
-    if (allocation.chefLabourItem) {
+  if (allocation.chefLabourItem) {
   formData.append("menuItemAllocationConfigRequest.chefLabourItem.id",
     allocation.chefLabourItem.id || 0);
   formData.append("menuItemAllocationConfigRequest.chefLabourItem.allocation_type",
     allocation.chefLabourItem.allocation_type || "plate_wise");
   formData.append("menuItemAllocationConfigRequest.chefLabourItem.counterNo",
     allocation.chefLabourItem.counterNo || 0);
+ 
   formData.append("menuItemAllocationConfigRequest.chefLabourItem.pricePerLabour",
     allocation.chefLabourItem.pricePerLabour || 0);
   formData.append("menuItemAllocationConfigRequest.chefLabourItem.pricePerHelper",
     allocation.chefLabourItem.pricePerHelper || 0);
   formData.append("menuItemAllocationConfigRequest.chefLabourItem.helperNo",
     allocation.chefLabourItem.helperNo || 0);
-
 }
 
     // Outside Item
@@ -143,9 +143,10 @@ formData.append(
         allocation.outsideItem.unitId || 0,
       );
       formData.append(
-        "menuItemAllocationConfigRequest.outsideItem.pricePerHelper",
-        allocation.outsideItem.pricePerHelper || 0,
+        "menuItemAllocationConfigRequest.outsideItem.basePrice",
+        allocation.outsideItem.basePrice || 0,  
       );
+      
       formData.append(
         "menuItemAllocationConfigRequest.outsideItem.contactCategoryId",
         allocation.outsideItem.contactCategoryId || 0,
