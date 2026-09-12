@@ -81,6 +81,47 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
 
     return () => clearTimeout(translateTimer.current);
   }, [formData.english]);
+
+  const translateInstruction = async (english) => {
+  const linesHtml = english.split(/<br\s*\/?>/i);
+
+  const translatedLines = await Promise.all(
+    linesHtml.map(async (lineHtml) => {
+      const bullet = lineHtml.match(/^(\s*(•|·|▪|-|\*)\s*)/);
+      const prefix = bullet?.[0] || "";
+      const rest = lineHtml.slice(prefix.length);
+
+      const div = document.createElement("div");
+      div.innerHTML = rest;
+
+      const segments = Array.from(div.childNodes).map((node) => ({
+        bold: node.nodeType === 1 && node.tagName === "B",
+        text: node.textContent || "",
+      }));
+
+      const translatedSegments = await Promise.all(
+        segments.map(async (seg) => {
+          if (!seg.text.trim()) return seg;
+          const res = await Translateapi(seg.text);
+          const { regional, hindi } = extractTranslations(res.data);
+          return { ...seg, hindiText: hindi, gujaratiText: regional };
+        })
+      );
+
+      const wrap = (bold, text) => (bold ? `<b>${text}</b>` : text);
+      const hindiLine = prefix + translatedSegments.map((s) => wrap(s.bold, s.hindiText || s.text)).join("");
+      const gujaratiLine = prefix + translatedSegments.map((s) => wrap(s.bold, s.gujaratiText || s.text)).join("");
+
+      return { hindi: hindiLine, gujarati: gujaratiLine };
+    })
+  );
+
+  return {
+    hindi: translatedLines.map((l) => l.hindi).join("<br>"),
+    gujarati: translatedLines.map((l) => l.gujarati).join("<br>"),
+  };
+};
+
   const stripTrailingNbsp = (str = "") =>
     str.replace(/(&nbsp;|\u00A0|\s)+$/g, "");
 
@@ -104,33 +145,12 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
   const hasBullet = lines.some((line) => /^\s*(•|·|▪|-|\*)\s*/.test(line));
   const joined = hasBullet ? lines.join("<br>") : lines.join("\n");
 
-  return sanitizeToAllowedTags(joined)   // ← final safety net before save
+  return sanitizeToAllowedTags(joined)   
     .replace(/(&nbsp;|\u00A0)/gi, " ")
     .replace(/&amp;/gi, "&")
     .trim();
 };
-  // Translate each visual line independently. This retains newlines and bullet
-  // prefixes, which the translation service otherwise merges into one sentence.
-  const translateInstruction = async (english) => {
-    const translatedLines = await Promise.all(
-      toEditorText(english).split("\n").map(async (line) => {
-        const bullet = line.match(/^(\s*(•|·|▪|-|\*)\s*)/);
-        const prefix = bullet?.[0] || "";
-        const text = line.slice(prefix.length).trim();
-
-        if (!text) return { hindi: prefix.trimEnd(), gujarati: prefix.trimEnd() };
-
-        const res = await Translateapi(text);
-        const { regional, hindi } = extractTranslations(res.data);
-        return { hindi: `${prefix}${hindi || ""}`, gujarati: `${prefix}${regional || ""}` };
-      }),
-    );
-
-    return {
-      hindi: translatedLines.map((line) => line.hindi).join("\n"),
-      gujarati: translatedLines.map((line) => line.gujarati).join("\n"),
-    };
-  };
+ 
 
   // ── Find the underlying English input (textarea OR contentEditable div) ──
   const getEnglishEditor = () => {

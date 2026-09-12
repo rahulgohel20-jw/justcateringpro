@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";               
+import { useRef, useEffect } from "react";
 import InputToTextLang from "../InputToTextLang";
 import RichTextEditable, {
   trimPayloadWhitespace,
@@ -86,21 +86,20 @@ const MultiLangInputBox = ({
   return (
     <div className={`grid ${gridClass} gap-3`}>
       {languages.map((item, index) => {
-        
+
         // ==========================================
-        // BOLD EDITOR - ONLY WHEN enableFormatting=true
+        // RICH TEXT EDITOR - WHEN enableFormatting=true (all languages)
         // ==========================================
-        if (type === "textarea" && enableFormatting && index === 0) {
+        if (type === "textarea" && enableFormatting) {
           return (
             <div key={item.key} className="flex flex-col gap-1">
               <label className="text-sm font-normal text-black">
                 {label} ({item.label})
-                {required && (
+                {required && index === 0 && (
                   <span className="text-red-500 ms-0.5">*</span>
                 )}
               </label>
 
-              {/* Editable content — THIS LINE CHANGED */}
               <RichTextEditable
                 name={item.key}
                 value={formData[item.key] || ""}
@@ -112,7 +111,7 @@ const MultiLangInputBox = ({
                 }
               />
 
-              {error && (
+              {index === 0 && error && (
                 <span className="text-sm text-red-500">
                   {error}
                 </span>

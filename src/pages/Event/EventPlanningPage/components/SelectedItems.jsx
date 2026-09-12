@@ -468,17 +468,18 @@ useEffect(() => {
 )}
 
       {!isDeleted && showSubItemModal && (
-        <SubTextModal
-          label={`Sub Category — ${displayItemName}`}
-          onClose={() => setShowSubItemModal(false)}
-          onSave={(val) => onItemSubSave(catName, item.id, val)}
-          initialValues={{
-            english: item.subItem || "",
-            hindi: item.subItemHindi || "",
-            gujarati: item.subItemGujarati || "",
-          }}
-        />
-      )}
+  <SubTextModal
+    label={`Sub Category — ${displayItemName}`}
+    mode={mode}
+    onClose={() => setShowSubItemModal(false)}
+    onSave={(val) => onItemSubSave(catName, item.id, val)}
+    initialValues={{
+      english: item.subItem || "",
+      hindi: item.subItemHindi || "",
+      gujarati: item.subItemGujarati || "",
+    }}
+  />
+)}
 {!isDeleted && showVendorModal && (
   <VendorPickerModal
     itemName={displayItemName}
@@ -491,6 +492,7 @@ useEffect(() => {
       {!isDeleted && showHeadingModal && (
   <SubTextModal
     label={`Item Heading — ${displayItemName}`}
+    mode={mode}
     onClose={() => setShowHeadingModal(false)}
     onSave={(val) => onItemHeadingSave(catName, item.id, val)}
     initialValues={{
@@ -811,7 +813,7 @@ useEffect(() => {
   );
 };
 
-const SubTextModal = ({ label, onClose, onSave, initialValues = {} }) => {
+const SubTextModal = ({ label, onClose, onSave, initialValues = {}, mode = "menu" }) => {
   const [formData, setFormData] = useState({
     english: initialValues.english || "",
     gujarati: initialValues.gujarati || "",
@@ -859,7 +861,7 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {} }) => {
         <MultiLangInputBox
           formData={formData}
           setFormData={setFormData}
-          enableFormatting={true}
+          enableFormatting={mode === "decor"}
           label="Sub Text"
           cols={1}
           keys={{ english: "english", regional: "gujarati", hindi: "hindi" }}
@@ -1374,16 +1376,16 @@ if (loading) {
   );
 })()}
       {subCatModal && (
-        <SubTextModal
-          label={`Sub Category — ${subCatModal}`}
-          onClose={() => setSubCatModal(null)}
-          onSave={(val) => {
-            onSubCatSave(subCatModal, val);
-          }}
-          initialValues={data.categorySubTexts?.[subCatModal] || {}}
-        />
-      )}
-
+  <SubTextModal
+    label={`Sub Category — ${subCatModal}`}
+    mode={mode}
+    onClose={() => setSubCatModal(null)}
+    onSave={(val) => {
+      onSubCatSave(subCatModal, val);
+    }}
+    initialValues={data.categorySubTexts?.[subCatModal] || {}}
+  />
+)}
   {itemImageModal && mode === "decor" && (
   <ItemImageModal
     itemName={getLocalizedItemName(itemImageModal.item)}

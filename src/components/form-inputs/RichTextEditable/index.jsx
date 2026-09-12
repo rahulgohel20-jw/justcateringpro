@@ -6,7 +6,6 @@ export const trimPayloadWhitespace = (value = "") =>
     .replace(/\u00a0/g, " ")
     .replace(/<b>\s+/gi, "<b>")
     .replace(/\s+<\/b>/gi, "</b>")
-    .replace(/<\/b>\s+/gi, "</b>")
     .replace(/[ \t]{2,}/g, " ");
 
 // Hard whitelist: only bare <b>, </b>, and <br> ever survive. Now exported
