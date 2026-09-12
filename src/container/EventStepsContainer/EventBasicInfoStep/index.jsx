@@ -31,6 +31,7 @@ const EventBasicInfoStep = ({
   errors,
   prefillAppliedRef,
   enableAdvancedDateSync = false,
+   setParentEventTypes,
 }) => {
   const classes = useStyles();
   const [eventTypes, setEventTypes] = useState([]);
@@ -169,6 +170,7 @@ const EventBasicInfoStep = ({
         label: getLabel(event, "name"),
       }));
       setEventTypes(formattedEventTypes);
+      setParentEventTypes?.(formattedEventTypes);
       if (autoSelectLatest && formattedEventTypes.length > 0) {
         const latestEventType =
           formattedEventTypes[formattedEventTypes.length - 1];

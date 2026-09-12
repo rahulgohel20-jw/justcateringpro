@@ -883,13 +883,13 @@ formData.append("cess", parseFloat(values.cess) || 0);
             </div>
 
             <div className="flex flex-col">
-              <label className="form-label">Closing Qty</label>
+              <label className="form-label">Min Qty</label>
               <input
                 type="tel"
                 name="closingQty"
                 value={formik.values.closingQty}
                 onChange={formik.handleChange}
-                placeholder="Enter Closing Qty"
+                placeholder="Enter Min Qty"
                 className="input"
               />
             </div>
