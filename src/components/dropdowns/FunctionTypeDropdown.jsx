@@ -13,6 +13,9 @@ const FunctionTypeDropdown = ({ value, onChange, options, ...rest }) => {
         option?.label?.toLowerCase().includes(input.toLowerCase())
       }
       style={{ width: "100%" }}
+      popupClassName="function-type-popup"
+      dropdownClassName="function-type-popup" // keep both — v4 uses dropdownClassName, v5 uses popupClassName
+      dropdownMatchSelectWidth={false} // let popup width grow independent of the input's width
       {...rest}
     />
   );
