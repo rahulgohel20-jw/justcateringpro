@@ -32,6 +32,9 @@ const AddStoreRequisition = () => {
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [pageNo, setPageNo] = useState(1);
   const [addRawMaterial, setAddRawMaterial] = useState(false);
   const [form, setForm] = useState({ voucher: "", date: new Date(), party_id: null, party_name: "", stock_type_id: "", invoice_type: "", remark: "" });
 
@@ -53,16 +56,46 @@ const AddStoreRequisition = () => {
     setItems((editData.details || []).map((item) => ({ rawMaterialId: item.rawMaterialId, item_name: item.rawMaterialName || item.rawMaterialNameEng || "", nameEnglish: item.rawMaterialNameEng || item.rawMaterialName || "", nameGujarati: item.rawMaterialNameGuj || "", nameHindi: item.rawMaterialNameHin || "", qty: item.qty || "", unit: item.unitName || "", originalQty: item.qty || 0 })));
   }, [editData, suppliers]);
 
-  useEffect(() => {
-    if (!categoryId || categoryId === "ALL" && !query.trim()) { setCatalog([]); return; }
-    const timer = setTimeout(() => {
+  const fetchRawMaterials = (page = 1, append = false) => {
+    if (!categoryId) return;
+
+    if (page === 1) {
       setLoadingItems(true);
-      GetAllRawMaterials(1, 100, categoryId === "ALL" ? 0 : categoryId, query, userId).then((response) => {
+    } else {
+      setLoadingMore(true);
+    }
+
+    GetAllRawMaterials(page, 100, categoryId === "ALL" ? 0 : categoryId, query, userId)
+      .then((response) => {
         const payload = response?.data?.data || response?.data || response || {};
         const data = payload?.["Raw Material Details"] || [];
-        setCatalog(data);
-      }).catch(() => setCatalog([])).finally(() => setLoadingItems(false));
+        const totalPages = payload?.totalPages ?? 1;
+
+        setCatalog((current) => (append ? [...current, ...data] : data));
+        setPageNo(page);
+        setHasMore(page < totalPages);
+      })
+      .catch(() => {
+        setCatalog((current) => (append ? current : []));
+        setHasMore(false);
+      })
+      .finally(() => {
+        setLoadingItems(false);
+        setLoadingMore(false);
+      });
+  };
+
+  useEffect(() => {
+    if (!categoryId) {
+      setCatalog([]);
+      setHasMore(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      fetchRawMaterials(1, false);
     }, 300);
+
     return () => clearTimeout(timer);
   }, [categoryId, query]);
 
@@ -114,16 +147,39 @@ const AddStoreRequisition = () => {
       </div>
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden"><div className="flex items-center justify-between px-6 py-4 border-b border-slate-100"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary"><ShoppingCart size={17} className="text-white" /></div><h2 className="text-blue-900 font-bold text-base tracking-tight">Store Requisition Details</h2>{items.length > 0 && <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">{items.length} item{items.length !== 1 ? "s" : ""}</span>}</div><button onClick={save} disabled={saving} className="flex items-center gap-2 px-5 py-2 rounded-xl text-white text-xs font-bold bg-green-700 disabled:bg-gray-400"><Save size={16} />{saving ? "Saving..." : <FormattedMessage id={isEdit ? "COMMON.UPDATE" : "COMMON.SAVE"} defaultMessage={isEdit ? "Update" : "Save"} />}</button></div>
         <div className="px-6 py-3 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center gap-3">
-          <Select showSearch value={categoryId} onChange={(value) => { setCategoryId(value || "ALL"); setQuery(""); }} className="w-56" options={[{ label: "All", value: "ALL" }, ...categories.map((category) => ({ label: nameFor(category, language), value: category.id }))]} />
+          <Select showSearch value={categoryId || "ALL"} onChange={(value) => { setCategoryId(value || "ALL"); setQuery(""); }} className="w-56" options={[{ label: "All", value: "ALL" }, ...categories.map((category) => ({ label: nameFor(category, language), value: category.id }))]} />
           {categoryId === "ALL" ? (
-            <Select showSearch filterOption={false} showArrow={false} placeholder="Search & add item..." searchValue={query} onSearch={setQuery} onSelect={(value, option) => addItem(option.raw)} notFoundContent={loadingItems ? "Loading..." : "Type to search"} className="flex-1" options={catalog.map((item) => ({ value: item.id, label: nameFor(item, language), raw: item }))} />
+            <Select
+              showSearch
+              filterOption={false}
+              showArrow={false}
+              loading={loadingItems}
+              placeholder="Search & add item..."
+              searchValue={query}
+              onSearch={setQuery}
+              onSelect={(value, option) => addItem(option.raw)}
+              onPopupScroll={(event) => {
+                const target = event.target;
+                if (target.scrollTop + target.offsetHeight >= target.scrollHeight - 10 && hasMore && !loadingMore) {
+                  fetchRawMaterials(pageNo + 1, true);
+                }
+              }}
+              notFoundContent={loadingItems ? <div className="flex items-center gap-2 text-xs text-slate-500"><span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-blue-500" /> Loading...</div> : "Type to search"}
+              className="flex-1"
+              options={catalog.map((item) => ({ value: item.id, label: nameFor(item, language), raw: item }))}
+            />
           ) : (
             <input type="text" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search item name..." className="w-full max-w-sm px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-400" />
           )}
         </div>
-        {categoryId !== "ALL" && <div className="px-6 py-3 border-b border-slate-100">{loadingItems ? <p className="py-4 text-sm text-slate-400">Loading items...</p> : catalog.length === 0 ? <p className="py-4 text-sm text-slate-400">No items found.</p> : <div className="rounded-xl border border-slate-100 overflow-hidden">
+        {categoryId !== "ALL" && <div className="px-6 py-3 border-b border-slate-100">{loadingItems ? <div className="flex items-center gap-2 py-4 text-sm text-slate-400"><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-blue-500" /> Loading items...</div> : catalog.length === 0 ? <p className="py-4 text-sm text-slate-400">No items found.</p> : <div className="rounded-xl border border-slate-100 overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-3 bg-slate-50 border-b border-slate-100">{[0, 1, 2].map((column) => <div key={column} className={`grid grid-cols-[2.5rem_1fr_6rem_4.5rem] px-3 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wider ${column > 0 ? "md:border-l md:border-slate-100" : ""}`}><span className="text-center">Sr</span><span>Item Name</span><span className="text-center">Qty</span><span className="text-center">Unit</span></div>)}</div>
-          <div className="max-h-[520px] overflow-y-auto"><div className="grid grid-cols-1 md:grid-cols-3">{catalog.map((item, index) => { const selected = items.find((row) => row.rawMaterialId === item.id); const column = index % 3; const displayName = nameFor(item, language); const filled = selected?.qty !== undefined && selected?.qty !== "" && Number(selected.qty) > 0; return <div key={item.id} className={`grid grid-cols-[2.5rem_1fr_6rem_4.5rem] items-center px-3 py-2 border-b border-slate-50 transition-colors ${column > 0 ? "md:border-l md:border-slate-100" : ""} ${filled ? "bg-emerald-50/40" : "hover:bg-blue-50/20"}`}><span className="text-center text-xs text-slate-400 font-medium">{index + 1}</span><span className="font-semibold text-slate-800 text-sm truncate pr-2" title={displayName}>{displayName}</span><input type="tel" value={selected?.qty || ""} onChange={(event) => addOrUpdateQty(item, event.target.value)} placeholder="0" className={`w-full px-2 py-1 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1 ${filled ? "border-emerald-300 bg-white text-emerald-700 focus:border-emerald-400 focus:ring-emerald-200" : "border-blue-300 bg-blue-50 text-blue-700 placeholder-blue-400 focus:border-blue-400 focus:ring-blue-200"}`} /><span className="text-center text-xs text-slate-500 font-medium truncate">{item.unit?.nameEnglish || "—"}</span></div>; })}</div></div>
+          <div className="max-h-[520px] overflow-y-auto" onScroll={(event) => {
+            const target = event.target;
+            if (target.scrollTop + target.clientHeight >= target.scrollHeight - 10 && hasMore && !loadingMore) {
+              fetchRawMaterials(pageNo + 1, true);
+            }
+          }}><div className="grid grid-cols-1 md:grid-cols-3">{catalog.map((item, index) => { const selected = items.find((row) => row.rawMaterialId === item.id); const column = index % 3; const displayName = nameFor(item, language); const filled = selected?.qty !== undefined && selected?.qty !== "" && Number(selected.qty) > 0; return <div key={item.id} className={`grid grid-cols-[2.5rem_1fr_6rem_4.5rem] items-center px-3 py-2 border-b border-slate-50 transition-colors ${column > 0 ? "md:border-l md:border-slate-100" : ""} ${filled ? "bg-emerald-50/40" : "hover:bg-blue-50/20"}`}><span className="text-center text-xs text-slate-400 font-medium">{index + 1}</span><span className="font-semibold text-slate-800 text-sm truncate pr-2" title={displayName}>{displayName}</span><input type="tel" value={selected?.qty || ""} onChange={(event) => addOrUpdateQty(item, event.target.value)} placeholder="0" className={`w-full px-2 py-1 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1 ${filled ? "border-emerald-300 bg-white text-emerald-700 focus:border-emerald-400 focus:ring-emerald-200" : "border-blue-300 bg-blue-50 text-blue-700 placeholder-blue-400 focus:border-blue-400 focus:ring-blue-200"}`} /><span className="text-center text-xs text-slate-500 font-medium truncate">{item.unit?.nameEnglish || "—"}</span></div>; })}</div>{loadingMore && <div className="flex items-center justify-center gap-2 py-3 text-xs text-slate-400"><span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-blue-500" /> Loading more...</div>}</div>
         </div>}</div>}
         {items.length === 0 ? <div className="px-6 py-14 text-center text-slate-400"><Package size={36} className="mx-auto text-slate-200" /><p className="mt-2">No items added yet</p></div> : <div className="grid grid-cols-1 md:grid-cols-3">{items.map((item, index) => { const filled = item.qty !== "" && Number(item.qty) > 0; return <div key={item.rawMaterialId} className={`grid grid-cols-[2.5rem_1fr_6rem_4rem_2rem] items-center gap-2 px-4 py-3 border-b border-slate-100 ${filled ? "bg-emerald-50/40" : ""}`}><span className="text-xs text-slate-400">{index + 1}</span><span className="font-semibold text-sm truncate" title={nameFor(item, language)}>{nameFor(item, language)}</span><input type="tel" value={item.qty} onChange={(event) => updateQty(item.rawMaterialId, event.target.value)} className={`px-2 py-1 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1 ${filled ? "border-emerald-300 bg-white text-emerald-700 focus:border-emerald-400 focus:ring-emerald-200" : "border-blue-300 bg-blue-50 text-blue-700 placeholder-blue-400 focus:border-blue-400 focus:ring-blue-200"}`} placeholder="0" /><span className="text-xs text-slate-500 truncate">{item.unit || "-"}</span><button onClick={() => setItems(items.filter((row) => row.rawMaterialId !== item.rawMaterialId))}><X size={14} className="text-red-500" /></button></div>; })}</div>}
       </div>

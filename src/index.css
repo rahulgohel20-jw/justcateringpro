@@ -88,3 +88,23 @@ button:focus-visible {
   }
 }
 
+/* Closed select box — truncate the chosen value, this is fine */
+.ant-select-selector .ant-select-selection-item {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Open dropdown list — always show full option text */
+.function-type-popup .ant-select-item-option-content {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: unset;
+  word-break: break-word;
+}
+
+/* Let the popup expand to fit the longest label instead of matching input width */
+.function-type-popup {
+  min-width: 220px !important;
+  max-width: 320px !important;
+}

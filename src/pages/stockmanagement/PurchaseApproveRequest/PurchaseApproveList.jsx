@@ -47,6 +47,7 @@ const PurchaseApprovalList = () => {
 
   // userId lives in localStorage per project convention
   const userId = localStorage.getItem("mainId");
+  const mainId =localStorage.getItem("userId");
 
   // TODO: confirm the actual field names returned by /purchase-approval/getAll
   // and adjust this mapping. Fallback chain (res?.data?.data ?? res?.data ?? res)
@@ -66,7 +67,7 @@ const PurchaseApprovalList = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await getallpurchasereport(userId);
+      const res = await getallpurchasereport(mainId);
       const responseData = res?.data?.data ?? res?.data ?? res;
       // TODO: confirm whether the API returns a bare array or an object with
       // a "content"/list key like the other paginated endpoints in this project.
@@ -145,10 +146,18 @@ const PurchaseApprovalList = () => {
   // ── Filtering ─────────────────────────────────────────────────────────
   const filteredRequests = useMemo(() => {
     return requests.filter((r) => {
+      const searchableText = [
+        r.requestCode,
+        r.startDate,
+        r.endDate,
+        r.requestBy,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
       const matchesSearch =
-        !searchTerm ||
-        r.requestCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.remarks.toLowerCase().includes(searchTerm.toLowerCase());
+        !searchTerm || searchableText.includes(searchTerm.toLowerCase());
       const matchesUser = userFilter === "all" || r.generatedBy === userFilter;
       return matchesSearch && matchesUser;
     });
@@ -395,7 +404,8 @@ const PurchaseApprovalList = () => {
         open={viewModalOpen}
         onCancel={() => setViewModalOpen(false)}
         footer={null}
-        width={900}
+        centered
+        width={1200}
       >
         {viewLoading ? (
           <div className="flex flex-col items-center justify-center gap-3 py-10 text-sm text-slate-400">
