@@ -1,11 +1,13 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 
 export const trimPayloadWhitespace = (value = "") =>
   String(value)
     .replace(/&nbsp;/gi, " ")
     .replace(/\u00a0/g, " ")
-    .replace(/<b>\s+/gi, "<b>")
-    .replace(/\s+<\/b>/gi, "</b>")
+    .replace(/&amp;/gi, "&")
+    .replace(/<b>\s+/gi, " <b>")
+    .replace(/\s+<\/b>/gi, "</b> ")
+    .replace(/<b>\s*<\/b>/gi, "")
     .replace(/[ \t]{2,}/g, " ");
 
 export const sanitizeToAllowedTags = (html = "") =>
@@ -61,7 +63,7 @@ export const displayHtmlToPayload = (html) => {
   };
 
   Array.from(doc.body.childNodes).forEach(walk);
-  return trimPayloadWhitespace(doc.body.innerHTML);
+  return trimPayloadWhitespace(doc.body.innerHTML).replace(/&amp;/gi, "&");
 };
 
 export default function RichTextEditable({
@@ -74,6 +76,54 @@ export default function RichTextEditable({
 }) {
   const ref = useRef(null);
   const isInternalChange = useRef(false);
+  const [isBold, setIsBold] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [toast, setToast] = useState(null); // { message: string, type: 'active' | 'inactive' }
+  const toastTimerRef = useRef(null);
+
+  const showToast = (message, type = "active") => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ message, type });
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+    }, 2200);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  const updateBoldState = () => {
+    if (!ref.current) return false;
+    try {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || !ref.current.contains(sel.anchorNode)) {
+        setIsBold(false);
+        return false;
+      }
+      const active = Boolean(document.queryCommandState("bold"));
+      setIsBold(active);
+      return active;
+    } catch {
+      return false;
+    }
+  };
+
+  const toggleBold = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (ref.current) {
+      ref.current.focus();
+    }
+    document.execCommand("bold", false, null);
+    emitChange();
+    const active = updateBoldState();
+    showToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
+  };
 
   useEffect(() => {
     if (isInternalChange.current) {
@@ -103,16 +153,17 @@ export default function RichTextEditable({
     const html = e.clipboardData.getData("text/html");
     const plain = e.clipboardData.getData("text/plain");
 
-    if (html) {
-      const cleanPayload = displayHtmlToPayload(html)
-        .replace(/\n{2,}/g, "\n")
-        .replace(/^\n+|\n+$/g, "");
-      document.execCommand("insertHTML", false, payloadToDisplayHtml(cleanPayload));
-    } else {
-      document.execCommand("insertText", false, plain);
-    }
-    emitChange();
-  };
+  if (html) {
+    const cleanPayload = displayHtmlToPayload(html)
+      .replace(/\n{2,}/g, "\n")   // ← collapse runs of blank lines from pasted blocks
+      .replace(/^\n+|\n+$/g, ""); // ← drop leading/trailing blank lines too
+    document.execCommand("insertHTML", false, payloadToDisplayHtml(cleanPayload));
+  } else {
+    document.execCommand("insertText", false, plain);
+  }
+  emitChange();
+  updateBoldState();
+};
 
   const applyBoldPerLine = () => {
     const sel = window.getSelection();
@@ -122,7 +173,9 @@ export default function RichTextEditable({
     if (range.collapsed) {
       document.execCommand("bold", false, null);
       emitChange();
-      return;
+      const active = updateBoldState();
+    showToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
+    return;
     }
 
     const fragment = range.cloneContents();
@@ -257,17 +310,65 @@ export default function RichTextEditable({
     emitChange();
   };
 
+  const isTextarea = minHeight.includes("100") || minHeight.includes("textarea");
+  const badgePosition = isTextarea
+    ? "top-2.5 right-2.5"
+    : "top-1/2 -translate-y-1/2 right-2.5";
+
   return (
-    <div
-      ref={ref}
-      name={name}
-      contentEditable
-      onPaste={handlePaste}
-      onKeyDown={handleKeyDown}
-      suppressContentEditableWarning
-      data-placeholder={placeholder}
-      className={`${minHeight} w-full rounded-lg border border-gray-300 p-2 text-sm outline-none focus:ring-2 focus:ring-primary bg-white empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none ${className}`}
-      onInput={emitChange}
-    />
+    <div className={`relative ${className}`}>
+      {/* Toast / Status indicator cleanly positioned inside the right side of the input box */}
+      {toast && (
+        <div
+          className={`absolute ${badgePosition} z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold shadow-xs pointer-events-none select-none transition-all duration-200 ${
+            toast.type === "active"
+              ? "bg-primary/10 text-primary border border-primary/30"
+              : "bg-gray-100 text-gray-500 border border-gray-300"
+          }`}
+        >
+          <span className={`font-black text-[11px] ${toast.type === "active" ? "text-primary" : "text-gray-400 line-through"}`}>
+            B
+          </span>
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* Persistent indicator badge when Bold is Active (if no toast is showing) */}
+      {!toast && isBold && isFocused && (
+        <button
+          type="button"
+          onMouseDown={toggleBold}
+          title="Bold is active. Click or press Ctrl+B to turn off."
+          className={`absolute ${badgePosition} z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary border border-primary/30 cursor-pointer select-none hover:bg-primary/20 transition-all`}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          <span className="font-black text-[11px]">B</span>
+          <span>Bold Active</span>
+        </button>
+      )}
+
+      <div
+        ref={ref}
+        name={name}
+        contentEditable
+        onPaste={handlePaste}
+        onKeyDown={handleKeyDown}
+        onFocus={() => {
+          setIsFocused(true);
+          setTimeout(updateBoldState, 20);
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+          setIsBold(false);
+          setToast(null);
+        }}
+        onKeyUp={updateBoldState}
+        onMouseUp={updateBoldState}
+        suppressContentEditableWarning
+        data-placeholder={placeholder}
+        className={`${minHeight} w-full rounded-lg border border-gray-300 p-2 ${(isBold && isFocused) || toast ? "pr-24" : ""} text-sm outline-none focus:ring-2 focus:ring-primary bg-white whitespace-pre-wrap break-words empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none`}
+        onInput={emitChange}
+      />
+    </div>
   );
 }
