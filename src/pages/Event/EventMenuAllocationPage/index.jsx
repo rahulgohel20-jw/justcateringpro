@@ -46,6 +46,7 @@ import { AddLogs } from "../../../services/apiServices";
 import { AlertTriangle, Calendar, Globe, IndianRupee, Languages, RefreshCw } from "lucide-react";
 import { useModuleAccess } from "../../../hooks/useModuleAccess";
 import TranslateInstructionModal from "./TranslateInstructionModal";
+import GuestSignModal from "./components/Guestsignmodal";
 
 /**
  * Get the current language from localStorage
@@ -1212,6 +1213,8 @@ const EventMenuAllocationPage = ({ mode }) => {
   const [menuForHMModuleId, setMenuForHMModuleId] = useState(null);
   const [menuForHMMappingId, setMenuForHMMappingId] = useState(null);
   const [menuForHMTemplateId, setMenuForHMTemplateId] = useState(null);
+  const [isGuestSignModalOpen, setIsGuestSignModalOpen] = useState(false);
+const [guestSignSaving, setGuestSignSaving] = useState(false);
 
   // ============= LANGUAGE STATE =============
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
@@ -1236,6 +1239,7 @@ const syncCooldownTimerRef = useRef(null);
   const permMenuPlanning = usePermission("Menu Planning");
   const { hasModuleAccess } = useModuleAccess();
   const canAccessAccounting = hasModuleAccess("Account");
+  const canAccessGuestSignature = hasModuleAccess("Guest Signature");
   const permRawMaterial = usePermission("Raw Material Distribution");
   const permAgencyDistribution = usePermission("Labour Agency Order");
   const permPerDishCosting = usePermission("Per Dish Costing");
@@ -3551,69 +3555,87 @@ rows.forEach((r, i) => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                className="btn btn-sm btn-primary"
-                onClick={handleMainSave}
-                disabled={
-                  isSubmittingRef.current ||
-                  isSaving ||
-                  saveCooldown ||
-                  loading ||
-                  tableLoading ||
-                  menuLoading ||
-                  !activeFunction
-                }
-              >
-               {isSubmittingRef.current || isSaving ? (
-    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-  ) : (
-    <FormattedMessage id="COMMON.SAVE" defaultMessage="Save" />
-  )}
-</button>
+            {/* Action Buttons */}
+<div className="flex flex-col items-end gap-2 flex-shrink-0">
+  <div className="flex items-center gap-2">
+    <button
+      className="btn btn-sm btn-primary"
+      onClick={handleMainSave}
+      disabled={
+        isSubmittingRef.current ||
+        isSaving ||
+        saveCooldown ||
+        loading ||
+        tableLoading ||
+        menuLoading ||
+        !activeFunction
+      }
+    >
+      {isSubmittingRef.current || isSaving ? (
+        <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+      ) : (
+        <FormattedMessage id="COMMON.SAVE" defaultMessage="Save" />
+      )}
+    </button>
 
-              <button
-  className="btn btn-sm btn-primary"
-  onClick={handleSyncRawMaterial}
-  disabled={
-    syncCooldown || loading || tableLoading || menuLoading || !activeFunction
-  }
+    <button
+      className="btn btn-sm btn-primary"
+      onClick={handleSyncRawMaterial}
+      disabled={
+        syncCooldown || loading || tableLoading || menuLoading || !activeFunction
+      }
+    >
+      <FormattedMessage
+        id="EVENT_MENU_ALLOCATION.SYNC_RAW_MATERIAL"
+        defaultMessage="Sync Raw Material"
+      />
+    </button>
+
+    <button
+      className="btn btn-sm bg-white border border-red-700 text-red-700 flex items-center gap-1.5"
+      onClick={handleDeleteSyncWithPasswordCheck}
+      disabled={isSyncing}
+    >
+      <AlertTriangle size={18} className="text-red-700 shrink-0" />
+      <FormattedMessage
+        id="EVENT_MENU_ALLOCATION.SYNC_RAW_MATERIAL"
+        defaultMessage="Sync Raw Material and Menu allocation"
+      />
+    </button>
+
+    {canAccessAccounting && (
+      <button
+        className="btn btn-sm btn-success"
+        onClick={() => setAllVendor(true)}
+      >
+        <img
+          src={toAbsoluteUrl("/media/icons/payall.png")}
+          className="size-4"
+          alt=""
+        />
+        <FormattedMessage
+          id="COMMON.SAVE"
+          defaultMessage="Pay Vendor"
+        />
+      </button>
+    )}
+  </div>
+{canAccessGuestSignature && (
+ <button
+  className="btn btn-sm text-white"
+  style={{ backgroundColor: "#38bdf8" }}
+  onClick={() => setIsGuestSignModalOpen(true)}
+  disabled={loading || tableLoading || menuLoading || !activeFunction}
 >
+  <i className="ki-filled ki-pencil text-sm "></i>
   <FormattedMessage
-    id="EVENT_MENU_ALLOCATION.SYNC_RAW_MATERIAL"
-    defaultMessage="Sync Raw Material"
+    id="EVENT_MENU_ALLOCATION.GET_SIGNATURE"
+    defaultMessage="Guest Signature"
   />
 </button>
-          
-
-<button
-  className="btn btn-sm bg-white border border-red-700 text-red-700 flex items-center gap-1.5"
-  onClick={handleDeleteSyncWithPasswordCheck}
-  disabled={isSyncing}
->
-  <AlertTriangle size={18} className="text-red-700 shrink-0" />
-  <FormattedMessage
-    id="EVENT_MENU_ALLOCATION.SYNC_RAW_MATERIAL"
-    defaultMessage="Sync Raw Material and Menu allocation"
-  />
-</button>
-              {canAccessAccounting && (
-                <button
-                  className="btn btn-sm btn-success"
-                  onClick={() => setAllVendor(true)}
-                >
-                  <img
-                    src={toAbsoluteUrl("/media/icons/payall.png")}
-                    className="size-4"
-                    alt=""
-                  />
-                  <FormattedMessage
-                    id="COMMON.SAVE"
-                    defaultMessage="Pay Vendor"
-                  />
-                </button>
-              )}
-            </div>
+)}
+</div>
+ 
           </div>
         </div>
 
@@ -4019,6 +4041,30 @@ rows.forEach((r, i) => {
           setIsModalOpen={setIsAllCustomerToogleOpen}
           onEventSelect={handleEventSelect}
         />
+        <GuestSignModal
+  open={isGuestSignModalOpen}
+  onClose={() => setIsGuestSignModalOpen(false)}
+  saving={guestSignSaving}
+  eventId={eventId}
+  eventFunctionId={getEventFunctionId(activeFunction)}
+  eventFunctions={eventData?.eventFunctions || []}
+  onSave={async (payload) => {
+    setGuestSignSaving(true);
+    try {
+      console.log("Guest sign rows to save:", payload);
+      setIsGuestSignModalOpen(false);
+    } catch (err) {
+      console.error("Failed to save guest signature particulars:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to save guest signature details.",
+      });
+    } finally {
+      setGuestSignSaving(false);
+    }
+  }}
+/>
       </Container>
       {isSaving && (
         <div
