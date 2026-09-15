@@ -3812,8 +3812,8 @@ export const addUpdatePurchaseRequest = (data) => {
   return POST(`/purchase-approval/add-update` ,data);
 };
 
-export const getallpurchasereport = (userId ) => {
-  return GET(`/purchase-approval/getAll?userId=${userId}`);
+export const getallpurchasereport = (userId ,status ) => {
+  return GET(`/purchase-approval/getAll?userId=${userId}&status=${status}`);
 }
 
 export const getpurchaseapprovalbyid = (purchaseRequestId) => {
