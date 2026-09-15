@@ -12,6 +12,7 @@ import SelectMenureport from "../../partials/modals/menu-report/SelectMenureport
 import { createPortal } from "react-dom";
 import { WhatsAppPdf } from "../../services/apiServices";
 import { Tooltip } from "antd";
+import dayjs from "dayjs";
 
 
 
@@ -320,6 +321,20 @@ const [waSendMode, setWaSendMode] = useState("api");
   }, [open, eventFunctionId, eventId, type]);
 
 
+
+  const formatWaDate = (dateTimeStr) => {
+  if (!dateTimeStr) return "";
+  const parsed = dayjs(dateTimeStr, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY"]);
+  return parsed.isValid() ? parsed.format("DD.MM.YYYY") : "";
+};
+
+const formatWaTime = (dateTimeStr) => {
+  if (!dateTimeStr) return "";
+  const parsed = dayjs(dateTimeStr, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY"]);
+  return parsed.isValid() ? parsed.format("hh:mm A") : "";
+};
+
+
  const handleLangSelect = (lang) => {
   setShowLangSelect(false);
   if (selectedItemForLang !== null) {
@@ -327,25 +342,35 @@ const [waSendMode, setWaSendMode] = useState("api");
   }
 };
 
-  const displayData = apiData
-    ? isShowingAllFunctions
-      ? apiData.flatMap((functionData) =>
-          functionData.agencyResponse.map((item) => ({
-            ...item,
-            functionName: functionData.eventFunction?.function?.nameEnglish || "N/A",
-            functionDateTime: functionData.eventFunction?.functionStartDateTime || "N/A",
-          })),
-        )
-      : apiData[0]?.agencyResponse || []
-    : [];
+const displayData = apiData
+  ? isShowingAllFunctions
+    ? apiData.flatMap((functionData) =>
+        functionData.agencyResponse.map((item) => ({
+          ...item,
+          functionName: functionData.eventFunction?.function?.nameEnglish || "N/A",
+          functionDateTime: functionData.eventFunction?.functionStartDateTime || "N/A",
+          functionVenue:
+            functionData.eventFunction?.function_venue ||
+            functionData.eventFunction?.banquetHallShifts?.[0]?.banquetHallName ||
+            functionData.eventFunction?.venue?.nameEnglish ||
+            "",
+        })),
+      )
+    : apiData[0]?.agencyResponse || []
+  : [];
 
-  const singleFunctionInfo =
-    !isShowingAllFunctions && apiData?.[0]
-      ? {
-          functionName: apiData[0].eventFunction?.function?.nameEnglish || "N/A",
-          functionDateTime: apiData[0].eventFunction?.functionStartDateTime || "N/A",
-        }
-      : null;
+const singleFunctionInfo =
+  !isShowingAllFunctions && apiData?.[0]
+    ? {
+        functionName: apiData[0].eventFunction?.function?.nameEnglish || "N/A",
+        functionDateTime: apiData[0].eventFunction?.functionStartDateTime || "N/A",
+        functionVenue:
+          apiData[0].eventFunction?.function_venue ||
+          apiData[0].eventFunction?.banquetHallShifts?.[0]?.banquetHallName ||
+          apiData[0].eventFunction?.venue?.nameEnglish ||
+          "",
+      }
+    : null;
 
   const toggleItems = (index) => {
     setExpandedItems((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -472,13 +497,34 @@ if (data?.data?.success) {
       const phoneRaw = item.number || item.mobile || item.contactNumber || "";
 
       if (mode === "web") {
-        const greeting = item.contactName || "there";
-        const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${data?.data?.report_path}`;
-        window.open(
-          `https://wa.me/${phoneRaw.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
-          "_blank"
-        );
-      } else {
+  const greeting = (item.contactName || "THERE").toUpperCase();
+  const functionName = item.functionName || singleFunctionInfo?.functionName || "";
+  const functionDateTime = item.functionDateTime || singleFunctionInfo?.functionDateTime || "";
+  const venueName = item.functionVenue || singleFunctionInfo?.functionVenue || "";
+  const dateStr = formatWaDate(functionDateTime);
+  const timeStr = formatWaTime(functionDateTime);
+
+  const itemLines = (item.allocationItems || [])
+    .map((ai) => `${(ai.itemName || "").toUpperCase()} (${ai.pax || 0} Pax)`)
+    .join("\n");
+
+  const messageLines = [
+    `TO ${greeting},`,
+    dateStr ? ` Date : ${dateStr} ` : null,
+    venueName ? ` At Venue : ${venueName}` : null,
+    functionName ? `${functionName.toUpperCase()}${timeStr ? ` at ${timeStr}` : ""} Ready,` : null,
+    itemLines || null,
+    "",
+    data?.data?.report_path,
+  ].filter((line) => line !== null);
+
+  const message = messageLines.join("\n");
+
+  window.open(
+    `https://wa.me/${phoneRaw.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
+    "_blank"
+  );
+} else {
         try {
           const { companyMobileNo, companyName } = getCompanyAuthInfo();
           const wres = await WhatsAppPdf({

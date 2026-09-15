@@ -85,11 +85,11 @@ export default function SelectMenureport({
     }
   }, [lang]);
 
-  const selectedEventFunction = useMemo(() => {
-    const nonAll = selectedFunctionIds.filter((id) => id !== -1);
-    if (nonAll.length !== 1) return null;
-    return eventData?.eventFunctions?.find((item) => item.id === nonAll[0]);
-  }, [eventData, selectedFunctionIds]);
+ const selectedEventFunction = useMemo(() => {
+  const nonAll = selectedFunctionIds.filter((id) => id !== -1);
+  if (nonAll.length !== 1) return null;
+  return eventData?.eventFunctions?.find((item) => item.id === nonAll[0]);
+}, [eventData, selectedFunctionIds]);
 
   const activeLang = localStorage.getItem("lang") || "en";
 
@@ -105,6 +105,18 @@ export default function SelectMenureport({
         return obj[`${baseKey}English`] || "";
     }
   };
+
+
+const selectedFunctionName = selectedEventFunction
+  ? getLangValue(selectedEventFunction.function, "name", activeLang)
+  : "";
+const selectedFunctionDateTime = selectedEventFunction?.functionStartDateTime || "";
+const selectedFunctionVenue =
+  selectedEventFunction?.function_venue ||
+  getLangValue(eventData?.venue, "name", activeLang) ||
+  "";
+
+
 
   const { filterSections, allowedTemplateIds } = useReportPermission();
 
@@ -819,6 +831,9 @@ if (mode === "package" && String(userId) === "359") {
         sloganFontIds={sloganFontId}
         sloganFontSizes={sloganFontSize}
         preSelectedAgencyId={preSelectedAgencyId}
+         functionName={selectedFunctionName}       
+  functionDateTime={selectedFunctionDateTime} 
+  venueName={selectedFunctionVenue} 
       />
 
       <CounterNameplate
