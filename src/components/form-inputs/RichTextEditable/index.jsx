@@ -76,40 +76,37 @@ export default function RichTextEditable({
 }) {
   const ref = useRef(null);
   const isInternalChange = useRef(false);
-  const [isBold, setIsBold] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const [toast, setToast] = useState(null); // { message: string, type: 'active' | 'inactive' }
-  const toastTimerRef = useRef(null);
+  // const [isBold, setIsBold] = useState(false);
+  // const [isFocused, setIsFocused] = useState(false);
+  // const [toast, setToast] = useState(null); // { message: string, type: 'active' | 'inactive' }
+  // const toastTimerRef = useRef(null);
 
-  const showToast = (message, type = "active") => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    setToast({ message, type });
-    toastTimerRef.current = setTimeout(() => {
-      setToast(null);
-    }, 2200);
-  };
+  // const showToast = (message, type = "active") => {
+  //   if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  //   setToast({ message, type });
+  //   toastTimerRef.current = setTimeout(() => {
+  //     setToast(null);
+  //   }, 2200);
+  // };
 
-  useEffect(() => {
-    return () => {
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    };
-  }, []);
+  // useEffect(() => {
+  //   return () => {
+  //     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  //   };
+  // }, []);
 
-  const updateBoldState = () => {
-    if (!ref.current) return false;
-    try {
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0 || !ref.current.contains(sel.anchorNode)) {
-        setIsBold(false);
-        return false;
-      }
-      const active = Boolean(document.queryCommandState("bold"));
-      setIsBold(active);
-      return active;
-    } catch {
+ const updateBoldState = () => {
+  if (!ref.current) return false;
+  try {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !ref.current.contains(sel.anchorNode)) {
       return false;
     }
-  };
+    return Boolean(document.queryCommandState("bold"));
+  } catch {
+    return false;
+  }
+};
 
   const toggleBold = (e) => {
     if (e) {
@@ -122,7 +119,7 @@ export default function RichTextEditable({
     document.execCommand("bold", false, null);
     emitChange();
     const active = updateBoldState();
-    showToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
+    // showToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
   };
 
   useEffect(() => {
@@ -173,8 +170,7 @@ export default function RichTextEditable({
   if (range.collapsed) {
     document.execCommand("bold", false, null);
     emitChange();
-    const active = updateBoldState();
-    showToast(active ? "Bold Active" : "Bold Inactive", active ? "active" : "inactive");
+    updateBoldState();
     return;
   }
 
@@ -327,12 +323,12 @@ while (node && node !== ref.current) {
     emitChange();
   };
 
-  const badgePosition = "bottom-full mb-1.5 right-0";
+  // const badgePosition = "bottom-full mb-1.5 right-0";
 
   return (
     <div className={`relative ${className}`}>
       {/* Toast / Status indicator cleanly positioned outside the input box on top-right */}
-      {toast && (
+      {/* {toast && (
         <div
           className={`absolute ${badgePosition} z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold shadow-xs pointer-events-none select-none transition-all duration-200 ${
             toast.type === "active"
@@ -345,10 +341,10 @@ while (node && node !== ref.current) {
           </span>
           <span>{toast.message}</span>
         </div>
-      )}
+      )} */}
 
       {/* Persistent indicator badge when Bold is Active (if no toast is showing) */}
-      {!toast && isBold && isFocused && (
+      {/* {!toast && isBold && isFocused && (
         <button
           type="button"
           onMouseDown={toggleBold}
@@ -359,7 +355,7 @@ while (node && node !== ref.current) {
           <span className="font-black text-[11px]">B</span>
           <span>Bold Active</span>
         </button>
-      )}
+      )} */}
 
       <div
         ref={ref}
@@ -368,14 +364,8 @@ while (node && node !== ref.current) {
         onPaste={handlePaste}
         onKeyDown={handleKeyDown}
         onFocus={() => {
-          setIsFocused(true);
-          setTimeout(updateBoldState, 20);
-        }}
-        onBlur={() => {
-          setIsFocused(false);
-          setIsBold(false);
-          setToast(null);
-        }}
+  setTimeout(updateBoldState, 20);
+}}
         onKeyUp={updateBoldState}
         onMouseUp={updateBoldState}
         suppressContentEditableWarning

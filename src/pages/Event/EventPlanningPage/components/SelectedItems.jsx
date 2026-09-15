@@ -14,6 +14,8 @@ import MultiLangInputBox from "../../../../components/form-inputs/MultiLangInput
 import { getLangConfig } from "@/utils/langConfig";
 import RenameItemCat from "../../../../partials/modals/menu-notes/RenameItemscat";
 import VendorPickerModal from "./VendorPickerModal";
+import RichTextEditor from "../../../../partials/modals/menu-report/RichTextEditor";
+import RichTextEditable from "../../../../components/form-inputs/RichTextEditable";
 
 
 
@@ -408,37 +410,28 @@ const [localInstruction, setLocalInstruction] = useState(instruction);
 const [translatingItems, setTranslatingItems] = useState({});
 const prevItemIdRef = useRef(item.id);
 const isTypingRef = useRef(false);
-const instructionRef = useRef(null);              // ← NEW
-const isInternalInstructionChange = useRef(false);
+// const instructionRef = useRef(null);             
+// const isInternalInstructionChange = useRef(false);
  const [showVendorModal, setShowVendorModal] = useState(false);
 
  const vendorBtnRef = useRef(null);
 
-useEffect(() => {
-  if (isInternalInstructionChange.current) {
-    isInternalInstructionChange.current = false;
-    return;
-  }
-  if (instructionRef.current && instructionRef.current.innerHTML !== (localInstruction || "")) {
-    instructionRef.current.innerHTML = localInstruction || "";
-  }
-}, [localInstruction]);
+// useEffect(() => {
+//   if (isInternalInstructionChange.current) {
+//     isInternalInstructionChange.current = false;
+//     return;
+//   }
+//   if (instructionRef.current && instructionRef.current.innerHTML !== (localInstruction || "")) {
+//     instructionRef.current.innerHTML = localInstruction || "";
+//   }
+// }, [localInstruction]);
 
 useEffect(() => {
   if (item.id !== prevItemIdRef.current) {
     prevItemIdRef.current = item.id;
-    setLocalInstruction(instruction);
-    setShowInstructions(!!instruction);
-    return;
   }
-  if (!isTypingRef.current || instruction === "") {
-    setLocalInstruction(instruction);
-    if (instruction) {
-      setShowInstructions(true);  
-    } else {
-      setShowInstructions(false); 
-    }
-  }
+  setLocalInstruction(instruction);
+  setShowInstructions(!!instruction);
 }, [instruction, item.id]);
 
   const subItem = item.subItem || "";
@@ -781,29 +774,26 @@ useEffect(() => {
               </button>
             </div>
 
-            {showInstructions && !isDeleted && (
+          {showInstructions && !isDeleted && (
   <div
-    ref={instructionRef}
-    contentEditable
-    suppressContentEditableWarning
-    data-placeholder="Add instructions..."
-    onInput={(e) => {
-      isTypingRef.current = true;
-      isInternalInstructionChange.current = true;
-      const html = e.currentTarget.innerHTML;
-      setLocalInstruction(html);
-      onInstructionsChange(functionId, catName, item.id, html);
-    }}
-    onBlur={() => { isTypingRef.current = false; }}
+    className="mt-1.5"
     onClick={(e) => e.stopPropagation()}
     onMouseDown={(e) => e.stopPropagation()}
-    className="item-instruction-editable w-full mt-1.5 min-h-[42px] overflow-visible whitespace-pre-wrap break-words bg-white border border-gray-200 rounded-md p-1.5 text-sm text-gray-600 focus:outline-none focus:ring-1 focus:ring-primary"
-  />
+  >
+    <RichTextEditable
+      placeholder="Add instructions..."
+      value={localInstruction}
+      onChange={(payload) => {
+        setLocalInstruction(payload);
+        onInstructionsChange(functionId, catName, item.id, payload);
+      }}
+    />
+  </div>
 )}
 {showInstructions && isDeleted && localInstruction && (
   <div
     className="w-full mt-1.5 bg-gray-100 border border-gray-200 rounded-md p-1.5 text-sm text-gray-500 italic"
-    dangerouslySetInnerHTML={{ __html: localInstruction }}
+    dangerouslySetInnerHTML={{ __html: payloadToDisplayHtml(localInstruction) }}
   />
 )}
           </div>
@@ -1766,24 +1756,28 @@ return (
                                 </p>
                               </div>
 
-                              {(expandedCategoryInstructions[catName] ?? !!categoryInstructionsMap[catName]) &&
+ {(expandedCategoryInstructions[catName] ?? !!categoryInstructionsMap[catName]) &&
   catStatus !== "CANCELLED" && (
-    <textarea
-      rows={2}
-      placeholder="Add category instructions..."
-      value={categoryInstructionsMap[catName] || ""}
-      onChange={(e) => {
-        onCategoryInstructionsChange(functionId, catName, e.target.value);
-      }}
+    <div
+      className="mt-2"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
-      className="w-full mt-2 bg-white border border-gray-200 rounded-md p-1.5 text-sm text-gray-600 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
-    />
+    >
+      <RichTextEditable
+        placeholder="Add category instructions..."
+        value={categoryInstructionsMap[catName] || ""}
+        onChange={(payload) => {
+          setCategoryInstructionsMap((prev) => ({ ...prev, [catName]: payload }));
+          onCategoryInstructionsChange(functionId, catName, payload);
+        }}
+      />
+    </div>
 )}
 {expandedCategoryInstructions[catName] && catStatus === "CANCELLED" && categoryInstructionsMap[catName] && (
-  <div className="w-full mt-2 bg-gray-100 border border-gray-200 rounded-md p-1.5 text-sm text-gray-500 italic">
-    {categoryInstructionsMap[catName]}
-  </div>
+  <div
+    className="w-full mt-2 bg-gray-100 border border-gray-200 rounded-md p-1.5 text-sm text-gray-500 italic"
+    dangerouslySetInnerHTML={{ __html: payloadToDisplayHtml(categoryInstructionsMap[catName]) }}
+  />
 )}
 
                               {/* ROW 2: all action buttons, right-aligned */}
