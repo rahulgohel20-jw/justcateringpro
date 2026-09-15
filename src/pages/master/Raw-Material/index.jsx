@@ -55,7 +55,7 @@ const RawMaterial = () => {
 
   const FetchRawMaterial = (
     page = currentPage,
-    categoryId = 0,
+    categoryId = categoryFilter || 0,
     isAsc = sortOrder,
   ) => {
     if (abortControllerRef.current) {
@@ -65,7 +65,7 @@ const RawMaterial = () => {
     const signal = abortControllerRef.current.signal;
 
     setLoading(true);
-    GetAllRawMaterial(isAsc, page, ITEMS_PER_PAGE, categoryId, Id)
+    GetAllRawMaterial(isAsc, page, ITEMS_PER_PAGE, categoryId, Id, signal)
       .then((res) => {
         const data = res?.data?.data || {};
         setRawOriginalData(data["Raw Material Details"] || []);
@@ -83,10 +83,11 @@ const RawMaterial = () => {
   const FetchSearchRawMaterial = (
     searchTerm,
     page = currentPage,
+    categoryId = categoryFilter || 0,
     isAsc = sortOrder,
   ) => {
     if (!searchTerm.trim()) {
-      FetchRawMaterial(page);
+      FetchRawMaterial(page, categoryId, isAsc);
       return;
     }
 
@@ -96,7 +97,17 @@ const RawMaterial = () => {
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
     setLoading(true);
-    SearchRawMaterial(isAsc, Id, page, ITEMS_PER_PAGE, searchTerm)
+    SearchRawMaterial(
+      isAsc,
+      Id,
+      page,
+      ITEMS_PER_PAGE,
+      searchTerm,
+      signal,
+      false,
+      "",
+      categoryId || 0,
+    )
       .then((res) => {
         if (signal.aborted) return;
         const data = res?.data?.data || {};
@@ -156,7 +167,7 @@ const RawMaterial = () => {
     if (generalFixFilter) {
       FetchGeneralFix(sortOrder);
     } else if (searchQuery.trim()) {
-      FetchSearchRawMaterial(searchQuery, currentPage, sortOrder);
+      FetchSearchRawMaterial(searchQuery, currentPage, categoryFilter || 0, sortOrder);
     } else {
       FetchRawMaterial(currentPage, categoryFilter || 0, sortOrder);
     }
@@ -171,7 +182,7 @@ const RawMaterial = () => {
     const timer = setTimeout(() => {
       setCurrentPage(1);
       if (searchQuery.trim()) {
-        FetchSearchRawMaterial(searchQuery, 1, sortOrder);
+        FetchSearchRawMaterial(searchQuery, 1, categoryFilter || 0, sortOrder);
       } else {
         FetchRawMaterial(1, categoryFilter || 0, sortOrder);
       }
@@ -334,7 +345,7 @@ const RawMaterial = () => {
     if (generalFixFilter) {
       FetchGeneralFix(sortOrder);
     } else if (searchQuery.trim()) {
-      FetchSearchRawMaterial(searchQuery, currentPage, sortOrder);
+      FetchSearchRawMaterial(searchQuery, currentPage, categoryFilter || 0, sortOrder);
     } else {
       FetchRawMaterial(currentPage, categoryFilter || 0, sortOrder);
     }

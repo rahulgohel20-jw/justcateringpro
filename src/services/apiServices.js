@@ -211,10 +211,28 @@ export const SearchRawMaterial = (
   signal,
   isPurchaseApproved = false,
   purchaseApproveId = "",
+  catId = 0,
 ) => {
+  let actualSignal = signal;
+  let actualIsPurchaseApproved = isPurchaseApproved;
+  let actualPurchaseApproveId = purchaseApproveId;
+  let actualCatId = catId || 0;
+
+  // Support case where catId is passed as 6th param
+  if (
+    typeof signal === "number" ||
+    (typeof signal === "string" && !isNaN(signal) && signal !== "")
+  ) {
+    actualCatId = signal;
+    actualSignal =
+      typeof isPurchaseApproved === "object" ? isPurchaseApproved : undefined;
+    actualIsPurchaseApproved =
+      typeof isPurchaseApproved === "boolean" ? isPurchaseApproved : false;
+  }
+
   return GET(
-    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=0&unitid=0&userid=${Id}&isPurchaseApprove=${isPurchaseApproved}&purchaseApproveId=${purchaseApproveId}`,
-    signal,
+    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=${actualCatId || 0}&unitid=0&userid=${Id}&isPurchaseApprove=${actualIsPurchaseApproved}&purchaseApproveId=${actualPurchaseApproveId}`,
+    actualSignal,
   );
 };
 
