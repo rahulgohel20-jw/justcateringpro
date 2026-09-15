@@ -24,6 +24,7 @@ import { Select } from "antd";
 import { TeamOutlined, AppstoreOutlined } from "@ant-design/icons";
 import { useModuleAccess } from "../../../hooks/useModuleAccess";  
 import { WhatsAppPdf } from "../../../services/apiServices";
+import dayjs from "dayjs";
 
 const WhatsAppModal = ({ isOpen, onClose, onSend, mobileNumber, mode = "api" }) => {
   const [name, setName] = useState("");
@@ -149,7 +150,33 @@ const WhatsAppModal = ({ isOpen, onClose, onSend, mobileNumber, mode = "api" }) 
   );
 };
 
+const formatWaDate = (dateTimeStr) => {
+  if (!dateTimeStr) return "";
+  const parsed = dayjs(dateTimeStr, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY"]);
+  return parsed.isValid() ? parsed.format("DD.MM.YYYY") : "";
+};
 
+const formatWaTime = (dateTimeStr) => {
+  if (!dateTimeStr) return "";
+  const parsed = dayjs(dateTimeStr, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY"]);
+  return parsed.isValid() ? parsed.format("hh:mm A") : "";
+};
+
+const buildWaMessage = ({ greeting, functionName, functionDateTime, venueName, pdfUrl }) => {
+  const dateStr = formatWaDate(functionDateTime);
+  const timeStr = formatWaTime(functionDateTime);
+  const lines = [
+    `TO ${(greeting || "THERE").toUpperCase()},`,
+    dateStr ? ` Date : ${dateStr} ` : null,
+    venueName ? ` At Venue : ${venueName}` : null,
+    functionName
+      ? `${functionName.toUpperCase()}${timeStr ? ` at ${timeStr}` : ""} Ready,`
+      : null,
+    "",
+    pdfUrl,
+  ].filter((line) => line !== null);
+  return lines.join("\n");
+};
 
 const getCompanyAuthInfo = () => {
   try {
@@ -201,8 +228,11 @@ const MenuReport = ({
   sloganFontIds,
   sloganFontSizes,
   preSelectedAgencyId,
-    customPackageId,                 // NEW
-  customPackageTemplateMasterId
+    customPackageId,                
+  customPackageTemplateMasterId,
+   functionName,        
+  functionDateTime,   
+  venueName,       
 }) => {
   const pdfPlugin = defaultLayoutPlugin();
   const userId = localStorage.getItem("userId");
@@ -773,15 +803,20 @@ useEffect(() => {
   ]);
 
 
-  const openWebWhatsApp = (mobile, recipientName) => {
+const openWebWhatsApp = (mobile, recipientName) => {
   const greeting = recipientName || eventName || "there";
-  const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${pdfUrl}`;
+  const message = buildWaMessage({
+    greeting,
+    functionName,
+    functionDateTime,
+    venueName,
+    pdfUrl,
+  });
   const cleanedMobile = mobile.replace(/\D/g, "");
   const waUrl = `https://wa.me/${cleanedMobile}?text=${encodeURIComponent(message)}`;
   window.open(waUrl, "_blank", "noopener,noreferrer");
   setShowWhatsAppModal(false);
 };
-
   const formatAdminDate = (dateString) => {
     if (!dateString) return null;
     const [year, month, day] = dateString.split("-");
@@ -1073,7 +1108,13 @@ const handleWhatsAppShare = (mode = "api") => {
 
 const handleWhatsAppSend = async (mobile, recipientName) => {
   const greeting = recipientName || eventName || "there";
-  const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${pdfUrl}`;
+  const message = buildWaMessage({
+    greeting,
+    functionName,
+    functionDateTime,
+    venueName,
+    pdfUrl,
+  });
 
   try {
     const { companyMobileNo, companyName } = getCompanyAuthInfo();
