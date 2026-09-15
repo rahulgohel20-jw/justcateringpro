@@ -2233,7 +2233,9 @@ export const AddAutoManualPOApi = (data) => {
   return POST(`sot/manual-po/add-update`, data);
 };
 
-
+export const getautomanualpurchsaseid = (sotPoId) => {
+  return GET(`/sot/manual-po/detail/${sotPoId}`);
+};
 export const GetAllPurchase = (userId) => {
   return GET(`/purchaseorder/getbyuser?userId=${userId}`);
 };

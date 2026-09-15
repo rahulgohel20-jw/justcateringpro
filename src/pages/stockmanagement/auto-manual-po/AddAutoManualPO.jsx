@@ -27,6 +27,7 @@ import {
   OutsideContactName,
   AddAutoManualPOApi,
   GetAllApprovedPurchase,
+  getautomanualpurchsaseid
 } from "@/services/apiServices";
 import AddContactName from "@/pages/master/MenuItemMaster/components/AddContactName";
 import Swal from "sweetalert2";
@@ -83,52 +84,80 @@ const [isPurchaseApproved, setIsPurchaseApproved] = useState(false);
   const [adjustment, setAdjustment] = useState(0);
   const userId = localStorage.getItem("userId");
 
-  const location = useLocation();
-  const editData = location.state?.editData || null;
-  const isEdit = !!editData;
-
+   const location = useLocation();
+  const editId = location.state?.editId || location.state?.editData?.id || null;
+  const isEdit = !!editId;
+  const [editData, setEditData] = useState(null);
+  const [loadingEdit, setLoadingEdit] = useState(false);
   const backDatePermission = usePermission("Lock Back Date Entry");
 const isBackDateLocked = backDatePermission.add || backDatePermission.edit;
 const todayStr = new Date().toISOString().split("T")[0];
 
-  useEffect(() => {
-    if (!editData) return;
-    setForm({
-      voucher_no: editData.voucher || "",
-      date: editData.podate
-        ? editData.podate.split("/").reverse().join("-") // dd/mm/yyyy → yyyy-mm-dd
-        : "",
-      bill_no: editData.billno || "",
-      supplier_id: editData.supplierId || "",
-      account_name: editData.supplierName || "",
-      invoice_type: editData.invoicetype || "Tax Invoice",
-      remark: editData.remarks || "",
-    });
-    setDiscount(editData.discountper || 0);
-    setAdjustment(editData.adjustamount || 0);
+// Fetch full PO detail when editing
+useEffect(() => {
+  if (!editId) return;
+  setLoadingEdit(true);
+  getautomanualpurchsaseid(editId)
+    .then((res) => {
+      const data = res?.data?.data || res?.data;
+      setEditData(data || null);
+    })
+    .catch((err) => {
+      console.error("Failed to fetch PO detail:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to load purchase order details.",
+        confirmButtonColor: "#d33",
+      });
+    })
+    .finally(() => setLoadingEdit(false));
+}, [editId]);
 
-    setIsPurchaseApproved(!!editData.isPurchaseApprove);
+// Prefill form/items once detail arrives
+useEffect(() => {
+  if (!editData) return;
+
+  setForm({
+    voucher_no: editData.voucherNo || "",
+    date: editData.voucherDate
+      ? editData.voucherDate.split("/").reverse().join("-") // dd/mm/yyyy → yyyy-mm-dd
+      : "",
+    bill_no: editData.billno || "",
+    supplier_id: editData.partyId || "",
+    account_name: editData.partyName || "",
+    invoice_type: editData.invoicetype || "Tax Invoice",
+    remark: editData.remarks || "",
+  });
+
+  setDiscount(editData.discountper || 0);
+  setAdjustment(editData.adjustamount || 0);
+
+  setIsPurchaseApproved(!!editData.isPurchaseApprove);
   setSelectedApprovedPurchaseId(editData.purchaseApproveRequestId || null);
 
-    const prefilledItems = (editData.details || []).map((d) => ({
+  const prefilledItems = (editData.details || []).map((d) => ({
+  id: d.id || 0,              // ← add this
   rawMaterialId: d.rawMaterialId || 0,
-  rawMaterialCatId: d.rawMaterialCatId || 0,   
-  unitId: d.unitId || 0,                        
+  rawMaterialCatId: d.rawMaterialCatId || 0,
+  unitId: d.unitId || 0,
   item_name: d.rawMaterialName || "",
   hsc_sac: d.hsccode || "",
   cgst: d.cgst || 0,
   sgst: d.sgst || 0,
   igst: d.igst || 0,
-  qty: d.qty || "",
+  qty: d.qty ?? "",
   unit: d.unitName || "",
-  price_per_unit: d.price || "",
+  price_per_unit: d.price ?? "",
   other_charges: d.othercharge || 0,
   total_price: String(d.total || 0),
   originalQty: d.qty || 0,
 }));
 
-    setItems(prefilledItems);
-  }, [editData]);
+  setItems(prefilledItems);
+}, [editData]);
+ 
+
 
   useEffect(() => {
     fetchSupplier();
@@ -358,7 +387,7 @@ const handleSave = async () => {
     setSaving(true);
 
     const payload = {
-      id: isEdit ? editData.id : -1,
+id: isEdit ? (editData?.id ?? editId) : -1,
       userId: parseInt(userId),
       partyId: form.supplier_id,         
       voucherDate: form.date               
@@ -377,21 +406,21 @@ const handleSave = async () => {
       eventId: null,   
       isPurchaseApprove: isPurchaseApproved,
      purchaseApproveRequestId: isPurchaseApproved ? selectedApprovedPurchaseId : 0,                       
-      details: items.map((item) => ({
-        id: 0,
-        rawMaterialId: item.rawMaterialId || 0,
-        rawMaterialCatId: item.rawMaterialCatId || 0,  
-        unitId: item.unitId || 0,          
-        partyId: form.supplier_id,         
-        hsccode: item.hsc_sac || "",
-        cgst: parseFloat(item.cgst) || 0,
-        sgst: parseFloat(item.sgst) || 0,
-        igst: parseFloat(item.igst) || 0,
-        qty: parseFloat(item.qty) || 0,
-        price: parseFloat(item.price_per_unit) || 0,
-        othercharge: parseFloat(item.other_charges) || 0,
-        total: parseFloat(item.total_price) || 0,
-      })),
+     details: items.map((item) => ({
+  id: item.id || 0,           // ← was hardcoded 0
+  rawMaterialId: item.rawMaterialId || 0,
+  rawMaterialCatId: item.rawMaterialCatId || 0,
+  unitId: item.unitId || 0,
+  partyId: form.supplier_id,
+  hsccode: item.hsc_sac || "",
+  cgst: parseFloat(item.cgst) || 0,
+  sgst: parseFloat(item.sgst) || 0,
+  igst: parseFloat(item.igst) || 0,
+  qty: parseFloat(item.qty) || 0,
+  price: parseFloat(item.price_per_unit) || 0,
+  othercharge: parseFloat(item.other_charges) || 0,
+  total: parseFloat(item.total_price) || 0,
+})),
     };
 
   const response = await AddAutoManualPOApi(payload);
@@ -446,9 +475,9 @@ if (response?.data?.success === true) {
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-green-700">
                   <FileText size={17} className="text-white" />
                 </div>
-                <h2 className="text-green-900 font-bold text-base tracking-tight">
-                  {isEdit ? "Edit Auto Manual PO" : "Auto manual PO Information"}
-                </h2>{" "}
+               <h2 className="text-green-900 font-bold text-base tracking-tight">
+  {isEdit ? (loadingEdit ? "Loading PO…" : "Edit Auto Manual PO") : "Auto manual PO Information"}
+</h2>
               </div>
               <div className="flex items-center gap-2">
                 <button

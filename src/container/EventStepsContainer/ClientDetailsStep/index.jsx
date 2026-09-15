@@ -279,6 +279,12 @@ useEffect(() => {
                       defaultMessage="Miss"
                     />
                   </option>
+                  <option value="M/S.">
+                    <FormattedMessage
+                      id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_DETAILS_CLIENT_DETAILS_PREFIX_MS"
+                      defaultMessage="M/S."
+                    />
+                  </option>
                 </select>
                 <div className="sg__inner flex items-center gap-1 relative w-full">
                   <i className="ki-filled ki-user ms-2.5"></i>
