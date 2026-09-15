@@ -33,6 +33,31 @@ const getStatusClasses = (status, kind = "category") => {
   // "Normal" or anything else → unchanged / default
   return kind === "category" ? "bg-white border-gray-200" : "bg-[#EEF3F7]";
 };
+
+// Add near the top of the file, alongside getStatusClasses
+const payloadToDisplayHtml = (payload) => {
+  if (!payload) return "";
+
+  // Already an HTML string
+  if (typeof payload === "string") return payload;
+
+  // Common editor shapes: { html: "..." } or { value: "..." }
+  if (typeof payload === "object") {
+    if (typeof payload.html === "string") return payload.html;
+    if (typeof payload.value === "string") return payload.value;
+
+    // Quill Delta-style: { ops: [{ insert: "text" }, ...] }
+    if (Array.isArray(payload.ops)) {
+      return payload.ops
+        .map((op) => (typeof op.insert === "string" ? op.insert : ""))
+        .join("")
+        .replace(/\n/g, "<br>");
+    }
+  }
+
+  // Unknown shape — avoid crashing, render nothing rather than "[object Object]"
+  return "";
+};
 // ─────────────────────────────────────────
 // SPACE MODAL (shared for both category and item)
 // ─────────────────────────────────────────

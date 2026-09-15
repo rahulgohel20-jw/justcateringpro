@@ -3831,3 +3831,19 @@ export const GetAllRawMaterialcategory = (categoryTypeId , userid , isActive , c
     `/rawmaterialcategory/getallbyuserid?categoryTypeId=${categoryTypeId}&userid=${userid}&isActive=${isActive}&categoryName=${categoryName}`,
   );
 }
+
+//guest signature 
+export const getallguestsign = (eventFunctionId, eventId) => {
+  return GET(`/guest-signature/getAllbyEventAndEventFunction?eventFunctionId=${eventFunctionId}&eventId=${eventId}`);
+};
+
+export const addupdateguesign = (eventId, eventFunctionId, data) => {
+  return POST(
+    `/guest-signature/add-update?eventId=${eventId}&eventFunctionId=${eventFunctionId}`,
+    data,
+  );
+};
+
+export const getreportguestsign = (eventId, isCompanyDetails, userId) => {
+  return GET(`/guest-signature/generate-guest-signature-report?eventId=${eventId}&isCompanyDetails=${isCompanyDetails}&userId=${userId}`);
+};
