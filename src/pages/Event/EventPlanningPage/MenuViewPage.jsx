@@ -576,6 +576,8 @@ const MenuViewPage = () => {
 
   const grouped = useMemo(() => {
     if (!menuData) return [];
+     console.log("menuData:", menuData);
+  console.log("first category raw:", menuData.menuPreparationItems?.[0]);
     const map = new Map();
     (menuData.menuPreparationItems || []).forEach((catGroup) => {
       const key = catGroup.nameEnglish || "Other";

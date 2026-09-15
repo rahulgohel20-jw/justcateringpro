@@ -3623,7 +3623,7 @@ rows.forEach((r, i) => {
 {canAccessGuestSignature && (
  <button
   className="btn btn-sm text-white"
-  style={{ backgroundColor: "#38bdf8" }}
+  style={{ backgroundColor: "green" }}
   onClick={() => setIsGuestSignModalOpen(true)}
   disabled={loading || tableLoading || menuLoading || !activeFunction}
 >

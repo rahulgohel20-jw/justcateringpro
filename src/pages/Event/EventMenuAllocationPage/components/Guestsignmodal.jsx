@@ -40,7 +40,8 @@ const GuestSignModal = ({
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [isCompanyDetails, setIsCompanyDetails] = useState(true);
   const [reportGenerating, setReportGenerating] = useState(false);
-
+const [isDirty, setIsDirty] = useState(false);
+const [originalRows, setOriginalRows] = useState([]);
   const fetchGuestSignRows = async (functionId) => {
     if (!eventId) {
       setRows([emptyRow()]);
@@ -69,20 +70,27 @@ const GuestSignModal = ({
           ? res.data.data
           : [];
 
-      const mapped = payload.length
-        ? payload.map((row) => ({
-            id: row.id ?? `row_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-            particulars: row.particulars ?? "",
-            person: row.persons ?? row.person ?? "",
-            extra: row.extra ?? "",
-          }))
-        : [emptyRow()];
+     const mapped = payload.length
+  ? payload.map((row) => ({
+      id: row.id ?? `row_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      particulars: row.particulars ?? "",
+      person: row.persons ?? row.person ?? "",
+      extra: row.extra ?? "",
+    }))
+  : [emptyRow()];
+
+setRows(mapped);
+setOriginalRows(mapped);
+setIsDirty(false);
 
       setRows(mapped);
-    } catch (err) {
-      console.error("Failed to load guest signature rows:", err);
-      setRows([emptyRow()]);
-    } finally {
+    }  catch (err) {
+  console.error("Failed to load guest signature rows:", err);
+  const fallback = [emptyRow()];
+  setRows(fallback);
+  setOriginalRows(fallback);
+  setIsDirty(false);
+} finally {
       setLoading(false);
     }
   };
@@ -118,7 +126,7 @@ const GuestSignModal = ({
       const userId = Number(localStorage.getItem("userId") || 0);
       const res = await getreportguestsign(
         Number(eventId),
-        isCompanyDetails ? 0 : 1,
+        isCompanyDetails ? 1 : 0,
         userId,
       );
 
@@ -158,12 +166,13 @@ const GuestSignModal = ({
   };
 
   const handleFieldChange = (id, field, value) => {
-    setRows((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)),
-    );
-  };
+  setRows((prev) =>
+    prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)),
+  );
+  setIsDirty(true);
+};
 
-  const handleAddRow = () => {
+const handleAddRow = () => {
   if (!selectedFunctionId || selectedFunctionId === -1) {
     Swal.fire({
       icon: "warning",
@@ -174,14 +183,20 @@ const GuestSignModal = ({
     return;
   }
   setRows((prev) => [...prev, emptyRow()]);
+  setIsDirty(true);
 };
 
-  const handleRemoveRow = (id) => {
-    setRows((prev) => {
-      const next = prev.filter((r) => r.id !== id);
-      return next.length > 0 ? next : [emptyRow()];
-    });
-  };
+const handleRemoveRow = (id) => {
+  setRows((prev) => {
+    const next = prev.filter((r) => r.id !== id);
+    return next.length > 0 ? next : [emptyRow()];
+  });
+  setIsDirty(true);
+};
+
+ 
+
+ 
 
   const handleSave = async () => {
     if (!eventId) {
@@ -288,14 +303,14 @@ const GuestSignModal = ({
           >
             Print
           </button>
-          <button
-            type="button"
-            disabled={saving || loading || !selectedFunctionId || !eventId}
-            onClick={handleSave}
-            className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:opacity-90 disabled:opacity-50"
-          >
-            {saving || loading ? "Saving..." : "Save"}
-          </button>
+         <button
+  type="button"
+  disabled={saving || loading || !selectedFunctionId || selectedFunctionId === -1 || !eventId || !isDirty}
+  onClick={handleSave}
+  className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:opacity-90 disabled:opacity-50"
+>
+  {saving || loading ? "Saving..." : "Save"}
+</button>
         </div>
       }
     >
