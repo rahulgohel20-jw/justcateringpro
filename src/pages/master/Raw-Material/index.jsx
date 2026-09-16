@@ -80,38 +80,39 @@ const RawMaterial = () => {
       });
   };
 
-  const FetchSearchRawMaterial = (
-    searchTerm,
-    page = currentPage,
-    isAsc = sortOrder,
-  ) => {
-    if (!searchTerm.trim()) {
-      FetchRawMaterial(page);
-      return;
-    }
+ const FetchSearchRawMaterial = (
+  searchTerm,
+  page = currentPage,
+  isAsc = sortOrder,
+  categoryId = categoryFilter || 0,
+) => {
+  if (!searchTerm.trim()) {
+    FetchRawMaterial(page, categoryId, isAsc);
+    return;
+  }
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-    const signal = abortControllerRef.current.signal;
-    setLoading(true);
-    SearchRawMaterial(isAsc, Id, page, ITEMS_PER_PAGE, searchTerm)
-      .then((res) => {
-        if (signal.aborted) return;
-        const data = res?.data?.data || {};
-        setRawOriginalData(data["Raw Material Details"] || []);
-        setTotalRecords(data.totalItems || 0);
-      })
-      .catch((err) => {
-        if (err?.code === "ERR_CANCELED" || signal.aborted) return;
-        setRawOriginalData([]);
-        setTotalRecords(0);
-      })
-      .finally(() => {
-        if (!signal.aborted) setLoading(false);
-      });
-  };
+  if (abortControllerRef.current) {
+    abortControllerRef.current.abort();
+  }
+  abortControllerRef.current = new AbortController();
+  const signal = abortControllerRef.current.signal;
+  setLoading(true);
+  SearchRawMaterial(isAsc, Id, page, ITEMS_PER_PAGE, searchTerm, categoryId)
+    .then((res) => {
+      if (signal.aborted) return;
+      const data = res?.data?.data || {};
+      setRawOriginalData(data["Raw Material Details"] || []);
+      setTotalRecords(data.totalItems || 0);
+    })
+    .catch((err) => {
+      if (err?.code === "ERR_CANCELED" || signal.aborted) return;
+      setRawOriginalData([]);
+      setTotalRecords(0);
+    })
+    .finally(() => {
+      if (!signal.aborted) setLoading(false);
+    });
+};
 
   const FetchGeneralFix = async () => {
     if (abortControllerRef.current) {
@@ -152,32 +153,32 @@ const RawMaterial = () => {
     FetchCategories();
   }, []);
 
-  useEffect(() => {
-    if (generalFixFilter) {
-      FetchGeneralFix(sortOrder);
-    } else if (searchQuery.trim()) {
-      FetchSearchRawMaterial(searchQuery, currentPage, sortOrder);
-    } else {
-      FetchRawMaterial(currentPage, categoryFilter || 0, sortOrder);
-    }
-  }, [currentPage, categoryFilter, sortOrder, generalFixFilter]);
+useEffect(() => {
+  if (generalFixFilter) {
+    FetchGeneralFix(sortOrder);
+  } else if (searchQuery.trim()) {
+    FetchSearchRawMaterial(searchQuery, currentPage, sortOrder, categoryFilter || 0);
+  } else {
+    FetchRawMaterial(currentPage, categoryFilter || 0, sortOrder);
+  }
+}, [currentPage, categoryFilter, sortOrder, generalFixFilter]);
 
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
+useEffect(() => {
+  if (isFirstRender.current) {
+    isFirstRender.current = false;
+    return;
+  }
+  if (generalFixFilter) return;
+  const timer = setTimeout(() => {
+    setCurrentPage(1);
+    if (searchQuery.trim()) {
+      FetchSearchRawMaterial(searchQuery, 1, sortOrder, categoryFilter || 0);
+    } else {
+      FetchRawMaterial(1, categoryFilter || 0, sortOrder);
     }
-    if (generalFixFilter) return;
-    const timer = setTimeout(() => {
-      setCurrentPage(1);
-      if (searchQuery.trim()) {
-        FetchSearchRawMaterial(searchQuery, 1, sortOrder);
-      } else {
-        FetchRawMaterial(1, categoryFilter || 0, sortOrder);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, 500);
+  return () => clearTimeout(timer);
+}, [searchQuery]);
 
   useEffect(() => {
   const languageMap = {
@@ -330,16 +331,15 @@ const RawMaterial = () => {
       .catch((error) => console.error("Error status update:", error));
   };
 
-  const handleRefreshData = () => {
-    if (generalFixFilter) {
-      FetchGeneralFix(sortOrder);
-    } else if (searchQuery.trim()) {
-      FetchSearchRawMaterial(searchQuery, currentPage, sortOrder);
-    } else {
-      FetchRawMaterial(currentPage, categoryFilter || 0, sortOrder);
-    }
-  };
-
+const handleRefreshData = () => {
+  if (generalFixFilter) {
+    FetchGeneralFix(sortOrder);
+  } else if (searchQuery.trim()) {
+    FetchSearchRawMaterial(searchQuery, currentPage, sortOrder, categoryFilter || 0);
+  } else {
+    FetchRawMaterial(currentPage, categoryFilter || 0, sortOrder);
+  }
+};
   const tableColumns = columns(
     handleEdit,
     DeleteRawMaterial,
