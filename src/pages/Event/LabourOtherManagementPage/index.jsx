@@ -53,6 +53,7 @@ import {
 } from "@/services/apiServices";
 import AllCustomerToogle from "@/components/modal/AllCustomerToggle";
 import Checklist from "./Checklist";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { createPortal } from "react-dom";
 import { AddExclusiveReport } from "@/services/apiServices";
@@ -60,6 +61,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { useModuleAccess } from "../../../hooks/useModuleAccess";
 import { AddLogs, WhatsAppPdf } from "../../../services/apiServices";
 import ViewLabourKyc from "./component/ViewLabourKyc";
+import FunctionCard from "../EventPlanningPage/components/FunctionCard";
 
 dayjs.extend(customParseFormat);
 
@@ -311,6 +313,35 @@ const LabourOtherManagementPage = ({ mode }) => {
   const isSavingRef = useRef(false); 
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
 const [kycRow, setKycRow] = useState(null);
+
+const scrollRef = useRef(null);
+const [canScrollLeft, setCanScrollLeft] = useState(false);
+const [canScrollRight, setCanScrollRight] = useState(false);
+
+const updateScrollButtons = useCallback(() => {
+  const el = scrollRef.current;
+  if (!el) return;
+  setCanScrollLeft(el.scrollLeft > 4);
+  setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+}, []);
+
+useEffect(() => {
+  updateScrollButtons();
+  window.addEventListener("resize", updateScrollButtons);
+  return () => window.removeEventListener("resize", updateScrollButtons);
+}, [eventData?.eventFunctions, updateScrollButtons]);
+
+const scroll = (direction) => {
+  if (scrollRef.current) {
+    const scrollAmount = 250;
+    scrollRef.current.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+    // update buttons shortly after the smooth scroll settles
+    setTimeout(updateScrollButtons, 350);
+  }
+};
 
 
 
@@ -1624,19 +1655,17 @@ const handleSaveNotes = useCallback(
       )}
 
       <Container>
+         <div className="w-full max-w-full overflow-x-auto">
         {/* Breadcrumbs */}
         <div className="gap-2 mb-3">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-6">
-              <h2 className="text-xl text-black font-semibold">
-                <FormattedMessage
-                  id="AGENCY_DISTRIBUTION.TITLE"
-                  defaultMessage="5. Agency Distribution"
-                />
-              </h2>
+  <div className="flex justify-between items-center mb-4">
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 min-w-0">
+      <h2 className="text-xl text-black font-semibold shrink-0">
+        <FormattedMessage id="AGENCY_DISTRIBUTION.TITLE" defaultMessage="5. Agency Distribution" />
+      </h2>
 
-              {/* DESKTOP & TABLET */}
-             <div className="hidden md:flex gap-2">
+      {/* DESKTOP & TABLET */}
+      <div className="hidden md:flex flex-wrap gap-2 min-w-0">
   {permMenuPlanning.view && (
     <button
       onClick={() => navigate(`/menu-preparation/${eventId}`)}
@@ -1777,11 +1806,11 @@ const handleSaveNotes = useCallback(
           </div>
         </div>
         {/* Event Info Card */}
-        <div className="card min-w-full rtl:[background-position:right_center] [background-position:right_center] bg-no-repeat bg-[length:500px] user-access-bg mb-5">
-          <div className="flex flex-col md:flex-row md:flex-wrap items-start md:items-center justify-between p-4 gap-3 md:gap-4 lg:gap-6">
-            {" "}
+<div className="card w-full max-w-full rtl:[background-position:right_center] [background-position:right_center] bg-no-repeat bg-[length:500px] user-access-bg mb-5 overflow-hidden">
+  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 p-4">          
+      {" "}
             {/* ROW 1 */}
-            <div className="flex items-center gap-3">
+           <div className="flex items-start gap-3 min-w-0">
               <i className="ki-filled ki-calendar-tick text-success text-lg"></i>
               <div className="flex flex-col">
                 <span className="text-sm">
@@ -1798,7 +1827,7 @@ const handleSaveNotes = useCallback(
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+           <div className="flex items-start gap-3 min-w-0">
               <i className="ki-filled ki-user text-success text-lg"></i>
               <div className="flex flex-col">
                 <span className="text-sm">
@@ -1812,7 +1841,7 @@ const handleSaveNotes = useCallback(
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+           <div className="flex items-start gap-3 min-w-0">
               <i className="ki-filled ki-geolocation-home text-success text-lg"></i>
               <div className="flex flex-col">
                 <span className="text-sm">
@@ -1826,7 +1855,7 @@ const handleSaveNotes = useCallback(
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+           <div className="flex items-start gap-3 min-w-0">
               <i className="ki-filled ki-calendar-tick text-success text-lg"></i>
               <div className="flex flex-col">
                 <span className="text-sm">
@@ -1841,9 +1870,9 @@ const handleSaveNotes = useCallback(
               </div>
             </div>
             {/* FORCE NEW ROW */}
-            <div className="w-full h-0"></div>
+           
             {/* ROW 2 LEFT — Event Venue */}
-            <div className="flex items-center gap-3">
+           <div className="flex items-start gap-3 min-w-0">
               <i className="ki-filled ki-calendar-tick text-success text-lg"></i>
               <div className="flex flex-col">
                 <span className="text-sm">
@@ -1858,8 +1887,7 @@ const handleSaveNotes = useCallback(
               </div>
             </div>
             {/* ROW 2 RIGHT — Buttons */}
-            <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-gray-200 w-full md:w-auto">
-              {" "}
+<div className="col-span-full flex justify-end gap-2 pt-3 border-t border-gray-200">              {" "}
               {/* Report Button */}
               <button
                 onClick={handleSave}
@@ -1876,30 +1904,54 @@ const handleSaveNotes = useCallback(
             </div>
           </div>
         </div>
-        {/* Function Tabs */}
-        <div className="w-full max-w-xxl bg-white shadow-md rounded-xl border border-gray-200 mb-4 p-2">
-          <div className="inline-flex items-center bg-gray-50 border border-gray-300 rounded-lg overflow-hidden overflow-x-auto max-w-full">
-            {" "}
-            {eventData?.eventFunctions?.map((fn, index) => (
-              <button
-                key={fn.id}
-                onClick={() =>
-                  handleFunctionChange(
-                    fn.id,
-                    fn.function?.nameEnglish,
-                    fn.pax || 0,
-                  )
-                }
-                className={`px-8 py-3 text-sm font-medium transition-all duration-200 
-                  ${activeTab === fn.id ? "bg-primary text-white" : "text-gray-700 hover:bg-gray-100"}
-                  ${index !== 0 ? "border-l border-gray-300" : ""}
-                `}
-              >
-                {fn.function?.nameEnglish}
-              </button>
-            ))}
-          </div>
-        </div>
+        
+   {/* Function Tabs */}
+<div className="relative mb-4 w-full max-w-full overflow-hidden">
+  {canScrollLeft && (
+    <button
+      onClick={() => scroll("left")}
+      className="absolute left-1 top-1/2 -translate-y-1/2 z-90 bg-primary shadow-md rounded-full p-1 hover:bg-primary/90"
+    >
+      <ChevronLeft size={18} className="text-white" />
+    </button>
+  )}
+
+  {/* left fade */}
+  {canScrollLeft && (
+    <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-10 z-10 " />
+  )}
+
+  <div
+    ref={scrollRef}
+    onScroll={updateScrollButtons}
+className="flex gap-3 border rounded overflow-x-auto py-2 px-10 text-gray-500 bg-gray-200 scroll-smooth snap-x snap-mandatory w-full"  >
+    {eventData?.eventFunctions?.map((fn) => (
+      <div
+  key={fn.id}
+  onClick={() =>
+    handleFunctionChange(fn.id, fn.function?.nameEnglish, fn.pax || 0)
+  }
+  className="cursor-pointer flex-shrink-0 snap-start"
+>
+        <FunctionCard functionData={fn} isSelected={activeTab === fn.id} />
+      </div>
+    ))}
+  </div>
+
+  {/* right fade */}
+  {canScrollRight && (
+    <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 z-10 bg-gradient-to-l from-gray-200 to-transparent" />
+  )}
+
+  {canScrollRight && (
+    <button
+      onClick={() => scroll("right")}
+      className="absolute right-1 top-1/2 -translate-y-1/2 z-20 bg-primary shadow-md rounded-full p-1 hover:bg-primary/90"
+    >
+      <ChevronRight size={18} className="text-white" />
+    </button>
+  )}
+</div>
         {/* Action Bar */}
         <div className="card mb-5">
           <div className="card-body p-4">
@@ -1933,11 +1985,11 @@ const handleSaveNotes = useCallback(
                 </div>
 
                 {/* Search + Buttons */}
-                <div className="flex flex-col sm:flex-row items-stretch gap-3">
-                  <input
-                    type="text"
-                    placeholder="Search labour type..."
-                    className="input h-10 w-full sm:w-[250px]"
+                <div className="flex flex-col sm:flex-row items-stretch gap-3 min-w-0">
+  <input
+    type="text"
+    placeholder="Search labour type..."
+    className="input h-10 w-full sm:w-[220px]"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -2176,6 +2228,7 @@ const handleSaveNotes = useCallback(
   eventId={eventData?.id}
   onAssign={handleAssignKyc}
 />
+        </div>
       </Container>
       {isSaving && (
         <div
