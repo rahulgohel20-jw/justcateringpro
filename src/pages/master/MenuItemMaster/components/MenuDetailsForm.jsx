@@ -143,7 +143,9 @@ const skipNextRawFetchRef = useRef(false);
     handleAddRecipe,
     handleDeleteRow,
     handleEditRow,
-    convertWeightBetweenUnits, 
+    convertWeightBetweenUnits,
+    editingRowId,
+    handleCancelEdit,
   } = useRecipe(rawmaterialList, defaultData, captainTableData);
   const [captainUnitOptions, setCaptainUnitOptions] = useState([]);
   const [englishInstruction, setEnglishInstruction] = useState("");
@@ -354,6 +356,28 @@ setInstructionHindi(editData.instructionHindi || "");
     }
 
     if (editData.menuItemRawMaterials?.length > 0) {
+      const editRawMaterials = editData.menuItemRawMaterials
+        .filter((rm) => rm?.rawMaterial)
+        .map((rm) => ({
+          rawMaterialId: rm.rawMaterial?.id,
+          category: rm.rawMaterial?.rawMaterialCat?.nameEnglish,
+          name: rm.rawMaterial?.nameEnglish,
+          unitId: rm.unit?.id || rm.rawMaterial?.unit?.id,
+          unit: rm.unit?.nameEnglish || rm.rawMaterial?.unit?.nameEnglish,
+          supplierRate: rm.rawMaterial?.supplierRate,
+          unitHierarchy: rm.rawMaterial?.unitHierarchy || rm?.unitHierarchy,
+        }));
+
+      if (editRawMaterials.length > 0) {
+        setRawmaterialList((prev) => {
+          const existingIds = new Set(prev.map((i) => String(i.rawMaterialId)));
+          const toAdd = editRawMaterials.filter(
+            (i) => i.rawMaterialId && !existingIds.has(String(i.rawMaterialId))
+          );
+          return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+        });
+      }
+
       const mapped = editData.menuItemRawMaterials.map((rm, idx) => {
         const rawVenueId = rm?.godown?.id ?? rm?.venue ?? rm?.venueId;
         const resolvedVenueId =
@@ -376,11 +400,12 @@ setInstructionHindi(editData.instructionHindi || "");
           weight: rm?.weight,
           unitId: rm?.unit?.id,
           unit: rm?.unit?.nameEnglish,
-          supplierRate: rm.rawMaterial.supplierRate,
+          supplierRate: rm.rawMaterial?.supplierRate,
           rate: rm.rate,
           venueId: resolvedVenueId,
           venue: resolvedVenueName,
-           isVisible: rm?.isVisible !== false,
+          isVisible: rm?.isVisible !== false,
+          unitHierarchy: rm.rawMaterial?.unitHierarchy || rm?.unitHierarchy,
         };
       });
       setTableData(mapped);
@@ -835,6 +860,69 @@ setInstructionHindi(editData.instructionHindi || "");
     setFileList([]);
   };
 
+  const handleEditRowWithFetch = async (row) => {
+    // Ensure the raw material item exists in rawmaterialList so the Select can display it
+    setRawmaterialList((prev) => {
+      const exists = prev.some(
+        (item) => String(item.rawMaterialId) === String(row.rawMaterialId)
+      );
+      if (!exists) {
+        return [
+          ...prev,
+          {
+            rawMaterialId: row.rawMaterialId,
+            category: row.category,
+            name: row.name,
+            unitId: row.unitId,
+            unit: row.unit,
+            supplierRate: row.supplierRate,
+            unitHierarchy: row.unitHierarchy,
+          },
+        ];
+      }
+      return prev;
+    });
+
+    handleEditRow(row);
+
+    // If unitHierarchy is missing, search to fetch full hierarchy options
+    if (!row.unitHierarchy && row.name && userId) {
+      try {
+        const res = await SearchRawMaterial(true, userId, 1, 10, row.name);
+        const items = res?.data?.data?.["Raw Material Details"] || [];
+        const found = items.find(
+          (item) => String(item.id) === String(row.rawMaterialId)
+        );
+        if (found) {
+          const hierarchy = found.unitHierarchy;
+          if (hierarchy) {
+            const unitList = [
+              { label: hierarchy.nameEnglish, value: hierarchy.unitId },
+              ...(hierarchy.children?.map((child) => ({
+                label: child.nameEnglish,
+                value: child.unitId,
+              })) || []),
+            ];
+            setUnitOptions(unitList);
+            setRawmaterialList((prev) =>
+              prev.map((item) =>
+                String(item.rawMaterialId) === String(found.id)
+                  ? {
+                      ...item,
+                      supplierRate: found.supplierRate,
+                      unitHierarchy: found.unitHierarchy,
+                    }
+                  : item
+              )
+            );
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching raw material unit hierarchy for edit:", err);
+      }
+    }
+  };
+
   // In MenuDetailsForm.jsx — add this wrapper function near the captain section
   const handleEditCaptainRowWithFetch = async (row) => {
     // First set the basic edit state via the hook
@@ -1246,11 +1334,13 @@ setInstructionHindi(editData.instructionHindi || "");
                     options={rawmaterialList
                       .filter((item) => {
                         const isAdded = tableData.some(
-                          (row) => row.rawMaterialId === item.rawMaterialId,
+                          (row) =>
+                            String(row.rawMaterialId) === String(item.rawMaterialId) &&
+                            (editingRowId == null || row.sr_no !== editingRowId),
                         );
                         const isCurrentlySelected =
-                          item.rawMaterialId === selectedRaw;
-                        
+                          String(item.rawMaterialId) === String(selectedRaw);
+
                         return rawSearchText || isCurrentlySelected
                           ? true
                           : !isAdded;
@@ -1264,20 +1354,26 @@ setInstructionHindi(editData.instructionHindi || "");
                       skipNextRawFetchRef.current = true;
                       setRawSearchText("");
                       const found = rawmaterialList.find(
-                        (r) => r.rawMaterialId === value,
+                        (r) => String(r.rawMaterialId) === String(value),
                       );
                       if (found) {
                         const parent = found.unitHierarchy;
-                        const unitList = [
-                          { label: parent.nameEnglish, value: parent.unitId },
-                          ...(parent.children?.map((child) => ({
-                            label: child.nameEnglish,
-                            value: child.unitId,
-                          })) || []),
-                        ];
-                        setUnitOptions(unitList);
-                        
-                        setUnit(found.unitId ?? parent.unitId);
+                        if (parent) {
+                          const unitList = [
+                            { label: parent.nameEnglish, value: parent.unitId },
+                            ...(parent.children?.map((child) => ({
+                              label: child.nameEnglish,
+                              value: child.unitId,
+                            })) || []),
+                          ];
+                          setUnitOptions(unitList);
+                          setUnit(found.unitId ?? parent.unitId);
+                        } else {
+                          setUnitOptions([
+                            { label: found.unit, value: found.unitId },
+                          ]);
+                          setUnit(found.unitId);
+                        }
                       }
                     }}
                   />
@@ -1311,31 +1407,46 @@ setInstructionHindi(editData.instructionHindi || "");
                   Unit
                 </label>
                 <Select
-  placeholder="Select Unit"
-  className="bg-[#F8FAFC] h-10"
-  value={unit}
-  onChange={(value) => {
-    const raw = rawmaterialList.find((r) => r.rawMaterialId === selectedRaw);
-    if (raw && unit && weight) {
-      const converted = convertWeightBetweenUnits(raw, parseFloat(weight), unit, value);
-      setWeight(String(converted));
-    }
-    setUnit(value);
-  }}
-  options={unitOptions}
-/>
+                  placeholder="Select Unit"
+                  className="bg-[#F8FAFC] h-10"
+                  value={unit}
+                  onChange={(value) => {
+                    const raw = rawmaterialList.find(
+                      (r) => String(r.rawMaterialId) === String(selectedRaw),
+                    );
+                    if (raw && unit && weight) {
+                      const converted = convertWeightBetweenUnits(
+                        raw,
+                        parseFloat(weight),
+                        unit,
+                        value,
+                      );
+                      setWeight(String(converted));
+                    }
+                    setUnit(value);
+                  }}
+                  options={unitOptions}
+                />
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2 mt-7">
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={handleAddRecipe}
-                className="bg-primary h-10 px-6 rounded-md hover:bg-primary mt-7"
+                className="bg-primary h-10 px-6 rounded-md hover:bg-primary"
               >
-                Add Recipe
+                {editingRowId !== null ? "Update Recipe" : "Add Recipe"}
               </Button>
+              {editingRowId !== null && (
+                <Button
+                  onClick={handleCancelEdit}
+                  className="h-10 px-4 rounded-md"
+                >
+                  Cancel
+                </Button>
+              )}
             </div>
           </div>
 
@@ -1382,7 +1493,7 @@ setInstructionHindi(editData.instructionHindi || "");
 
       <RawMaterialTable
         data={filteredTableData}
-        onEditRow={handleEditRow}
+        onEditRow={handleEditRowWithFetch}
         onDeleteRow={handleDeleteRow}
         selectedRows={selectedRows}
         setSelectedRows={setSelectedRows}
