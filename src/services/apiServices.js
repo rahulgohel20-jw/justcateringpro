@@ -3261,8 +3261,8 @@ export const AccountLedgerPdf = (startDate , endDate , userid,partyId  , vendorC
 };
 
 
-export const invoicecodeforadmin = () => {
-  return GET(`/invoice/getinvoicecode`);
+export const invoicecodeforadmin = (userId) => {
+  return GET(`/invoice/getinvoicecode?userId=${userId}`);
 };
 
 

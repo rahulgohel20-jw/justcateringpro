@@ -380,7 +380,8 @@ const fetchCashAccounts = async () => {
 
 const fetchInvoiceCode = async () => {
   try {
-    const res = await invoicecodeforadmin();
+    const userId = Number(localStorage.getItem("userId") || 0);
+    const res = await invoicecodeforadmin(userId);
 
     if (res?.data?.success) {
       setInvoiceCode(res.data.data || "");
@@ -389,7 +390,6 @@ const fetchInvoiceCode = async () => {
     console.error("Invoice code fetch error:", error);
   }
 };
-
   const fetchBankDetails = async () => {
     try {
       const userId = localStorage.getItem("userId");
