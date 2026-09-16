@@ -39,6 +39,7 @@ const CounterNameplate = ({
   selectedTemplateId,
   withLogo = false,
   type=null,
+  namePlateImages = null,
 }) => {
 
   
@@ -65,6 +66,28 @@ const CounterNameplate = ({
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [numberOfColumns, setNumberOfColumns] = useState(1);
   const [numberOfItemsPerPage, setNumberOfItemsPerPage] = useState(5);
+const [selectedNamePlateImageId, setSelectedNamePlateImageId] = useState(null);
+
+const namePlateImageEntries = namePlateImages
+  ? Array.isArray(namePlateImages)
+    ? namePlateImages.map((url, idx) => ({ id: idx + 1, url }))
+    : Object.entries(namePlateImages).map(([id, url]) => ({ id, url }))
+  : [];
+
+const hasNamePlateImages = namePlateImageEntries.length > 0;
+
+// URLs may already be full https links, or older "D:" style relative paths
+const getNamePlateImageUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return `${import.meta.env.VITE_API_BASE_URL || ""}${url.replace(/^D:/, "/")}`;
+};
+   useEffect(() => {
+  if (isModalOpen) {
+    setSelectedNamePlateImageId(null);
+  }
+}, [isModalOpen, namePlateImages]);
+
 const langConfig = getLangConfig();
   const col1Items = [5, 6, 7, 8, 9];
   const col2Items = [10, 12, 14, 16, 18];
@@ -228,7 +251,9 @@ setCounters((prev) =>
       formData.append("lang", currentlang);
       formData.append("userId", userId);
       formData.append("twoLanugage", twoLanugage);
-
+if (hasNamePlateImages && selectedNamePlateImageId != null) {
+  formData.append("imageId", selectedNamePlateImageId);
+}
       const res = await GenerateNamePlateReport(formData);
       const url = res.data?.report_path;
 
@@ -313,39 +338,79 @@ setCounters((prev) =>
         </div>
 
         {/* Column & Items Dropdowns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-600 mb-1">
-              Column
-            </label>
-            <select
-              value={numberOfColumns}
-              onChange={(e) => handleColumnChange(Number(e.target.value))}
-              className="w-full h-11 px-3 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value={1}>1 Column</option>
-              <option value={2}>2 Column</option>
-            </select>
-          </div>
-          {type !== "Type 9" && (
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-gray-600 mb-1">
-              Items
-            </label>
-            <select
-              value={numberOfItemsPerPage}
-              onChange={(e) => setNumberOfItemsPerPage(Number(e.target.value))}
-              className="w-full h-11 px-3 rounded-lg border border-gray-300 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              {(numberOfColumns === 2 ? col2Items : col1Items).map((val) => (
-                <option key={val} value={val}>
-                  {val}
-                </option>
-              ))}
-            </select>
-          </div>
-          )}
-        </div>
+ {hasNamePlateImages ? (
+   <div className="mb-5">
+    <label className="block text-sm font-medium text-gray-600 mb-2">
+      Select Name Plate Image
+    </label>
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[380px] overflow-y-auto pr-1">
+      {namePlateImageEntries.map(({ id, url }) => {
+        const imgUrl = getNamePlateImageUrl(url);
+        const isSelected = selectedNamePlateImageId === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setSelectedNamePlateImageId(id)}
+            className={`relative rounded-xl overflow-hidden border-2 bg-gray-50 transition ${
+              isSelected ? "border-primary ring-2 ring-primary/40" : "border-gray-200 hover:border-gray-300"
+            }`}
+          >
+            <img
+              src={imgUrl}
+              alt={`Name plate option ${id}`}
+              className="w-full h-28 object-contain"
+            />
+            <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              #{id}
+            </span>
+            {isSelected && (
+              <span className="absolute top-1.5 right-1.5 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                Selected
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+  
+) : (
+  /* ── Column & Items Dropdowns (existing behavior) ── */
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+    <div>
+      <label className="flex items-center gap-2 text-sm font-medium text-gray-600 mb-1">
+        Column
+      </label>
+      <select
+        value={numberOfColumns}
+        onChange={(e) => handleColumnChange(Number(e.target.value))}
+        className="w-full h-11 px-3 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+      >
+        <option value={1}>1 Column</option>
+        <option value={2}>2 Column</option>
+      </select>
+    </div>
+    {type !== "Type 9" && (
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-600 mb-1">
+          Items
+        </label>
+        <select
+          value={numberOfItemsPerPage}
+          onChange={(e) => setNumberOfItemsPerPage(Number(e.target.value))}
+          className="w-full h-11 px-3 rounded-lg border border-gray-300 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          {(numberOfColumns === 2 ? col2Items : col1Items).map((val) => (
+            <option key={val} value={val}>
+              {val}
+            </option>
+          ))}
+        </select>
+      </div>
+    )}
+  </div>
+)}
 
         {/* ✅ DragDropContext uses StrictModeDroppable instead of Droppable */}
         <DragDropContext onDragEnd={handleDragEnd}>

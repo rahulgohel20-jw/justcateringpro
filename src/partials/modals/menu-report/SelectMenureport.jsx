@@ -67,7 +67,7 @@ export default function SelectMenureport({
   const [sloganFontId, setSloganFontId] = useState(null);
   const [sloganFontSize, setSloganFontSize] = useState(null);
   const [templateType, setTemplateType] = useState(null);
-
+const [selectedNamePlateImages, setSelectedNamePlateImages] = useState(null);
 
 
   
@@ -252,6 +252,7 @@ else if (mode === "allocation" && !ischef && !isOutside) {
             dummyPdf: item.templateMaster.dummyPdf,
             isNamePlate: item.templateMaster.isNamePlate,
             namePlateBg: item.templateMaster.namePlateBg,
+             namePlateImages: item.templateMaster.namePlateImages || null,
             isCounterNamePlate: item.templateMaster.isCounterNamePlate,
             isStatic: false,
             mappingId: item.templateMappingResponseDto?.id || item.id,
@@ -330,7 +331,7 @@ else if (mode === "allocation" && !ischef && !isOutside) {
     setSloganFontId(template.sloganFontId);
     setSloganFontSize(template.sloganFontSize);
      setTemplateType(template.type);
-
+setSelectedNamePlateImages(template.namePlateImages || null);
     const selectedTab = tabs.find((tab) => tab.key === activeTab);
 
     let type = null;
@@ -845,6 +846,7 @@ if (mode === "package" && String(userId) === "359") {
         adminTemplatemoduleId={selectedModuleId || activeTab}
         selectedTemplateId={selectedTemplateId}
         type={templateType}
+          namePlateImages={selectedNamePlateImages}  
       />
 
       <CounterNameplate
@@ -857,6 +859,7 @@ if (mode === "package" && String(userId) === "359") {
         selectedTemplateId={selectedTemplateId}
         type={templateType}
         withLogo={true}
+        namePlateImages={selectedNamePlateImages} 
       />
       {openNamePlateTest && (
         <MainStandyMenuReport

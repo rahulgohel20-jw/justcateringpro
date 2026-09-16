@@ -1663,6 +1663,18 @@ export const GetAllCustomThemeByUserIdAndModuleId = (Id, moduleId) => {
     `/admintemplatemodule/getall?templateModuleId=${moduleId}&userId=${Id}`,
   );
 };
+export const addUpdateNameplateImages = (templateMasterId, imageFiles = []) => {
+  const formData = new FormData();
+  imageFiles.forEach((file) => formData.append("images", file));
+
+  return POST(
+    `/templatemaster/add-update-nameplate-images?templateMasterId=${templateMasterId}`,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    }
+  );
+};
 
 export const AddCustomTheme = (data) => {
   return POST("/templatemaster/add", data);

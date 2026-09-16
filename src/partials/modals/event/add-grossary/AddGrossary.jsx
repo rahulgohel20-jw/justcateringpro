@@ -62,7 +62,15 @@ useEffect(() => {
   return () => clearTimeout(translateTimerRef.current);
 }, [remarksForm.remarksEnglish]);
 
-  const handleModalClose = () => setIsModalOpen(false);
+
+const handleMasterAllocate = () => {
+  if (selectedAgency) onAllocateAgency(selectedAgency);
+  if (selectedPlace) onAllocatePlace(selectedPlace);
+  if (selectedDate) onAllocateDate(selectedDate);
+};
+
+const canMasterAllocate = !!selectedAgency || !!selectedPlace || !!selectedDate;
+const handleModalClose = () => setIsModalOpen(false);
 
   let userId = localStorage.getItem("userId");
 
@@ -187,160 +195,155 @@ useEffect(() => {
           ]}
         >
           {/* ── Allocation Filters ── */}
-          <div className="filters flex flex-wrap items-end justify-between gap-3 mb-4">
+{/* ── Allocation Filters ── */}
+<div className="border-t border-gray-200 pt-4 mb-4">
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
-            {/* Agency */}
-            <div className="flex items-end gap-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                  <FormattedMessage id="SIDEBAR_MODAL.SELECT_AGENCY" defaultMessage="Agency" />
-                </label>
-                <select
-                  className="select w-[150px]"
-                  value={selectedAgency}
-                  onChange={(e) => setSelectedAgency(e.target.value)}
+    {/* Agency */}
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+        <FormattedMessage id="SIDEBAR_MODAL.SELECT_AGENCY" defaultMessage="Agency" />
+      </label>
+      <div className="flex items-center gap-2">
+        <select
+          className="select flex-1 h-10"
+          value={selectedAgency}
+          onChange={(e) => setSelectedAgency(e.target.value)}
+        >
+          <option value="">
+            <FormattedMessage
+              id="SIDEBAR_MODAL.SELECT_AGENCY"
+              defaultMessage="Select Agency"
+            />
+          </option>
+          {loading && <option>Loading...</option>}
+          {!loading && agencies.length > 0
+            ? agencies.map((agency) => (
+                <option
+                  key={agency.id}
+                  value={agency.nameEnglish || agency.name}
                 >
-                  <option value="">
-                    <FormattedMessage
-                      id="SIDEBAR_MODAL.SELECT_AGENCY"
-                      defaultMessage="Select Agency"
-                    />
-                  </option>
-                  {loading && <option>Loading...</option>}
-                  {!loading && agencies.length > 0
-                    ? agencies.map((agency) => (
-                        <option
-                          key={agency.id}
-                          value={agency.nameEnglish || agency.name}
-                        >
-                          {agency.nameEnglish || agency.name}
-                        </option>
-                      ))
-                    : null}
-                </select>
-              </div>
+                  {agency.nameEnglish || agency.name}
+                </option>
+              ))
+            : null}
+        </select>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setIsVendorModalOpen(true);
-                  setIsModalOpen(false);
-                }}
-                className="w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full"
-                title="Add Vendor"
-              >
-                <i className="ki-filled ki-plus"></i>
-              </button>
+        <button
+          type="button"
+          onClick={() => {
+            setIsVendorModalOpen(true);
+            setIsModalOpen(false);
+          }}
+          className="shrink-0 w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full"
+          title="Add Vendor"
+        >
+          <i className="ki-filled ki-plus"></i>
+        </button>
+      </div>
+    </div>
 
-              <button
-                className="btn btn-primary"
-                onClick={handleAllocateAgency}
-                disabled={!selectedAgency}
-              >
-                <FormattedMessage id="COMMON.ALLOCATE" defaultMessage="Allocate" />
-              </button>
-            </div>
+    {/* Place */}
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+        <FormattedMessage id="COMMON.PLACE" defaultMessage="Place" />
+      </label>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-10">
+          <PlaceSelect
+            value={selectedPlace}
+            onChange={(value) => setSelectedPlace(value)}
+            options={options}
+          />
+        </div>
 
-            {/* Place */}
-            <div className="flex items-end gap-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                  <FormattedMessage id="COMMON.PLACE" defaultMessage="Place" />
-                </label>
-                <div className="w-[200px]">
-                  <PlaceSelect
-                    value={selectedPlace}
-                    onChange={(value) => setSelectedPlace(value)}
-                    options={options}
-                  />
-                </div>
-              </div>
+        <button
+          type="button"
+          onClick={() => {
+            setIsGodownOpen(true);
+            setIsModalOpen(false);
+          }}
+          className="shrink-0 w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full"
+          title="Add Godown"
+        >
+          <i className="ki-filled ki-plus"></i>
+        </button>
+      </div>
+    </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setIsGodownOpen(true);
-                  setIsModalOpen(false);
-                }}
-                className="w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full"
-                title="Add Godown"
-              >
-                <i className="ki-filled ki-plus"></i>
-              </button>
+    {/* Date + Master Allocate */}
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+        <FormattedMessage id="COMMON.DATE" defaultMessage="Date & Time" />
+      </label>
+      <div className="flex items-center gap-2">
+        <DatePicker
+          className="input h-10 flex-1"
+          selected={selectedDate}
+          onChange={(date) => setSelectedDate(date)}
+          showTimeSelect
+          timeFormat="hh:mm aa"
+          timeIntervals={15}
+          dateFormat="MM/dd/yyyy hh:mm aa"
+          placeholderText="Select date and time"
+        />
 
-              <button
-                className="btn btn-primary"
-                onClick={handleAllocatePlace}
-                disabled={!selectedPlace}
-              >
-                <FormattedMessage id="COMMON.ALLOCATE" defaultMessage="Allocate" />
-              </button>
-            </div>
-
-            {/* Date */}
-            <div className="flex items-end gap-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                  <FormattedMessage id="COMMON.DATE" defaultMessage="Date & Time" />
-                </label>
-                <DatePicker
-                  className="input"
-                  selected={selectedDate}
-                  onChange={(date) => setSelectedDate(date)}
-                  showTimeSelect
-                  timeFormat="hh:mm aa"
-                  timeIntervals={15}
-                  dateFormat="MM/dd/yyyy hh:mm aa"
-                  placeholderText="Select date and time"
-                />
-              </div>
-
-              <button
-                className="btn btn-primary"
-                onClick={handleAllocateDate}
-                disabled={!selectedDate}
-              >
-                <FormattedMessage id="COMMON.ALLOCATE" defaultMessage="Allocate" />
-              </button>
-            </div>
-
-            {/* ── Remarks Section ── */}
-           {/* ── Remarks Section ── */}
-<div className="w-full border-t border-gray-200 pt-3 mt-1">
-  <div className="flex items-center gap-2 mb-2">
-    <i className="ki-filled ki-message-text text-primary text-sm"></i>
-    <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">
-      <FormattedMessage id="COMMON.REMARKS" defaultMessage="Remarks" />
-    </span>
+       <button
+  className="shrink-0 h-10 px-4 flex items-center gap-1.5 btn btn-primary whitespace-nowrap"
+  onClick={handleMasterAllocate}
+  disabled={!canMasterAllocate}
+  title={
+    canMasterAllocate
+      ? "Allocate the selected fields"
+      : "Select agency, place, and/or date to enable"
+  }
+>
+  <i className="ki-filled ki-check-circle"></i>
+  <FormattedMessage
+    id="COMMON.MASTER_ALLOCATE"
+    defaultMessage=" Allocate"
+  />
+</button>
+      </div>
+    </div>
   </div>
 
-  <div className="flex items-end gap-3">
-    <div className="flex-1">
-      <MultiLangInputBox
-        formData={remarksForm}
-        setFormData={setRemarksForm}
-        label="Remarks"
-        cols={3}
-        type="text"
-        keys={{
-          english: "remarksEnglish",
-          regional: "remarksGujarati",
-          hindi: "remarksHindi",
-        }}
-      />
+  {/* ── Remarks Section ── */}
+  <div className="border-t border-gray-200 pt-3 mt-4">
+    <div className="flex items-center gap-2 mb-2">
+      <i className="ki-filled ki-message-text text-primary text-sm"></i>
+      <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">
+        <FormattedMessage id="COMMON.REMARKS" defaultMessage="Remarks" />
+      </span>
     </div>
-    <div className="flex flex-col justify-end pb-1">
-      <button
-        className="btn btn-primary"
-        onClick={handleAllocateRemarks}
-        disabled={!remarksForm.remarksEnglish && !remarksForm.remarksHindi && !remarksForm.remarksGujarati}
-      >
-        <FormattedMessage id="COMMON.ALLOCATE" defaultMessage="Allocate" />
-      </button>
+
+    <div className="flex items-end gap-3">
+      <div className="flex-1">
+        <MultiLangInputBox
+          formData={remarksForm}
+          setFormData={setRemarksForm}
+          label="Remarks"
+          cols={3}
+          type="text"
+          keys={{
+            english: "remarksEnglish",
+            regional: "remarksGujarati",
+            hindi: "remarksHindi",
+          }}
+        />
+      </div>
+      <div className="shrink-0">
+        <button
+          className="btn btn-primary h-10 px-5"
+          onClick={handleAllocateRemarks}
+          disabled={!remarksForm.remarksEnglish && !remarksForm.remarksHindi && !remarksForm.remarksGujarati}
+        >
+          <FormattedMessage id="COMMON.ALLOCATE" defaultMessage="Allocate" />
+        </button>
+      </div>
     </div>
   </div>
 </div>
-          </div>
 
           {/* ── Table Section ── */}
           <div className="mt-4">{modalData && modalData()}</div>
