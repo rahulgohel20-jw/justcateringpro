@@ -1382,8 +1382,14 @@ setInstructionHindi(editData.instructionHindi || "");
 
       <RawMaterialTable
         data={filteredTableData}
-        onEditRow={handleEditRow}
-        onDeleteRow={handleDeleteRow}
+        onEditRow={(row) => {
+    console.log("Raw Material - Edit clicked:", row);
+    handleEditRow(row);
+  }}
+          onDeleteRow={(row) => {
+    console.log("Raw Material - Delete clicked:", row);
+    handleDeleteRow(row);
+  }}
         selectedRows={selectedRows}
         setSelectedRows={setSelectedRows}
         godownOptions={godownOptions}

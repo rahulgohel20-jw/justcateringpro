@@ -62,7 +62,16 @@ useEffect(() => {
   return () => clearTimeout(translateTimerRef.current);
 }, [remarksForm.remarksEnglish]);
 
-  const handleModalClose = () => setIsModalOpen(false);
+
+const handleMasterAllocate = () => {
+  if (selectedAgency) onAllocateAgency(selectedAgency);
+  if (selectedPlace) onAllocatePlace(selectedPlace);
+  if (selectedDate) onAllocateDate(selectedDate);
+};
+
+const canMasterAllocate = !!selectedAgency && !!selectedPlace && !!selectedDate;
+
+const handleModalClose = () => setIsModalOpen(false);
 
   let userId = localStorage.getItem("userId");
 
@@ -186,6 +195,24 @@ useEffect(() => {
             </div>,
           ]}
         >
+          <div className="flex items-end justify-end">
+  <button
+    className=" btn btn-success"
+    onClick={handleMasterAllocate}
+    disabled={!canMasterAllocate}
+    title={
+      canMasterAllocate
+        ? "Allocate agency, place & date together"
+        : "Select agency, place and date to enable"
+    }
+  >
+    <i className="ki-filled ki-check-circle me-1"></i>
+    <FormattedMessage
+      id="COMMON.MASTER_ALLOCATE"
+      defaultMessage="Master Allocate"
+    />
+  </button>
+</div>
           {/* ── Allocation Filters ── */}
           <div className="filters flex flex-wrap items-end justify-between gap-3 mb-4">
 
