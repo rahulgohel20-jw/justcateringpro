@@ -44,18 +44,18 @@ useEffect(() => {
       return weightValue * supplierRate;
     }
 
-    if (selectedUnitId === nativeUnitId) {
+    if (String(selectedUnitId) === String(nativeUnitId)) {
       // already in the native unit — no conversion needed
       return weightValue * supplierRate;
     }
 
     // Step 1: convert selected unit's weight into "parent unit" terms
     let weightInParentUnits;
-    if (selectedUnitId === unitHierarchy.unitId) {
+    if (String(selectedUnitId) === String(unitHierarchy.unitId)) {
       weightInParentUnits = weightValue;
     } else {
       const selectedChild = unitHierarchy.children?.find(
-        (c) => c.unitId === selectedUnitId
+        (c) => String(c.unitId) === String(selectedUnitId)
       );
       weightInParentUnits = selectedChild?.equivalentValue
         ? weightValue / selectedChild.equivalentValue
@@ -64,11 +64,11 @@ useEffect(() => {
 
     // Step 2: convert parent-unit terms into the native unit
     let weightInNativeUnit;
-    if (nativeUnitId === unitHierarchy.unitId) {
+    if (String(nativeUnitId) === String(unitHierarchy.unitId)) {
       weightInNativeUnit = weightInParentUnits;
     } else {
       const nativeChild = unitHierarchy.children?.find(
-        (c) => c.unitId === nativeUnitId
+        (c) => String(c.unitId) === String(nativeUnitId)
       );
       weightInNativeUnit = nativeChild?.equivalentValue
         ? weightInParentUnits * nativeChild.equivalentValue
@@ -78,39 +78,59 @@ useEffect(() => {
     return weightInNativeUnit * supplierRate;
   };
 
-
-
   const convertWeightBetweenUnits = (raw, weightValue, fromUnitId, toUnitId) => {
-  const unitHierarchy = raw?.unitHierarchy;
-  if (!unitHierarchy || fromUnitId === toUnitId) return weightValue;
+    const unitHierarchy = raw?.unitHierarchy;
+    if (!unitHierarchy || String(fromUnitId) === String(toUnitId)) return weightValue;
 
-  // Step 1: convert `fromUnitId` weight into parent-unit terms
-  let weightInParent;
-  if (fromUnitId === unitHierarchy.unitId) {
-    weightInParent = weightValue;
-  } else {
-    const fromChild = unitHierarchy.children?.find((c) => c.unitId === fromUnitId);
-    weightInParent = fromChild?.equivalentValue
-      ? weightValue / fromChild.equivalentValue
-      : weightValue;
-  }
+    // Step 1: convert `fromUnitId` weight into parent-unit terms
+    let weightInParent;
+    if (String(fromUnitId) === String(unitHierarchy.unitId)) {
+      weightInParent = weightValue;
+    } else {
+      const fromChild = unitHierarchy.children?.find(
+        (c) => String(c.unitId) === String(fromUnitId)
+      );
+      weightInParent = fromChild?.equivalentValue
+        ? weightValue / fromChild.equivalentValue
+        : weightValue;
+    }
 
-  // Step 2: convert parent-unit terms into `toUnitId`
-  if (toUnitId === unitHierarchy.unitId) {
-    return weightInParent;
-  }
-  const toChild = unitHierarchy.children?.find((c) => c.unitId === toUnitId);
-  return toChild?.equivalentValue
-    ? weightInParent * toChild.equivalentValue
-    : weightInParent;
-};
+    // Step 2: convert parent-unit terms into `toUnitId`
+    if (String(toUnitId) === String(unitHierarchy.unitId)) {
+      return weightInParent;
+    }
+    const toChild = unitHierarchy.children?.find(
+      (c) => String(c.unitId) === String(toUnitId)
+    );
+    return toChild?.equivalentValue
+      ? weightInParent * toChild.equivalentValue
+      : weightInParent;
+  };
 
   const handleAddRecipe = () => {
     if (!selectedRaw || !weight || !unit) {
       return message.error("Please fill all recipe fields");
     }
 
-    const raw = rawmaterialList.find((r) => r.rawMaterialId === selectedRaw);
+    let raw = rawmaterialList.find(
+      (r) => String(r.rawMaterialId) === String(selectedRaw)
+    );
+
+    if (!raw && editingRowId) {
+      const existing = tableData.find((r) => r.sr_no === editingRowId);
+      if (existing && String(existing.rawMaterialId) === String(selectedRaw)) {
+        raw = {
+          rawMaterialId: existing.rawMaterialId,
+          category: existing.category,
+          name: existing.name,
+          unitId: existing.unitId,
+          unit: existing.unit,
+          supplierRate: existing.supplierRate,
+          unitHierarchy: existing.unitHierarchy,
+        };
+      }
+    }
+
     if (!raw) {
       return message.error("Invalid raw material selected");
     }
@@ -120,15 +140,20 @@ useEffect(() => {
       return message.error("Please enter a valid weight");
     }
 
-    const unitName = unitOptions.find((u) => u.value === unit)?.label || "";
+    const unitName =
+      unitOptions.find((u) => String(u.value) === String(unit))?.label ||
+      raw?.unit ||
+      "";
     const supplierRate = raw?.supplierRate || 0;
 
     const rate = calculateRate(raw, weightValue, unit);
 
     const duplicate = tableData.find(
-      (r) => r.rawMaterialId === raw.rawMaterialId
+      (r) =>
+        String(r.rawMaterialId) === String(raw.rawMaterialId) &&
+        (!editingRowId || r.sr_no !== editingRowId)
     );
-    if (!editingRowId && duplicate) {
+    if (duplicate) {
       return message.error("This raw material is already added.");
     }
 
@@ -136,16 +161,17 @@ useEffect(() => {
       const updatedRows = tableData.map((row) =>
         row.sr_no === editingRowId
           ? {
-            ...row,
-            category: raw.category,
-            name: raw.name,
-            weight: weightValue,
-            unit: unitName,
-            unitId: unit,
-            supplierRate,
-            rate: Number(rate.toFixed(2)), 
-            rawMaterialId: raw.rawMaterialId, 
-          }
+              ...row,
+              category: raw.category,
+              name: raw.name,
+              weight: weightValue,
+              unit: unitName,
+              unitId: unit,
+              supplierRate,
+              rate: Number(rate.toFixed(2)),
+              rawMaterialId: raw.rawMaterialId,
+              unitHierarchy: raw.unitHierarchy || row.unitHierarchy,
+            }
           : row
       );
 
@@ -161,23 +187,24 @@ useEffect(() => {
         unit: unitName,
         unitId: unit,
         supplierRate,
-        rate: Number(rate.toFixed(2)), 
+        rate: Number(rate.toFixed(2)),
         menuRmId: null,
         rawMaterialId: raw.rawMaterialId,
+        unitHierarchy: raw.unitHierarchy,
       };
 
-setTableData((prev) => {
-  const updated = [newRow, ...prev];
-  return updated.map((row, idx) => ({ ...row, sr_no: idx + 1 }));
-});
-setRowCounter((prev) => prev + 1);
+      setTableData((prev) => {
+        const updated = [newRow, ...prev];
+        return updated.map((row, idx) => ({ ...row, sr_no: idx + 1 }));
+      });
+      setRowCounter((prev) => prev + 1);
       message.success("Recipe added");
     }
 
     setSelectedRaw(null);
     setWeight("");
     setUnit(null);
-    setUnitOptions([]); 
+    setUnitOptions([]);
   };
 
   const handleDeleteRow = async (row) => {
@@ -201,13 +228,21 @@ setRowCounter((prev) => prev + 1);
 
   const handleEditRow = (row) => {
     setEditingRowId(row.sr_no);
-    const raw = rawmaterialList.find((r) => r.rawMaterialId === row.rawMaterialId);
-
-    if (!raw) return;
+    const raw = rawmaterialList.find(
+      (r) => String(r.rawMaterialId) === String(row.rawMaterialId)
+    ) || {
+      rawMaterialId: row.rawMaterialId,
+      name: row.name,
+      category: row.category,
+      unitId: row.unitId,
+      unit: row.unit,
+      supplierRate: row.supplierRate,
+      unitHierarchy: row.unitHierarchy,
+    };
 
     setSelectedRaw(raw.rawMaterialId);
 
-    const unitHierarchy = raw.unitHierarchy;
+    const unitHierarchy = raw?.unitHierarchy || row?.unitHierarchy;
     if (unitHierarchy) {
       const options = [
         {
@@ -220,12 +255,22 @@ setRowCounter((prev) => prev + 1);
         })) || []),
       ];
       setUnitOptions(options);
-    } else {
-      setUnitOptions([{ label: raw.unit, value: raw.unitId }]);
+    } else if (row.unitId || raw?.unitId) {
+      setUnitOptions([
+        { label: row.unit || raw?.unit || "", value: row.unitId || raw?.unitId },
+      ]);
     }
 
-    setUnit(row.unitId);
-    setWeight(row.weight);
+    setUnit(row.unitId != null ? row.unitId : raw?.unitId);
+    setWeight(row.weight != null ? String(row.weight) : "");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRowId(null);
+    setSelectedRaw(null);
+    setWeight("");
+    setUnit(null);
+    setUnitOptions([]);
   };
 
   return {
@@ -247,7 +292,10 @@ setRowCounter((prev) => prev + 1);
     handleAddRecipe,
     handleDeleteRow,
     handleEditRow,
-    calculateRate,         
-  convertWeightBetweenUnits,
+    handleCancelEdit,
+    editingRowId,
+    setEditingRowId,
+    calculateRate,
+    convertWeightBetweenUnits,
   };
 }

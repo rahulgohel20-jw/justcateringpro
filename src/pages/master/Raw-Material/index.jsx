@@ -55,7 +55,7 @@ const RawMaterial = () => {
 
   const FetchRawMaterial = (
     page = currentPage,
-    categoryId = 0,
+    categoryId = categoryFilter || 0,
     isAsc = sortOrder,
   ) => {
     if (abortControllerRef.current) {
@@ -65,7 +65,7 @@ const RawMaterial = () => {
     const signal = abortControllerRef.current.signal;
 
     setLoading(true);
-    GetAllRawMaterial(isAsc, page, ITEMS_PER_PAGE, categoryId, Id)
+    GetAllRawMaterial(isAsc, page, ITEMS_PER_PAGE, categoryId, Id, signal)
       .then((res) => {
         const data = res?.data?.data || {};
         setRawOriginalData(data["Raw Material Details"] || []);
