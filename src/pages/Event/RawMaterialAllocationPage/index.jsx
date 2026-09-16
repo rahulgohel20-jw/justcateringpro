@@ -724,7 +724,8 @@ const checkSotStatus = async () => {
 
   const handleChange = (index, field, value) => {
     const updated = [...data];
-    const row = updated[index];
+     const row = { ...updated[index] };   // ✅ clone, don't reuse the reference
+  updated[index] = row;
     const basePrice = Number(row.basePricePerUnit) || 0;
 
     if (field === "finalQty") {
@@ -955,15 +956,10 @@ const payload = {
   eventId: parseInt(eventId),
   rawMaterialCategoryId: parseInt(activeTab || 0),
   eventRawMaterial: originalData.map((item) => {  
-    const supplierId =
+ const supplierId =
   agencies.find(
-    (a) =>
-      a.nameEnglish === item.agency ||
-      a.name === item.agency ||
-      a.id === item.supplierId, 
-  )?.id ||
-  item.supplierId ||
-  0;
+    (a) => a.nameEnglish === item.agency || a.name === item.agency,
+  )?.id ?? item.supplierId ?? 0;
 
     const eventRawMatFunctions = item.isNewRow
       ? []
@@ -971,13 +967,11 @@ const payload = {
           menuItemId: fn.menuItemId,
           eventFunctionId: fn.eventFunctionId || 0,
           functionId: fn.functionId || 0,
-          functiondatetime: fn.functiondatetime
-            ? dayjs(fn.functiondatetime).isValid()
-              ? dayjs(fn.functiondatetime).format("YYYY-MM-DD HH:mm:ss.0")
-              : ""
-            : item.date && dayjs(item.date).isValid()
-              ? dayjs(item.date).format("YYYY-MM-DD HH:mm:ss.0")
-              : "",
+          functiondatetime: item.date && dayjs(item.date).isValid()
+  ? dayjs(item.date).format("YYYY-MM-DD HH:mm:ss.0")
+  : fn.functiondatetime && dayjs(fn.functiondatetime).isValid()
+    ? dayjs(fn.functiondatetime).format("YYYY-MM-DD HH:mm:ss.0")
+    : "",
           isExtraField: fn.isExtraField === true,
           rawMaterialRate: fn.rawMaterialRate || fn.rawMaterialPrice,
           itemName: fn.itemName || item.material || "",
@@ -1249,88 +1243,74 @@ const changeSummary = buildRawMaterialLogSummary(
     setIsModalOpen(true);
   };
 
-  const handleAllocateAgency = (agency) => {
-    if (selectedRows.length === 0) {
-      Swal.fire({
-        icon: "warning",
-        title: "No Selection",
-        text: "Please select at least one raw material.",
-      });
-      return;
-    }
-
-    const updated = data.map((item) =>
-      selectedRows.includes(item.rawMaterialId) ? { ...item, agency } : item,
-    );
-
-    setData(updated);
-    setOriginalData(updated);
-    setHasUnsavedChanges(true);
-  };
-
-  const handleAllocatePlace = (placeName, placeId) => {
-    if (selectedRows.length === 0) {
-      Swal.fire({
-        icon: "warning",
-        title: "No Selection",
-        text: "Please select at least one raw material.",
-      });
-      return;
-    }
-
-    const updated = data.map((item) =>
-      selectedRows.includes(item.rawMaterialId)
-        ? {
-            ...item,
-            place: placeName,
-            placeId: Number(placeId) || 0,
-          }
-        : item,
-    );
-
-    setData(updated);
-    setOriginalData(updated);
-    setHasUnsavedChanges(true);
-  };
-
-  const handleAllocateDate = (date) => {
-    if (!date) return;
-
-    if (selectedRows.length === 0) {
-      Swal.fire({
-        icon: "warning",
-        title: "No Selection",
-        text: "Please select at least one raw material.",
-      });
-      return;
-    }
-
-    const allocatedDate = dayjs(date);
-
-    const updated = data.map((item) =>
-      selectedRows.includes(item.rawMaterialId)
-        ? { ...item, date: allocatedDate }
-        : item,
-    );
-
-    setData(updated);
-    setOriginalData(updated);
-    setHasUnsavedChanges(true);
-  };
-
-
-  const handleAllocateRemarks = ({ remarksEnglish, remarksHindi, remarksGujarati }) => {
+const handleAllocateAgency = (agency) => {
   if (selectedRows.length === 0) {
     Swal.fire({ icon: "warning", title: "No Selection", text: "Please select at least one raw material." });
     return;
   }
-  const updated = data.map((item) =>
-    selectedRows.includes(item.rawMaterialId)
-      ? { ...item, remarksEnglish, remarksHindi, remarksGujarati }
-      : item
-  );
-  setData(updated);
-  setOriginalData(updated);
+
+  setData((prev) => {
+    const updated = prev.map((item) =>
+      selectedRows.includes(item.rawMaterialId) ? { ...item, agency } : item,
+    );
+    setOriginalData(updated);
+    return updated;
+  });
+  setHasUnsavedChanges(true);
+};
+
+const handleAllocatePlace = (placeName, placeId) => {
+  if (selectedRows.length === 0) {
+    Swal.fire({ icon: "warning", title: "No Selection", text: "Please select at least one raw material." });
+    return;
+  }
+
+  setData((prev) => {
+    const updated = prev.map((item) =>
+      selectedRows.includes(item.rawMaterialId)
+        ? { ...item, place: placeName, placeId: Number(placeId) || 0 }
+        : item,
+    );
+    setOriginalData(updated);
+    return updated;
+  });
+  setHasUnsavedChanges(true);
+};
+
+const handleAllocateDate = (date) => {
+  if (!date) return;
+  if (selectedRows.length === 0) {
+    Swal.fire({ icon: "warning", title: "No Selection", text: "Please select at least one raw material." });
+    return;
+  }
+
+  const allocatedDate = dayjs(date);
+
+  setData((prev) => {
+    const updated = prev.map((item) =>
+      selectedRows.includes(item.rawMaterialId) ? { ...item, date: allocatedDate } : item,
+    );
+    setOriginalData(updated);
+    return updated;
+  });
+  setHasUnsavedChanges(true);
+};
+
+const handleAllocateRemarks = ({ remarksEnglish, remarksHindi, remarksGujarati }) => {
+  if (selectedRows.length === 0) {
+    Swal.fire({ icon: "warning", title: "No Selection", text: "Please select at least one raw material." });
+    return;
+  }
+
+  setData((prev) => {
+    const updated = prev.map((item) =>
+      selectedRows.includes(item.rawMaterialId)
+        ? { ...item, remarksEnglish, remarksHindi, remarksGujarati }
+        : item,
+    );
+    setOriginalData(updated);
+    return updated;
+  });
   setHasUnsavedChanges(true);
 };
 
