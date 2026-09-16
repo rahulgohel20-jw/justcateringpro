@@ -37,7 +37,7 @@ const PurchaseApprovalRequest = () => {
 const [viewModalOpen, setViewModalOpen] = useState(false);
 const [viewData, setViewData] = useState(null);
 const [viewLoading, setViewLoading] = useState(false);
-
+const [statusFilter, setStatusFilter] = useState("ALL"); // ALL | PENDING | APPROVED | REJECTED
   const navigate = useNavigate();
   const permissions = usePermission("Purchase Approve Request");
 
@@ -58,27 +58,26 @@ const [viewLoading, setViewLoading] = useState(false);
     remarks: r.remarks ?? "",
   });
 
-  const fetchRequests = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getallpurchasereport(userId);
-      const responseData = res?.data?.data ?? res?.data ?? res;
-      // TODO: confirm whether the API returns a bare array or an object with
-      // a "content"/list key like the other paginated endpoints in this project.
-      const list = Array.isArray(responseData)
-        ? responseData
-        : responseData?.content ?? [];
+ const fetchRequests = async () => {
+  setLoading(true);
+  setError(null);
+  try {
+    const res = await getallpurchasereport(userId, statusFilter);
+    const responseData = res?.data?.data ?? res?.data ?? res;
+    const list = Array.isArray(responseData)
+      ? responseData
+      : responseData?.content ?? [];
 
-      setRequests(list.map(mapRequestRow));
-    } catch (err) {
-      console.error("Failed to load purchase requests:", err);
-      setError(err?.response?.data?.message ?? err?.message ?? "Failed to load requests.");
-      setRequests([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setRequests(list.map(mapRequestRow));
+  } catch (err) {
+    console.error("Failed to load purchase requests:", err);
+    setError(err?.response?.data?.message ?? err?.message ?? "Failed to load requests.");
+    setRequests([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   useEffect(() => {
     fetchRequests();
@@ -321,20 +320,31 @@ const isApproved = String(request.status ?? "").toUpperCase() === "APPROVED";
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-            {permissions.add && (
-              <button
-                className="btn btn-primary"
-                onClick={() => navigate("/purchase/approval-request/add")}
-              >
-                <i className="ki-filled ki-plus"></i>{" "}
-                <FormattedMessage
-                  id="PURCHASE.APPROVAL_REQUEST.ADD"
-                  defaultMessage="Add Purchase Request"
-                />
-              </button>
-              )}
-            </div>
+           <div className="flex flex-wrap items-center gap-2">
+  <Select
+    style={{ width: 160, height: 38 }}
+    value={statusFilter}
+    onChange={(value) => setStatusFilter(value)}
+    options={[
+      { value: "ALL", label: "All Status" },
+      { value: "PENDING", label: "Pending" },
+      { value: "APPROVED", label: "Approved" },
+      
+    ]}
+  />
+  {permissions.add && (
+    <button
+      className="btn btn-primary"
+      onClick={() => navigate("/purchase/approval-request/add")}
+    >
+      <i className="ki-filled ki-plus"></i>{" "}
+      <FormattedMessage
+        id="PURCHASE.APPROVAL_REQUEST.ADD"
+        defaultMessage="Add Purchase Request"
+      />
+    </button>
+  )}
+</div>
           </div>
 
           {/* Table */}
@@ -361,16 +371,7 @@ const isApproved = String(request.status ?? "").toUpperCase() === "APPROVED";
               </span>
 
               <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-400">Rows per page:</span>
-                <Select
-                  style={{ width: 72, height: 32 }}
-                  value={pageSize}
-                  onChange={(value) => {
-                    setPageSize(value);
-                    setPage(1);
-                  }}
-                  options={[10, 20, 50].map((n) => ({ value: n, label: String(n) }))}
-                />
+                
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}

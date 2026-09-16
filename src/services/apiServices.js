@@ -208,10 +208,11 @@ export const SearchRawMaterial = (
   page,
   pageSize,
   itemName,
+  
   signal,
   isPurchaseApproved = false,
   purchaseApproveId = "",
-  catId = 0,
+  categoryId = 0,
 ) => {
   let actualSignal = signal;
   let actualIsPurchaseApproved = isPurchaseApproved;
@@ -231,8 +232,8 @@ export const SearchRawMaterial = (
   }
 
   return GET(
-    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=${actualCatId || 0}&unitid=0&userid=${Id}&isPurchaseApprove=${actualIsPurchaseApproved}&purchaseApproveId=${actualPurchaseApproveId}`,
-    actualSignal,
+    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=${categoryId}&unitid=0&userid=${Id}&isPurchaseApprove=${isPurchaseApproved}&purchaseApproveId=${purchaseApproveId}`,
+    signal,
   );
 };
 
@@ -1681,6 +1682,18 @@ export const GetAllCustomThemeByUserIdAndModuleId = (Id, moduleId) => {
     `/admintemplatemodule/getall?templateModuleId=${moduleId}&userId=${Id}`,
   );
 };
+export const addUpdateNameplateImages = (templateMasterId, imageFiles = []) => {
+  const formData = new FormData();
+  imageFiles.forEach((file) => formData.append("images", file));
+
+  return POST(
+    `/templatemaster/add-update-nameplate-images?templateMasterId=${templateMasterId}`,
+    formData,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+    }
+  );
+};
 
 export const AddCustomTheme = (data) => {
   return POST("/templatemaster/add", data);
@@ -2251,7 +2264,9 @@ export const AddAutoManualPOApi = (data) => {
   return POST(`sot/manual-po/add-update`, data);
 };
 
-
+export const getautomanualpurchsaseid = (sotPoId) => {
+  return GET(`/sot/manual-po/detail/${sotPoId}`);
+};
 export const GetAllPurchase = (userId) => {
   return GET(`/purchaseorder/getbyuser?userId=${userId}`);
 };
@@ -3277,8 +3292,8 @@ export const AccountLedgerPdf = (startDate , endDate , userid,partyId  , vendorC
 };
 
 
-export const invoicecodeforadmin = () => {
-  return GET(`/invoice/getinvoicecode`);
+export const invoicecodeforadmin = (userId) => {
+  return GET(`/invoice/getinvoicecode?userId=${userId}`);
 };
 
 
@@ -3830,8 +3845,8 @@ export const addUpdatePurchaseRequest = (data) => {
   return POST(`/purchase-approval/add-update` ,data);
 };
 
-export const getallpurchasereport = (userId ) => {
-  return GET(`/purchase-approval/getAll?userId=${userId}`);
+export const getallpurchasereport = (userId ,status ) => {
+  return GET(`/purchase-approval/getAll?userId=${userId}&status=${status}`);
 }
 
 export const getpurchaseapprovalbyid = (purchaseRequestId) => {
@@ -3849,3 +3864,19 @@ export const GetAllRawMaterialcategory = (categoryTypeId , userid , isActive , c
     `/rawmaterialcategory/getallbyuserid?categoryTypeId=${categoryTypeId}&userid=${userid}&isActive=${isActive}&categoryName=${categoryName}`,
   );
 }
+
+//guest signature 
+export const getallguestsign = (eventFunctionId, eventId) => {
+  return GET(`/guest-signature/getAllbyEventAndEventFunction?eventFunctionId=${eventFunctionId}&eventId=${eventId}`);
+};
+
+export const addupdateguesign = (eventId, eventFunctionId, data) => {
+  return POST(
+    `/guest-signature/add-update?eventId=${eventId}&eventFunctionId=${eventFunctionId}`,
+    data,
+  );
+};
+
+export const getreportguestsign = (eventId, isCompanyDetails, userId) => {
+  return GET(`/guest-signature/generate-guest-signature-report?eventId=${eventId}&isCompanyDetails=${isCompanyDetails}&userId=${userId}`);
+};

@@ -67,7 +67,7 @@ export default function SelectMenureport({
   const [sloganFontId, setSloganFontId] = useState(null);
   const [sloganFontSize, setSloganFontSize] = useState(null);
   const [templateType, setTemplateType] = useState(null);
-
+const [selectedNamePlateImages, setSelectedNamePlateImages] = useState(null);
 
 
   
@@ -85,11 +85,11 @@ export default function SelectMenureport({
     }
   }, [lang]);
 
-  const selectedEventFunction = useMemo(() => {
-    const nonAll = selectedFunctionIds.filter((id) => id !== -1);
-    if (nonAll.length !== 1) return null;
-    return eventData?.eventFunctions?.find((item) => item.id === nonAll[0]);
-  }, [eventData, selectedFunctionIds]);
+ const selectedEventFunction = useMemo(() => {
+  const nonAll = selectedFunctionIds.filter((id) => id !== -1);
+  if (nonAll.length !== 1) return null;
+  return eventData?.eventFunctions?.find((item) => item.id === nonAll[0]);
+}, [eventData, selectedFunctionIds]);
 
   const activeLang = localStorage.getItem("lang") || "en";
 
@@ -105,6 +105,18 @@ export default function SelectMenureport({
         return obj[`${baseKey}English`] || "";
     }
   };
+
+
+const selectedFunctionName = selectedEventFunction
+  ? getLangValue(selectedEventFunction.function, "name", activeLang)
+  : "";
+const selectedFunctionDateTime = selectedEventFunction?.functionStartDateTime || "";
+const selectedFunctionVenue =
+  selectedEventFunction?.function_venue ||
+  getLangValue(eventData?.venue, "name", activeLang) ||
+  "";
+
+
 
   const { filterSections, allowedTemplateIds } = useReportPermission();
 
@@ -240,6 +252,7 @@ else if (mode === "allocation" && !ischef && !isOutside) {
             dummyPdf: item.templateMaster.dummyPdf,
             isNamePlate: item.templateMaster.isNamePlate,
             namePlateBg: item.templateMaster.namePlateBg,
+             namePlateImages: item.templateMaster.namePlateImages || null,
             isCounterNamePlate: item.templateMaster.isCounterNamePlate,
             isStatic: false,
             mappingId: item.templateMappingResponseDto?.id || item.id,
@@ -318,7 +331,7 @@ else if (mode === "allocation" && !ischef && !isOutside) {
     setSloganFontId(template.sloganFontId);
     setSloganFontSize(template.sloganFontSize);
      setTemplateType(template.type);
-
+setSelectedNamePlateImages(template.namePlateImages || null);
     const selectedTab = tabs.find((tab) => tab.key === activeTab);
 
     let type = null;
@@ -819,6 +832,9 @@ if (mode === "package" && String(userId) === "359") {
         sloganFontIds={sloganFontId}
         sloganFontSizes={sloganFontSize}
         preSelectedAgencyId={preSelectedAgencyId}
+         functionName={selectedFunctionName}       
+  functionDateTime={selectedFunctionDateTime} 
+  venueName={selectedFunctionVenue} 
       />
 
       <CounterNameplate
@@ -830,6 +846,7 @@ if (mode === "package" && String(userId) === "359") {
         adminTemplatemoduleId={selectedModuleId || activeTab}
         selectedTemplateId={selectedTemplateId}
         type={templateType}
+          namePlateImages={selectedNamePlateImages}  
       />
 
       <CounterNameplate
@@ -842,6 +859,7 @@ if (mode === "package" && String(userId) === "359") {
         selectedTemplateId={selectedTemplateId}
         type={templateType}
         withLogo={true}
+        namePlateImages={selectedNamePlateImages} 
       />
       {openNamePlateTest && (
         <MainStandyMenuReport

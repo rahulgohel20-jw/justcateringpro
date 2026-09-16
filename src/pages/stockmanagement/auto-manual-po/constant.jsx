@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { FormattedMessage } from "react-intl";
-import { MoreVertical, Info, Printer, Trash2, FilePlus2, MessageCircle } from "lucide-react";
+import { MoreVertical, Info, Printer, Trash2, FilePlus2, MessageCircle  , Pencil } from "lucide-react";
 
-const ActionCell = ({ row, onInfo, onPrint, onDelete, onGenerateInvoice, onWhatsApp, permissions = {} }) => {
+const ActionCell = ({ row, onInfo, onPrint, onDelete, onGenerateInvoice, onEdit,onWhatsApp, permissions = {} }) => {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const triggerRef = useRef(null);
@@ -64,6 +64,14 @@ const ActionCell = ({ row, onInfo, onPrint, onDelete, onGenerateInvoice, onWhats
       icon: <Info size={15} className="text-green-700" />,
       onClick: () => runAction(onInfo, row.original),
     },
+     ...(status !== "INVOICE_GENERATED" && permissions.edit
+      ? [{
+          key: "edit",
+          label: "Edit",
+          icon: <Pencil size={15} className="text-indigo-700" />,
+          onClick: () => runAction(onEdit, row.original),
+        }]
+      : []),
     {
       key: "print",
       label: "Print",
@@ -152,7 +160,7 @@ const StatusBadge = ({ status }) => {
 };
 
 // ── Columns ────────────────────────────────────────────────────────────────────
-export const columns = (onInfo, onPrint, onDelete, onGenerateInvoice, onWhatsApp, permissions = {}) => [
+export const columns = (onInfo, onPrint, onDelete, onGenerateInvoice, onWhatsApp, onEdit ,permissions = {}) => [
     {
     accessorKey: "sr_no",
     header: <FormattedMessage id="COMMON.SR_NO" defaultMessage="Sr No." />,
@@ -217,6 +225,7 @@ export const columns = (onInfo, onPrint, onDelete, onGenerateInvoice, onWhatsApp
         onDelete={onDelete}
         onGenerateInvoice={onGenerateInvoice}
         onWhatsApp={onWhatsApp}
+        onEdit={onEdit}
         permissions={permissions}
       />
     ),

@@ -126,7 +126,11 @@ const AutoManualPO = () => {
   };
 
   // ── Actions ────────────────────────────────────────────────────────────────
-
+const handleEdit = (item) => {
+  navigate("/stock-management/automanualpo/add", {
+    state: { editId: item.id },
+  });
+};
   // Opens the Info modal
 const handleInfo = async (item) => {
   const sotPoId = item?.id || item?.sotPoId;
@@ -320,9 +324,11 @@ const handleWhatsApp = (item) => {
     handleDelete,
     handleGenerateInvoice,
     handleWhatsApp,
+      handleEdit,
     {
       delete: permissions.delete,
       add: permissions.add,
+      edit: permissions.edit,
     }
   )}
   data={tableData}

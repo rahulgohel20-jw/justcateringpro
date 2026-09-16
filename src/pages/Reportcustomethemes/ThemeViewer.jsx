@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, Fragment } from "react";
 import { Container } from "@/components/container";
 import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
-import { Search, X } from "lucide-react";
-import { GetAllCustomTheme } from "@/services/apiServices";
+import { Search, X ,Upload, ImagePlus, Trash2} from "lucide-react";
+import { GetAllCustomTheme  , addUpdateNameplateImages } from "@/services/apiServices";
 import Swal from "sweetalert2";
 
 const ThemeViewer = ({
@@ -20,6 +20,11 @@ const ThemeViewer = ({
   const [templateList, setTemplateList] = useState([]);
   const [isLoading, setIsLoading]     = useState(false);
   const [searchTerm, setSearchTerm]   = useState("");
+const [uploadModalOpen, setUploadModalOpen] = useState(false);
+const [uploadTheme, setUploadTheme] = useState(null);
+const [selectedFiles, setSelectedFiles] = useState([]); // { file, previewUrl }
+const [uploading, setUploading] = useState(false);
+const [existingImages, setExistingImages] = useState([]);
 
   const userId      = localStorage.getItem("userId");
   const hasFetched  = useRef(false);
@@ -95,6 +100,110 @@ const ThemeViewer = ({
     setSelectedTheme(null);
   };
 
+  const openUploadModal = (theme) => {
+  setUploadTheme(theme);
+  setSelectedFiles([]);
+  setExistingImages(getExistingNamePlateImages(theme));
+  setUploadModalOpen(true);
+};
+
+const closeUploadModal = () => {
+  // revoke object URLs to avoid memory leaks
+  selectedFiles.forEach((f) => URL.revokeObjectURL(f.previewUrl));
+  setUploadModalOpen(false);
+  setUploadTheme(null);
+  setSelectedFiles([]);
+};
+
+const handleDeleteExistingImage = (id) => {
+  setExistingImages((prev) => prev.filter((img) => img.id !== id));
+};
+const handleFilesSelected = (e) => {
+  const files = Array.from(e.target.files || []);
+  const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+
+  if (imageFiles.length !== files.length) {
+    Swal.fire({
+      icon: "warning",
+      title: "Invalid file(s)",
+      text: "Only image files are allowed.",
+    });
+  }
+
+  const mapped = imageFiles.map((file) => ({
+    file,
+    previewUrl: URL.createObjectURL(file),
+  }));
+
+  setSelectedFiles((prev) => [...prev, ...mapped]);
+  e.target.value = ""; // allow re-selecting the same file
+};
+
+const handleRemoveFile = (index) => {
+  setSelectedFiles((prev) => {
+    const next = [...prev];
+    URL.revokeObjectURL(next[index].previewUrl);
+    next.splice(index, 1);
+    return next;
+  });
+};
+
+const handleUploadImages = async () => {
+  if (!uploadTheme || selectedFiles.length === 0) {
+    Swal.fire({
+      icon: "warning",
+      title: "No images selected",
+      text: "Please select at least one menu image to upload.",
+    });
+    return;
+  }
+
+  setUploading(true);
+  try {
+    const files = selectedFiles.map((f) => f.file);
+    const res = await addUpdateNameplateImages(uploadTheme.id, files);
+
+    const success = res?.data?.success ?? true;
+    if (!success) {
+      throw new Error(res?.data?.msg || "Upload failed");
+    }
+
+    Swal.fire({
+      icon: "success",
+      title: "Uploaded",
+      text: res?.data?.msg || "Menu images uploaded successfully.",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
+    closeUploadModal();
+    fetchTemplates();
+  } catch (error) {
+    console.error("Menu image upload failed:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Upload failed",
+      text: error?.response?.data?.msg || error?.message || "Failed to upload menu images.",
+    });
+  } finally {
+    setUploading(false);
+  }
+};
+// Add this near the top of the component, alongside other helpers
+const getExistingNamePlateImages = (theme) => {
+  const images = theme?.namePlateImages;
+  if (!images) return [];
+  if (Array.isArray(images)) {
+    return images.map((url, idx) => ({ id: idx + 1, url }));
+  }
+  return Object.entries(images).map(([id, url]) => ({ id, url }));
+};
+
+const getNamePlateImageUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return `${import.meta.env.VITE_API_BASE_URL || ""}${url.replace(/^D:/, "/")}`;
+};
   return (
     <Fragment>
       <Container>
@@ -167,22 +276,32 @@ const ThemeViewer = ({
 </span>
                     </div>
 
-                    {/* PDF button */}
-                    {theme.dummyPdf && (
-                      <div className="absolute top-2 right-2 z-10">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openPDF(theme); }}
-                          className="bg-white/80 hover:bg-white text-green-700 hover:text-green-900 p-2 rounded-full shadow-md transition"
-                          title="View PDF"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
+                  {/* PDF button */}
+{theme.dummyPdf && (
+  <div className="absolute top-2 right-10 z-10">
+    <button
+      onClick={(e) => { e.stopPropagation(); openPDF(theme); }}
+      className="bg-white/80 hover:bg-white text-green-700 hover:text-green-900 p-2 rounded-full shadow-md transition"
+      title="View PDF"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+      </svg>
+    </button>
+  </div>
+)}
 
+{/* Upload menu images button */}
+<div className="absolute top-2 right-2 z-10">
+  <button
+    onClick={(e) => { e.stopPropagation(); openUploadModal(theme); }}
+    className="bg-white/80 hover:bg-white text-[#005BA8] hover:text-[#004C8C] p-2 rounded-full shadow-md transition"
+    title="Upload Menu Images"
+  >
+    <Upload size={18} />
+  </button>
+</div>
                     {/* Image */}
                     <div className="h-[250px] w-full overflow-hidden bg-gray-100">
                       {theme.namePlateBg ? (
@@ -258,6 +377,127 @@ const ThemeViewer = ({
               </div>
             </div>
           )}
+
+          {/* ── Upload Menu Images Modal ── */}
+{/* ── Upload Menu Images Modal ── */}
+{uploadModalOpen && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden relative flex flex-col">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+        <div>
+          <h3 className="text-lg font-semibold text-[#002D62]">
+            Upload Menu Images
+          </h3>
+          <p className="text-sm text-gray-500">{uploadTheme?.name}</p>
+        </div>
+        <button
+          onClick={closeUploadModal}
+          className="bg-gray-200 hover:bg-gray-300 text-gray-700 p-2 rounded-full transition"
+        >
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-5">
+        {/* Existing menu images already on this theme */}
+       {existingImages.length > 0 && (
+  <div className="mb-5">
+    <label className="block text-sm font-medium text-gray-600 mb-2">
+      Existing Menu Images
+    </label>
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[260px] overflow-y-auto pr-1">
+      {existingImages.map(({ id, url }) => (
+        <div
+          key={id}
+          className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-50 group"
+        >
+          <img
+            src={getNamePlateImageUrl(url)}
+            alt={`Existing image ${id}`}
+            className="w-full h-28 object-contain"
+          />
+          <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+            #{id}
+          </span>
+          <button
+            type="button"
+            onClick={() => handleDeleteExistingImage(id)}
+            className="absolute top-1.5 right-1.5 bg-black/60 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
+            title="Remove image"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+        {/* Dropzone / file picker */}
+        <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 rounded-xl py-10 cursor-pointer hover:border-[#005BA8] hover:bg-blue-50/30 transition">
+          <ImagePlus size={32} className="text-gray-400" />
+          <span className="text-sm font-medium text-gray-600">
+            Click to select menu images
+          </span>
+          <span className="text-xs text-gray-400">PNG, JPG up to a few MB each</span>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFilesSelected}
+            className="hidden"
+          />
+        </label>
+
+        {/* Preview grid (newly selected files, not yet uploaded) */}
+        {selectedFiles.length > 0 && (
+          <div className="mb-1 mt-4">
+            <label className="block text-sm font-medium text-gray-600 mb-2">
+              New Images to Upload
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[320px] overflow-y-auto pr-1">
+              {selectedFiles.map((f, i) => (
+                <div key={i} className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-50 group">
+                  <img
+                    src={f.previewUrl}
+                    alt={f.file.name}
+                    className="w-full h-28 object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFile(i)}
+                    className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
+                    title="Remove"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-gray-50">
+        <button
+          type="button"
+          onClick={closeUploadModal}
+          className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-300"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleUploadImages}
+          disabled={uploading || selectedFiles.length === 0}
+          className="px-4 py-2 rounded-lg bg-[#005BA8] text-white text-sm font-medium hover:bg-[#004C8C] disabled:opacity-50"
+        >
+          {uploading ? "Uploading..." : `Upload ${selectedFiles.length || ""} Image${selectedFiles.length !== 1 ? "s" : ""}`}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
         </div>
       </Container>
     </Fragment>

@@ -11,6 +11,7 @@ import SelectMenureport from "../../partials/modals/menu-report/SelectMenureport
 import { FormattedMessage } from "react-intl";
 import { WhatsAppPdf } from "../../services/apiServices";
 import { Tooltip } from "antd";
+import dayjs from "dayjs";
 
 
 const WhatsAppIcon = () => (
@@ -80,6 +81,20 @@ const getCompanyAuthInfo = () => {
   } catch {
     return { companyMobileNo: "", companyName: "" };
   }
+};
+
+
+
+const formatWaDate = (dateTimeStr) => {
+  if (!dateTimeStr) return "";
+  const parsed = dayjs(dateTimeStr, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY"]);
+  return parsed.isValid() ? parsed.format("DD.MM.YYYY") : "";
+};
+
+const formatWaTime = (dateTimeStr) => {
+  if (!dateTimeStr) return "";
+  const parsed = dayjs(dateTimeStr, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY"]);
+  return parsed.isValid() ? parsed.format("hh:mm A") : "";
 };
 
 export default function SummaryItemModalOutsideAgency({
@@ -335,14 +350,41 @@ const notifyWhatsApp = async (url) => {
   if (actionType === "whatsapp") {
     await notifyWhatsApp(data?.data?.report_path);
   } else if (actionType === "whatsapp-web") {
-    const phone = item.number || item.mobile || item.contactNumber || "";
-    const greeting = item.contactName || "there";
-    const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${data?.data?.report_path}`;
-    window.open(
-      `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
-      "_blank"
-    );
-  } else {
+  const phone = item.number || item.mobile || item.contactNumber || "";
+  const greeting = (item.contactName || "THERE").toUpperCase();
+  const functionName = item.functionName || singleFunctionInfo?.functionName || "";
+  const functionDateTime = item.functionDateTime || singleFunctionInfo?.functionDateTime || "";
+  const venueName = item.venue || singleFunctionInfo?.venue || "";
+  const dateStr = formatWaDate(functionDateTime);
+  const timeStr = formatWaTime(functionDateTime);
+
+  const itemLines = (item.allocationItems || [])
+    .map((ai) => {
+      const qty = Number(ai.qty || 0).toFixed(2);
+      const unit = (ai.unitName || "").toUpperCase();
+      return `${(ai.itemName || "").toUpperCase()} for ${qty}${unit ? ` ${unit}` : ""}`;
+    })
+    .join("\n");
+
+  const messageLines = [
+    `TO ${greeting},`,
+    dateStr ? ` Date : ${dateStr} ` : null,
+    venueName && venueName !== "N/A" ? ` At Venue : ${venueName}` : null,
+    functionName
+      ? `${functionName.toUpperCase()} Ready${timeStr ? ` at ${timeStr}` : ""},Requirement :`
+      : null,
+    itemLines || null,
+    "",
+    data?.data?.report_path,
+  ].filter((line) => line !== null);
+
+  const message = messageLines.join("\n");
+
+  window.open(
+    `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
+    "_blank"
+  );
+} else {
     window.open(data?.data?.report_path, "_blank");
   }
 } else {
