@@ -55,7 +55,7 @@ const RawMaterial = () => {
 
   const FetchRawMaterial = (
     page = currentPage,
-    categoryId = categoryFilter || 0,
+    categoryId = 0,
     isAsc = sortOrder,
   ) => {
     if (abortControllerRef.current) {
@@ -65,7 +65,7 @@ const RawMaterial = () => {
     const signal = abortControllerRef.current.signal;
 
     setLoading(true);
-    GetAllRawMaterial(isAsc, page, ITEMS_PER_PAGE, categoryId, Id, signal)
+    GetAllRawMaterial(isAsc, page, ITEMS_PER_PAGE, categoryId, Id)
       .then((res) => {
         const data = res?.data?.data || {};
         setRawOriginalData(data["Raw Material Details"] || []);
@@ -97,7 +97,18 @@ const RawMaterial = () => {
   abortControllerRef.current = new AbortController();
   const signal = abortControllerRef.current.signal;
   setLoading(true);
-  SearchRawMaterial(isAsc, Id, page, ITEMS_PER_PAGE, searchTerm, categoryId)
+
+  SearchRawMaterial(
+    isAsc,
+    Id,
+    page,
+    ITEMS_PER_PAGE,
+    searchTerm,
+    signal,        // ✅ now actually passed as the signal
+    false,         // isPurchaseApproved
+    "",            // purchaseApproveId
+    categoryId,    // ✅ now actually lands in the categoryId param
+  )
     .then((res) => {
       if (signal.aborted) return;
       const data = res?.data?.data || {};

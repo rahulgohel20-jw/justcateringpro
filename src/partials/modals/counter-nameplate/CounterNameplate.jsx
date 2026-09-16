@@ -345,7 +345,7 @@ if (hasNamePlateImages && selectedNamePlateImageId != null) {
     </label>
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[380px] overflow-y-auto pr-1">
       {namePlateImageEntries.map(({ id, url }) => {
-        const imgUrl = getNamePlateImageUrl(url);
+        // const imgUrl = getNamePlateImageUrl(url);
         const isSelected = selectedNamePlateImageId === id;
         return (
           <button
@@ -357,7 +357,7 @@ if (hasNamePlateImages && selectedNamePlateImageId != null) {
             }`}
           >
             <img
-              src={imgUrl}
+              src={url}
               alt={`Name plate option ${id}`}
               className="w-full h-28 object-contain"
             />

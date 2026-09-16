@@ -208,29 +208,11 @@ export const SearchRawMaterial = (
   page,
   pageSize,
   itemName,
-  
   signal,
   isPurchaseApproved = false,
   purchaseApproveId = "",
   categoryId = 0,
 ) => {
-  let actualSignal = signal;
-  let actualIsPurchaseApproved = isPurchaseApproved;
-  let actualPurchaseApproveId = purchaseApproveId;
-  let actualCatId = catId || 0;
-
-  // Support case where catId is passed as 6th param
-  if (
-    typeof signal === "number" ||
-    (typeof signal === "string" && !isNaN(signal) && signal !== "")
-  ) {
-    actualCatId = signal;
-    actualSignal =
-      typeof isPurchaseApproved === "object" ? isPurchaseApproved : undefined;
-    actualIsPurchaseApproved =
-      typeof isPurchaseApproved === "boolean" ? isPurchaseApproved : false;
-  }
-
   return GET(
     `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=${categoryId}&unitid=0&userid=${Id}&isPurchaseApprove=${isPurchaseApproved}&purchaseApproveId=${purchaseApproveId}`,
     signal,
