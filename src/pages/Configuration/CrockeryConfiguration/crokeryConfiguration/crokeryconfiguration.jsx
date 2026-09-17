@@ -58,6 +58,45 @@ const resolveLocalizedRawMaterialName = (obj, lang) => {
   return obj.rawMaterialNameEnglish || "N/A";
 };
 
+const RawMaterialImage = ({ item, altText }) => {
+  const [hasError, setHasError] = useState(false);
+
+  const rawUrl =
+    item?.imageUrl || item?.file || item?.image || item?.imagePath;
+
+  const isValidUrl =
+    Boolean(rawUrl) &&
+    typeof rawUrl === "string" &&
+    rawUrl.trim() !== "" &&
+    rawUrl.trim() !== "null" &&
+    !rawUrl.endsWith("/null") &&
+    !rawUrl.endsWith("null") &&
+    !rawUrl.includes("null");
+
+  useEffect(() => {
+    setHasError(false);
+  }, [rawUrl]);
+
+  if (!isValidUrl || hasError) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 shrink-0 flex items-center justify-center text-gray-400">
+        <i className="ki-filled ki-picture text-xl text-gray-400"></i>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={rawUrl}
+      alt={altText || "Raw Material"}
+      className="w-12 h-12 rounded-lg object-cover border border-gray-200 shrink-0 bg-gray-50"
+      onError={() => {
+        setHasError(true);
+      }}
+    />
+  );
+};
+
 const CrokeyClutly = () => {
   const location = useLocation();
   const intl = useIntl();
@@ -761,14 +800,9 @@ const CrokeyClutly = () => {
           const item = row.original;
           return (
             <div className="flex items-center gap-3">
-              <img
-                src={item.imageUrl || "/placeholder-image.png"}
-                alt={getLocalizedRawMaterialName(item)}
-                className="w-12 h-12 rounded-lg object-cover border border-gray-200 shrink-0 bg-gray-50"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = "/placeholder-image.png";
-                }}
+              <RawMaterialImage
+                item={item}
+                altText={getLocalizedRawMaterialName(item)}
               />
               <div className="flex flex-col">
                 <span className="font-medium text-gray-800">
