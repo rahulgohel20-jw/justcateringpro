@@ -12,7 +12,8 @@ import {
   Fetchmanager,
   GetRawMaterialcategory,
   GetActiveFonts,
-  CustomPackagePdf
+  CustomPackagePdf,
+    getallmenuselecteditem,
 } from "@/services/apiServices";
 import { successMsgPopup, errorMsgPopup } from "../../../underConstruction";
 import { Worker, Viewer } from "@react-pdf-viewer/core";
@@ -520,28 +521,33 @@ if (!config) {
           setShowItemDropdown(false);
         }
 
-        if (isAdminModuleReport || agencyType == null) {
-          setisDropdownStatus(0);
-          setShowAgencyDropdown(false);
-          setShowItemDropdown(false);
-          setShowCategoryDropdown(false);
-        } else if (config.isAgency === 1 && config.isItem === 1) {
-          setisDropdownStatus(1);
-          setShowAgencyDropdown(true);
-          setShowItemDropdown(true);
-          setShowCategoryDropdown(false);
-        } else if (config.isAgency === 1) {
-          setisDropdownStatus(1);
-          setShowAgencyDropdown(true);
-          setShowCategoryDropdown(false);
-        } else if (config.isItem === 1) {
-          setisDropdownStatus(1);
-          setShowItemDropdown(true);
-          setShowCategoryDropdown(false);
-        }
+      if (isAdminModuleReport) {
+  setisDropdownStatus(0);
+  setShowAgencyDropdown(false);
+  setShowItemDropdown(false);
+  setShowCategoryDropdown(false);
+} else if (config.isRawMaterialCat === 1) {
+  setisDropdownStatus(1);
+  setShowCategoryDropdown(true);
+  setShowAgencyDropdown(false);
+  setShowItemDropdown(false);
+} else {
+  // Agency dropdown only makes sense when we actually have an agencyType
+  // to filter by — it stays independent of Item/Category below.
+  const canShowAgency = config.isAgency === 1 && agencyType != null;
+  const canShowItem = config.isItem === 1;
 
-        if (config.isDate === 1) setisDateStatus(1);
-        if (config.isStatus == 1) {
+  setShowAgencyDropdown(canShowAgency);
+  setShowItemDropdown(canShowItem);
+  setShowCategoryDropdown(false);
+  setisDropdownStatus(canShowAgency || canShowItem ? 1 : 0);
+}
+
+if (config.isDate === 1 || config.isStartDate === 1 || config.isEndDate === 1) {
+  setisDateStatus(1);
+} else {
+  setisDateStatus(0);
+}if (config.isStatus == 1) {
           setShowStatusDropdown(true);
           setSelectedStatus([0, 1, 2, 3]);
           setShowAgencyDropdown(false);
@@ -690,14 +696,14 @@ const agencyRes = await GetAgenciesForReportFilter(
 
     fetchAgencies();
   }, [
-    isModalOpen,
-    isDropdownStatus,
-    eventFunctionId,
-    eventId,
-    agencyType,
-    isAdminModuleReport,
-    preSelectedAgencyId,
-  ]);
+     isModalOpen,
+  showAgencyDropdown,
+  eventFunctionId,
+  eventId,
+  agencyType,
+  isAdminModuleReport,
+  preSelectedAgencyId,
+]);
 
   useEffect(() => {
     if (!isModalOpen || isAdminModuleReport) return;
@@ -760,47 +766,69 @@ useEffect(() => {
 }, [isModalOpen, isDropdownStatus, eventId, agencyType, userId]);
 
   useEffect(() => {
-    if (
-      !isModalOpen ||
-      isDropdownStatus !== 1 ||
-      selectedAgency.length === 0 ||
-      isAdminModuleReport
-    ) {
-      setItems([]);
-      setSelectedItems([]);
-      return;
-    }
+  if (!isModalOpen || isDropdownStatus !== 1 || !showItemDropdown || isAdminModuleReport) {
+    setItems([]);
+    setSelectedItems([]);
+    return;
+  }
 
-    const fetchItemsByAgency = async () => {
-      setLoadingFilters(true);
-      try {
-        const itemsRes = await GetSelectedItemsForReportFilter(
-          eventFunctionId,
-          eventId,
-          selectedAgency,
-        );
-        if (itemsRes?.data?.success && itemsRes?.data?.data) {
-          setItems(itemsRes.data.data);
-        } else {
-          setItems([]);
-        }
-      } catch (err) {
-        errorMsgPopup("Failed to load items");
-        setItems([]);
-      } finally {
-        setLoadingFilters(false);
+  // No Agency dropdown (e.g. date-driven configs, or any isItem-only config)
+  // → fetch all items via the simpler menu-preparation endpoint, no party filter.
+  const fetchWithoutAgencyFilter = !showAgencyDropdown;
+
+  if (!fetchWithoutAgencyFilter && selectedAgency.length === 0) {
+    setItems([]);
+    setSelectedItems([]);
+    return;
+  }
+
+  const singleFunctionId = Array.isArray(eventFunctionId)
+    ? (eventFunctionId.find((id) => id !== -1) ?? -1)
+    : (eventFunctionId ?? -1);
+
+ const fetchItems = async () => {
+  setLoadingFilters(true);
+  try {
+    const itemsRes = fetchWithoutAgencyFilter
+      ? await getallmenuselecteditem(eventId, singleFunctionId)
+      : await GetSelectedItemsForReportFilter(eventFunctionId, eventId, selectedAgency);
+
+    if (itemsRes?.data?.success && itemsRes?.data?.data) {
+      // getallmenuselecteditem returns menuItemId instead of id — normalize
+      // so the rest of the component (Select options, payload.itemId) can
+      // treat both endpoints' results the same way.
+      const normalizedItems = fetchWithoutAgencyFilter
+        ? itemsRes.data.data.map((i) => ({
+            ...i,
+            id: i.menuItemId,
+          }))
+        : itemsRes.data.data;
+
+      setItems(normalizedItems);
+      if (fetchWithoutAgencyFilter) {
+        setSelectedItems(normalizedItems.map((i) => i.id));
       }
-    };
-
-    fetchItemsByAgency();
-  }, [
-    isModalOpen,
-    isDropdownStatus,
-    eventFunctionId,
-    eventId,
-    selectedAgency,
-    isAdminModuleReport,
-  ]);
+    } else {
+      setItems([]);
+    }
+  } catch (err) {
+    errorMsgPopup("Failed to load items");
+    setItems([]);
+  } finally {
+    setLoadingFilters(false);
+  }
+};
+  fetchItems();
+}, [
+  isModalOpen,
+  isDropdownStatus,
+  showItemDropdown,
+  showAgencyDropdown,
+  eventFunctionId,
+  eventId,
+  selectedAgency,
+  isAdminModuleReport,
+]);
 
 
 const openWebWhatsApp = (mobile, recipientName) => {
@@ -963,8 +991,16 @@ const openWebWhatsApp = (mobile, recipientName) => {
       managerIds: selectedManager,
       itemId: selectedItems,
       rawMaterialCatIds: selectedCategory,
-      ...(adminStartDate && { startDate: formatAdminDate(adminStartDate) }),
-      ...(adminEndDate && { endDate: formatAdminDate(adminEndDate) }),
+      ...(adminStartDate
+  ? { startDate: formatAdminDate(adminStartDate) }
+  : startDate
+    ? { startDate: formatAdminDate(startDate) }
+    : {}),
+...(adminEndDate
+  ? { endDate: formatAdminDate(adminEndDate) }
+  : endDate
+    ? { endDate: formatAdminDate(endDate) }
+    : {}),
       ...(showStatusDropdown && { eventStatus: selectedStatus }),
 
       catFontId: catFontId || -1,
@@ -1365,7 +1401,7 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
     <div className="grid grid-cols-2 gap-4">
       <div>
         <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-          Start Date
+            Start Date <span className="text-red-500">*</span>
         </label>
         <input
           type="date"
@@ -1376,7 +1412,7 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
       </div>
       <div>
         <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-          End Date
+            End Date <span className="text-red-500">*</span>
         </label>
         <input
           type="date"
@@ -1397,74 +1433,62 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
                 showCategoryDropdown) && (
                 <div className="p-5 rounded-xl border-2">
                   <div className="grid grid-cols-2 gap-4">
-                    {showAgencyDropdown && (
-                      <>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-                            <TeamOutlined className="mr-1" />
-                            Agency
-                          </label>
-                          <Select
-                            mode="multiple"
-                            value={selectedAgency}
-                            onChange={setSelectedAgency}
-                            placeholder="Select agencies..."
-                            className="w-full"
-                            size="large"
-                            loading={loadingFilters}
-                            showSearch
-                            optionFilterProp="children"
-                            filterOption={(input, option) =>
-                              (option?.label ?? "")
-                                .toLowerCase()
-                                .includes(input.toLowerCase())
-                            }
-                            options={agencies.map((a) => ({
-                              value: a.id,
-                              label: a.nameEnglish,
-                            }))}
-                            getPopupContainer={() => document.body}
-  dropdownStyle={{ zIndex: 10000 }}
-                            maxTagCount="responsive"
-                            allowClear
-                          />
-                        </div>
-                        {showItemDropdown && (
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-                              <AppstoreOutlined className="mr-1" />
-                              Items
-                            </label>
-                            <Select
-                              mode="multiple"
-                              value={selectedItems}
-                              onChange={setSelectedItems}
-                              placeholder="Select items..."
-                              className="w-full"
-                              size="large"
-                              loading={loadingFilters}
-                              showSearch
-                              optionFilterProp="children"
-                              filterOption={(input, option) =>
-                                (option?.label ?? "")
-                                  .toLowerCase()
-                                  .includes(input.toLowerCase())
-                              }
-                              options={items.map((i) => ({
-                                value: i.id,
-                                label: i.nameEnglish,
-                              }))}
-                              getPopupContainer={() => document.body}
-  dropdownStyle={{ zIndex: 10000 }}
-                              maxTagCount="responsive"
-                              allowClear
-                              disabled={selectedAgency.length === 0}
-                            />
-                          </div>
-                        )}
-                      </>
-                    )}
+                   {showAgencyDropdown && (
+  <div>
+    <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+      <TeamOutlined className="mr-1" />
+      Agency
+    </label>
+    <Select
+      mode="multiple"
+      value={selectedAgency}
+      onChange={setSelectedAgency}
+      placeholder="Select agencies..."
+      className="w-full"
+      size="large"
+      loading={loadingFilters}
+      showSearch
+      optionFilterProp="children"
+      filterOption={(input, option) =>
+        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+      }
+      options={agencies.map((a) => ({ value: a.id, label: a.nameEnglish }))}
+      getPopupContainer={() => document.body}
+      dropdownStyle={{ zIndex: 10000 }}
+      maxTagCount="responsive"
+      allowClear
+    />
+  </div>
+)}
 
+{showItemDropdown && (
+  <div>
+    <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+      <AppstoreOutlined className="mr-1" />
+      Items <span className="text-red-500">*</span>
+    </label>
+    <Select
+      mode="multiple"
+      value={selectedItems}
+      onChange={setSelectedItems}
+      placeholder="Select items..."
+      className="w-full"
+      size="large"
+      loading={loadingFilters}
+      showSearch
+      optionFilterProp="children"
+      filterOption={(input, option) =>
+        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+      }
+      options={items.map((i) => ({ value: i.id, label: i.nameEnglish }))}
+      getPopupContainer={() => document.body}
+      dropdownStyle={{ zIndex: 10000 }}
+      maxTagCount="responsive"
+      allowClear
+      disabled={showAgencyDropdown && selectedAgency.length === 0}
+    />
+  </div>
+)}
                     {showCategoryDropdown && (
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">

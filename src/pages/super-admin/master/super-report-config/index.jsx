@@ -68,6 +68,8 @@ const SuperReportConfig = () => {
         isSignatureVisible:item.isSignatureVisible,
         showLastPage:item.showLastPage,
         isAllItemTogether:item.isAllItemTogether,
+        isStartDate:item.isStartDate,
+        isEndDate:item.isEndDate,
             }));
 
      
