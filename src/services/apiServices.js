@@ -2937,10 +2937,11 @@ export const reportpdfforrmdisposable = (
   lang,
   rawCategoryId,
   isAllItems,
-  isWithImage
+  isWithImage,
+  isTwoColumns = 0
 ) => {
   return GET(
-    `/event-rm-Disposable/pdf?eventId=${eventId}&isAllItems=${isAllItems}&isCompanyDetails=${isCompanyDetails}&isWithPrice=${isWithPrice}&lang=${lang}&rawCategoryId=${rawCategoryId}&userId=${userId}&isWithImage=${isWithImage}`,
+    `/event-rm-Disposable/pdf?eventId=${eventId}&isAllItems=${isAllItems}&isCompanyDetails=${isCompanyDetails}&isWithPrice=${isWithPrice}&lang=${lang}&rawCategoryId=${rawCategoryId}&userId=${userId}&isWithImage=${isWithImage}&isTwoColumns=${isTwoColumns}`,
   );
 };
 

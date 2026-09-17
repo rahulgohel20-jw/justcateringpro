@@ -1407,26 +1407,15 @@ setInstructionHindi(editData.instructionHindi || "");
                   Unit
                 </label>
                 <Select
-                  placeholder="Select Unit"
-                  className="bg-[#F8FAFC] h-10"
-                  value={unit}
-                  onChange={(value) => {
-                    const raw = rawmaterialList.find(
-                      (r) => String(r.rawMaterialId) === String(selectedRaw),
-                    );
-                    if (raw && unit && weight) {
-                      const converted = convertWeightBetweenUnits(
-                        raw,
-                        parseFloat(weight),
-                        unit,
-                        value,
-                      );
-                      setWeight(String(converted));
-                    }
-                    setUnit(value);
-                  }}
-                  options={unitOptions}
-                />
+  placeholder="Select Unit"
+  className="bg-[#F8FAFC] h-10"
+  value={unit}
+  onChange={(value) => {
+    // Just switch the unit — don't touch the weight value the user typed
+    setUnit(value);
+  }}
+  options={unitOptions}
+/>
               </div>
             </div>
 

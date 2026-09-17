@@ -58,6 +58,45 @@ const resolveLocalizedRawMaterialName = (obj, lang) => {
   return obj.rawMaterialNameEnglish || "N/A";
 };
 
+const RawMaterialImage = ({ item, altText }) => {
+  const [hasError, setHasError] = useState(false);
+
+  const rawUrl =
+    item?.imageUrl || item?.file || item?.image || item?.imagePath;
+
+  const isValidUrl =
+    Boolean(rawUrl) &&
+    typeof rawUrl === "string" &&
+    rawUrl.trim() !== "" &&
+    rawUrl.trim() !== "null" &&
+    !rawUrl.endsWith("/null") &&
+    !rawUrl.endsWith("null") &&
+    !rawUrl.includes("null");
+
+  useEffect(() => {
+    setHasError(false);
+  }, [rawUrl]);
+
+  if (!isValidUrl || hasError) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 shrink-0 flex items-center justify-center text-gray-400">
+        <i className="ki-filled ki-picture text-xl text-gray-400"></i>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={rawUrl}
+      alt={altText || "Raw Material"}
+      className="w-12 h-12 rounded-lg object-cover border border-gray-200 shrink-0 bg-gray-50"
+      onError={() => {
+        setHasError(true);
+      }}
+    />
+  );
+};
+
 const CrokeyClutly = () => {
   const location = useLocation();
   const intl = useIntl();
@@ -84,6 +123,7 @@ const CrokeyClutly = () => {
   const [isCompanyDetails, setIsCompanyDetails] = useState(false);
   const [isWithImage, setIsWithImage] = useState(false);
   const [isWithPrice, setIsWithPrice] = useState(false);
+  const [isTwoColumns, setIsTwoColumns] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("english");
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
@@ -672,15 +712,20 @@ const CrokeyClutly = () => {
           ? -1
           : reportCategoryId;
 
+      const twoCols = isTwoColumns ? 1 : 0;
+      const withPrice = twoCols === 1 ? 0 : isWithPrice ? 1 : 0;
+      const withImage = twoCols === 1 ? 0 : isWithImage ? 1 : 0;
+
       const res = await reportpdfforrmdisposable(
         eventId,
         isCompanyDetails ? 1 : 0,
-        isWithPrice ? 1 : 0,
+        withPrice,
         userId,
         lang,
         rawCategoryId,
         isAllItems,
-        isWithImage ? 1 : 0,
+        withImage,
+        twoCols,
       );
 
       const url =
@@ -755,14 +800,9 @@ const CrokeyClutly = () => {
           const item = row.original;
           return (
             <div className="flex items-center gap-3">
-              <img
-                src={item.imageUrl || "/placeholder-image.png"}
-                alt={getLocalizedRawMaterialName(item)}
-                className="w-12 h-12 rounded-lg object-cover border border-gray-200 shrink-0 bg-gray-50"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = "/placeholder-image.png";
-                }}
+              <RawMaterialImage
+                item={item}
+                altText={getLocalizedRawMaterialName(item)}
               />
               <div className="flex flex-col">
                 <span className="font-medium text-gray-800">
@@ -1127,6 +1167,8 @@ const CrokeyClutly = () => {
                 setReportCategoryId(ALL_CATEGORY_VALUE);
                 setIsAllItemsReport(true);
                 setIsWithImage(false);
+                setIsWithPrice(false);
+                setIsTwoColumns(false);
 
                 setShowPdfConfigModal(true);
               }}
@@ -1425,7 +1467,15 @@ const CrokeyClutly = () => {
             </div>
             <button
               type="button"
-              onClick={() => setIsWithPrice((v) => !v)}
+              onClick={() => {
+                setIsWithPrice((prev) => {
+                  const next = !prev;
+                  if (next) {
+                    setIsTwoColumns(false);
+                  }
+                  return next;
+                });
+              }}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
                 isWithPrice ? "bg-primary" : "bg-gray-300"
               }`}
@@ -1455,7 +1505,15 @@ const CrokeyClutly = () => {
             </div>
             <button
               type="button"
-              onClick={() => setIsWithImage((v) => !v)}
+              onClick={() => {
+                setIsWithImage((prev) => {
+                  const next = !prev;
+                  if (next) {
+                    setIsTwoColumns(false);
+                  }
+                  return next;
+                });
+              }}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
                 isWithImage ? "bg-primary" : "bg-gray-300"
               }`}
@@ -1463,6 +1521,45 @@ const CrokeyClutly = () => {
               <span
                 className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
                   isWithImage ? "translate-x-5" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">
+                <FormattedMessage
+                  id="CROCKERY.TWO_COLUMNS"
+                  defaultMessage="Two Columns"
+                />
+              </p>
+              <p className="text-xs text-gray-500">
+                <FormattedMessage
+                  id="CROCKERY.TWO_COLUMNS_DESC"
+                  defaultMessage="Include two columns format on the report"
+                />
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsTwoColumns((prev) => {
+                  const next = !prev;
+                  if (next) {
+                    setIsWithPrice(false);
+                    setIsWithImage(false);
+                  }
+                  return next;
+                });
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                isTwoColumns ? "bg-primary" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
+                  isTwoColumns ? "translate-x-5" : "translate-x-1"
                 }`}
               />
             </button>
