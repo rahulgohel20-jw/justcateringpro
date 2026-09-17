@@ -2532,6 +2532,8 @@
 "CROCKERY.WITH_PRICE_DESC": "રિપોર્ટમાં આઇટમની કિંમતો શામેલ કરો",
 "CROCKERY.WITH_IMAGE": "ઈમેજ સાથે",
 "CROCKERY.WITH_IMAGE_DESC": "રિપોર્ટમાં આઇટમની ઈમેજ શામેલ કરો",
+"CROCKERY.TWO_COLUMNS": "બે કૉલમ",
+"CROCKERY.TWO_COLUMNS_DESC": "રિપોર્ટમાં બે કૉલમ ફોર્મેટ શામેલ કરો",
 "CROCKERY.ALL_ITEMS": "બધી આઇટમ",
 "CROCKERY.ALL_ITEMS_DESC": "ફક્ત પસંદ કરેલી કેટેગરી જ નહીં, પરંતુ દરેક કેટેગરીની આઇટમ શામેલ કરો",
 "CROCKERY.GENERATE_REPORT": "રિપોર્ટ જનરેટ કરો",
