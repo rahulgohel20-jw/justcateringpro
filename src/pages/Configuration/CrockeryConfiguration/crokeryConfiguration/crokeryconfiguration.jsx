@@ -84,6 +84,7 @@ const CrokeyClutly = () => {
   const [isCompanyDetails, setIsCompanyDetails] = useState(false);
   const [isWithImage, setIsWithImage] = useState(false);
   const [isWithPrice, setIsWithPrice] = useState(false);
+  const [isTwoColumns, setIsTwoColumns] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("english");
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [categorySearchTerm, setCategorySearchTerm] = useState("");
@@ -672,15 +673,20 @@ const CrokeyClutly = () => {
           ? -1
           : reportCategoryId;
 
+      const twoCols = isTwoColumns ? 1 : 0;
+      const withPrice = twoCols === 1 ? 0 : isWithPrice ? 1 : 0;
+      const withImage = twoCols === 1 ? 0 : isWithImage ? 1 : 0;
+
       const res = await reportpdfforrmdisposable(
         eventId,
         isCompanyDetails ? 1 : 0,
-        isWithPrice ? 1 : 0,
+        withPrice,
         userId,
         lang,
         rawCategoryId,
         isAllItems,
-        isWithImage ? 1 : 0,
+        withImage,
+        twoCols,
       );
 
       const url =
@@ -1127,6 +1133,8 @@ const CrokeyClutly = () => {
                 setReportCategoryId(ALL_CATEGORY_VALUE);
                 setIsAllItemsReport(true);
                 setIsWithImage(false);
+                setIsWithPrice(false);
+                setIsTwoColumns(false);
 
                 setShowPdfConfigModal(true);
               }}
@@ -1425,7 +1433,15 @@ const CrokeyClutly = () => {
             </div>
             <button
               type="button"
-              onClick={() => setIsWithPrice((v) => !v)}
+              onClick={() => {
+                setIsWithPrice((prev) => {
+                  const next = !prev;
+                  if (next) {
+                    setIsTwoColumns(false);
+                  }
+                  return next;
+                });
+              }}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
                 isWithPrice ? "bg-primary" : "bg-gray-300"
               }`}
@@ -1455,7 +1471,15 @@ const CrokeyClutly = () => {
             </div>
             <button
               type="button"
-              onClick={() => setIsWithImage((v) => !v)}
+              onClick={() => {
+                setIsWithImage((prev) => {
+                  const next = !prev;
+                  if (next) {
+                    setIsTwoColumns(false);
+                  }
+                  return next;
+                });
+              }}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
                 isWithImage ? "bg-primary" : "bg-gray-300"
               }`}
@@ -1463,6 +1487,45 @@ const CrokeyClutly = () => {
               <span
                 className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
                   isWithImage ? "translate-x-5" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">
+                <FormattedMessage
+                  id="CROCKERY.TWO_COLUMNS"
+                  defaultMessage="Two Columns"
+                />
+              </p>
+              <p className="text-xs text-gray-500">
+                <FormattedMessage
+                  id="CROCKERY.TWO_COLUMNS_DESC"
+                  defaultMessage="Include two columns format on the report"
+                />
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setIsTwoColumns((prev) => {
+                  const next = !prev;
+                  if (next) {
+                    setIsWithPrice(false);
+                    setIsWithImage(false);
+                  }
+                  return next;
+                });
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
+                isTwoColumns ? "bg-primary" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
+                  isTwoColumns ? "translate-x-5" : "translate-x-1"
                 }`}
               />
             </button>

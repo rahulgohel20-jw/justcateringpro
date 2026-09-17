@@ -2627,6 +2627,8 @@
 "CROCKERY.WITH_PRICE_DESC": "रिपोर्ट में आइटम की कीमतें शामिल करें",
 "CROCKERY.WITH_IMAGE": "इमेज सहित",
 "CROCKERY.WITH_IMAGE_DESC": "रिपोर्ट में आइटम की इमेज शामिल करें",
+"CROCKERY.TWO_COLUMNS": "दो कॉलम",
+"CROCKERY.TWO_COLUMNS_DESC": "रिपोर्ट में दो कॉलम प्रारूप शामिल करें",
 "CROCKERY.ALL_ITEMS": "सभी आइटम",
 "CROCKERY.ALL_ITEMS_DESC": "केवल चुनी हुई श्रेणी ही नहीं, बल्कि हर श्रेणी के आइटम शामिल करें",
 "CROCKERY.GENERATE_REPORT": "रिपोर्ट जनरेट करें",
