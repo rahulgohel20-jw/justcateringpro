@@ -3862,3 +3862,7 @@ export const addupdateguesign = (eventId, eventFunctionId, data) => {
 export const getreportguestsign = (eventId, isCompanyDetails, userId) => {
   return GET(`/guest-signature/generate-guest-signature-report?eventId=${eventId}&isCompanyDetails=${isCompanyDetails}&userId=${userId}`);
 };
+
+export const getallmenuselecteditem = (eventId , eventFunctionId ) => {
+  return GET(`/menupreparation/getAllMenuPreparationItems?eventId=${eventId}&eventFunctionId=${eventFunctionId}`);
+};
