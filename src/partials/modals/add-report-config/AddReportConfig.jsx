@@ -58,6 +58,8 @@ const defaultOptions = {
   showLastPage:false,
   showAddOnLabel:false,
   isAllItemTogether:false,
+  isEndDate:false,
+  isStartDate:false,
 };
 
 const optionLabels = {
@@ -110,6 +112,8 @@ const optionLabels = {
   withOutBg : "With Out Background",
   withVendor : "With Vendor",
   isAllItemTogether : "Is All Item Together",
+  isEndDate : "Is End Date",
+  isStartDate : "Is start Date",
 };
 
 const AddReportConfig = ({
@@ -254,7 +258,8 @@ const AddReportConfig = ({
             withOutBg: !!data.withOutBg,
             withVendor: !!data.withVendor,
             isAllItemTogether: !!data.isAllItemTogether,
-           
+           isStartDate: !!data.isStartDate,
+           isEndDate: !!data.isEndDate,
           });
         }
       } catch (error) {
@@ -386,6 +391,8 @@ const AddReportConfig = ({
     withOutBg:booleanToNumber(options.withOutBg),
     withVendor:booleanToNumber(options.withVendor),
     isAllItemTogether:booleanToNumber(options.isAllItemTogether),
+    isStartDate:booleanToNumber(options.isStartDate),
+    isEndDate:booleanToNumber(options.isEndDate),
     };
 
     try {
