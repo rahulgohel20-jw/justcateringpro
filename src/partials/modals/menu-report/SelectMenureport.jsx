@@ -715,7 +715,26 @@ else if (selectedTab?.nameEnglish === "Raw Material Theme") {
                     return false;
                   }
                   // for arroma new type 
-if (template.type === "Type 19" || template.type === "Type 20") {
+// if (template.type === "Type 19" || template.type === "Type 20") {
+//   if (location.pathname.includes("/menu-preparation/")) {
+//     return false;
+//   }
+//   if (!location.pathname.includes("master/custom-package")) {
+//     return false;
+//   }
+// }
+//  // Aroma Caterers (userId 359) requirement: in Custom Package mode,
+// if (mode === "package" && String(userId) === "359") {
+//   if (template.type !== "Type 19" && template.type !== "Type 20") {
+//     return false;
+//   }
+// }
+
+// for arroma new type — only relevant within the Exclusive Theme tab
+if (
+  tabName === "Exclusive Theme" &&
+  (template.type === "Type 19" || template.type === "Type 20")
+) {
   if (location.pathname.includes("/menu-preparation/")) {
     return false;
   }
@@ -723,13 +742,12 @@ if (template.type === "Type 19" || template.type === "Type 20") {
     return false;
   }
 }
- // Aroma Caterers (userId 359) requirement: in Custom Package mode,
+// Aroma Caterers (userId 359) requirement: in Custom Package mode,
 if (mode === "package" && String(userId) === "359") {
   if (template.type !== "Type 19" && template.type !== "Type 20") {
     return false;
   }
 }
-
 
                   if (allowedTemplateIds === null) return true;
 
