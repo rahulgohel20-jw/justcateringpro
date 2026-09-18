@@ -3900,3 +3900,7 @@ export const GetEventByFilter = (endDate, eventDate, eventStatus, partyName, sta
 
   return GET(`/eventmaster/getalleventbyfilter?${params.toString()}`);
 };
+
+export const getpdfpurchaseapproval = (purchaseApprovalRequestId , userId) => {
+  return GET(`purchase-approval/purchase-approval-sheet-report?purchaseApprovalRequestId=${purchaseApprovalRequestId}&userId=${userId}`);
+};
