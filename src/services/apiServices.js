@@ -3867,3 +3867,7 @@ export const getreportguestsign = (eventId, isCompanyDetails, userId) => {
 export const getallmenuselecteditem = (eventId , eventFunctionId ) => {
   return GET(`/menupreparation/getAllMenuPreparationItems?eventId=${eventId}&eventFunctionId=${eventFunctionId}`);
 };
+
+export const getpdfpurchaseapproval = (purchaseApprovalRequestId , userId) => {
+  return GET(`purchase-approval/purchase-approval-sheet-report?purchaseApprovalRequestId=${purchaseApprovalRequestId}&userId=${userId}`);
+};

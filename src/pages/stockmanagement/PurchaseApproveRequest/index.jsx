@@ -17,7 +17,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import { FormattedMessage } from "react-intl";
 import Swal from "sweetalert2";
 // TODO: adjust this import path to match your actual project structure
-import { getallpurchasereport , getpurchaseapprovalbyid  } from "@/services/apiServices";
+import { getallpurchasereport , getpurchaseapprovalbyid , getpdfpurchaseapproval   } from "@/services/apiServices";
 
 const STATUS_STYLES = {
   Pending: "bg-yellow-100 text-yellow-700",
@@ -40,6 +40,7 @@ const [viewLoading, setViewLoading] = useState(false);
 const [statusFilter, setStatusFilter] = useState("ALL"); // ALL | PENDING | APPROVED | REJECTED
   const navigate = useNavigate();
   const permissions = usePermission("Purchase Approve Request");
+  const [printingId, setPrintingId] = useState(null);
 
   // userId lives in localStorage per project convention
   const userId = localStorage.getItem("mainId");
@@ -124,9 +125,40 @@ const handleEdit = (id) => {
   }
 };
 
-  const handlePrint = (id) => {
-    console.log("Print request", id);
-  };
+  const handlePrint = async (id) => {
+  try {
+    setPrintingId(id);
+    const res = await getpdfpurchaseapproval(id, userId);
+
+    const contentType = res?.headers?.["content-type"] || "";
+    if (contentType.includes("application/json")) {
+      const url = res?.data?.report_path || res?.data?.data || res?.data?.url;
+      if (url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: res?.data?.msg || "Report generated, but no file URL was returned.",
+        });
+      }
+    } else {
+      // Fallback: API streamed a file/blob directly
+      const blob = new Blob([res.data], { type: contentType || "application/pdf" });
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank", "noopener,noreferrer");
+    }
+  } catch (err) {
+    console.error("Failed to generate purchase approval sheet:", err);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: err?.response?.data?.message || "Failed to generate the report.",
+    });
+  } finally {
+    setPrintingId(null);
+  }
+};
 
   const handleDelete = (id) => {
     console.log("Delete request", id);
@@ -256,7 +288,22 @@ const isApproved = String(request.status ?? "").toUpperCase() === "APPROVED";
 >
   <i className="ki-filled ki-eye text-success"></i>
 </button>
+
           )}
+
+           <button
+          onClick={() => handlePrint(request.id)}
+          disabled={printingId === request.id}
+          className="text-slate-400 hover:text-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Print"
+        >
+          {printingId === request.id ? (
+            <Spin size="small" />
+          ) : (
+            <Printer size={16} />
+          )}
+        </button>
+
              {!isApproved && permissions.edit && (
               
                 <button
@@ -283,8 +330,7 @@ const isApproved = String(request.status ?? "").toUpperCase() === "APPROVED";
         },
       },
     ],
-    [currentPage, pageSize, permissions],
-  );
+  [currentPage, pageSize, permissions, printingId],  );
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden px-6 font-sans">
