@@ -1130,6 +1130,13 @@ export const GetAllVendorPayment = (eventId, isLabour) => {
   );
 };
 
+export const GetAllPaymentDetails = (userId, isPayable ) => {
+  return GET(
+    `/vendorpayment/getallvendorpayment?userId=${userId}&isPayable=${isPayable}`,
+  );
+};
+
+
 export const GeteventInvoicedata = (id) => {
   return GET(`/eventmaster/getallbypartyid?partyId=${id}`);
 };
@@ -3877,6 +3884,21 @@ export const getreportguestsign = (eventId, isCompanyDetails, userId) => {
 
 export const getallmenuselecteditem = (eventId , eventFunctionId ) => {
   return GET(`/menupreparation/getAllMenuPreparationItems?eventId=${eventId}&eventFunctionId=${eventFunctionId}`);
+};
+
+
+export const GetEventByFilter = (endDate, eventDate, eventStatus, partyName, startDate, userId) => {
+  const params = new URLSearchParams({
+    userId,
+    startDate,
+    endDate,
+    eventDate: eventDate ?? "", // required — fall back to range start if none given
+    eventStatus: eventStatus ?? "", // required — send even if empty, see note below
+  });
+
+  if (partyName) params.append("partyName", partyName);
+
+  return GET(`/eventmaster/getalleventbyfilter?${params.toString()}`);
 };
 
 export const getpdfpurchaseapproval = (purchaseApprovalRequestId , userId) => {
