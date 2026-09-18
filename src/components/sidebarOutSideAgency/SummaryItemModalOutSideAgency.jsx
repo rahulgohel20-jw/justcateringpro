@@ -374,8 +374,8 @@ const notifyWhatsApp = async (url) => {
       ? `${functionName.toUpperCase()} Ready${timeStr ? ` at ${timeStr}` : ""},Requirement :`
       : null,
     itemLines || null,
-    "",
-    data?.data?.report_path,
+    // "",
+    // data?.data?.report_path,
   ].filter((line) => line !== null);
 
   const message = messageLines.join("\n");

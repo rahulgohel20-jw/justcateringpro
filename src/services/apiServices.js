@@ -1901,9 +1901,20 @@ export const GetCopyItem = (userId, isCaptainRecipe ) => {
   return GET(`/menuitems/getallexistingrawitems?userId=${userId}&isCaptainRecipe=${isCaptainRecipe}`);
 };
 
-export const Getpaymentvendordata = (eventId, isPayable, userId, vendorId) => {
+export const Getpaymentvendordata = (eventId, isPayable, userId, vendorId, vendorName) => {
+  const params = new URLSearchParams({
+    eventId,
+    isPayable,
+    userId,
+    vendorId,
+  });
+
+  if (vendorName) {
+    params.append("vendorName", vendorName);
+  }
+
   return GET(
-    `/vendorpayment/getvendorpaymentbyeventidandvendorid?eventId=${eventId}&isPayable=${isPayable}&userId=${userId}&vendorId=${vendorId}`,
+    `/vendorpayment/getvendorpaymentbyeventidandvendorid?${params.toString()}`,
   );
 };
 
