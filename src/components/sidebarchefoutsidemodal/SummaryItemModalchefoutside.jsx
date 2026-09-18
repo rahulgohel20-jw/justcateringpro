@@ -515,7 +515,7 @@ if (data?.data?.success) {
     functionName ? `${functionName.toUpperCase()}${timeStr ? ` at ${timeStr}` : ""} Ready,` : null,
     itemLines || null,
     "",
-    data?.data?.report_path,
+    // data?.data?.report_path,
   ].filter((line) => line !== null);
 
   const message = messageLines.join("\n");
