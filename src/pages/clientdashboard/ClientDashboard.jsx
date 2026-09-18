@@ -24,12 +24,13 @@ import {
   GetClientdashboardpiechart1,
   GetClientdashboardpiechart2,
   GetClientdashboardpiechart3,
-  GetClienteventdata,
+   GetEventByFilter,
   GetAllInvoicedatabyfilter,
   Getmostsellingitems,
 } from "@/services/apiServices";
 import dayjs from "dayjs";
 import { DatePicker } from "antd";
+import EventStatusDropdown from "../../components/dropdowns/EventStatusDropdown";
 
 const { RangePicker } = DatePicker;
 
@@ -89,6 +90,7 @@ const ClientDashboard = () => {
   const [showInvoiceAmount, setShowInvoiceAmount] = useState(false);
   const [showQuotationAmount, setShowQuotationAmount] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [eventStatus, setEventStatus] = useState("");
   const authData = JSON.parse(localStorage.getItem("auth-storage") || "{}");
 
 const roleId =
@@ -184,31 +186,40 @@ const roleId =
     setIsChartLoading(false);
   };
 
-  // ---------------- EVENTS ----------------
-  const fetchEventData = async (range) => {
-    setIsLoadingEvents(true);
 
-    const { startDate, endDate } =
-      range === "custom"
-        ? getDateRange("custom", customEventDates)
-        : getDateRange(range);
+const fetchEventData = async (range, partyName = "", status = eventStatus) => {
+  setIsLoadingEvents(true);
 
-    const res = await GetClienteventdata(startDate, endDate, userId);
-    const list = res?.data?.data || [];
+  const { startDate, endDate } =
+    range === "custom"
+      ? getDateRange("custom", customEventDates)
+      : getDateRange(range);
 
-    setEventData(
-      list.map((cust, i) => ({
-        Invoice: i + 1,
-        CustomerName: cust.userFullName,
-        Eventname: cust.eventName,
-        eventDate: cust.eventStartDateTime,
-        Venue: cust.venueName,
-        status: cust.status,
-      })),
-    );
-    setIsLoadingEvents(false);
-  };
+  const res = await GetEventByFilter(
+    endDate,
+    "",
+    status || -1,
+    partyName || undefined,
+    startDate,
+    userId,
+  );
 
+  const todayEvents = res?.data?.data?.TodayEvents || [];
+  const upcomingEvents = res?.data?.data?.UpCommingEvents || [];
+  const list = [...todayEvents, ...upcomingEvents]; // or keep them separate if the UI needs to distinguish
+
+  setEventData(
+    list.map((cust, i) => ({
+      Invoice: i + 1,
+      CustomerName: cust.party?.nameEnglish, // note: no top-level "userFullName" in this shape
+      Eventname: cust.eventType?.nameEnglish, // no top-level "eventName" either
+      eventDate: cust.eventStartDateTime,
+      Venue: cust.venue?.nameEnglish ?? cust.banquetHallName,
+      status: cust.status,
+    })),
+  );
+  setIsLoadingEvents(false);
+};
   // ---------------- INVOICES ----------------
   const fetchInvoices = async (range) => {
     const { startDate, endDate } =
@@ -262,21 +273,26 @@ const roleId =
 
   // ---------------- EFFECTS ----------------
   // Initial load
-  useEffect(() => {
-    fetchdashboarddata();
-    // load charts initially with "today"
-    handlePeriodChange("month", "expense");
-    handlePeriodChange("month", "invoice");
-    fetchEventData("month");
-    fetchInvoices("month");
-    fetchMostSelling("month");
-  }, []);
+// initial load — pass no search term
+useEffect(() => {
+  fetchdashboarddata();
+  handlePeriodChange("month", "expense");
+  handlePeriodChange("month", "invoice");
+  fetchEventData("month", "", eventStatus); 
+  fetchInvoices("month");
+  fetchMostSelling("month");
+}, []);
 
   // debounce search listeners
-  useEffect(() => {
-    const handler = debounce((v) => setEventSearch(v));
-    handler(eventSearchInput);
-  }, [eventSearchInput]);
+// debounce search listeners — now triggers a real fetch instead of client filtering
+useEffect(() => {
+  const handler = debounce((v) => {
+    setEventSearch(v);
+    fetchEventData(eventDateRange, v);
+  }, 400);
+  handler(eventSearchInput);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [eventSearchInput]);
 
   useEffect(() => {
     const handler = debounce((v) => setInvoiceSearch(v));
@@ -289,8 +305,10 @@ const roleId =
   }, [itemSearchInput]);
 
   const handleEventCustomApply = () => {
-    if (customEventDates) fetchEventData("custom");
-  };
+  if (customEventDates) fetchEventData("custom", eventSearch);
+};
+
+
   const handleInvoiceCustomApply = () => {
     if (customInvoiceDates) fetchInvoices("custom");
   };
@@ -712,22 +730,31 @@ const roleId =
               />
 
               <select
-                className="border rounded px-3 py-2 text-sm cursor-pointer h-10"
-                value={eventDateRange}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setEventDateRange(value);
+  className="border rounded px-3 py-2 text-sm cursor-pointer h-10"
+  value={eventDateRange}
+  onChange={(e) => {
+    const value = e.target.value;
+    setEventDateRange(value);
 
-                  if (value !== "custom") {
-                    fetchEventData(value);
-                  }
-                }}
-              >
+    if (value !== "custom") {
+      fetchEventData(value, eventSearch);
+    }
+  }}
+>
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
                 <option value="month">This Month</option>
                 <option value="custom">Custom Range</option>
               </select>
+
+              <EventStatusDropdown
+  value={eventStatus}
+  onChange={(e) => {
+    const val = e.target.value;
+    setEventStatus(val);
+    fetchEventData(eventDateRange, eventSearch, val);
+  }}
+/>
 
               {eventDateRange === "custom" && (
                 <>
@@ -745,15 +772,15 @@ const roleId =
               )}
 
               <button
-                className="p-2 rounded-lg border bg-white shadow-sm"
-                onClick={() =>
-                  eventDateRange === "custom"
-                    ? fetchEventData("custom")
-                    : fetchEventData(eventDateRange)
-                }
-              >
-                <RefreshCcw className="w-4 h-4" />
-              </button>
+  className="p-2 rounded-lg border bg-white shadow-sm"
+  onClick={() =>
+    eventDateRange === "custom"
+      ? fetchEventData("custom", eventSearch)
+      : fetchEventData(eventDateRange, eventSearch)
+  }
+>
+  <RefreshCcw className="w-4 h-4" />
+</button>
             </div>
           </div>
 
@@ -764,10 +791,10 @@ const roleId =
           ) : (
             <div className="overflow-x-auto">
               <TableComponent
-                columns={columns}
-                data={filteredEvents}
-                paginationSize={10}
-              />
+  columns={columns}
+  data={eventData}
+  paginationSize={10}
+/>
             </div>
           )}
         </div>

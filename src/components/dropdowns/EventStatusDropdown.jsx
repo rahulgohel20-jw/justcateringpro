@@ -52,14 +52,15 @@ const EventStatusDropdown = ({ value, onChange, ...rest }) => {
   };
 
   return (
-    <SelectDropdown
-      value={value} // "0" | "1" | "2" | "3"
-      onChange={handleChange}
-      staticOptions={STATUS_OPTIONS}
-      placeholder="Please select"
-      {...rest}
-    />
-  );
+  <SelectDropdown
+    value={value}
+    onChange={handleChange}
+    staticOptions={STATUS_OPTIONS}
+    placeholder="Please select"
+    className="min-w-[140px]"
+    {...rest}
+  />
+);
 };
 
 export default EventStatusDropdown;

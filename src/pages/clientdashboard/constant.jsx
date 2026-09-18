@@ -3,32 +3,45 @@ import { DataGridColumnHeader } from "@/components";
 import { FormattedMessage } from "react-intl";
 
 // Status Badge Component
-const StatusBadge = ({ status }) => {
-  const statusConfig = {
-    Confirmed: {
-      bgColor: "bg-green-100",
-      textColor: "text-green-700",
-      borderColor: "border-green-300",
-    },
-    Inquiry: {
-      bgColor: "bg-blue-100",
-      textColor: "text-blue-700",
-      borderColor: "border-gray-300",
-    },
-    Cancelled: {
-      bgColor: "bg-red-100",
-      textColor: "text-red-700",
-      borderColor: "border-red-300",
-    },
-  };
+const STATUS_MAP = {
+  0: "Inquiry",
+  1: "Confirmed",
+  2: "Cancelled",
+  3: "Tentative",
+};
 
-  const config = statusConfig[status] || statusConfig.Inquiry;
+const statusConfig = {
+  Confirmed: {
+    bgColor: "bg-green-100",
+    textColor: "text-green-700",
+    borderColor: "border-green-300",
+  },
+  Inquiry: {
+    bgColor: "bg-blue-100",
+    textColor: "text-blue-700",
+    borderColor: "border-gray-300",
+  },
+  Cancelled: {
+    bgColor: "bg-red-100",
+    textColor: "text-red-700",
+    borderColor: "border-red-300",
+  },
+  Tentative: {
+    bgColor: "bg-yellow-100",
+    textColor: "text-yellow-700",
+    borderColor: "border-yellow-300",
+  },
+};
+
+const StatusBadge = ({ status }) => {
+  const label = STATUS_MAP[status] ?? "Inquiry";
+  const config = statusConfig[label] || statusConfig.Inquiry;
 
   return (
     <span
       className={`inline-flex items-center px-3 py-1 rounded-md text-sm font-medium border ${config.bgColor} ${config.textColor} ${config.borderColor}`}
     >
-      {status}
+      {label}
     </span>
   );
 };
