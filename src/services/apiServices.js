@@ -2267,8 +2267,8 @@ export const AddAutoManualPOApi = (data) => {
 export const getautomanualpurchsaseid = (sotPoId) => {
   return GET(`/sot/manual-po/detail/${sotPoId}`);
 };
-export const GetAllPurchase = (userId) => {
-  return GET(`/purchaseorder/getbyuser?userId=${userId}`);
+export const GetAllPurchase = (userId, page = 0, size = 100) => {
+  return GET(`/purchaseorder/getbyuser?userId=${userId}&page=${page}&size=${size}`);
 };
 
 export const AddStorePO = (data) => {

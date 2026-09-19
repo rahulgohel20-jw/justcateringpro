@@ -69,6 +69,12 @@ const Purchase = () => {
   const [tableData, setTableData] = useState([]);
   const [originalData, setOriginalData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+  page: 0,
+  size: 10,
+  totalElements: 0,
+  totalPages: 0,
+});
   const [reportModal, setReportModal] = useState({
     open: false,
     startDate: null,
@@ -124,29 +130,49 @@ const Purchase = () => {
     [userId],
   );
 
-  useEffect(() => {
-    fetchPurchase();
-  }, []);
 
-  const fetchPurchase = async () => {
-    try {
-      setLoading(true);
-      const res = await GetAllPurchase(userId);
-      const data = (res?.data?.data || []).map((item, index) => ({
-        ...item,
-        sr_no: index + 1,
-        purchaseid: item.id,
-        voucher: item.pocode,
-        podate: item.podate ? item.podate.split("-").reverse().join("/") : "",
-      }));
-      setTableData(data);
-      setOriginalData(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+useEffect(() => {
+  fetchPurchase();
+}, []);
+
+const fetchPurchase = async () => {
+  try {
+    setLoading(true);
+    const res = await GetAllPurchase(userId, 0, 100); // covers current ~405 rows with headroom
+    const payload = res?.data;
+    const data = (payload?.data || []).map((item, index) => ({
+      ...item,
+      sr_no: index + 1,
+      purchaseid: item.id,
+      voucher: item.pocode,
+      podate: item.podate ? item.podate.split("-").reverse().join("/") : "",
+    }));
+    setTableData(data);
+    setOriginalData(data);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setLoading(false);
+  }
+};
+const handleFetchData = useCallback(
+  async ({ pageIndex, pageSize }) => {
+    const res = await GetAllPurchase(userId, pageIndex, pageSize);
+    const payload = res?.data;
+    const data = (payload?.data || []).map((item, index) => ({
+      ...item,
+      sr_no: pageIndex * pageSize + index + 1,
+      purchaseid: item.id,
+      voucher: item.pocode,
+      podate: item.podate ? item.podate.split("-").reverse().join("/") : "",
+    }));
+    return { data, totalCount: payload?.totalElements ?? 0 };
+  },
+  [userId],
+);
+const handlePageChange = (newPage, newSize) => {
+  setPagination((prev) => ({ ...prev, page: newPage, size: newSize ?? prev.size }));
+};
 
   const handleDelete = (purchaseid) => {
     const targetItem = tableData.find((i) => i.purchaseid === purchaseid) || {};
@@ -610,7 +636,7 @@ const handlePrint = async (item) => {
             </p>
           </div>
         ) : (
-    <TableComponent
+<TableComponent
   columns={columns(
     permissions.edit ? handleEdit : null,
     permissions.delete ? handleDelete : null,
@@ -618,9 +644,9 @@ const handlePrint = async (item) => {
     handleExcel,
   )}
   getRowClassName={getRowClassName}
-  data={tableData}
-  paginationSize={100}
-  loading={loading}
+  serverSide
+  onFetchData={handleFetchData}
+  paginationSize={10}
 />
         )}
       </Container>
