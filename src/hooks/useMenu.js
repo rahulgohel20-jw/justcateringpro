@@ -96,6 +96,7 @@ export const useMenu = () => {
     const isVisible = currentUser?.isVisible ?? true;
       const authStorage = JSON.parse(localStorage.getItem("auth-storage") || "{}");
 const isHeaderOwned = ["jcxpro", "justbanq"].includes(authStorage?.state?.user?.softType);
+// const isHeaderOwned = ["jcx"].includes(authStorage?.state?.user?.softType);
     let baseMenu;
     if (isRecipeModule) {
       baseMenu = recipeMenuItems;
