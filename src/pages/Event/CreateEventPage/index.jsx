@@ -131,8 +131,8 @@ const [isVenueTranslating, setIsVenueTranslating] = useState(false);
 const isPro = useMemo(() => {
   try {
     const auth = JSON.parse(localStorage.getItem("auth-storage"));
-    // return ["jcxpro", "justbanq"].includes(auth?.state?.user?.softType);
-    const isVisible = ["jcx"].includes(storeUser?.softType);
+    return ["jcxpro", "justbanq"].includes(auth?.state?.user?.softType);
+    // const isVisible = ["jcx"].includes(storeUser?.softType);
   } catch {
     return false;
   }
