@@ -9,14 +9,15 @@ const TableComponent = ({
   expandable,
   hidePagination,
   getRowClassName,
+  serverSide,
+  onFetchData,
 }) => {
   return (
     <DataGrid
       columns={columns}
       data={data}
       pagination={{
-        
-        size: hidePagination ? data.length || 9999 : (paginationSize ?? 10),
+        size: hidePagination ? data?.length || 9999 : (paginationSize ?? 10),
       }}
       sorting={defaultSorting}
       expandable={expandable}
@@ -24,8 +25,11 @@ const TableComponent = ({
       layout={{ card: true }}
       hidePagination={hidePagination}
       getRowClassName={getRowClassName}
+      serverSide={serverSide}
+      onFetchData={onFetchData}
     />
   );
 };
+
 
 export { TableComponent };
