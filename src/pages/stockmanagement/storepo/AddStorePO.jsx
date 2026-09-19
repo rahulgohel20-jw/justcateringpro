@@ -295,6 +295,32 @@ const todayStr = new Date().toISOString().split("T")[0];
 
   const TODAY = new Date();
 
+  // ── Focus control refs ──────────────────────────────────────
+const searchSelectRef = useRef(null);
+const qtyInputRefs = useRef({});
+const [focusQtyIndex, setFocusQtyIndex] = useState(null);
+
+// New items are unshifted to index 0, so whenever focusQtyIndex
+// is set, focus that row's qty field right after it renders.
+useEffect(() => {
+  if (focusQtyIndex === null) return;
+  const el = qtyInputRefs.current[focusQtyIndex];
+  if (el) {
+    const t = setTimeout(() => {
+      el.focus();
+      el.select?.();
+      setFocusQtyIndex(null); // ← reset so typing doesn't re-trigger select-all
+    }, 0);
+    return () => clearTimeout(t);
+  } else {
+    setFocusQtyIndex(null); // ← also reset if the ref wasn't ready yet
+  }
+}, [items, focusQtyIndex]);
+
+const focusSearchInput = useCallback(() => {
+  searchSelectRef.current?.focus?.();
+}, []);
+
   const [form, setForm] = useState({
     pocode: "",
     date: TODAY,
@@ -598,34 +624,35 @@ useEffect(() => {
     }
   };
 
-  const handleSelectItem = useCallback(
-    (rawItem) => {
-      const id = rawItem.id || rawItem.rawMaterialId;
-      const exists = items.some((i) => i.rawMaterialId === id);
-      if (exists) {
-        Swal.fire({
-          icon: "warning",
-          title: "Duplicate Item",
-          text: "Item already added.",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-        return;
-      }
-      setItems((prev) => [
-        {
-          rawMaterialId: id,
-          item_name: rawItem.nameEnglish || "",
-          qty: "",
-          unit: rawItem.unit?.nameEnglish || rawItem.unit || "",
-          closingStock: rawItem.closingStock ?? null,
-          isAddInStock: true,
-        },
-        ...prev,
-      ]);
-    },
-    [items],
-  );
+const handleSelectItem = useCallback(
+  (rawItem) => {
+    const id = rawItem.id || rawItem.rawMaterialId;
+    const exists = items.some((i) => i.rawMaterialId === id);
+    if (exists) {
+      Swal.fire({
+        icon: "warning",
+        title: "Duplicate Item",
+        text: "Item already added.",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      return;
+    }
+    setItems((prev) => [
+      {
+        rawMaterialId: id,
+        item_name: rawItem.nameEnglish || "",
+        qty: "",
+        unit: rawItem.unit?.nameEnglish || rawItem.unit || "",
+        closingStock: rawItem.closingStock ?? null,
+        isAddInStock: true,
+      },
+      ...prev,
+    ]);
+    setFocusQtyIndex(0); // ← new item is always at index 0
+  },
+  [items],
+);
 
   const updateQty = useCallback((index, value) => {
     if (!/^\d*\.?\d*$/.test(value)) return;
@@ -1183,9 +1210,10 @@ useEffect(() => {
           <div className="px-6 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center gap-3">
             <div className="relative w-full max-w-md">
               <Select
-                showSearch
-                placeholder="Search & add item..."
-                value={searchValue || undefined}
+  ref={searchSelectRef}
+  showSearch
+  placeholder="Search & add item..."
+  value={searchValue || undefined}
                 filterOption={false}
                 onSearch={(value) => {
                   setSearchValue(value);
@@ -1325,23 +1353,32 @@ useEffect(() => {
                         {item.item_name}
                       </td>
                       <td className="px-2 py-2 w-28">
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={item.qty}
-                          onChange={(e) => updateQty(i, e.target.value)}
-                          onBlur={() => {
-                            if (String(item.qty).endsWith("."))
-                              updateQty(i, String(parseFloat(item.qty)));
-                          }}
-                          placeholder="0"
-                          className={`w-full px-3 py-1.5 text-sm border rounded-xl text-center transition-all focus:outline-none focus:ring-1
-                          ${
-                            !item.qty || parseFloat(item.qty) <= 0
-                              ? "border-blue-300 bg-blue-50 text-blue-700 placeholder-blue-400 focus:border-blue-400 focus:ring-blue-200"
-                              : "border-slate-200 bg-white text-slate-800 focus:border-blue-400 focus:ring-blue-200"
-                          }`}
-                        />
+                       <input
+  type="text"
+  inputMode="decimal"
+  ref={(el) => (qtyInputRefs.current[i] = el)}
+  value={item.qty}
+  onChange={(e) => updateQty(i, e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (String(item.qty).endsWith("."))
+        updateQty(i, String(parseFloat(item.qty)));
+      focusSearchInput();
+    }
+  }}
+  onBlur={() => {
+    if (String(item.qty).endsWith("."))
+      updateQty(i, String(parseFloat(item.qty)));
+  }}
+  placeholder="0"
+  className={`w-full px-3 py-1.5 text-sm border rounded-xl text-center transition-all focus:outline-none focus:ring-1
+  ${
+    !item.qty || parseFloat(item.qty) <= 0
+      ? "border-blue-300 bg-blue-50 text-blue-700 placeholder-blue-400 focus:border-blue-400 focus:ring-blue-200"
+      : "border-slate-200 bg-white text-slate-800 focus:border-blue-400 focus:ring-blue-200"
+  }`}
+/>
                         {!isEdit && item.originalQty > 0 && (
                           <p className="text-xs text-slate-400 mt-0.5 text-center">
                             min: {item.originalQty}

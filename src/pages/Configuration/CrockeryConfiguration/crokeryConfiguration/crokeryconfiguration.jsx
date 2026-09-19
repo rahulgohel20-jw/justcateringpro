@@ -27,6 +27,7 @@ import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import { getLangConfig } from "@/utils/langConfig";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useModuleAccess } from "../../../../hooks/useModuleAccess";
 
 const initialData = [];
 
@@ -134,6 +135,11 @@ const CrokeyClutly = () => {
   const [isAllItemsReport, setIsAllItemsReport] = useState(true);
   const categoryDropdownRef = useRef(null);
   const langConfig = getLangConfig();
+
+  
+    const { hasModuleAccess } = useModuleAccess();
+  
+    const canAccessStock = hasModuleAccess("Stock")
 
   const languageOptions = [
     {
@@ -1114,6 +1120,7 @@ const CrokeyClutly = () => {
           </div>
 
           <div className="flex gap-3">
+             {canAccessStock && (
             <button
               onClick={handleGenerateCrockerySOT}
               disabled={sotLoading || isSotLocked === true}
@@ -1147,6 +1154,7 @@ const CrokeyClutly = () => {
                 />
               )}
             </button>
+            )}
             <button
               onClick={handleSave}
               disabled={saveLoading || isSotLocked === true}
