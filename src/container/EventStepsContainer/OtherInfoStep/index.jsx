@@ -62,6 +62,7 @@ const OtherInfoStep = ({ formData, setFormData, onInputChange, errors, eventStar
   try {
     const auth = JSON.parse(localStorage.getItem("auth-storage"));
     return ["jcxpro", "justbanq"].includes(auth?.state?.user?.softType); 
+    // return ["jcx"].includes(auth?.state?.user?.softType);
   } catch {
     return false;
   }
