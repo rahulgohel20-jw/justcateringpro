@@ -367,7 +367,8 @@ const HeaderTopbar = () => {
  const navigate    = useNavigate();
   const storeUser = useAuthStore((state) => state.user);
   const rights    = useAuthStore((state) => state.rights);
-  const isVisible = ["jcxpro", "justbanq"].includes(storeUser?.softType);
+  // const isVisible = ["jcxpro", "justbanq"].includes(storeUser?.softType);
+  const isVisible = ["jcx"].includes(storeUser?.softType);
   const visibleGroups = ALL_GROUPS.map((group) => {
     const filteredItems = group.items.filter((item) => {
       if (isSuperUser) return true;

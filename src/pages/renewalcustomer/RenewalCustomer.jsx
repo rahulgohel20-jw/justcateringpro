@@ -35,7 +35,8 @@ const RenewalCustomer = () => {
   const isPro = useMemo(() => {
   try {
     const auth = JSON.parse(localStorage.getItem("auth-storage"));
-    return auth?.state?.user?.softType === "jcxpro"; 
+    // return auth?.state?.user?.softType === "jcxpro"; 
+     return auth?.state?.user?.softType === "jcx"; 
   } catch {
     return false;
   }

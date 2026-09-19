@@ -58,7 +58,8 @@ const SidebarMenu = () => {
   const { menu, loading } = useMenu();
   const { currentUser } = useAuthContext(); 
 const authStorage = JSON.parse(localStorage.getItem("auth-storage") || "{}");
-const isVisible = ["jcxpro", "justbanq"].includes(authStorage?.state?.user?.softType);  if (loading) return null;
+// const isVisible = ["jcxpro", "justbanq"].includes(authStorage?.state?.user?.softType);  if (loading) return null;
+const isVisible = ["jcx"].includes(authStorage?.state?.user?.softType);  if (loading) return null;
   if (!menu.length) return null;
 
   // build menu helpers
