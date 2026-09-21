@@ -361,9 +361,7 @@ if (hasNamePlateImages && selectedNamePlateImageId != null) {
               alt={`Name plate option ${id}`}
               className="w-full h-28 object-contain"
             />
-            <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-              #{id}
-            </span>
+        
             {isSelected && (
               <span className="absolute top-1.5 right-1.5 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                 Selected
