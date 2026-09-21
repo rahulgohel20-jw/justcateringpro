@@ -16,6 +16,7 @@ export default function AllocateRowChef({
   const [quantity, setQuantity] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [shiftTransPrice, setShiftTransPrice] = useState("");
+  const [reportingTime, setReportingTime] = useState(""); // ⬅ NEW
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +42,8 @@ export default function AllocateRowChef({
       !serviceType &&
       (!pax || pax <= 0) &&
       (!quantity || quantity <= 0) &&
-      (!shiftTransPrice || shiftTransPrice <= 0)
+      (!shiftTransPrice || shiftTransPrice <= 0) &&
+      !reportingTime // ⬅ NEW
     ) {
       Swal.fire({
         title: "Missing Information",
@@ -76,6 +78,7 @@ export default function AllocateRowChef({
     if (quantity && quantity > 0) allocationData.quantity = quantity;
     if (shiftTransPrice && shiftTransPrice >= 0)
       allocationData.shiftTransPrice = shiftTransPrice;
+    if (reportingTime) allocationData.reportingTime = reportingTime; // ⬅ NEW — "HH:MM" 24hr
 
     const success = onAllocate(allocationData);
 
@@ -85,6 +88,7 @@ export default function AllocateRowChef({
       setQuantity("");
       setServiceType("");
       setShiftTransPrice("");
+      setReportingTime(""); // ⬅ NEW
     }
   };
 
@@ -95,7 +99,7 @@ export default function AllocateRowChef({
           Bulk Allocate {selectedCount > 0 && `(${selectedCount} selected)`}
         </span>
       </div>
-      <div className="grid grid-cols-7 gap-4">
+      <div className="grid grid-cols-8 gap-4">
         <BaseSelect
           value={selectedVendor}
           onChange={(e) => setSelectedVendor(e.target.value)}
@@ -142,6 +146,15 @@ export default function AllocateRowChef({
           onChange={(e) => setShiftTransPrice(e.target.value)}
           type="tel"
           min="0"
+        />
+
+        {/* ⬅ NEW: Reporting Time */}
+        <input
+          type="time"
+          className="input"
+          value={reportingTime}
+          onChange={(e) => setReportingTime(e.target.value)}
+          placeholder="Reporting Time"
         />
 
         <button className="btn-primary col-span-2" onClick={handleAllocate}>

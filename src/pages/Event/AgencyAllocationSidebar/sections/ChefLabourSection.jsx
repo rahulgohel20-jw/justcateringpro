@@ -163,105 +163,108 @@ useEffect(() => {
     setSelectedItems((prev) => ({ ...prev, [itemKey]: isChecked }));
   }, []);
 
-  const handleAllocate = useCallback(
-    (allocationData) => {
-      const hasSelectedItems = Object.values(selectedItems).some(Boolean);
-      if (!hasSelectedItems) {
-        Swal.fire({ title: "Warning", text: "Please select at least one item to allocate", icon: "warning" });
-        return false;
-      }
+ const handleAllocate = useCallback(
+  (allocationData) => {
+    const hasSelectedItems = Object.values(selectedItems).some(Boolean);
+    if (!hasSelectedItems) {
+      Swal.fire({ title: "Warning", text: "Please select at least one item to allocate", icon: "warning" });
+      return false;
+    }
 
-      if (
-        !allocationData.partyId &&
-        !allocationData.serviceType &&
-        !allocationData.pax &&
-        !allocationData.quantity &&
-        allocationData.shiftTransPrice === undefined
-      ) {
-        Swal.fire({ title: "Warning", text: "Please provide at least one allocation value", icon: "warning" });
-        return false;
-      }
+    if (
+      !allocationData.partyId &&
+      !allocationData.serviceType &&
+      !allocationData.pax &&
+      !allocationData.quantity &&
+      allocationData.shiftTransPrice === undefined &&
+      allocationData.reportingTime === undefined  // ⬅ added
+    ) {
+      Swal.fire({ title: "Warning", text: "Please provide at least one allocation value", icon: "warning" });
+      return false;
+    }
 
-      let allocatedCount = 0;
+    let allocatedCount = 0;
 
-      const updatedMenuItems = menuItems.map((menuItem, menuIndex) => {
-        if (!Array.isArray(menuItem.eventFunctionMenuAllocations)) return menuItem;
+    const updatedMenuItems = menuItems.map((menuItem, menuIndex) => {
+      if (!Array.isArray(menuItem.eventFunctionMenuAllocations)) return menuItem;
 
-        const updatedAllocations = menuItem.eventFunctionMenuAllocations.map(
-          (allocation, allocationIndex) => {
-            const itemKey = `${menuIndex}-${allocationIndex}`;
-            if (!selectedItems[itemKey]) return allocation;
+      const updatedAllocations = menuItem.eventFunctionMenuAllocations.map(
+        (allocation, allocationIndex) => {
+          const itemKey = `${menuIndex}-${allocationIndex}`;
+          if (!selectedItems[itemKey]) return allocation;
 
-            allocatedCount++;
-            const updates = {};
+          allocatedCount++;
+          const updates = {};
 
-            if (allocationData.partyId !== undefined) {
-              updates.partyId = allocationData.partyId;
-              updates.partyName = allocationData.partyName || "";
-              updates.number = allocationData.number || "";
-            }
-            if (allocationData.serviceType !== undefined) updates.serviceType = allocationData.serviceType;
-            if (allocationData.pax !== undefined) updates.quantity = allocationData.pax;
-            if (allocationData.quantity !== undefined) updates.quantity = allocationData.quantity;
-            if (allocationData.shiftTransPrice !== undefined)
-              updates.shiftTransPrice = allocationData.shiftTransPrice;
-
-            const effectiveType = updates.serviceType ?? allocation.serviceType ?? "plate_wise";
-            const merged = { ...allocation, ...updates };
-            const shiftTrans = parseFloat(merged.shiftTransPrice) || 0;
-
-            if (!effectiveType || effectiveType === "plate_wise") {
-              const qty = parseFloat(merged.quantity) || 0;
-              const price = parseFloat(merged.price) || 0;
-              updates.totalPrice = qty * price + shiftTrans;
-            } else if (effectiveType === "counter_wise") {
-              const cQty = parseFloat(merged.counterQuantity) || 0;
-              const hQty = parseFloat(merged.helperQuantity) || 0;
-              const cPrice = parseFloat(merged.counterPrice) || 0;
-              const hPrice = parseFloat(merged.helperPrice) || 0;
-              updates.totalPrice = cQty * cPrice + hQty * hPrice + shiftTrans;
-            }
-
-            return { ...allocation, ...updates };
-          },
-        );
-
-        const hasUpdatedAllocations = menuItem.eventFunctionMenuAllocations.some(
-          (_, allocationIndex) => selectedItems[`${menuIndex}-${allocationIndex}`],
-        );
-
-        if (hasUpdatedAllocations && allocationData.pax !== undefined) {
-          const itemKey = `${menuItem.menuItemId}-${menuItem.menuCategoryId}-${menuItem.eventFunctionId}`;
-          const initialItem = initialMenuItemsRef.current[menuIndex];
-          if (initialItem && initialItem.personCount !== allocationData.pax) {
-            changedPaxItemsRef.current.add(itemKey);
+          if (allocationData.partyId !== undefined) {
+            updates.partyId = allocationData.partyId;
+            updates.partyName = allocationData.partyName || "";
+            updates.number = allocationData.number || "";
           }
+          if (allocationData.serviceType !== undefined) updates.serviceType = allocationData.serviceType;
+          if (allocationData.pax !== undefined) updates.quantity = allocationData.pax;
+          if (allocationData.quantity !== undefined) updates.quantity = allocationData.quantity;
+          if (allocationData.shiftTransPrice !== undefined)
+            updates.shiftTransPrice = allocationData.shiftTransPrice;
+          if (allocationData.reportingTime !== undefined)          // ⬅ added
+            updates.reportingTime = allocationData.reportingTime;   // ⬅ added
+
+          const effectiveType = updates.serviceType ?? allocation.serviceType ?? "plate_wise";
+          const merged = { ...allocation, ...updates };
+          const shiftTrans = parseFloat(merged.shiftTransPrice) || 0;
+
+          if (!effectiveType || effectiveType === "plate_wise") {
+            const qty = parseFloat(merged.quantity) || 0;
+            const price = parseFloat(merged.price) || 0;
+            updates.totalPrice = qty * price + shiftTrans;
+          } else if (effectiveType === "counter_wise") {
+            const cQty = parseFloat(merged.counterQuantity) || 0;
+            const hQty = parseFloat(merged.helperQuantity) || 0;
+            const cPrice = parseFloat(merged.counterPrice) || 0;
+            const hPrice = parseFloat(merged.helperPrice) || 0;
+            updates.totalPrice = cQty * cPrice + hQty * hPrice + shiftTrans;
+          }
+
+          return { ...allocation, ...updates };
+        },
+      );
+
+      const hasUpdatedAllocations = menuItem.eventFunctionMenuAllocations.some(
+        (_, allocationIndex) => selectedItems[`${menuIndex}-${allocationIndex}`],
+      );
+
+      if (hasUpdatedAllocations && allocationData.pax !== undefined) {
+        const itemKey = `${menuItem.menuItemId}-${menuItem.menuCategoryId}-${menuItem.eventFunctionId}`;
+        const initialItem = initialMenuItemsRef.current[menuIndex];
+        if (initialItem && initialItem.personCount !== allocationData.pax) {
+          changedPaxItemsRef.current.add(itemKey);
         }
+      }
 
-        return {
-          ...menuItem,
-          eventFunctionMenuAllocations: updatedAllocations,
-          ...(hasUpdatedAllocations &&
-            allocationData.pax !== undefined && { personCount: allocationData.pax }),
-        };
-      });
+      return {
+        ...menuItem,
+        eventFunctionMenuAllocations: updatedAllocations,
+        ...(hasUpdatedAllocations &&
+          allocationData.pax !== undefined && { personCount: allocationData.pax }),
+      };
+    });
 
-      setMenuItems(updatedMenuItems);
-       onDirtyChange?.(true);
-      if (onDataUpdate) onDataUpdate(updatedMenuItems);
-      setSelectedItems({});
+    setMenuItems(updatedMenuItems);
+    onDirtyChange?.(true);
+    if (onDataUpdate) onDataUpdate(updatedMenuItems);
+    setSelectedItems({});
 
-      Swal.fire({
-        title: "Success",
-        text: `Updated ${allocatedCount} selected item(s) successfully`,
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
-      });
-      return true;
-    },
-    [menuItems, selectedItems, onDataUpdate],
-  );
+    Swal.fire({
+      title: "Success",
+      text: `Updated ${allocatedCount} selected item(s) successfully`,
+      icon: "success",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+    return true;
+  },
+  [menuItems, selectedItems, onDataUpdate],
+);
 
 const handleCancel = useCallback(() => {
   if (isDirty) {

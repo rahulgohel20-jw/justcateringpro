@@ -1116,7 +1116,7 @@ export const GetAllInvoicedatabyfilter = (
   endDate,
   startDate,
   id,
-  isVenue,
+  isVenue = "",
   userId
 ) => {
   return GET(
