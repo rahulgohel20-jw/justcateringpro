@@ -8,8 +8,8 @@ import {
   GetRawMaterialcategory, GetStockReport, GetStockTypeByUserId,
   GetStockPdfReport, GetStockPdfReport2, GetStockExcelReport,
 } from "../../../services/apiServices";
-import { message } from "antd";
 import { useStockTypePermission } from "../../../hooks/useStockTypePermission";
+import { message, Modal, Switch } from "antd";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -338,7 +338,9 @@ const [dwsKitchenType, setDwsKitchenType]   = useState(undefined);
   const [printLoading,    setPrintLoading]    = useState(false);
   const [modalExcelLoading, setModalExcelLoading] = useState(false);
   const { filterStockTypes } = useStockTypePermission();
-
+const [printModalOpen, setPrintModalOpen] = useState(false);
+const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default off
+const [pendingPrintFn, setPendingPrintFn] = useState(null); // (isCompanyDetails) => void
 
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -362,7 +364,17 @@ const getFilters = useCallback((section) => ({
      dwsCategory, dwsGodownType, dwsKitchenType,
      dwsFrom, dwsTo]);
 
+const handleOpenPrintModal = (printFn) => {
+  setPendingPrintFn(() => printFn);
+  setShowCompanyDetails(false); // reset default off
+  setPrintModalOpen(true);
+};
 
+const handleConfirmPrint = () => {
+  const isCompanyDetails = showCompanyDetails ? 1 : 0;
+  setPrintModalOpen(false);
+  pendingPrintFn?.(isCompanyDetails);
+};
   // ── Fetch report data ─────────────────────────────────────────────────────
 const fetchReportData = useCallback(async ({ section, page = 1, size = pageSize, itemName = "" }) => {
   try {
@@ -496,10 +508,10 @@ useEffect(() => {
     setDwsType("");
   };
 
-const handleModalPrint = () => {
+const handleModalPrint = (isCompanyDetails = 1) => {
   const { catId, stockId, kitchenTypeId, fromDate, toDate } = getFilters(activeSection);
   downloadPdf(
-    () => GetStockPdfReport(userId, catId, stockId, fromDate, toDate, 1, "", kitchenTypeId),
+    () => GetStockPdfReport(userId, catId, stockId, fromDate, toDate, isCompanyDetails, "", kitchenTypeId),
     setPrintLoading
   );
 };
@@ -526,10 +538,10 @@ const handleModalExcel = () => {
           pageSize={pageSize}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
-          onPrint={handleModalPrint}
           onExcel={handleModalExcel}
           printLoading={printLoading}
           excelLoading={modalExcelLoading}
+           onPrint={() => handleOpenPrintModal(handleModalPrint)}
         />
 
         <div className="flex items-center justify-between mb-5">
@@ -543,13 +555,21 @@ const handleModalExcel = () => {
       <SelectField label="Item Category" value={soCategory} onChange={setSoCategory} options={categories} />
     </div>
     <div className="flex items-center gap-2">
-      <ActionButton
-        onClick={() => downloadPdf(
-          () => GetStockPdfReport(userId, soCategory || 0, 0, "", "", 1, "", 0),
-          setSoPrintLoading
-        )}
-        loading={soPrintLoading} icon={Printer} label="Print"
-      />
+     <ActionButton
+  onClick={() => handleOpenPrintModal((isCompanyDetails) =>
+    downloadPdf(
+      () => GetStockPdfReport(
+        userId,
+        dwsCategory || 0,
+        dwsAllType || dwsGodownType || dwsKitchenType || 0,
+        formatDate(dwsFrom), formatDate(dwsTo), isCompanyDetails, "",
+        dwsGodownType || dwsKitchenType || 0
+      ),
+      setDwsPrintLoading
+    )
+  )}
+  loading={dwsPrintLoading} icon={Printer} label="Print"
+/>
       <ActionButton
         onClick={() => downloadExcel(soCategory || 0, 0, "", "", setSoExcelLoading, "", 0)}
         loading={soExcelLoading} icon={FileSpreadsheet} label="Excel" variant="excel"
@@ -575,18 +595,14 @@ const handleModalExcel = () => {
       </div>
     </div>
     <div className="flex justify-end gap-2">
-      <ActionButton
-  onClick={() => downloadPdf(
-    () => GetStockPdfReport(
-      userId,
-      dwsCategory || 0,
-      dwsAllType || dwsGodownType || dwsKitchenType || 0,
-      formatDate(dwsFrom), formatDate(dwsTo), 1, "",
-      dwsGodownType || dwsKitchenType || 0   // ← kitchenTypeId
-    ),
-    setDwsPrintLoading
+     <ActionButton
+  onClick={() => handleOpenPrintModal((isCompanyDetails) =>
+    downloadPdf(
+      () => GetStockPdfReport(userId, soCategory || 0, 0, "", "", isCompanyDetails, "", 0),
+      setSoPrintLoading
+    )
   )}
-  loading={dwsPrintLoading} icon={Printer} label="Print"
+  loading={soPrintLoading} icon={Printer} label="Print"
 />
       <ActionButton
   onClick={() => downloadExcel(
@@ -602,6 +618,36 @@ const handleModalExcel = () => {
     </div>
   </div>
 </SectionCard>
+<Modal
+  title="Print Report"
+  centered
+  open={printModalOpen}
+  onCancel={() => setPrintModalOpen(false)}
+  footer={[
+    <button
+      key="cancel"
+      className="btn btn-light"
+      onClick={() => setPrintModalOpen(false)}
+    >
+      Cancel
+    </button>,
+    <button
+      key="print"
+      className="btn btn-primary ms-2"
+      onClick={handleConfirmPrint}
+    >
+      Print
+    </button>,
+  ]}
+>
+  <div className="flex items-center justify-between py-2">
+    <span className="text-sm text-gray-700">Show Company Details</span>
+    <Switch
+      checked={showCompanyDetails}
+      onChange={(checked) => setShowCompanyDetails(checked)}
+    />
+  </div>
+</Modal>
       </Container>
     </Fragment>
   );

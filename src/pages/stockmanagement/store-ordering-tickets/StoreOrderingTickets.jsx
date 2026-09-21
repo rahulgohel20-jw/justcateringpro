@@ -9,14 +9,16 @@ import Swal from "sweetalert2";
 import { usePermission } from "../../../hooks/usePermission";
 import { Spin } from "antd";
 import { shareViaWhatsApp } from "../../../hooks/useWhatsAppShare";
-
+import { Modal, Switch } from "antd";
 const StoreOrderingTickets = () => {
   const [searchQuery, setSearchQuery]   = useState("");
   const [tableData, setTableData]       = useState([]);
   const [originalData, setOriginalData] = useState([]);
   const [loading, setLoading]           = useState(false);
    const [selectedRows, setSelectedRows] = useState([]); 
-
+const [printModalOpen, setPrintModalOpen] = useState(false);
+const [printItem, setPrintItem] = useState(null);
+const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default off
   const userId = localStorage.getItem("userId"); 
   const permission = usePermission("Store Ordering Tickets");
 
@@ -137,17 +139,24 @@ if (selectedRows.length === 0 || loading) return;
   });
 };
 
-const handleStoreReport = async (item) => {
+const handleStoreReport = (item) => {
+  setPrintItem(item);
+  setShowCompanyDetails(false); // reset default off
+  setPrintModalOpen(true);
+};
+
+const handleConfirmStoreReport = async () => {
+  if (!printItem) return;
   try {
     setLoading(true);
-    const userId = localStorage.getItem("userId");
-    const isCompanyDetails = 1; 
+    const isCompanyDetails = showCompanyDetails ? 1 : 0;
 
-    const res = await SotReportPdf(item.id, isCompanyDetails, userId);
+    const res = await SotReportPdf(printItem.id, isCompanyDetails, userId);
 
     const fileUrl = res?.data?.fileUrl;
     if (res?.data?.success && fileUrl) {
       window.open(fileUrl, "_blank");
+      setPrintModalOpen(false);
     } else {
       Swal.fire({
         icon: "error",
@@ -303,7 +312,36 @@ const handleStoreReport = async (item) => {
               loading={loading}
             />
         </div>
-
+<Modal
+  title="Print Store Ordering Ticket"
+  centered
+  open={printModalOpen}
+  onCancel={() => setPrintModalOpen(false)}
+  footer={[
+    <button
+      key="cancel"
+      className="btn btn-light"
+      onClick={() => setPrintModalOpen(false)}
+    >
+      Cancel
+    </button>,
+    <button
+      key="print"
+      className="btn btn-primary ms-2"
+      onClick={handleConfirmStoreReport}
+    >
+      Print
+    </button>,
+  ]}
+>
+  <div className="flex items-center justify-between py-2">
+    <span className="text-sm text-gray-700">Show Company Details</span>
+    <Switch
+      checked={showCompanyDetails}
+      onChange={(checked) => setShowCompanyDetails(checked)}
+    />
+  </div>
+</Modal>
       </Container>
     </Fragment>
   );
