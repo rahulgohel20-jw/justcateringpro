@@ -16,6 +16,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { TableComponent } from "../../../components/table/TableComponent";
 import { columns } from "./constant";
+import { Modal, Switch } from "antd";
 
 const DROPDOWN_PAGE_SIZE = 100;
 const TODAY = new Date();
@@ -48,7 +49,8 @@ const StoreLedger = () => {
   const dropdownRef = useRef(null);
   const [price, setPrice] = useState("");
   const [unit, setUnit] = useState("");
-
+const [printModalOpen, setPrintModalOpen] = useState(false);
+const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default off
   const tableData = useMemo(() => {
     if (!ledgerData?.rows) return [];
     return ledgerData.rows.map((row, index) => ({
@@ -178,26 +180,31 @@ const StoreLedger = () => {
   const labelCls =
     "block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5";
 
-const handlePrint = async () => {
+const handlePrint = () => {
   if (!selectedItem?.id || !form.from_date || !form.to_date) return;
+  setShowCompanyDetails(false); // reset default off
+  setPrintModalOpen(true);
+};
+
+const handleConfirmPrint = async () => {
   try {
     const res = await GetStockLedgerPdfReport(
       userId,
       selectedItem.id,
       formatDateForApi(form.from_date),
       formatDateForApi(form.to_date),
-      1
+      showCompanyDetails ? 1 : 0, // isCompanyDetails — last param, was hardcoded 1
     );
 
     const fileUrl = res?.data?.fileUrl;
     if (fileUrl) {
       window.open(fileUrl, "_blank");
+      setPrintModalOpen(false);
     }
   } catch (err) {
     console.error("Failed to generate PDF:", err);
   }
 };
-
 
 
   return (
@@ -438,7 +445,36 @@ const handlePrint = async () => {
             </div>
           </div>
         </div>
-
+<Modal
+  title="Print Stock Ledger"
+  centered
+  open={printModalOpen}
+  onCancel={() => setPrintModalOpen(false)}
+  footer={[
+    <button
+      key="cancel"
+      className="btn btn-light"
+      onClick={() => setPrintModalOpen(false)}
+    >
+      Cancel
+    </button>,
+    <button
+      key="print"
+      className="btn btn-primary ms-2"
+      onClick={handleConfirmPrint}
+    >
+      Print
+    </button>,
+  ]}
+>
+  <div className="flex items-center justify-between py-2">
+    <span className="text-sm text-gray-700">Show Company Details</span>
+    <Switch
+      checked={showCompanyDetails}
+      onChange={(checked) => setShowCompanyDetails(checked)}
+    />
+  </div>
+</Modal>
       </Container>
     </Fragment>
   );

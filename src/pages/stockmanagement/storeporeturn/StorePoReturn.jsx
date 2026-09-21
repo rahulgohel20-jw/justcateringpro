@@ -15,7 +15,7 @@ import {
 } from "../../../services/apiServices";
 import { usePermission } from "../../../hooks/usePermission";
 import { shareViaWhatsApp } from "../../../hooks/useWhatsAppShare";
-
+import { Modal, Switch } from "antd";
 import Swal from "sweetalert2";
 
 const getUserEmail = () => {
@@ -42,7 +42,9 @@ const StorePOReturn = () => {
   const [error, setError] = useState(null);
 
   const userId = localStorage.getItem("userId");
-
+const [printModalOpen, setPrintModalOpen] = useState(false);
+const [printItem, setPrintItem] = useState(null);
+const [showCompanyDetails, setShowCompanyDetails] = useState(false);
   const sendLog = useCallback(
     async (status, item = {}) => {
       try {
@@ -187,29 +189,40 @@ const StorePOReturn = () => {
     });
   };
 
-  const handlePrint = async (item) => {
-    try {
-      const res = await GetStoreIssueReturnPdf(1, item.id, userId);
-      const fileUrl = res?.data?.fileUrl || res?.data?.data?.fileUrl;
+ const handlePrint = (item) => {
+  setPrintItem(item);
+  setShowCompanyDetails(false); // default off
+  setPrintModalOpen(true);
+};
+const handleConfirmPrint = async () => {
+  if (!printItem) return;
+  try {
+    const res = await GetStoreIssueReturnPdf(
+      showCompanyDetails ? 1 : 0, // isCompanyDetails
+      printItem.id,               // sirId
+      userId,                     // userId
+    );
+    const fileUrl = res?.data?.fileUrl || res?.data?.data?.fileUrl;
 
-      if (fileUrl) {
-        window.open(fileUrl, "_blank", "noopener,noreferrer");
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: res?.data?.msg || "Failed to generate PDF.",
-        });
-      }
-    } catch (error) {
-      console.error("Print error:", error);
+    if (fileUrl) {
+      window.open(fileUrl, "_blank", "noopener,noreferrer");
+      setPrintModalOpen(false);
+    } else {
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "Something went wrong while generating the PDF.",
+        text: res?.data?.msg || "Failed to generate PDF.",
       });
     }
-  };
+  } catch (error) {
+    console.error("Print error:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Something went wrong while generating the PDF.",
+    });
+  }
+};
 
   const handleWhatsApp = (item) => {
     shareViaWhatsApp({
@@ -354,6 +367,36 @@ const StorePOReturn = () => {
             loading={loading}
           />
         )}
+        <Modal
+  title="Print Store Issue Return"
+  centered
+  open={printModalOpen}
+  onCancel={() => setPrintModalOpen(false)}
+  footer={[
+    <button
+      key="cancel"
+      className="btn btn-light"
+      onClick={() => setPrintModalOpen(false)}
+    >
+      Cancel
+    </button>,
+    <button
+      key="print"
+      className="btn btn-primary ms-2"
+      onClick={handleConfirmPrint}
+    >
+      Print
+    </button>,
+  ]}
+>
+  <div className="flex items-center justify-between py-2">
+    <span className="text-sm text-gray-700">Show Company Details</span>
+    <Switch
+      checked={showCompanyDetails}
+      onChange={(checked) => setShowCompanyDetails(checked)}
+    />
+  </div>
+</Modal>
       </Container>
     </Fragment>
   );

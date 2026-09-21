@@ -64,8 +64,9 @@ const getCompanyAuthInfo = () => {
 const Purchase = () => {
   const classes = useStyle();
   const permissions = usePermission("Purchase");
+const [searchQuery, setSearchQuery] = useState("");
+const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const [searchQuery, setSearchQuery] = useState("");
   const [tableData, setTableData] = useState([]);
   const [originalData, setOriginalData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -87,25 +88,15 @@ const Purchase = () => {
   const navigate = useNavigate();
   const intl = useIntl();
 
-  const handleSearch = (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    if (!query.trim()) {
-      setTableData(originalData);
-    } else {
-      const filtered = originalData.filter((item) =>
-        Object.values(item).some((val) =>
-          String(val).toLowerCase().includes(query.toLowerCase()),
-        ),
-      );
-      setTableData(
-        filtered.map((item, index) => ({ ...item, sr_no: index + 1 })),
-      );
-    }
-  };
+ const handleSearch = (e) => {
+  setSearchQuery(e.target.value);
+};
 
   const userId = localStorage.getItem("userId");
-
+useEffect(() => {
+  const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+  return () => clearTimeout(timer);
+}, [searchQuery]);
   const sendLog = useCallback(
     async (status, item = {}) => {
       try {
@@ -157,7 +148,7 @@ const fetchPurchase = async () => {
 };
 const handleFetchData = useCallback(
   async ({ pageIndex, pageSize }) => {
-    const res = await GetAllPurchase(userId, pageIndex, pageSize);
+    const res = await GetAllPurchase(userId, pageIndex, pageSize, debouncedSearch);
     const payload = res?.data;
     const data = (payload?.data || []).map((item, index) => ({
       ...item,
@@ -168,7 +159,7 @@ const handleFetchData = useCallback(
     }));
     return { data, totalCount: payload?.totalElements ?? 0 };
   },
-  [userId],
+  [userId, debouncedSearch],
 );
 const handlePageChange = (newPage, newSize) => {
   setPagination((prev) => ({ ...prev, page: newPage, size: newSize ?? prev.size }));
@@ -637,6 +628,7 @@ const handlePrint = async (item) => {
           </div>
         ) : (
 <TableComponent
+  key={debouncedSearch}
   columns={columns(
     permissions.edit ? handleEdit : null,
     permissions.delete ? handleDelete : null,

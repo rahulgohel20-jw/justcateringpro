@@ -2267,8 +2267,9 @@ export const AddAutoManualPOApi = (data) => {
 export const getautomanualpurchsaseid = (sotPoId) => {
   return GET(`/sot/manual-po/detail/${sotPoId}`);
 };
-export const GetAllPurchase = (userId, page = 0, size = 100) => {
-  return GET(`/purchaseorder/getbyuser?userId=${userId}&page=${page}&size=${size}`);
+
+export const GetAllPurchase = (userId, page = 0, size = 100 , searchName) => {
+  return GET(`/purchaseorder/getbyuser?userId=${userId}&page=${page}&size=${size}&searchName=${searchName}`);
 };
 
 export const AddStorePO = (data) => {
@@ -2280,8 +2281,8 @@ export const StatusStorePO = (poid, status) => {
 };
 
 
-export const GetAllStorePO = (userId) => {
-  return GET(`/storepo/getbyuser?userId=${userId}`);
+export const GetAllStorePO = (userId, page = 0, size = 10, searchName = "") => {
+  return GET(`/storepo/getbyuser?userId=${userId}&page=${page}&size=${size}&searchName=${searchName}`);
 };
 
 export const UpdateUserPlan = (date, id, otp) => {
@@ -2858,10 +2859,9 @@ export const AddInfoAutoManualPO = (data) => {
 };
 
 
-export const PrintAutoManualPO = (sotPoId, userId) => {
-  return GET(`/sot/manual-po/pdf/${sotPoId}?isCompanyDetails=1&userId=${userId}`);
+export const PrintAutoManualPO = (sotPoId, userId, isCompanyDetails) => {
+  return GET(`/sot/manual-po/pdf/${sotPoId}?isCompanyDetails=${isCompanyDetails}&userId=${userId}`);
 };
-
 
 export const GetInfoAutoManualPO = (sotPoId) => {
   return GET(`/sot/manual-po/info/${sotPoId}`);
