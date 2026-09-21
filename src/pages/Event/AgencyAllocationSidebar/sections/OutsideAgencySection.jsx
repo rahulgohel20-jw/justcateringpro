@@ -118,91 +118,96 @@ const handleCancel = useCallback(() => {
 }, [isDirty, close]);
 
   const handleAllocate = useCallback(
-    (allocationData) => {
-      const hasSelectedItems = Object.values(selectedItems).some(Boolean);
-      if (!hasSelectedItems) {
-        Swal.fire({ title: "Warning", text: "Please select at least one item to allocate", icon: "warning" });
-        return false;
+  (allocationData) => {
+    const hasSelectedItems = Object.values(selectedItems).some(Boolean);
+    if (!hasSelectedItems) {
+      Swal.fire({ title: "Warning", text: "Please select at least one item to allocate", icon: "warning" });
+      return false;
+    }
+
+    if (
+      !allocationData.partyId &&
+      !allocationData.quantity &&
+      allocationData.shiftTransPrice === undefined
+      && !allocationData.unitId
+      && allocationData.reportingTime === undefined  // ⬅ added
+    ) {
+      Swal.fire({ title: "Warning", text: "Please provide at least one allocation value", icon: "warning" });
+      return false;
+    }
+
+    let allocatedCount = 0;
+    const current = menuItemsRef.current;
+
+    const updatedMenuItems = current.map((menuItem, menuIndex) => {
+      const updatedAllocations = menuItem.eventFunctionMenuAllocations.map(
+        (allocation, allocationIndex) => {
+          const itemKey = `${menuIndex}-${allocationIndex}`;
+          if (!selectedItems[itemKey]) return allocation;
+
+          allocatedCount++;
+          const updates = {};
+
+          if (allocationData.partyId !== undefined) {
+            updates.partyId = allocationData.partyId;
+            updates.partyName = allocationData.partyName || "";
+          }
+          if (allocationData.quantity !== undefined) updates.quantity = allocationData.quantity;
+          if (allocationData.shiftTransPrice !== undefined)
+            updates.shiftTransPrice = allocationData.shiftTransPrice;
+
+          if (allocationData.unitId !== undefined)
+            updates.unitId = allocationData.unitId;
+
+          if (allocationData.reportingTime !== undefined)           // ⬅ added
+            updates.reportingTime = allocationData.reportingTime;   // ⬅ added
+
+          const merged = { ...allocation, ...updates };
+          const qty = parseFloat(merged.quantity) || 0;
+          const price = parseFloat(merged.price) || 0;
+          const shiftTrans = parseFloat(merged.shiftTransPrice) || 0;
+          updates.totalPrice = qty * price + shiftTrans;
+
+          return { ...allocation, ...updates };
+        },
+      );
+
+      const hasUpdatedAllocations = menuItem.eventFunctionMenuAllocations.some(
+        (_, allocationIndex) => selectedItems[`${menuIndex}-${allocationIndex}`],
+      );
+
+      if (hasUpdatedAllocations && allocationData.quantity !== undefined) {
+        const itemKey = `${menuItem.menuItemId}-${menuItem.menuCategoryId}-${menuItem.eventFunctionId}`;
+        const initialItem = initialMenuItemsRef.current[menuIndex];
+        if (initialItem && initialItem.personCount !== allocationData.quantity) {
+          changedPaxItemsRef.current.add(itemKey);
+        }
       }
 
-      if (
-  !allocationData.partyId &&
-  !allocationData.quantity &&
-  allocationData.shiftTransPrice === undefined
-  && !allocationData.unitId
-) {
-        Swal.fire({ title: "Warning", text: "Please provide at least one allocation value", icon: "warning" });
-        return false;
-      }
+      return {
+        ...menuItem,
+        eventFunctionMenuAllocations: updatedAllocations,
+        ...(hasUpdatedAllocations &&
+          allocationData.quantity !== undefined && { personCount: allocationData.quantity }),
+      };
+    });
 
-      let allocatedCount = 0;
-      const current = menuItemsRef.current;
+    setMenuItems(updatedMenuItems);
 
-      const updatedMenuItems = current.map((menuItem, menuIndex) => {
-        const updatedAllocations = menuItem.eventFunctionMenuAllocations.map(
-          (allocation, allocationIndex) => {
-            const itemKey = `${menuIndex}-${allocationIndex}`;
-            if (!selectedItems[itemKey]) return allocation;
+    onDirtyChange?.(true);
+    setSelectedItems({});
 
-            allocatedCount++;
-            const updates = {};
-
-            if (allocationData.partyId !== undefined) {
-              updates.partyId = allocationData.partyId;
-              updates.partyName = allocationData.partyName || "";
-            }
-            if (allocationData.quantity !== undefined) updates.quantity = allocationData.quantity;
-            if (allocationData.shiftTransPrice !== undefined)
-              updates.shiftTransPrice = allocationData.shiftTransPrice;
-
-            if (allocationData.unitId !== undefined)   
-  updates.unitId = allocationData.unitId;
-            const merged = { ...allocation, ...updates };
-            const qty = parseFloat(merged.quantity) || 0;
-            const price = parseFloat(merged.price) || 0;
-            const shiftTrans = parseFloat(merged.shiftTransPrice) || 0;
-            updates.totalPrice = qty * price + shiftTrans;
-
-            return { ...allocation, ...updates };
-          },
-        );
-
-        const hasUpdatedAllocations = menuItem.eventFunctionMenuAllocations.some(
-          (_, allocationIndex) => selectedItems[`${menuIndex}-${allocationIndex}`],
-        );
-
-       if (hasUpdatedAllocations && allocationData.quantity !== undefined) {
-  const itemKey = `${menuItem.menuItemId}-${menuItem.menuCategoryId}-${menuItem.eventFunctionId}`;
-  const initialItem = initialMenuItemsRef.current[menuIndex];
-  if (initialItem && initialItem.personCount !== allocationData.quantity) {
-    changedPaxItemsRef.current.add(itemKey);
-  }
-}
-
-        return {
-  ...menuItem,
-  eventFunctionMenuAllocations: updatedAllocations,
-  ...(hasUpdatedAllocations &&
-    allocationData.quantity !== undefined && { personCount: allocationData.quantity }),
-};
-      });
-
-      setMenuItems(updatedMenuItems);
-
-      onDirtyChange?.(true);
-      setSelectedItems({});
-
-      Swal.fire({
-        title: "Success",
-        text: `Updated ${allocatedCount} selected item(s) successfully`,
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
-      });
-      return true;
-    },
-    [selectedItems],
-  );
+    Swal.fire({
+      title: "Success",
+      text: `Updated ${allocatedCount} selected item(s) successfully`,
+      icon: "success",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+    return true;
+  },
+  [selectedItems],
+);
 
   const handleMenuItemUpdate = useCallback((menuIndex, updatedMenuItem) => {
     const initialItem = initialMenuItemsRef.current[menuIndex];

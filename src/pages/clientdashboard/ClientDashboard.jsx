@@ -1,10 +1,10 @@
 "use client";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
 import { Container } from "@/components/container";
 import Chart from "react-apexcharts";
 import { TableComponent } from "@/components/table/TableComponent";
-import { columns } from "./constant";
+import { columns , STATUS_MAP,formatEventDate  } from "./constant";
 import ClientRaiseNewIssue from "../../partials/modals/TicketModal/ClientRaiseNewIssue";
 import {
   Search,
@@ -31,6 +31,7 @@ import {
 import dayjs from "dayjs";
 import { DatePicker } from "antd";
 import EventStatusDropdown from "../../components/dropdowns/EventStatusDropdown";
+import * as XLSX from "xlsx";
 
 const { RangePicker } = DatePicker;
 
@@ -92,6 +93,7 @@ const ClientDashboard = () => {
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [eventStatus, setEventStatus] = useState("");
   const authData = JSON.parse(localStorage.getItem("auth-storage") || "{}");
+const isFirstRender = useRef(true);
 
 const roleId =
   authData?.state?.user?.userBasicDetails?.role?.id ||
@@ -144,6 +146,31 @@ const roleId =
     setDashboarddata(res?.data?.data);
   };
 
+
+const exportEventsToExcel = () => {
+  if (!eventData.length) return;
+
+  try {
+    const excelData = eventData.map((item, index) => ({
+      "Sr. No.": index + 1,
+      "Customer Name": item.CustomerName || "",
+      "Event Name": item.Eventname || "",
+      "Event Start Date": formatEventDate(item.eventStartDateTime),
+"Event End Date": formatEventDate(item.eventEndDateTime),
+      Venue: item.Venue || "",
+      Status: STATUS_MAP?.[item.status] ?? "Inquiry",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Events");
+    XLSX.writeFile(workbook, `Events_${dayjs().format("DD-MM-YYYY")}.xlsx`);
+  } catch (err) {
+    console.error("Excel export failed:", err);
+    // optionally: Swal.fire("Error", "Could not export events", "error");
+  }
+};
+
   // ---------------- PIE CHART DATA ----------------
   const handlePeriodChange = async (period, type) => {
     setIsChartLoading(true);
@@ -187,7 +214,11 @@ const roleId =
   };
 
 
-const fetchEventData = async (range, partyName = "", status = eventStatus) => {
+const fetchEventData = async (
+  range,
+  partyName = "",
+  status = eventStatus
+) => {
   setIsLoadingEvents(true);
 
   const { startDate, endDate } =
@@ -201,23 +232,38 @@ const fetchEventData = async (range, partyName = "", status = eventStatus) => {
     status || -1,
     partyName || undefined,
     startDate,
-    userId,
+    userId
   );
 
   const todayEvents = res?.data?.data?.TodayEvents || [];
   const upcomingEvents = res?.data?.data?.UpCommingEvents || [];
-  const list = [...todayEvents, ...upcomingEvents]; // or keep them separate if the UI needs to distinguish
+
+  const list = [...todayEvents, ...upcomingEvents];
 
   setEventData(
     list.map((cust, i) => ({
       Invoice: i + 1,
-      CustomerName: cust.party?.nameEnglish, // note: no top-level "userFullName" in this shape
-      Eventname: cust.eventType?.nameEnglish, // no top-level "eventName" either
-      eventDate: cust.eventStartDateTime,
-      Venue: cust.venue?.nameEnglish ?? cust.banquetHallName,
+
+      CustomerName: cust.party?.nameEnglish || "",
+
+      Eventname: cust.eventType?.nameEnglish || "",
+
+      // Keep start date
+      eventStartDateTime: cust.eventStartDateTime || "",
+
+      // Add end date
+      eventEndDateTime: cust.eventEndDateTime || "",
+
+      // Keep this as ID for filtering/table logic
       status: cust.status,
-    })),
+
+      Venue:
+        cust.venue?.nameEnglish ??
+        cust.banquetHallName ??
+        "",
+    }))
   );
+
   setIsLoadingEvents(false);
 };
   // ---------------- INVOICES ----------------
@@ -283,14 +329,16 @@ useEffect(() => {
   fetchMostSelling("month");
 }, []);
 
-  // debounce search listeners
-// debounce search listeners — now triggers a real fetch instead of client filtering
 useEffect(() => {
-  const handler = debounce((v) => {
-    setEventSearch(v);
-    fetchEventData(eventDateRange, v);
+  if (isFirstRender.current) {
+    isFirstRender.current = false;
+    return;
+  }
+  const t = setTimeout(() => {
+    setEventSearch(eventSearchInput);
+    fetchEventData(eventDateRange, eventSearchInput);
   }, 400);
-  handler(eventSearchInput);
+  return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [eventSearchInput]);
 
@@ -525,17 +573,13 @@ useEffect(() => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Total Events Card */}
           <div className="flex items-center justify-between bg-[#FFF5E6] p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm">
-            <div>
-              <p className="text-sm text-gray-600 font-medium mb-1">
-                <FormattedMessage
-                  id="DASHBOARD.TOTAL_EVENTS"
-                  defaultMessage="Total Events"
-                />
-              </p>
-              <h2 className="text-3xl font-bold text-gray-900">
-                {dashboarddata?.totalEvent || 0}
-              </h2>
-            </div>
+            <div className="flex items-center justify-between mb-4">
+  <h2 className="text-base font-semibold text-gray-800">
+    Events
+  </h2>
+
+  
+</div>
             <div className="w-16 h-16 flex items-center justify-center bg-[#FF947A] rounded-full shadow-md">
               <img
                 src={toAbsoluteUrl(`/media/brand-logos/total_events.svg`)}
@@ -716,10 +760,25 @@ useEffect(() => {
         </div>
 
         {/* -------------------- EVENTS SECTION -------------------- */}
-        <div className="border border-primary p-3 rounded-lg mb-6">
-          <div className="flex flex-col gap-3 mb-4">
-            <h2 className="text-base font-semibold text-gray-800">Events</h2>
+      <div className="border border-primary p-3 rounded-lg mb-6">
 
+  <div className="flex flex-col gap-3 mb-4">
+
+    <div className="flex items-center justify-between">
+      <h2 className="text-base font-semibold text-gray-800">
+        Events
+      </h2>
+
+      <button
+        type="button"
+        onClick={exportEventsToExcel}
+        disabled={!eventData?.length}
+        className="bg-success  text-white px-4 py-2 rounded-md text-sm font-medium
+                   hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Export Excel
+      </button>
+    </div>
             <div className="flex flex-col md:flex-row md:items-center gap-3 w-full">
               <input
                 type="text"
@@ -791,10 +850,10 @@ useEffect(() => {
           ) : (
             <div className="overflow-x-auto">
               <TableComponent
-  columns={columns}
-  data={eventData}
-  paginationSize={10}
-/>
+    columns={columns}
+    data={eventData}
+    paginationSize={10}
+  />
             </div>
           )}
         </div>

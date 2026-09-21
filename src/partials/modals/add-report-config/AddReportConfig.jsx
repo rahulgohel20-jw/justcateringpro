@@ -39,7 +39,8 @@ const defaultOptions = {
   isHalfPax: false,
   is3Column:false,
   isFunctionNextPage:false,
-  isAddDecoration:false, 
+  isAddDecoration:false,
+  isAddShortMenu:false,
   isOnePage:false,
   isShowEventRemarks :false, 
   showAdditional:false,
@@ -114,6 +115,7 @@ const optionLabels = {
   isAllItemTogether : "Is All Item Together",
   isEndDate : "Is End Date",
   isStartDate : "Is start Date",
+  isAddShortMenu : "Is Add Short Menu Report"
 };
 
 const AddReportConfig = ({
@@ -241,6 +243,7 @@ const AddReportConfig = ({
             is3Column : !!data.is3Column,
             isFunctionNextPage :!!data.isFunctionNextPage,
             isAddDecoration: !!data.isAddDecoration , 
+            isAddShortMenu : !!data.isAddShortMenu,
             isOnePage:!!data.isOnePage , 
             isShowEventRemarks: !!data.isShowEventRemarks, 
             showAdditional: !!data.showAdditional,
@@ -374,6 +377,7 @@ const AddReportConfig = ({
   is3Column: booleanToNumber(options.is3Column),
   isFunctionNextPage :booleanToNumber(options.isFunctionNextPage),
   isAddDecoration:booleanToNumber(options.isAddDecoration),
+  isAddShortMenu:booleanToNumber(options.isAddShortMenu),
   isOnePage:booleanToNumber(options.isOnePage),
   isShowEventRemarks:booleanToNumber(options.isShowEventRemarks) , 
   showAdditional:booleanToNumber(options.showAdditional),

@@ -717,7 +717,12 @@ const handleWebWhatsAppClick = useCallback(
         return;
       }
 
-      const venue = eventData?.venue?.nameEnglish || "";
+      const venue =
+        activeFunction?.function_venue ||
+        activeFunction?.venue?.nameEnglish ||
+        activeFunction?.banquetHallShifts?.[0]?.banquetHallName ||
+        "";
+
       let shiftsToSend = shift ? [shift] : data.labourShift || [];
 
       const dateStr = shiftsToSend[0]?.labordatetime
@@ -731,7 +736,10 @@ const handleWebWhatsAppClick = useCallback(
             (c) => c.toUpperCase(),
           );
           const qty = s.qty ?? s.quantity ?? "";
-          return `${shiftName} : ${qty}`;
+          const timeStr = s.labordatetime
+            ? dayjs(s.labordatetime, "DD/MM/YYYY hh:mm A").format("hh:mm A")  // ⬅ NEW
+            : "";
+          return `${shiftName}${timeStr ? ` (${timeStr})` : ""} : ${qty}`;   // ⬅ time inserted here
         })
         .join(",\n");
 
@@ -785,9 +793,8 @@ const handleWebWhatsAppClick = useCallback(
       Swal.fire({ icon: "error", title: "Failed to fetch labour details" });
     }
   },
-  [activeFunction?.id, eventData, userId],
+  [activeFunction, eventData, userId],
 );
-
   const filteredLabourData = useMemo(
     () =>
       labourData.filter((row) => {

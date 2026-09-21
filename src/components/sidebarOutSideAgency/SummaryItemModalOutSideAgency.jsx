@@ -12,6 +12,7 @@ import { FormattedMessage } from "react-intl";
 import { WhatsAppPdf } from "../../services/apiServices";
 import { Tooltip } from "antd";
 import dayjs from "dayjs";
+import { errorMsgPopup } from "../../underConstruction";
 
 
 const WhatsAppIcon = () => (
@@ -103,6 +104,7 @@ export default function SummaryItemModalOutsideAgency({
   eventFunctionId,
   eventId,
   type,
+  eventFunctionsFromParent = [],
 }) {
   const [expandedItems, setExpandedItems] = useState({});
   const [apiData, setApiData] = useState(null);
@@ -157,27 +159,65 @@ export default function SummaryItemModalOutsideAgency({
     fetchData();
   }, [open, eventFunctionId, eventId, type]);
 
-  const displayData = apiData
-    ? isShowingAllFunctions
-      ? apiData.flatMap((functionData) =>
-          functionData.agencyResponse.map((agency) => ({
-            ...agency,
-            functionName: functionData.eventFunction?.function?.nameEnglish || "N/A",
-            functionDateTime: functionData.eventFunction?.functionStartDateTime || "N/A",
-            venue: functionData.eventFunction?.function_venue || "N/A",
-          }))
-        )
-      : apiData[0]?.agencyResponse || []
-    : [];
+  const getFunctionVenue = (eventFunction) => {
+  if (!eventFunction) return "N/A";
 
-  const singleFunctionInfo =
-    !isShowingAllFunctions && apiData?.[0]
-      ? {
-          functionName: apiData[0].eventFunction?.function?.nameEnglish || "N/A",
-          functionDateTime: apiData[0].eventFunction?.functionStartDateTime || "N/A",
-          venue: apiData[0].eventFunction?.function_venue || "N/A",
-        }
-      : null;
+  // 1. Try this endpoint's own banquet hall data first
+  if (eventFunction.banquetHallId) {
+    return eventFunction.banquetHallName || eventFunction.function_venue || "N/A";
+  }
+  const bhShift = eventFunction.banquetHallShifts?.[0];
+  if (bhShift?.banquetHallId) {
+    return bhShift.banquetHallName || eventFunction.function_venue || "N/A";
+  }
+
+  const parentMatch = eventFunctionsFromParent.find(
+    (f) => f.id === eventFunction.id,
+  );
+  if (parentMatch) {
+    if (parentMatch.banquetHallId) {
+      return (
+        parentMatch.banquetHallName ||
+        parentMatch.function_venue ||
+        eventFunction.function_venue ||
+        "N/A"
+      );
+    }
+    const parentBhShift = parentMatch.banquetHallShifts?.[0];
+    if (parentBhShift?.banquetHallId) {
+      return (
+        parentBhShift.banquetHallName ||
+        parentMatch.function_venue ||
+        eventFunction.function_venue ||
+        "N/A"
+      );
+    }
+  }
+
+  return eventFunction.function_venue || "N/A";
+};
+
+const displayData = apiData
+  ? isShowingAllFunctions
+    ? apiData.flatMap((functionData) =>
+        functionData.agencyResponse.map((agency) => ({
+          ...agency,
+          functionName: functionData.eventFunction?.function?.nameEnglish || "N/A",
+          functionDateTime: functionData.eventFunction?.functionStartDateTime || "N/A",
+          venue: getFunctionVenue(functionData.eventFunction), // ⬅ changed
+        }))
+      )
+    : apiData[0]?.agencyResponse || []
+  : [];
+
+const singleFunctionInfo =
+  !isShowingAllFunctions && apiData?.[0]
+    ? {
+        functionName: apiData[0].eventFunction?.function?.nameEnglish || "N/A",
+        functionDateTime: apiData[0].eventFunction?.functionStartDateTime || "N/A",
+        venue: getFunctionVenue(apiData[0].eventFunction), // ⬅ changed
+      }
+    : null;
 
   const toggleItems = (index) => {
     setExpandedItems((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -356,7 +396,7 @@ const notifyWhatsApp = async (url) => {
   const functionDateTime = item.functionDateTime || singleFunctionInfo?.functionDateTime || "";
   const venueName = item.venue || singleFunctionInfo?.venue || "";
   const dateStr = formatWaDate(functionDateTime);
-  const timeStr = formatWaTime(functionDateTime);
+  const timeStr = item.time || formatWaTime(functionDateTime);
 
   const itemLines = (item.allocationItems || [])
     .map((ai) => {
@@ -377,6 +417,8 @@ const notifyWhatsApp = async (url) => {
     // "",
     // data?.data?.report_path,
   ].filter((line) => line !== null);
+
+  console.log("message", messageLines);
 
   const message = messageLines.join("\n");
 

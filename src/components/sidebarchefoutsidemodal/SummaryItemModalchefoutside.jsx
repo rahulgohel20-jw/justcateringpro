@@ -263,6 +263,7 @@ export default function SummaryItemModalchefoutside({
   eventFunctionId,
   eventId,
   type,
+    eventFunctionsFromParent = [],
 }) {
   const [expandedItems, setExpandedItems] = useState({});
   const [apiData, setApiData] = useState(null);
@@ -342,34 +343,70 @@ const formatWaTime = (dateTimeStr) => {
   }
 };
 
+const getFunctionVenue = (eventFunction) => {
+  if (!eventFunction) return "";
+
+  // 1. Try this endpoint's own banquet hall data first
+  if (eventFunction.banquetHallId) {
+    return eventFunction.banquetHallName || eventFunction.function_venue || "";
+  }
+  const bhShift = eventFunction.banquetHallShifts?.[0];
+  if (bhShift?.banquetHallId) {
+    return bhShift.banquetHallName || eventFunction.function_venue || "";
+  }
+
+  // 2. Fall back: look up the same function by id from parent's richer eventFunctions data
+  const parentMatch = eventFunctionsFromParent.find(
+    (f) => f.id === eventFunction.id,
+  );
+  if (parentMatch) {
+    if (parentMatch.banquetHallId) {
+      return (
+        parentMatch.banquetHallName ||
+        parentMatch.function_venue ||
+        eventFunction.function_venue ||
+        ""
+      );
+    }
+    const parentBhShift = parentMatch.banquetHallShifts?.[0];
+    if (parentBhShift?.banquetHallId) {
+      return (
+        parentBhShift.banquetHallName ||
+        parentMatch.function_venue ||
+        eventFunction.function_venue ||
+        ""
+      );
+    }
+  }
+
+  // 3. Last resort: whatever function_venue this endpoint gave us
+  return eventFunction.function_venue || "";
+};
+
 const displayData = apiData
   ? isShowingAllFunctions
-    ? apiData.flatMap((functionData) =>
-        functionData.agencyResponse.map((item) => ({
+    ? apiData.flatMap((functionData) => {
+        console.log("eventFunction from GetOutsideSummary:", functionData.eventFunction); // ⬅ TEMP DEBUG
+        return functionData.agencyResponse.map((item) => ({
           ...item,
           functionName: functionData.eventFunction?.function?.nameEnglish || "N/A",
           functionDateTime: functionData.eventFunction?.functionStartDateTime || "N/A",
-          functionVenue:
-            functionData.eventFunction?.function_venue ||
-            functionData.eventFunction?.banquetHallShifts?.[0]?.banquetHallName ||
-            functionData.eventFunction?.venue?.nameEnglish ||
-            "",
-        })),
-      )
+          functionVenue: getFunctionVenue(functionData.eventFunction),
+        }));
+      })
     : apiData[0]?.agencyResponse || []
   : [];
 
 const singleFunctionInfo =
   !isShowingAllFunctions && apiData?.[0]
-    ? {
-        functionName: apiData[0].eventFunction?.function?.nameEnglish || "N/A",
-        functionDateTime: apiData[0].eventFunction?.functionStartDateTime || "N/A",
-        functionVenue:
-          apiData[0].eventFunction?.function_venue ||
-          apiData[0].eventFunction?.banquetHallShifts?.[0]?.banquetHallName ||
-          apiData[0].eventFunction?.venue?.nameEnglish ||
-          "",
-      }
+    ? (() => {
+        console.log("eventFunction (single):", apiData[0].eventFunction); // ⬅ TEMP DEBUG
+        return {
+          functionName: apiData[0].eventFunction?.function?.nameEnglish || "N/A",
+          functionDateTime: apiData[0].eventFunction?.functionStartDateTime || "N/A",
+          functionVenue: getFunctionVenue(apiData[0].eventFunction),
+        };
+      })()
     : null;
 
   const toggleItems = (index) => {
@@ -377,7 +414,7 @@ const singleFunctionInfo =
   };
 const handleWhatsAppClick = async (item, index, lang = 0, mode = "api") => {
   
-
+console.log("WA item:", JSON.stringify(item, null, 2));
  
 //  if (item._cachedPdfUrl) {
 //   try {
@@ -496,13 +533,13 @@ if (data?.data?.success) {
       item._cachedPdfUrl = data?.data?.report_path;
       const phoneRaw = item.number || item.mobile || item.contactNumber || "";
 
-      if (mode === "web") {
+    if (mode === "web") {
   const greeting = (item.contactName || "THERE").toUpperCase();
   const functionName = item.functionName || singleFunctionInfo?.functionName || "";
   const functionDateTime = item.functionDateTime || singleFunctionInfo?.functionDateTime || "";
   const venueName = item.functionVenue || singleFunctionInfo?.functionVenue || "";
   const dateStr = formatWaDate(functionDateTime);
-  const timeStr = formatWaTime(functionDateTime);
+  const timeStr = item.time || formatWaTime(functionDateTime);   // ⬅ fallback to function time if reportingTime is empty
 
   const itemLines = (item.allocationItems || [])
     .map((ai) => `${(ai.itemName || "").toUpperCase()} (${ai.pax || 0} Pax)`)
@@ -515,7 +552,6 @@ if (data?.data?.success) {
     functionName ? `${functionName.toUpperCase()}${timeStr ? ` at ${timeStr}` : ""} Ready,` : null,
     itemLines || null,
     "",
-    // data?.data?.report_path,
   ].filter((line) => line !== null);
 
   const message = messageLines.join("\n");

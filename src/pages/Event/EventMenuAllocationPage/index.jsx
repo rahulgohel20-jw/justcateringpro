@@ -4000,6 +4000,7 @@ rows.forEach((r, i) => {
           eventFunctionId={getEventFunctionId(activeFunction)}
           eventId={eventId}
           type={"chef"}
+          eventFunctionsFromParent={eventData?.eventFunctions || []}
         />
         <SummaryItemModalOutsideAgency
           open={isOutsideAgencyModalOpen}
@@ -4008,6 +4009,7 @@ rows.forEach((r, i) => {
           eventFunctionId={getEventFunctionId(activeFunction)}
           eventId={eventId}
           type={"outside"}
+           eventFunctionsFromParent={eventData?.eventFunctions || []} 
         />
         <SummaryItemModalInHousecook
           open={isInHouseCookModalOpen}

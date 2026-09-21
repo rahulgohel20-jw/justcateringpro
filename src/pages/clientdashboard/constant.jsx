@@ -1,9 +1,9 @@
-import React from "react";
 import { DataGridColumnHeader } from "@/components";
 import { FormattedMessage } from "react-intl";
+import dayjs from "dayjs";
 
 // Status Badge Component
-const STATUS_MAP = {
+export const STATUS_MAP = {
   0: "Inquiry",
   1: "Confirmed",
   2: "Cancelled",
@@ -46,6 +46,13 @@ const StatusBadge = ({ status }) => {
   );
 };
 
+// Formats an incoming date/time string (e.g. "21/09/2026 08:00 AM") to "DD/MM/YYYY"
+export const formatEventDate = (value) => {
+  if (!value) return "-";
+  const parsed = dayjs(value, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY"]);
+  return parsed.isValid() ? parsed.format("DD/MM/YYYY") : value;
+};
+
 export const columns = [
   {
     accessorKey: "Invoice",
@@ -82,18 +89,34 @@ export const columns = [
     ),
   },
   {
-    accessorKey: "eventDate",
+    accessorKey: "eventStartDateTime",
     header: ({ column }) => (
       <DataGridColumnHeader
         column={column}
         title={
           <FormattedMessage
-            id="TABLE.EVENT_DATE_TIME"
-            defaultMessage="Event Date & Time"
+            id="TABLE.EVENT_START_DATE"
+            defaultMessage="Event Start Date"
           />
         }
       />
     ),
+    cell: ({ row }) => formatEventDate(row.original?.eventStartDateTime),
+  },
+  {
+    accessorKey: "eventEndDateTime",
+    header: ({ column }) => (
+      <DataGridColumnHeader
+        column={column}
+        title={
+          <FormattedMessage
+            id="TABLE.EVENT_END_DATE"
+            defaultMessage="Event End Date"
+          />
+        }
+      />
+    ),
+    cell: ({ row }) => formatEventDate(row.original?.eventEndDateTime),
   },
   {
     accessorKey: "Venue",
