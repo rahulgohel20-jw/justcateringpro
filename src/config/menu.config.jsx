@@ -888,12 +888,12 @@ id="COMMON.ITEMRAWMATERIALUNITCHANGE"              defaultMessage="Item Raw Mate
       onClick={(e) => e.stopPropagation()}
     >
       <FormattedMessage id="COMMON.CRM" defaultMessage="CRM" />
-      <span className="ml-2 rounded bg-blue-600 px-2 py-0.5 text-xs text-white">
+      <span className="ml-2 rounded bg-primary px-2 py-0.5 text-xs text-white">
         PRO
       </span>
     </a>
   ),
-  icon: "ki-filled ki-security-user text-lg text-blue-600",
+  icon: "ki-filled ki-security-user text-lg text-primary",
   path: "#",
   pageName: "CRM",
   moduleName: "CRM",
