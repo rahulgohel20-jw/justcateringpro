@@ -245,6 +245,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
             withVendor: config.withVendor,
             isNotes : config.isNotes,
             showAddOnLabel: config.showAddOnLabel,
+            isSignature: config.isSignature,
           })
             .filter(([, v]) => v)
             .map(([k]) => k);
@@ -272,7 +273,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
               isWithPrice: config.isWithPrice === 1,
               isExtraCharges: config.isExtraCharges === 0,
               isTermsCond: config.isTermsCond === 0,
-              isDoc: config.isDoc === 1,
+              isDoc: config.isDoc === 0,
               isExcel: config.isExcel === 1,
               isHalfPax: config.isHalfPax === 0,
               isOnePage:config.isOnePage === 0,
@@ -868,6 +869,7 @@ const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobi
   isNotes = 0,
   exclusiveThemeId = -1, 
   backOfficeId = -1,  
+  isSignature = 0,
 } = {}) => {
   setLoadingPdf(true);
   try {
@@ -901,6 +903,7 @@ const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobi
           exclusiveThemeId,
           backOfficeId, 
             showLastPage,
+            isSignature,
         ),
       ),
     );
@@ -1087,6 +1090,8 @@ const handleConfigGenerate = async (configData) => {
     const withOutBg = nonExclusiveConfig?.withOutBg === 0 ? 0 : 1;
     const withVendor = nonExclusiveConfig?.withVendor === 0 ? 0 : 1;
     const isAllItemTogether = nonExclusiveConfig?.isAllItemTogether ? 1 : 0;
+   const isSignature = nonExclusiveConfig?.isSignature ? 1 : 0;
+    
 
     // ⬅ Exclusive Theme module — pass the theme record's OWN id (e.g. 18402),
     // not templateMaster.id (e.g. 183). Matched by nameEnglish so it can't be
@@ -1136,6 +1141,7 @@ const handleConfigGenerate = async (configData) => {
         isNotes,
         exclusiveThemeId,
         backOfficeId,
+        isSignature,
       }),
     ]);
 
