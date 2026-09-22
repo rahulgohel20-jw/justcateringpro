@@ -47,6 +47,7 @@ import { AlertTriangle, Calendar, Globe, IndianRupee, Languages, RefreshCw } fro
 import { useModuleAccess } from "../../../hooks/useModuleAccess";
 import TranslateInstructionModal from "./TranslateInstructionModal";
 import GuestSignModal from "./components/Guestsignmodal";
+import dayjs from "dayjs";
 
 /**
  * Get the current language from localStorage
@@ -137,6 +138,11 @@ const getVenueName = (venue) => {
   if (lang === "gu") return venue.nameGujarati || venue.nameEnglish || "-";
   return venue.nameEnglish || "-";
 };
+const getVenueDisplay = (event) => {
+  const venueName = getVenueName(event?.venue);
+  if (venueName && venueName !== "-") return venueName;
+  return event?.banquetHallName || "-";
+};
 
 const getFunctionName = (functionObj) => {
   if (!functionObj) return "Unnamed";
@@ -148,6 +154,17 @@ const getFunctionName = (functionObj) => {
     return functionObj.nameGujarati || functionObj.nameEnglish || "Unnamed";
   return functionObj.nameEnglish || "Unnamed";
 };
+
+
+const REPORTING_TIME_FORMAT = "hh:mm A"; // see the note on format below
+
+// "02/09/2026 04:00 PM" -> "04:00 PM"  (empty if the string has no time)
+const getFunctionTime = (functionStartDateTime) => {
+  if (!functionStartDateTime || !/\d{1,2}:\d{2}/.test(functionStartDateTime)) return "";
+  const parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
+  return parsed.isValid() ? parsed.format(REPORTING_TIME_FORMAT) : "";
+};
+
 
 const TopTabs = ({ value, onChange, functions, tableLoading }) => {
   return (
@@ -1426,6 +1443,14 @@ useEffect(() => {
     return functionItem.id;
   };
 
+
+  const getFunctionStart = (fnId) =>
+  eventData?.eventFunctions?.find((f) => f.id === fnId)?.functionStartDateTime;
+
+// saved reporting time, or the function's start time when empty
+const resolveReportingTime = (alloc, row) =>
+  alloc.reportingTime || getFunctionTime(getFunctionStart(row.eventFunctionId));
+
   // const isAllFunctions = activeFunction?.id === -1;
 
   // const groupedByFunction = useMemo(() => {
@@ -1659,7 +1684,7 @@ useEffect(() => {
     helperPrice: alloc.helperPrice || 0,
     totalPrice: allocationTotal,  
     shiftTransPrice: alloc.shiftTransPrice ?? 0,
-      reportingTime: alloc.reportingTime ?? "",
+      reportingTime: alloc.reportingTime || getFunctionTime(getFunctionStart(item.eventFunctionId)),
     isOutside,
     isChefLabour,
     isInside,
@@ -2763,7 +2788,7 @@ const buildMenuExecutionChangeSummary = (prevRows, currentRows) => {
         serviceType: alloc.serviceType || "",
         totalPrice: alloc.totalPrice ?? 0,
         shiftTransPrice: alloc.shiftTransPrice ?? 0,
-         reportingTime: alloc.reportingTime || "",
+         reportingTime: resolveReportingTime(alloc, r),
         unitId: alloc.unitId ?? 0,
       };
     }
@@ -2781,7 +2806,7 @@ const buildMenuExecutionChangeSummary = (prevRows, currentRows) => {
         serviceType: alloc.serviceType || "",
         shiftTransPrice: alloc.shiftTransPrice ?? 0,
         totalPrice: alloc.totalPrice ?? 0,
-         reportingTime: alloc.reportingTime || "", 
+         reportingTime: resolveReportingTime(alloc, r), 
         unitId: alloc.unitId ?? 0,
       };
     }
@@ -2801,7 +2826,7 @@ const buildMenuExecutionChangeSummary = (prevRows, currentRows) => {
         serviceType: alloc.serviceType || "",
         totalPrice: alloc.totalPrice || 0,
         shiftTransPrice: alloc.shiftTransPrice || 0,
-         reportingTime: alloc.reportingTime || "",
+         reportingTime: resolveReportingTime(alloc, r),
         unitId: alloc.unitId || 0,
       };
     }
@@ -2978,7 +3003,7 @@ rows.forEach((r, i) => {
           serviceType: alloc.serviceType || "",
           shiftTransPrice: alloc.shiftTransPrice ?? 0,
           totalPrice: alloc.totalPrice ?? 0,
-               reportingTime: alloc.reportingTime || "",
+               reportingTime: resolveReportingTime(alloc, r),
           unitId: alloc.unitId ?? 0,
         })) || []),
     );
@@ -3001,7 +3026,7 @@ rows.forEach((r, i) => {
           serviceType: alloc.serviceType || "",
           totalPrice: alloc.totalPrice ?? 0,
           shiftTransPrice: alloc.shiftTransPrice ?? 0,
-               reportingTime: alloc.reportingTime || "",
+               reportingTime: resolveReportingTime(alloc, r),
           unitId: alloc.unitId ?? 0,
         })) || []),
     );
@@ -3026,7 +3051,7 @@ rows.forEach((r, i) => {
           serviceType: alloc.serviceType || "",
           totalPrice: alloc.totalPrice || 0,
           shiftTransPrice: alloc.shiftTransPrice || 0,
-               reportingTime: alloc.reportingTime || "",
+               reportingTime: resolveReportingTime(alloc, r),
           unitId: alloc.unitId || 0,
         })) || []),
     );
@@ -3529,10 +3554,10 @@ rows.forEach((r, i) => {
                   label: (
                     <FormattedMessage
                       id="EVENT_MENU_ALLOCATION.EVENT_VENUE"
-                      defaultMessage="Venue"
+                      defaultMessage="Venue/Banquet"
                     />
                   ),
-                  value: getVenueName(eventData?.venue),
+                  value: getVenueDisplay(eventData),
                 },
               ].map((field, i) => (
                 <div
@@ -3545,7 +3570,7 @@ rows.forEach((r, i) => {
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400">{field.label}</p>
+                    <p className="text-xs text-gray-600">{field.label}</p>
                     <p className="text-sm font-semibold text-gray-800">
                       {field.value}
                     </p>
@@ -3994,23 +4019,31 @@ rows.forEach((r, i) => {
           mode={mode}
         />
         <SummaryItemModalchefoutside
-          open={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          chefsummary={chefsummary}
-          eventFunctionId={getEventFunctionId(activeFunction)}
-          eventId={eventId}
-          type={"chef"}
-          eventFunctionsFromParent={eventData?.eventFunctions || []}
-        />
-        <SummaryItemModalOutsideAgency
-          open={isOutsideAgencyModalOpen}
-          onClose={() => setIsOutsideAgencyModalOpen(false)}
-          outsidesummary={outsidesummary}
-          eventFunctionId={getEventFunctionId(activeFunction)}
-          eventId={eventId}
-          type={"outside"}
-           eventFunctionsFromParent={eventData?.eventFunctions || []} 
-        />
+  open={isModalOpen}
+  onClose={() => setIsModalOpen(false)}
+  chefsummary={chefsummary}
+  eventFunctionId={getEventFunctionId(activeFunction)}
+  eventId={eventId}
+  type={"chef"}
+  eventFunctionsFromParent={eventData?.eventFunctions || []}
+  mealType={eventData?.mealType}
+  mealNotes={eventData?.meal_notes}
+  mealNotesHindi={eventData?.meal_notes_hindi}
+  mealNotesGujarati={eventData?.meal_notes_gujarati}
+/>
+<SummaryItemModalOutsideAgency
+  open={isOutsideAgencyModalOpen}
+  onClose={() => setIsOutsideAgencyModalOpen(false)}
+  outsidesummary={outsidesummary}
+  eventFunctionId={getEventFunctionId(activeFunction)}
+  eventId={eventId}
+  type={"outside"}
+  eventFunctionsFromParent={eventData?.eventFunctions || []}
+  mealType={eventData?.mealType}
+  mealNotes={eventData?.meal_notes}
+  mealNotesHindi={eventData?.meal_notes_hindi}
+  mealNotesGujarati={eventData?.meal_notes_gujarati}
+/>
         <SummaryItemModalInHousecook
           open={isInHouseCookModalOpen}
           onClose={() => setIsInHouseCookModalOpen(false)}

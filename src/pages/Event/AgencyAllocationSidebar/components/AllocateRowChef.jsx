@@ -1,13 +1,21 @@
 import { useState, useEffect } from "react";
+import dayjs from "dayjs";
 import BaseSelect from "../ui/BaseSelect";
 import BaseInput from "../ui/BaseInput";
 import Swal from "sweetalert2";
 import { OutsideContactName } from "@/services/apiServices";
 
+const getFunctionTime24 = (functionStartDateTime) => {
+  if (!functionStartDateTime || !/\d{1,2}:\d{2}/.test(functionStartDateTime)) return "";
+  const parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
+  return parsed.isValid() ? parsed.format("HH:mm") : "";
+};
+
 export default function AllocateRowChef({
   onAllocate,
   vendorRefreshTrigger = 0,
   selectedCount,
+  functionStartDateTime, // ⬅ NEW
 }) {
   const userid = localStorage.getItem("userId");
   const [vendors, setVendors] = useState([]);
@@ -16,12 +24,18 @@ export default function AllocateRowChef({
   const [quantity, setQuantity] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [shiftTransPrice, setShiftTransPrice] = useState("");
-  const [reportingTime, setReportingTime] = useState(""); // ⬅ NEW
+  const [reportingTime, setReportingTime] = useState(() =>
+    getFunctionTime24(functionStartDateTime),
+  ); // ⬅ defaults to function time
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchdata();
   }, [vendorRefreshTrigger]);
+
+  useEffect(() => {
+    setReportingTime(getFunctionTime24(functionStartDateTime));
+  }, [functionStartDateTime]);
 
   const fetchdata = async () => {
     try {
@@ -43,7 +57,7 @@ export default function AllocateRowChef({
       (!pax || pax <= 0) &&
       (!quantity || quantity <= 0) &&
       (!shiftTransPrice || shiftTransPrice <= 0) &&
-      !reportingTime // ⬅ NEW
+      !reportingTime
     ) {
       Swal.fire({
         title: "Missing Information",
@@ -78,7 +92,7 @@ export default function AllocateRowChef({
     if (quantity && quantity > 0) allocationData.quantity = quantity;
     if (shiftTransPrice && shiftTransPrice >= 0)
       allocationData.shiftTransPrice = shiftTransPrice;
-    if (reportingTime) allocationData.reportingTime = reportingTime; // ⬅ NEW — "HH:MM" 24hr
+    if (reportingTime) allocationData.reportingTime = reportingTime;
 
     const success = onAllocate(allocationData);
 
@@ -88,7 +102,7 @@ export default function AllocateRowChef({
       setQuantity("");
       setServiceType("");
       setShiftTransPrice("");
-      setReportingTime(""); // ⬅ NEW
+      setReportingTime(getFunctionTime24(functionStartDateTime));
     }
   };
 
@@ -148,7 +162,6 @@ export default function AllocateRowChef({
           min="0"
         />
 
-        {/* ⬅ NEW: Reporting Time */}
         <input
           type="time"
           className="input"

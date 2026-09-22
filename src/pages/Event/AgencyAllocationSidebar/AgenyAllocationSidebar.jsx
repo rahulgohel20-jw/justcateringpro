@@ -283,6 +283,7 @@ const handleClose = useCallback(() => {
             isAllFunctions={isAllFunctions}
             onDirtyChange={setIsDirty}
             onSectionSave={(items) => onSectionSave?.(items, "chef")}
+             functionStartDateTime={eventFunctionData?.functionStartDateTime} 
           />
         );
       case "outside":
@@ -295,6 +296,7 @@ const handleClose = useCallback(() => {
             isAllFunctions={isAllFunctions}
             onDirtyChange={setIsDirty}
             onSectionSave={(items) => onSectionSave?.(items, "outside")}
+            functionStartDateTime={eventFunctionData?.functionStartDateTime} 
           />
         );
       case "inside":
