@@ -6,7 +6,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import Swal from "sweetalert2";
 import { GetAllAutoManualPO, PrintAutoManualPO, GetInfoAutoManualPO, AddLogs, DeleteAutoManual, WhatsAppPdf, } from "../../../services/apiServices";
-
+import { Modal, Switch } from "antd";
 
 
 import InfoModal from "../../../partials/modals/info/InfoModal";
@@ -43,6 +43,9 @@ const AutoManualPO = () => {
   const navigate = useNavigate();
   const intl     = useIntl();
   const userId   = localStorage.getItem("userId");
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+const [printItem, setPrintItem] = useState(null);
+const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default off
   const permissions = usePermission("Auto Manual PO");
   console.log(permissions);
   
@@ -159,25 +162,36 @@ const handleInfo = async (item) => {
   }
 };
 
-  const handlePrint = async (item) => {
-  const sotPoId = item?.id || item?.sotPoId;
+ const handlePrint = (item) => {
+  setPrintItem(item);
+  setShowCompanyDetails(false); // reset default off each time
+  setPrintModalOpen(true);
+};
+
+const handleConfirmPrint = async () => {
+  if (!printItem) return;
+  const sotPoId = printItem?.id || printItem?.sotPoId;
 
   try {
-    const res = await PrintAutoManualPO(sotPoId, userId);
+    const res = await PrintAutoManualPO(
+      sotPoId,
+      userId,
+      showCompanyDetails ? 1 : 0, // isCompanyDetails — now correctly the 3rd param
+    );
 
     const fileUrl = res?.data?.fileUrl;
 
     if (fileUrl) {
-      window.open(fileUrl, "_blank"); // 🔥 opens PDF in new tab
+      window.open(fileUrl, "_blank");
+      setPrintModalOpen(false);
       return;
     }
 
-    // fallback (if API returns data instead of URL)
-    const printData = res?.data?.data || item;
+    const printData = res?.data?.data || printItem;
     navigate("/stock-management/automanualpo/print", {
       state: { data: printData },
     });
-
+    setPrintModalOpen(false);
   } catch (err) {
     console.error("PrintAutoManualPO failed:", err?.response?.data || err?.message);
     Swal.fire({
@@ -188,8 +202,6 @@ const handleInfo = async (item) => {
     });
   }
 };
-
-
 const handleWhatsApp = (item) => {
   const sotPoId = item?.id || item?.sotPoId;
   shareViaWhatsApp({
@@ -336,6 +348,36 @@ const handleWhatsApp = (item) => {
   loading={loading}
 />
         </div>
+        <Modal
+  title="Print Purchase Order"
+  centered
+  open={printModalOpen}
+  onCancel={() => setPrintModalOpen(false)}
+  footer={[
+    <button
+      key="cancel"
+      className="btn btn-light"
+      onClick={() => setPrintModalOpen(false)}
+    >
+      Cancel
+    </button>,
+    <button
+      key="print"
+      className="btn btn-primary ms-2"
+      onClick={handleConfirmPrint}
+    >
+      Print
+    </button>,
+  ]}
+>
+  <div className="flex items-center justify-between py-2">
+    <span className="text-sm text-gray-700">Show Company Details</span>
+    <Switch
+      checked={showCompanyDetails}
+      onChange={(checked) => setShowCompanyDetails(checked)}
+    />
+  </div>
+</Modal>
 
       </Container>
 

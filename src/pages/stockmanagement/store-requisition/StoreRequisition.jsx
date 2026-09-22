@@ -9,6 +9,7 @@ import { DeleteStoreReq, GetAllStoreReq, GetStoreRequisitionPdf, UpdateStoreReqS
 import { shareViaWhatsApp } from "@/hooks/useWhatsAppShare";
 import { storeRequisitionColumns } from "./constant";
 import useStyle from "./style";
+import { Switch } from "antd";
 
 const StoreRequisition = () => {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ const StoreRequisition = () => {
   const [showLangSelect, setShowLangSelect] = useState(false);
   const [selectedPrintItem, setSelectedPrintItem] = useState(null);
   const [printMode, setPrintMode] = useState("print");
-
+const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default off
   const loadRows = async () => {
     try {
       setLoading(true);
@@ -96,48 +97,52 @@ const StoreRequisition = () => {
     }
   };
 
-  const handlePrint = (item) => {
-    setSelectedPrintItem(item);
-    setPrintMode("print");
-    setShowLangSelect(true);
-  };
+ const handlePrint = (item) => {
+  setSelectedPrintItem(item);
+  setPrintMode("print");
+  setShowCompanyDetails(false); // reset default off
+  setShowLangSelect(true);
+};
 
-  const handleWhatsApp = (item) => {
-    setSelectedPrintItem(item);
-    setPrintMode("whatsapp");
-    setShowLangSelect(true);
-  };
+const handleWhatsApp = (item) => {
+  setSelectedPrintItem(item);
+  setPrintMode("whatsapp");
+  setShowCompanyDetails(false); // reset default off
+  setShowLangSelect(true);
+};
 
   const handleLangSelect = async (lang) => {
-    setShowLangSelect(false);
-    if (!selectedPrintItem) return;
+  setShowLangSelect(false);
+  if (!selectedPrintItem) return;
 
-    const item = selectedPrintItem;
-    if (printMode === "whatsapp") {
-      shareViaWhatsApp({
-        generatePdf: () => GetStoreRequisitionPdf(1, lang, item.id, userId),
-        moduleName: "Store Requisition",
-        defaultName: item.partyName || "",
-        defaultMobile: item.mobile || item.partyMobile || "",
-        whatsAppApi: WhatsAppPdf,
-        userId,
-      });
-      setSelectedPrintItem(null);
-      return;
-    }
+  const item = selectedPrintItem;
+  const isCompanyDetails = showCompanyDetails ? 1 : 0;
 
-    try {
-      const response = await GetStoreRequisitionPdf(1, lang, item.id, userId);
-      const fileUrl = response?.data?.fileUrl || response?.data?.data?.fileUrl;
-      if (fileUrl) window.open(fileUrl, "_blank", "noopener,noreferrer");
-      else throw new Error(response?.data?.msg || "PDF URL was not returned");
-    } catch (error) {
-      console.error(error);
-      Swal.fire({ icon: "error", title: "Error", text: "Something went wrong while generating the PDF." });
-    } finally {
-      setSelectedPrintItem(null);
-    }
-  };
+  if (printMode === "whatsapp") {
+    shareViaWhatsApp({
+      generatePdf: () => GetStoreRequisitionPdf(isCompanyDetails, lang, item.id, userId),
+      moduleName: "Store Requisition",
+      defaultName: item.partyName || "",
+      defaultMobile: item.mobile || item.partyMobile || "",
+      whatsAppApi: WhatsAppPdf,
+      userId,
+    });
+    setSelectedPrintItem(null);
+    return;
+  }
+
+  try {
+    const response = await GetStoreRequisitionPdf(isCompanyDetails, lang, item.id, userId);
+    const fileUrl = response?.data?.fileUrl || response?.data?.data?.fileUrl;
+    if (fileUrl) window.open(fileUrl, "_blank", "noopener,noreferrer");
+    else throw new Error(response?.data?.msg || "PDF URL was not returned");
+  } catch (error) {
+    console.error(error);
+    Swal.fire({ icon: "error", title: "Error", text: "Something went wrong while generating the PDF." });
+  } finally {
+    setSelectedPrintItem(null);
+  }
+};
 
   return <Fragment>
     <Container>
@@ -155,17 +160,26 @@ const StoreRequisition = () => {
       </div>
       <TableComponent columns={storeRequisitionColumns((item) => navigate("/stock-management/add-store-requisition", { state: { editData: item.raw } }), handleDelete, handlePrint, handleStatusChange, permission, handleWhatsApp)} data={rows} paginationSize={100} loading={loading} />
     </Container>
-    {showLangSelect && <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-[300px]">
-        <h3 className="text-lg font-semibold mb-4 text-center">Select Language</h3>
-        <div className="flex flex-col gap-3">
-          <button onClick={() => handleLangSelect(0)} className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg">English</button>
-          <button onClick={() => handleLangSelect(1)} className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg">Hindi</button>
-          <button onClick={() => handleLangSelect(2)} className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg">Gujarati</button>
-        </div>
-        <button onClick={() => { setShowLangSelect(false); setSelectedPrintItem(null); }} className="mt-4 text-sm text-gray-500 w-full">Cancel</button>
-      </div>
-    </div>}
+   {showLangSelect && <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
+  <div className="bg-white rounded-xl shadow-xl p-6 w-[300px]">
+    <h3 className="text-lg font-semibold mb-4 text-center">Select Language</h3>
+
+    <div className="flex items-center justify-between mb-4 px-1">
+      <span className="text-sm text-gray-700">Show Company Details</span>
+      <Switch
+        checked={showCompanyDetails}
+        onChange={(checked) => setShowCompanyDetails(checked)}
+      />
+    </div>
+
+    <div className="flex flex-col gap-3">
+      <button onClick={() => handleLangSelect(0)} className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg">English</button>
+      <button onClick={() => handleLangSelect(1)} className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg">Hindi</button>
+      <button onClick={() => handleLangSelect(2)} className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg">Gujarati</button>
+    </div>
+    <button onClick={() => { setShowLangSelect(false); setSelectedPrintItem(null); }} className="mt-4 text-sm text-gray-500 w-full">Cancel</button>
+  </div>
+</div>}
   </Fragment>;
 };
 

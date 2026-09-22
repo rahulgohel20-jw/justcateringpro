@@ -9,8 +9,7 @@ import { DeleteChefReq, GetAllChefReq, UpdateChefReqStatus, GetChefRequisitionPd
 import { shareViaWhatsApp } from "../../../hooks/useWhatsAppShare";
 import Swal from "sweetalert2";
 import { usePermission } from "../../../hooks/usePermission";
-
-
+import { Switch } from "antd";
 const getUserEmail = () => {
   try {
     const authStorage = localStorage.getItem("auth-storage");
@@ -31,7 +30,7 @@ const [originalData, setOriginalData] = useState([]);
 const [loading, setLoading] = useState(false);
 const [statusLoadingId, setStatusLoadingId] = useState(null);
   const navigate = useNavigate();
-
+const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default off
   const intl = useIntl();
 
   const userId = localStorage.getItem("userId");
@@ -260,12 +259,14 @@ const handleDelete = (issueid) => {
 const handlePrint = (item) => {
   setSelectedPrintItem(item);
   setPrintMode("print");
+  setShowCompanyDetails(false); // reset default off
   setShowLangSelect(true);
 };
 
 const handleWhatsApp = (item) => {
   setSelectedPrintItem(item);
   setPrintMode("whatsapp");
+  setShowCompanyDetails(false); // reset default off
   setShowLangSelect(true);
 };
 
@@ -274,10 +275,11 @@ const handleLangSelect = async (lang) => {
   if (!selectedPrintItem) return;
 
   const item = selectedPrintItem;
+  const isCompanyDetails = showCompanyDetails ? 1 : 0;
 
   if (printMode === "whatsapp") {
     shareViaWhatsApp({
-      generatePdf: () => GetChefRequisitionPdf(1, lang, item.id, userId),
+      generatePdf: () => GetChefRequisitionPdf(isCompanyDetails, lang, item.id, userId),
       moduleName: "Chef Requisition",
       defaultName: item?.partyName || "",
       defaultMobile: item?.mobile || item?.partyMobile || "",
@@ -290,7 +292,7 @@ const handleLangSelect = async (lang) => {
 
   // existing plain-print flow, unchanged
   try {
-    const res = await GetChefRequisitionPdf(1, lang, item.id, userId);
+    const res = await GetChefRequisitionPdf(isCompanyDetails, lang, item.id, userId);
     const fileUrl = res?.data?.fileUrl || res?.data?.data?.fileUrl;
 
     if (fileUrl) {
@@ -366,45 +368,54 @@ const handleLangSelect = async (lang) => {
   loading={loading}
 />
       </Container>
-       {showLangSelect && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-[300px]">
-            <h3 className="text-lg font-semibold mb-4 text-center">
-              Select Language
-            </h3>
+      {showLangSelect && (
+  <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
+    <div className="bg-white rounded-xl shadow-xl p-6 w-[300px]">
+      <h3 className="text-lg font-semibold mb-4 text-center">
+        Select Language
+      </h3>
 
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => handleLangSelect(0)}
-                className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg"
-              >
-                English
-              </button>
+      {/* Company details toggle */}
+      <div className="flex items-center justify-between mb-4 px-1">
+        <span className="text-sm text-gray-700">Show Company Details</span>
+        <Switch
+          checked={showCompanyDetails}
+          onChange={(checked) => setShowCompanyDetails(checked)}
+        />
+      </div>
 
-              <button
-                onClick={() => handleLangSelect(1)}
-                className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg"
-              >
-                Hindi
-              </button>
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={() => handleLangSelect(0)}
+          className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg"
+        >
+          English
+        </button>
 
-              <button
-                onClick={() => handleLangSelect(2)}
-                className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg"
-              >
-                Gujarati
-              </button>
-            </div>
+        <button
+          onClick={() => handleLangSelect(1)}
+          className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg"
+        >
+          Hindi
+        </button>
 
-            <button
-              onClick={() => setShowLangSelect(false)}
-              className="mt-4 text-sm text-gray-500 w-full"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+        <button
+          onClick={() => handleLangSelect(2)}
+          className="px-4 py-2 text-gray-800 bg-blue-50 border-2 border-primary hover:bg-blue-200 rounded-lg"
+        >
+          Gujarati
+        </button>
+      </div>
+
+      <button
+        onClick={() => setShowLangSelect(false)}
+        className="mt-4 text-sm text-gray-500 w-full"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
     </Fragment>
   );
 };
