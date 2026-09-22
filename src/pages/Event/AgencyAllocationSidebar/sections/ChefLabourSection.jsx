@@ -3,6 +3,13 @@ import AllocateRowChef from "../components/AllocateRowChef";
 import ChefLabourTable from "../components/ChefLabourTable";
 import { MenuAllocationSave, AddLogs  } from "@/services/apiServices";
 import Swal from "sweetalert2";
+import dayjs from "dayjs";
+
+const getFunctionTime24 = (functionStartDateTime) => {
+  if (!functionStartDateTime || !/\d{1,2}:\d{2}/.test(functionStartDateTime)) return "";
+  const parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
+  return parsed.isValid() ? parsed.format("HH:mm") : "";
+};
 
 export default function ChefLabourSection({
   data,
@@ -13,6 +20,7 @@ export default function ChefLabourSection({
   onDirtyChange,
   isDirty,
   onSectionSave,
+   functionStartDateTime,
 }) {
   const [selectedItems, setSelectedItems] = useState({});
   const [menuItems, setMenuItems] = useState([]);
@@ -46,8 +54,9 @@ export default function ChefLabourSection({
     quantity,
     serviceType,
     totalPrice: alloc.totalPrice ?? calculatedTotal,
-      reportingTime: formatTime24hr(alloc.reportingTime || ""),
-
+      reportingTime:
+    formatTime24hr(alloc.reportingTime || "") ||
+    getFunctionTime24(functionStartDateTime),  
   };
 };
 
@@ -110,7 +119,7 @@ useEffect(() => {
     initialMenuItemsRef.current = [];
   }
   changedPaxItemsRef.current.clear();
-}, [data, isAllFunctions]);
+}, [data, isAllFunctions, functionStartDateTime]);
 
   // useEffect(() => {
   //   if (data && Array.isArray(data)) {
@@ -163,21 +172,26 @@ useEffect(() => {
     setSelectedItems((prev) => ({ ...prev, [itemKey]: isChecked }));
   }, []);
 
- const handleAllocate = useCallback(
+const handleAllocate = useCallback(
   (allocationData) => {
     const hasSelectedItems = Object.values(selectedItems).some(Boolean);
-    if (!hasSelectedItems) {
+
+    const hasNonTimeFields =
+      allocationData.partyId !== undefined ||
+      allocationData.serviceType !== undefined ||
+      allocationData.pax !== undefined ||
+      allocationData.quantity !== undefined ||
+      allocationData.shiftTransPrice !== undefined;
+
+    // Only require a selection if something OTHER than reporting time was provided
+    if (hasNonTimeFields && !hasSelectedItems) {
       Swal.fire({ title: "Warning", text: "Please select at least one item to allocate", icon: "warning" });
       return false;
     }
 
     if (
-      !allocationData.partyId &&
-      !allocationData.serviceType &&
-      !allocationData.pax &&
-      !allocationData.quantity &&
-      allocationData.shiftTransPrice === undefined &&
-      allocationData.reportingTime === undefined  // ⬅ added
+      !hasNonTimeFields &&
+      allocationData.reportingTime === undefined
     ) {
       Swal.fire({ title: "Warning", text: "Please provide at least one allocation value", icon: "warning" });
       return false;
@@ -191,10 +205,22 @@ useEffect(() => {
       const updatedAllocations = menuItem.eventFunctionMenuAllocations.map(
         (allocation, allocationIndex) => {
           const itemKey = `${menuIndex}-${allocationIndex}`;
-          if (!selectedItems[itemKey]) return allocation;
+          const isSelected = !!selectedItems[itemKey];
+
+          // ⬅ reporting time is stamped on EVERY row, regardless of checkbox
+          const timeUpdate =
+            allocationData.reportingTime !== undefined
+              ? { reportingTime: allocationData.reportingTime }
+              : {};
+
+          if (!isSelected) {
+            return Object.keys(timeUpdate).length
+              ? { ...allocation, ...timeUpdate }
+              : allocation;
+          }
 
           allocatedCount++;
-          const updates = {};
+          const updates = { ...timeUpdate };
 
           if (allocationData.partyId !== undefined) {
             updates.partyId = allocationData.partyId;
@@ -206,8 +232,6 @@ useEffect(() => {
           if (allocationData.quantity !== undefined) updates.quantity = allocationData.quantity;
           if (allocationData.shiftTransPrice !== undefined)
             updates.shiftTransPrice = allocationData.shiftTransPrice;
-          if (allocationData.reportingTime !== undefined)          // ⬅ added
-            updates.reportingTime = allocationData.reportingTime;   // ⬅ added
 
           const effectiveType = updates.serviceType ?? allocation.serviceType ?? "plate_wise";
           const merged = { ...allocation, ...updates };
@@ -256,14 +280,47 @@ useEffect(() => {
 
     Swal.fire({
       title: "Success",
-      text: `Updated ${allocatedCount} selected item(s) successfully`,
+      text:
+        allocationData.reportingTime !== undefined
+          ? `Reporting time set on all items${allocatedCount ? `, and ${allocatedCount} selected item(s) updated` : ""}`
+          : `Updated ${allocatedCount} selected item(s) successfully`,
       icon: "success",
       timer: 2000,
       showConfirmButton: false,
     });
     return true;
   },
-  [menuItems, selectedItems, onDataUpdate],
+  [menuItems, selectedItems, onDataUpdate, onDirtyChange],
+);
+
+const handleApplyTimeToAll = useCallback(
+  (time) => {
+    let touched = 0;
+
+    const updatedMenuItems = menuItems.map((menuItem) => {
+      if (!Array.isArray(menuItem.eventFunctionMenuAllocations)) return menuItem;
+
+      const updatedAllocations = menuItem.eventFunctionMenuAllocations.map((allocation) => {
+        touched++;
+        return { ...allocation, reportingTime: time };
+      });
+
+      return { ...menuItem, eventFunctionMenuAllocations: updatedAllocations };
+    });
+
+    setMenuItems(updatedMenuItems);
+    onDirtyChange?.(true);
+    if (onDataUpdate) onDataUpdate(updatedMenuItems);
+
+    Swal.fire({
+      title: "Time Applied",
+      text: `Reporting time set on ${touched} allocation(s)`,
+      icon: "success",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+  },
+  [menuItems, onDataUpdate, onDirtyChange],
 );
 
 const handleCancel = useCallback(() => {
@@ -550,8 +607,14 @@ const buildChefLabourChangeSummary = (prevItems, currentItems) => {
     <div className="flex flex-col h-full">
       <AllocateRowChef
         onAllocate={handleAllocate}
+         onApplyTimeToAll={handleApplyTimeToAll}   
         vendorRefreshTrigger={vendorRefreshTrigger}
         selectedCount={selectedCount}
+        totalCount={menuItems.reduce(
+    (sum, m) => sum + (m.eventFunctionMenuAllocations?.length || 0),
+    0,
+  )} 
+        functionStartDateTime={functionStartDateTime}
       />
       <div className="flex-1 overflow-auto">
         <ChefLabourTable

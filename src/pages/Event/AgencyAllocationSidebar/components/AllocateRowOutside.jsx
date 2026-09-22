@@ -2,22 +2,39 @@ import { useEffect, useState } from "react";
 import BaseSelect from "../ui/BaseSelect";
 import BaseInput from "../ui/BaseInput";
 import Swal from "sweetalert2";
+import dayjs from "dayjs";
 import { OutsideContactName, GetUnitData } from "@/services/apiServices";
+
+
+const getFunctionTime24 = (functionStartDateTime) => {
+  if (!functionStartDateTime || !/\d{1,2}:\d{2}/.test(functionStartDateTime)) return "";
+  const parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
+  return parsed.isValid() ? parsed.format("HH:mm") : "";
+};
 
 export default function AllocateRowOutside({
   onAllocate,
   vendorRefreshTrigger = 0,
   selectedCount,
+  functionStartDateTime 
 }) {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState("");
   const [quantity, setQuantity] = useState("");
   const [shiftTransPrice, setShiftTransPrice] = useState("");
-  const [reportingTime, setReportingTime] = useState(""); // ⬅ NEW
+const [reportingTime, setReportingTime] = useState(() =>
+  getFunctionTime24(functionStartDateTime),
+);
   const userid = localStorage.getItem("userId");
   const [units, setUnits] = useState([]);
   const [selectedUnit, setSelectedUnit] = useState("");
+
+  useEffect(() => {
+  setReportingTime(getFunctionTime24(functionStartDateTime));
+}, [functionStartDateTime]);
+
+
 
   useEffect(() => {
     fetchdata();
@@ -98,7 +115,7 @@ export default function AllocateRowOutside({
     setQuantity("");
     setShiftTransPrice("");
     setSelectedUnit("");
-    setReportingTime(""); // ⬅ NEW
+    setReportingTime(getFunctionTime24(functionStartDateTime)); 
   };
 
   return (
