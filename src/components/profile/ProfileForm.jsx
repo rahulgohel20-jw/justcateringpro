@@ -1,4 +1,4 @@
-import { Input, Select, Button, Form, message, Spin } from "antd";
+import { Input, Select, Button, Form, message, Spin , Upload } from "antd";
 import { useState, useEffect, useCallback, useRef } from "react";
 import ReactCountryFlag from "react-country-flag";
 import { isEqual } from "lodash";
@@ -8,9 +8,11 @@ import {
   fetchCitiesByState,
   getUserById,
   updateusermaster,
+  adduploadsignature,
 } from "@/services/apiServices";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useUser } from "../../context/UserContext";
+import { UploadOutlined } from "@ant-design/icons";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -38,6 +40,9 @@ const ProfileForm = ({ isEditing, onSaveSuccess }) => {
   const [countries, setCountries] = useState([]);
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
+  const [signatureFile, setSignatureFile] = useState(null);   // newly picked file, if any
+const [signaturePreview, setSignaturePreview] = useState(null); 
+const [signatureUploading, setSignatureUploading] = useState(false);
   const [loading, setLoading] = useState({
     country: false,
     state: false,
@@ -129,6 +134,7 @@ const ProfileForm = ({ isEditing, onSaveSuccess }) => {
         plan: user?.plan?.id ?? null,
         officePhone: user.userBasicDetails?.officeNo,
        gstNumber: user.gstNumber || "",
+       signature: user.userBasicDetails?.signature || user.signature || null,
 panNumber: user.panNumber || "",
 cinNumber: user.cinNumber || "",
 fdaLincense: user.fdaLincense || "",
@@ -157,7 +163,8 @@ followupDay: user.followupDay || user.userBasicDetails?.followupDay || "",
         bio: user.userBasicDetails?.bio || "",
       };
 
-      setInitialValues(values);
+       setInitialValues(values);
+      setSignaturePreview(values.signature || null);
       initialValuesRef.current = values;
 
       form.setFieldsValue(values);
@@ -257,11 +264,11 @@ followupDay: values.followupDay || "",
 
    
 
-    setIsSubmitting(true);
+     setIsSubmitting(true);
 
     try {
-      await updateusermaster(userMasterId, payload);
-      
+      await updateusermaster(userMasterId, { ...payload, signature: signaturePreview });
+
       message.success("Profile updated successfully");
 
       setIsChanged(false);
@@ -291,6 +298,31 @@ followupDay: values.followupDay || "",
       setIsSubmitting(false);
     }
   };
+
+  const handleSignatureUpload = async () => {
+  if (!signatureFile) {
+    message.warning("Please choose a signature file first");
+    return;
+  }
+  setSignatureUploading(true);
+  try {
+    const uploadRes = await adduploadsignature(signatureFile, userMasterId);
+    const url = uploadRes?.data?.data?.signatureUrl || uploadRes?.data?.data?.url;
+    if (!url) {
+      message.error("Signature upload failed. Please try again.");
+      return;
+    }
+    setSignaturePreview(url);
+    setSignatureFile(null);
+    setIsChanged(true);
+    message.success("Signature uploaded successfully");
+  } catch (err) {
+    console.error("[handleSignatureUpload] Error:", err);
+    message.error("Signature upload failed. Please try again.");
+  } finally {
+    setSignatureUploading(false);
+  }
+};
 
   const renderLocationSelect = (
     label,
@@ -658,6 +690,48 @@ followupDay: values.followupDay || "",
     readOnly={!isEditing}
     className="rounded-xl h-11 bg-[#F2F7FB] border border-[#E6ECF1]"
   />
+</Form.Item>
+<Form.Item
+  label={
+    <FormattedMessage id="COMMON.SIGNATURE" defaultMessage="Signature" />
+  }
+  className="mb-8"
+>
+  {signaturePreview && !signatureFile && (
+    <img
+      src={signaturePreview}
+      alt="Signature"
+      className="h-12 mb-2 object-contain"
+    />
+  )}
+  <div className="flex items-center gap-3">
+    <Upload
+      accept="image/*"
+      maxCount={1}
+      disabled={!isEditing || signatureUploading}
+      showUploadList={{ showRemoveIcon: isEditing }}
+      beforeUpload={(file) => {
+        setSignatureFile(file);
+        return false;
+      }}
+      onRemove={() => setSignatureFile(null)}
+    >
+      <Button icon={<UploadOutlined />} disabled={!isEditing || signatureUploading}>
+        {signaturePreview ? "Replace Signature" : "Choose Signature"}
+      </Button>
+    </Upload>
+
+    {signatureFile && (
+      <Button
+        type="primary"
+        loading={signatureUploading}
+        disabled={!isEditing}
+        onClick={handleSignatureUpload}
+      >
+        Upload
+      </Button>
+    )}
+  </div>
 </Form.Item>
         <Form.Item
           label={

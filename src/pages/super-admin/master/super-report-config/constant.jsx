@@ -230,6 +230,13 @@ export const columns = (
     return <YesNoIcon value={row.original.isAllItemTogether}/>;
   },
 },
+{
+  accessorKey:"isSignatureVisible",
+  header:"isSignatureVisible",
+  cell:({row}) => {
+    return <YesNoIcon value={row.original.isSignatureVisible}/>;
+  },
+},
  {
     accessorKey: "action",
     header: "Action",
