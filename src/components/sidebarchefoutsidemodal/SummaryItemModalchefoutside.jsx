@@ -264,6 +264,10 @@ export default function SummaryItemModalchefoutside({
   eventId,
   type,
     eventFunctionsFromParent = [],
+     mealType,          
+  mealNotes,         
+  mealNotesHindi,    
+  mealNotesGujarati, 
 }) {
   const [expandedItems, setExpandedItems] = useState({});
   const [apiData, setApiData] = useState(null);
@@ -539,10 +543,30 @@ if (data?.data?.success) {
   const functionDateTime = item.functionDateTime || singleFunctionInfo?.functionDateTime || "";
   const venueName = item.functionVenue || singleFunctionInfo?.functionVenue || "";
   const dateStr = formatWaDate(functionDateTime);
-  const timeStr = item.time || formatWaTime(functionDateTime);   // ⬅ fallback to function time if reportingTime is empty
+  const timeStr = item.time || formatWaTime(functionDateTime);
+  const instruction = item.notes || "";
+  const unit = item.unitName || "";
+
+  const mealTypeName = (
+    lang === 1 ? mealType?.nameHindi :
+    lang === 2 ? mealType?.nameGujarati :
+    mealType?.nameEnglish
+  )?.trim() || mealType?.nameEnglish || "";
+
+  const mealNotesText = (
+    lang === 1 ? mealNotesHindi :
+    lang === 2 ? mealNotesGujarati :
+    mealNotes
+  ) || mealNotes || "";
 
   const itemLines = (item.allocationItems || [])
-    .map((ai) => `${(ai.itemName || "").toUpperCase()} (${ai.pax || 0} Pax)`)
+    .map((ai) => {
+      const aiUnit = ai.unitName || ai.unit || unit || "";
+      const aiInstruction = ai.instructions || ai.instruction || ai.remarks || "";
+      let line = `${(ai.itemName || "").toUpperCase()} (${ai.pax || 0} Pax${aiUnit ? ` ${aiUnit}` : ""})`;
+      if (aiInstruction) line += `\n  - ${aiInstruction}`;
+      return line;
+    })
     .join("\n");
 
   const messageLines = [
@@ -550,9 +574,14 @@ if (data?.data?.success) {
     dateStr ? ` Date : ${dateStr} ` : null,
     venueName ? ` At Venue : ${venueName}` : null,
     functionName ? `${functionName.toUpperCase()}${timeStr ? ` at ${timeStr}` : ""} Ready,` : null,
+    unit ? `Unit : ${unit}` : null,
+    mealTypeName ? ` Meal Type : ${mealTypeName}` : null,
     itemLines || null,
+    instruction ? `Instructions : ${instruction}` : null,
+    mealNotesText ? ` Notes : ${mealNotesText}` : null,
     "",
   ].filter((line) => line !== null);
+  
 
   const message = messageLines.join("\n");
 

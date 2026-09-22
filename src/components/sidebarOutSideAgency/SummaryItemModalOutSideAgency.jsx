@@ -105,6 +105,10 @@ export default function SummaryItemModalOutsideAgency({
   eventId,
   type,
   eventFunctionsFromParent = [],
+  mealType,          
+  mealNotes,         
+  mealNotesHindi,    
+  mealNotesGujarati, 
 }) {
   const [expandedItems, setExpandedItems] = useState({});
   const [apiData, setApiData] = useState(null);
@@ -389,7 +393,7 @@ const notifyWhatsApp = async (url) => {
 
   if (actionType === "whatsapp") {
     await notifyWhatsApp(data?.data?.report_path);
-  } else if (actionType === "whatsapp-web") {
+ } else if (actionType === "whatsapp-web") {
   const phone = item.number || item.mobile || item.contactNumber || "";
   const greeting = (item.contactName || "THERE").toUpperCase();
   const functionName = item.functionName || singleFunctionInfo?.functionName || "";
@@ -398,11 +402,26 @@ const notifyWhatsApp = async (url) => {
   const dateStr = formatWaDate(functionDateTime);
   const timeStr = item.time || formatWaTime(functionDateTime);
 
+  const mealTypeName = (
+    lang === 1 ? mealType?.nameHindi :
+    lang === 2 ? mealType?.nameGujarati :
+    mealType?.nameEnglish
+  )?.trim() || mealType?.nameEnglish || "";
+
+  const mealNotesText = (
+    lang === 1 ? mealNotesHindi :
+    lang === 2 ? mealNotesGujarati :
+    mealNotes
+  ) || mealNotes || "";
+
   const itemLines = (item.allocationItems || [])
     .map((ai) => {
       const qty = Number(ai.qty || 0).toFixed(2);
       const unit = (ai.unitName || "").toUpperCase();
-      return `${(ai.itemName || "").toUpperCase()} for ${qty}${unit ? ` ${unit}` : ""}`;
+      const instruction = ai.notes || ai.remarks || "";
+      let line = `${(ai.itemName || "").toUpperCase()} for ${qty}${unit ? ` ${unit}` : ""}`;
+      if (instruction) line += `\n  - ${instruction}`;
+      return line;
     })
     .join("\n");
 
@@ -413,9 +432,9 @@ const notifyWhatsApp = async (url) => {
     functionName
       ? `${functionName.toUpperCase()} Ready${timeStr ? ` at ${timeStr}` : ""},Requirement :`
       : null,
+    mealTypeName ? ` Meal Type : ${mealTypeName}` : null,
     itemLines || null,
-    // "",
-    // data?.data?.report_path,
+    mealNotesText ? ` Notes : ${mealNotesText}` : null,
   ].filter((line) => line !== null);
 
   console.log("message", messageLines);

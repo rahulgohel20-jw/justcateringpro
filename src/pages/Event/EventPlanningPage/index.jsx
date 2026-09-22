@@ -3945,9 +3945,9 @@ const buildFullChangeSummary = (prev, next) => {
               <div className="mt-4">
                 <div className="flex items-center gap-2">
                   <img className="w-5 h-5" src={toAbsoluteUrl("/media/menu/venue.png")} alt="venue" />
-                  <span className="text-sm font-semibold text-gray-900"><FormattedMessage id="USER.EVENT_PLANNING.VENUE_LABEL" defaultMessage="Venue:" /></span>
+                  <span className="text-sm font-semibold text-gray-900"><FormattedMessage id="USER.EVENT_PLANNING.VENUE_LABEL" defaultMessage="Venue/Banquet:" /></span>
                   <span className={` ${isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}`}>
-                    {eventData?.venue?.nameEnglish || ""}
+                    {eventData?.venue?.nameEnglish || eventData?.banquetHallName}
                   </span>
                 </div>
                 
