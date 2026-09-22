@@ -717,23 +717,38 @@ const handleWebWhatsAppClick = useCallback(
         return;
       }
 
-      const venue = eventData?.venue?.nameEnglish || "";
+      const venue =
+        activeFunction?.function_venue ||
+        activeFunction?.venue?.nameEnglish ||
+        activeFunction?.banquetHallShifts?.[0]?.banquetHallName ||
+        "";
+
       let shiftsToSend = shift ? [shift] : data.labourShift || [];
 
       const dateStr = shiftsToSend[0]?.labordatetime
         ? dayjs(shiftsToSend[0].labordatetime, "DD/MM/YYYY hh:mm A").format("DD.MM.YYYY")
         : "";
 
+      const timeStr = shiftsToSend[0]?.labordatetime                          // ⬅ NEW
+        ? dayjs(shiftsToSend[0].labordatetime, "DD/MM/YYYY hh:mm A").format("hh:mm A")
+        : "";
+
       const shiftLines = shiftsToSend
-        .map((s) => {
-          const shiftName = (s.laborshift || s.shift || "").replace(
-            /^\w/,
-            (c) => c.toUpperCase(),
-          );
-          const qty = s.qty ?? s.quantity ?? "";
-          return `${shiftName} : ${qty}`;
-        })
-        .join(",\n");
+  .map((s) => {
+    const shiftName = (s.laborshift || s.shift || "").replace(
+      /^\w/,
+      (c) => c.toUpperCase(),
+    );
+    const qty = s.qty ?? s.quantity ?? "";
+    const price = s.price ?? "";                                         
+    const shiftTimeStr = s.labordatetime
+      ? dayjs(s.labordatetime, "DD/MM/YYYY hh:mm A").format("hh:mm A")
+      : "";
+    return `${shiftName}${shiftTimeStr ? ` (${shiftTimeStr})` : ""} : ${qty} Qty${price ? ` @ ₹${price}` : ""}`;  // ⬅ price appended
+  })
+  .join(",\n");
+
+  console.log("shiftLines", shiftLines)
 
       // Reuse the same report-generation flow to get a PDF link to attach
       let pdfUrl = "";
@@ -774,9 +789,10 @@ const handleWebWhatsAppClick = useCallback(
         `TO, ${data.contactname || row.contact || ""}\n` +
         `Required : ${data.labortypename || row.labourType || ""}\n` +
         `Date ${dateStr}\n` +
+                                      
         `Venue : ${venue}\n` +
-        `${shiftLines}` +
-        (pdfUrl ? `\n\n${pdfUrl}` : "");
+        `${shiftLines}` ;
+        // (pdfUrl ? `\n\n${pdfUrl}` : "");
 
       const url = `https://api.whatsapp.com/send?phone=${mobile}&text=${encodeURIComponent(message)}`;
       window.open(url, "_blank", "noopener,noreferrer");
@@ -785,9 +801,8 @@ const handleWebWhatsAppClick = useCallback(
       Swal.fire({ icon: "error", title: "Failed to fetch labour details" });
     }
   },
-  [activeFunction?.id, eventData, userId],
+  [activeFunction, eventData, userId],
 );
-
   const filteredLabourData = useMemo(
     () =>
       labourData.filter((row) => {
@@ -2536,10 +2551,7 @@ const LabourTable = ({
   className="flex items-center gap-1"
 >
   <Plus className="w-5 h-5 text-white bg-primary rounded-full p-0.5" />
-  <FormattedMessage
-    id="COMMON.ADD_VENDOR"
-    defaultMessage="Add Vendors"
-  />
+  
 </button>
 </div>
 

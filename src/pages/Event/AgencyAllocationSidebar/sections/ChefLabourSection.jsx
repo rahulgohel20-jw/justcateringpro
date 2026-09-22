@@ -3,6 +3,13 @@ import AllocateRowChef from "../components/AllocateRowChef";
 import ChefLabourTable from "../components/ChefLabourTable";
 import { MenuAllocationSave, AddLogs  } from "@/services/apiServices";
 import Swal from "sweetalert2";
+import dayjs from "dayjs";
+
+const getFunctionTime24 = (functionStartDateTime) => {
+  if (!functionStartDateTime || !/\d{1,2}:\d{2}/.test(functionStartDateTime)) return "";
+  const parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
+  return parsed.isValid() ? parsed.format("HH:mm") : "";
+};
 
 export default function ChefLabourSection({
   data,
@@ -13,6 +20,7 @@ export default function ChefLabourSection({
   onDirtyChange,
   isDirty,
   onSectionSave,
+   functionStartDateTime,
 }) {
   const [selectedItems, setSelectedItems] = useState({});
   const [menuItems, setMenuItems] = useState([]);
@@ -46,8 +54,9 @@ export default function ChefLabourSection({
     quantity,
     serviceType,
     totalPrice: alloc.totalPrice ?? calculatedTotal,
-      reportingTime: formatTime24hr(alloc.reportingTime || ""),
-
+      reportingTime:
+    formatTime24hr(alloc.reportingTime || "") ||
+    getFunctionTime24(functionStartDateTime),  
   };
 };
 
@@ -110,7 +119,7 @@ useEffect(() => {
     initialMenuItemsRef.current = [];
   }
   changedPaxItemsRef.current.clear();
-}, [data, isAllFunctions]);
+}, [data, isAllFunctions, functionStartDateTime]);
 
   // useEffect(() => {
   //   if (data && Array.isArray(data)) {
@@ -163,105 +172,156 @@ useEffect(() => {
     setSelectedItems((prev) => ({ ...prev, [itemKey]: isChecked }));
   }, []);
 
-  const handleAllocate = useCallback(
-    (allocationData) => {
-      const hasSelectedItems = Object.values(selectedItems).some(Boolean);
-      if (!hasSelectedItems) {
-        Swal.fire({ title: "Warning", text: "Please select at least one item to allocate", icon: "warning" });
-        return false;
-      }
+const handleAllocate = useCallback(
+  (allocationData) => {
+    const hasSelectedItems = Object.values(selectedItems).some(Boolean);
 
-      if (
-        !allocationData.partyId &&
-        !allocationData.serviceType &&
-        !allocationData.pax &&
-        !allocationData.quantity &&
-        allocationData.shiftTransPrice === undefined
-      ) {
-        Swal.fire({ title: "Warning", text: "Please provide at least one allocation value", icon: "warning" });
-        return false;
-      }
+    const hasNonTimeFields =
+      allocationData.partyId !== undefined ||
+      allocationData.serviceType !== undefined ||
+      allocationData.pax !== undefined ||
+      allocationData.quantity !== undefined ||
+      allocationData.shiftTransPrice !== undefined;
 
-      let allocatedCount = 0;
+    // Only require a selection if something OTHER than reporting time was provided
+    if (hasNonTimeFields && !hasSelectedItems) {
+      Swal.fire({ title: "Warning", text: "Please select at least one item to allocate", icon: "warning" });
+      return false;
+    }
 
-      const updatedMenuItems = menuItems.map((menuItem, menuIndex) => {
-        if (!Array.isArray(menuItem.eventFunctionMenuAllocations)) return menuItem;
+    if (
+      !hasNonTimeFields &&
+      allocationData.reportingTime === undefined
+    ) {
+      Swal.fire({ title: "Warning", text: "Please provide at least one allocation value", icon: "warning" });
+      return false;
+    }
 
-        const updatedAllocations = menuItem.eventFunctionMenuAllocations.map(
-          (allocation, allocationIndex) => {
-            const itemKey = `${menuIndex}-${allocationIndex}`;
-            if (!selectedItems[itemKey]) return allocation;
+    let allocatedCount = 0;
 
-            allocatedCount++;
-            const updates = {};
+    const updatedMenuItems = menuItems.map((menuItem, menuIndex) => {
+      if (!Array.isArray(menuItem.eventFunctionMenuAllocations)) return menuItem;
 
-            if (allocationData.partyId !== undefined) {
-              updates.partyId = allocationData.partyId;
-              updates.partyName = allocationData.partyName || "";
-              updates.number = allocationData.number || "";
-            }
-            if (allocationData.serviceType !== undefined) updates.serviceType = allocationData.serviceType;
-            if (allocationData.pax !== undefined) updates.quantity = allocationData.pax;
-            if (allocationData.quantity !== undefined) updates.quantity = allocationData.quantity;
-            if (allocationData.shiftTransPrice !== undefined)
-              updates.shiftTransPrice = allocationData.shiftTransPrice;
+      const updatedAllocations = menuItem.eventFunctionMenuAllocations.map(
+        (allocation, allocationIndex) => {
+          const itemKey = `${menuIndex}-${allocationIndex}`;
+          const isSelected = !!selectedItems[itemKey];
 
-            const effectiveType = updates.serviceType ?? allocation.serviceType ?? "plate_wise";
-            const merged = { ...allocation, ...updates };
-            const shiftTrans = parseFloat(merged.shiftTransPrice) || 0;
+          // ⬅ reporting time is stamped on EVERY row, regardless of checkbox
+          const timeUpdate =
+            allocationData.reportingTime !== undefined
+              ? { reportingTime: allocationData.reportingTime }
+              : {};
 
-            if (!effectiveType || effectiveType === "plate_wise") {
-              const qty = parseFloat(merged.quantity) || 0;
-              const price = parseFloat(merged.price) || 0;
-              updates.totalPrice = qty * price + shiftTrans;
-            } else if (effectiveType === "counter_wise") {
-              const cQty = parseFloat(merged.counterQuantity) || 0;
-              const hQty = parseFloat(merged.helperQuantity) || 0;
-              const cPrice = parseFloat(merged.counterPrice) || 0;
-              const hPrice = parseFloat(merged.helperPrice) || 0;
-              updates.totalPrice = cQty * cPrice + hQty * hPrice + shiftTrans;
-            }
-
-            return { ...allocation, ...updates };
-          },
-        );
-
-        const hasUpdatedAllocations = menuItem.eventFunctionMenuAllocations.some(
-          (_, allocationIndex) => selectedItems[`${menuIndex}-${allocationIndex}`],
-        );
-
-        if (hasUpdatedAllocations && allocationData.pax !== undefined) {
-          const itemKey = `${menuItem.menuItemId}-${menuItem.menuCategoryId}-${menuItem.eventFunctionId}`;
-          const initialItem = initialMenuItemsRef.current[menuIndex];
-          if (initialItem && initialItem.personCount !== allocationData.pax) {
-            changedPaxItemsRef.current.add(itemKey);
+          if (!isSelected) {
+            return Object.keys(timeUpdate).length
+              ? { ...allocation, ...timeUpdate }
+              : allocation;
           }
+
+          allocatedCount++;
+          const updates = { ...timeUpdate };
+
+          if (allocationData.partyId !== undefined) {
+            updates.partyId = allocationData.partyId;
+            updates.partyName = allocationData.partyName || "";
+            updates.number = allocationData.number || "";
+          }
+          if (allocationData.serviceType !== undefined) updates.serviceType = allocationData.serviceType;
+          if (allocationData.pax !== undefined) updates.quantity = allocationData.pax;
+          if (allocationData.quantity !== undefined) updates.quantity = allocationData.quantity;
+          if (allocationData.shiftTransPrice !== undefined)
+            updates.shiftTransPrice = allocationData.shiftTransPrice;
+
+          const effectiveType = updates.serviceType ?? allocation.serviceType ?? "plate_wise";
+          const merged = { ...allocation, ...updates };
+          const shiftTrans = parseFloat(merged.shiftTransPrice) || 0;
+
+          if (!effectiveType || effectiveType === "plate_wise") {
+            const qty = parseFloat(merged.quantity) || 0;
+            const price = parseFloat(merged.price) || 0;
+            updates.totalPrice = qty * price + shiftTrans;
+          } else if (effectiveType === "counter_wise") {
+            const cQty = parseFloat(merged.counterQuantity) || 0;
+            const hQty = parseFloat(merged.helperQuantity) || 0;
+            const cPrice = parseFloat(merged.counterPrice) || 0;
+            const hPrice = parseFloat(merged.helperPrice) || 0;
+            updates.totalPrice = cQty * cPrice + hQty * hPrice + shiftTrans;
+          }
+
+          return { ...allocation, ...updates };
+        },
+      );
+
+      const hasUpdatedAllocations = menuItem.eventFunctionMenuAllocations.some(
+        (_, allocationIndex) => selectedItems[`${menuIndex}-${allocationIndex}`],
+      );
+
+      if (hasUpdatedAllocations && allocationData.pax !== undefined) {
+        const itemKey = `${menuItem.menuItemId}-${menuItem.menuCategoryId}-${menuItem.eventFunctionId}`;
+        const initialItem = initialMenuItemsRef.current[menuIndex];
+        if (initialItem && initialItem.personCount !== allocationData.pax) {
+          changedPaxItemsRef.current.add(itemKey);
         }
+      }
 
-        return {
-          ...menuItem,
-          eventFunctionMenuAllocations: updatedAllocations,
-          ...(hasUpdatedAllocations &&
-            allocationData.pax !== undefined && { personCount: allocationData.pax }),
-        };
+      return {
+        ...menuItem,
+        eventFunctionMenuAllocations: updatedAllocations,
+        ...(hasUpdatedAllocations &&
+          allocationData.pax !== undefined && { personCount: allocationData.pax }),
+      };
+    });
+
+    setMenuItems(updatedMenuItems);
+    onDirtyChange?.(true);
+    if (onDataUpdate) onDataUpdate(updatedMenuItems);
+    setSelectedItems({});
+
+    Swal.fire({
+      title: "Success",
+      text:
+        allocationData.reportingTime !== undefined
+          ? `Reporting time set on all items${allocatedCount ? `, and ${allocatedCount} selected item(s) updated` : ""}`
+          : `Updated ${allocatedCount} selected item(s) successfully`,
+      icon: "success",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+    return true;
+  },
+  [menuItems, selectedItems, onDataUpdate, onDirtyChange],
+);
+
+const handleApplyTimeToAll = useCallback(
+  (time) => {
+    let touched = 0;
+
+    const updatedMenuItems = menuItems.map((menuItem) => {
+      if (!Array.isArray(menuItem.eventFunctionMenuAllocations)) return menuItem;
+
+      const updatedAllocations = menuItem.eventFunctionMenuAllocations.map((allocation) => {
+        touched++;
+        return { ...allocation, reportingTime: time };
       });
 
-      setMenuItems(updatedMenuItems);
-       onDirtyChange?.(true);
-      if (onDataUpdate) onDataUpdate(updatedMenuItems);
-      setSelectedItems({});
+      return { ...menuItem, eventFunctionMenuAllocations: updatedAllocations };
+    });
 
-      Swal.fire({
-        title: "Success",
-        text: `Updated ${allocatedCount} selected item(s) successfully`,
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
-      });
-      return true;
-    },
-    [menuItems, selectedItems, onDataUpdate],
-  );
+    setMenuItems(updatedMenuItems);
+    onDirtyChange?.(true);
+    if (onDataUpdate) onDataUpdate(updatedMenuItems);
+
+    Swal.fire({
+      title: "Time Applied",
+      text: `Reporting time set on ${touched} allocation(s)`,
+      icon: "success",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+  },
+  [menuItems, onDataUpdate, onDirtyChange],
+);
 
 const handleCancel = useCallback(() => {
   if (isDirty) {
@@ -547,8 +607,14 @@ const buildChefLabourChangeSummary = (prevItems, currentItems) => {
     <div className="flex flex-col h-full">
       <AllocateRowChef
         onAllocate={handleAllocate}
+         onApplyTimeToAll={handleApplyTimeToAll}   
         vendorRefreshTrigger={vendorRefreshTrigger}
         selectedCount={selectedCount}
+        totalCount={menuItems.reduce(
+    (sum, m) => sum + (m.eventFunctionMenuAllocations?.length || 0),
+    0,
+  )} 
+        functionStartDateTime={functionStartDateTime}
       />
       <div className="flex-1 overflow-auto">
         <ChefLabourTable

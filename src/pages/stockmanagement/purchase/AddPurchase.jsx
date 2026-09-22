@@ -155,6 +155,7 @@ const AddPurchase = () => {
   const navigate = useNavigate();
   const [discount, setDiscount] = useState(0);
   const [adjustment, setAdjustment] = useState(0);
+  const [transportation, setTransportation] = useState(0);
   const [saving, setSaving] = useState(false);
   const userId = localStorage.getItem("userId");
 
@@ -266,6 +267,7 @@ const todayStr = new Date().toISOString().split("T")[0];
     });
     setDiscount(editData.discountper || 0);
     setAdjustment(editData.adjustamount || 0);
+    setTransportation(editData.transportation || 0);
     setItems(
       (editData.details || []).map((d) => ({
         rawMaterialId: d.rawMaterialId || 0,
@@ -451,9 +453,8 @@ useEffect(() => {
     discountType === "percent"
       ? (totalAmount * (parseFloat(discount) || 0)) / 100
       : parseFloat(discount) || 0;
-  const finalAmount =
-    totalAmount - discountAmount + (parseFloat(adjustment) || 0);
-
+const finalAmount =
+  totalAmount - discountAmount + (parseFloat(adjustment) || 0) + (parseFloat(transportation) || 0);
   // ── Save ────────────────────────────────────────────────────────────────────
  // ── Save ────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -528,6 +529,7 @@ useEffect(() => {
         discountType === "percent" ? parseFloat(discount) || 0 : 0,
       discountval: discountAmount,
       adjustamount: parseFloat(adjustment) || 0,
+       transportation: parseFloat(transportation) || 0,
       finalamount: finalAmount,
       stockTypeId: form.stock_type_id || 0,
       priceUpdateMaster: form.priceUpdateMaster,
@@ -564,6 +566,7 @@ useEffect(() => {
       discountper: parseFloat(discount) || 0,
       discountval: discountAmount,
       adjustamount: parseFloat(adjustment) || 0,
+      transportation: parseFloat(transportation) || 0, 
       finalamount: finalAmount,
       stockTypeId: form.stock_type_id || 0,
       priceUpdateMaster: form.priceUpdateMaster,
@@ -1258,7 +1261,23 @@ useEffect(() => {
             <div className="border-t border-slate-100 bg-slate-50/50">
               <div className="flex justify-end">
                 <div className="w-80 divide-y divide-slate-100">
+                 {!isFromPO && (
+          <div className="flex items-center justify-between px-6 py-3">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Transportation
+            </span>
+
+            <input
+              type="number"
+              value={transportation}
+              onChange={(e) => setTransportation(Number(e.target.value) || 0)}
+              className="w-28 px-2 py-1 text-sm font-bold text-slate-800 text-right border border-slate-300 rounded-md"
+              placeholder="0.00"
+            />
+          </div>
+        )}
                   <div className="flex items-center justify-between px-6 py-3">
+
                     <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       <FormattedMessage
                         id="COMMON.SUBTOTAL"

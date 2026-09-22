@@ -1,10 +1,10 @@
 "use client";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
 import { Container } from "@/components/container";
 import Chart from "react-apexcharts";
 import { TableComponent } from "@/components/table/TableComponent";
-import { columns } from "./constant";
+import { columns , STATUS_MAP,formatEventDate  } from "./constant";
 import ClientRaiseNewIssue from "../../partials/modals/TicketModal/ClientRaiseNewIssue";
 import {
   Search,
@@ -24,12 +24,14 @@ import {
   GetClientdashboardpiechart1,
   GetClientdashboardpiechart2,
   GetClientdashboardpiechart3,
-  GetClienteventdata,
+   GetEventByFilter,
   GetAllInvoicedatabyfilter,
   Getmostsellingitems,
 } from "@/services/apiServices";
 import dayjs from "dayjs";
 import { DatePicker } from "antd";
+import EventStatusDropdown from "../../components/dropdowns/EventStatusDropdown";
+import * as XLSX from "xlsx";
 
 const { RangePicker } = DatePicker;
 
@@ -89,7 +91,9 @@ const ClientDashboard = () => {
   const [showInvoiceAmount, setShowInvoiceAmount] = useState(false);
   const [showQuotationAmount, setShowQuotationAmount] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [eventStatus, setEventStatus] = useState("");
   const authData = JSON.parse(localStorage.getItem("auth-storage") || "{}");
+const isFirstRender = useRef(true);
 
 const roleId =
   authData?.state?.user?.userBasicDetails?.role?.id ||
@@ -142,6 +146,31 @@ const roleId =
     setDashboarddata(res?.data?.data);
   };
 
+
+const exportEventsToExcel = () => {
+  if (!eventData.length) return;
+
+  try {
+    const excelData = eventData.map((item, index) => ({
+      "Sr. No.": index + 1,
+      "Customer Name": item.CustomerName || "",
+      "Event Name": item.Eventname || "",
+      "Event Start Date": formatEventDate(item.eventStartDateTime),
+"Event End Date": formatEventDate(item.eventEndDateTime),
+      Venue: item.Venue || "",
+      Status: STATUS_MAP?.[item.status] ?? "Inquiry",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Events");
+    XLSX.writeFile(workbook, `Events_${dayjs().format("DD-MM-YYYY")}.xlsx`);
+  } catch (err) {
+    console.error("Excel export failed:", err);
+    // optionally: Swal.fire("Error", "Could not export events", "error");
+  }
+};
+
   // ---------------- PIE CHART DATA ----------------
   const handlePeriodChange = async (period, type) => {
     setIsChartLoading(true);
@@ -184,31 +213,59 @@ const roleId =
     setIsChartLoading(false);
   };
 
-  // ---------------- EVENTS ----------------
-  const fetchEventData = async (range) => {
-    setIsLoadingEvents(true);
 
-    const { startDate, endDate } =
-      range === "custom"
-        ? getDateRange("custom", customEventDates)
-        : getDateRange(range);
+const fetchEventData = async (
+  range,
+  partyName = "",
+  status = eventStatus
+) => {
+  setIsLoadingEvents(true);
 
-    const res = await GetClienteventdata(startDate, endDate, userId);
-    const list = res?.data?.data || [];
+  const { startDate, endDate } =
+    range === "custom"
+      ? getDateRange("custom", customEventDates)
+      : getDateRange(range);
 
-    setEventData(
-      list.map((cust, i) => ({
-        Invoice: i + 1,
-        CustomerName: cust.userFullName,
-        Eventname: cust.eventName,
-        eventDate: cust.eventStartDateTime,
-        Venue: cust.venueName,
-        status: cust.status,
-      })),
-    );
-    setIsLoadingEvents(false);
-  };
+  const res = await GetEventByFilter(
+    endDate,
+    "",
+    status || -1,
+    partyName || undefined,
+    startDate,
+    userId
+  );
 
+  const todayEvents = res?.data?.data?.TodayEvents || [];
+  const upcomingEvents = res?.data?.data?.UpCommingEvents || [];
+
+  const list = [...todayEvents, ...upcomingEvents];
+
+  setEventData(
+    list.map((cust, i) => ({
+      Invoice: i + 1,
+
+      CustomerName: cust.party?.nameEnglish || "",
+
+      Eventname: cust.eventType?.nameEnglish || "",
+
+      // Keep start date
+      eventStartDateTime: cust.eventStartDateTime || "",
+
+      // Add end date
+      eventEndDateTime: cust.eventEndDateTime || "",
+
+      // Keep this as ID for filtering/table logic
+      status: cust.status,
+
+      Venue:
+        cust.venue?.nameEnglish ??
+        cust.banquetHallName ??
+        "",
+    }))
+  );
+
+  setIsLoadingEvents(false);
+};
   // ---------------- INVOICES ----------------
   const fetchInvoices = async (range) => {
     const { startDate, endDate } =
@@ -262,21 +319,28 @@ const roleId =
 
   // ---------------- EFFECTS ----------------
   // Initial load
-  useEffect(() => {
-    fetchdashboarddata();
-    // load charts initially with "today"
-    handlePeriodChange("month", "expense");
-    handlePeriodChange("month", "invoice");
-    fetchEventData("month");
-    fetchInvoices("month");
-    fetchMostSelling("month");
-  }, []);
+// initial load — pass no search term
+useEffect(() => {
+  fetchdashboarddata();
+  handlePeriodChange("month", "expense");
+  handlePeriodChange("month", "invoice");
+  fetchEventData("month", "", eventStatus); 
+  fetchInvoices("month");
+  fetchMostSelling("month");
+}, []);
 
-  // debounce search listeners
-  useEffect(() => {
-    const handler = debounce((v) => setEventSearch(v));
-    handler(eventSearchInput);
-  }, [eventSearchInput]);
+useEffect(() => {
+  if (isFirstRender.current) {
+    isFirstRender.current = false;
+    return;
+  }
+  const t = setTimeout(() => {
+    setEventSearch(eventSearchInput);
+    fetchEventData(eventDateRange, eventSearchInput);
+  }, 400);
+  return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [eventSearchInput]);
 
   useEffect(() => {
     const handler = debounce((v) => setInvoiceSearch(v));
@@ -289,8 +353,10 @@ const roleId =
   }, [itemSearchInput]);
 
   const handleEventCustomApply = () => {
-    if (customEventDates) fetchEventData("custom");
-  };
+  if (customEventDates) fetchEventData("custom", eventSearch);
+};
+
+
   const handleInvoiceCustomApply = () => {
     if (customInvoiceDates) fetchInvoices("custom");
   };
@@ -507,17 +573,13 @@ const roleId =
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Total Events Card */}
           <div className="flex items-center justify-between bg-[#FFF5E6] p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm">
-            <div>
-              <p className="text-sm text-gray-600 font-medium mb-1">
-                <FormattedMessage
-                  id="DASHBOARD.TOTAL_EVENTS"
-                  defaultMessage="Total Events"
-                />
-              </p>
-              <h2 className="text-3xl font-bold text-gray-900">
-                {dashboarddata?.totalEvent || 0}
-              </h2>
-            </div>
+            <div className="flex items-center justify-between mb-4">
+  <h2 className="text-base font-semibold text-gray-800">
+    Events
+  </h2>
+
+  
+</div>
             <div className="w-16 h-16 flex items-center justify-center bg-[#FF947A] rounded-full shadow-md">
               <img
                 src={toAbsoluteUrl(`/media/brand-logos/total_events.svg`)}
@@ -698,10 +760,25 @@ const roleId =
         </div>
 
         {/* -------------------- EVENTS SECTION -------------------- */}
-        <div className="border border-primary p-3 rounded-lg mb-6">
-          <div className="flex flex-col gap-3 mb-4">
-            <h2 className="text-base font-semibold text-gray-800">Events</h2>
+      <div className="border border-primary p-3 rounded-lg mb-6">
 
+  <div className="flex flex-col gap-3 mb-4">
+
+    <div className="flex items-center justify-between">
+      <h2 className="text-base font-semibold text-gray-800">
+        Events
+      </h2>
+
+      <button
+        type="button"
+        onClick={exportEventsToExcel}
+        disabled={!eventData?.length}
+        className="bg-success  text-white px-4 py-2 rounded-md text-sm font-medium
+                   hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Export Excel
+      </button>
+    </div>
             <div className="flex flex-col md:flex-row md:items-center gap-3 w-full">
               <input
                 type="text"
@@ -712,22 +789,31 @@ const roleId =
               />
 
               <select
-                className="border rounded px-3 py-2 text-sm cursor-pointer h-10"
-                value={eventDateRange}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setEventDateRange(value);
+  className="border rounded px-3 py-2 text-sm cursor-pointer h-10"
+  value={eventDateRange}
+  onChange={(e) => {
+    const value = e.target.value;
+    setEventDateRange(value);
 
-                  if (value !== "custom") {
-                    fetchEventData(value);
-                  }
-                }}
-              >
+    if (value !== "custom") {
+      fetchEventData(value, eventSearch);
+    }
+  }}
+>
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
                 <option value="month">This Month</option>
                 <option value="custom">Custom Range</option>
               </select>
+
+              <EventStatusDropdown
+  value={eventStatus}
+  onChange={(e) => {
+    const val = e.target.value;
+    setEventStatus(val);
+    fetchEventData(eventDateRange, eventSearch, val);
+  }}
+/>
 
               {eventDateRange === "custom" && (
                 <>
@@ -745,15 +831,15 @@ const roleId =
               )}
 
               <button
-                className="p-2 rounded-lg border bg-white shadow-sm"
-                onClick={() =>
-                  eventDateRange === "custom"
-                    ? fetchEventData("custom")
-                    : fetchEventData(eventDateRange)
-                }
-              >
-                <RefreshCcw className="w-4 h-4" />
-              </button>
+  className="p-2 rounded-lg border bg-white shadow-sm"
+  onClick={() =>
+    eventDateRange === "custom"
+      ? fetchEventData("custom", eventSearch)
+      : fetchEventData(eventDateRange, eventSearch)
+  }
+>
+  <RefreshCcw className="w-4 h-4" />
+</button>
             </div>
           </div>
 
@@ -764,10 +850,10 @@ const roleId =
           ) : (
             <div className="overflow-x-auto">
               <TableComponent
-                columns={columns}
-                data={filteredEvents}
-                paginationSize={10}
-              />
+    columns={columns}
+    data={eventData}
+    paginationSize={10}
+  />
             </div>
           )}
         </div>

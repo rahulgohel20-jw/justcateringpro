@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
+import { PDFDocument } from "pdf-lib";
 import { getLangConfig } from "@/utils/langConfig";
 import { CustomModal } from "../../../components/custom-modal/CustomModal";
 import NamePlateReport from "./NamePlateReport";
@@ -12,7 +13,10 @@ import {
   Fetchmanager,
   GetRawMaterialcategory,
   GetActiveFonts,
-  CustomPackagePdf
+  CustomPackagePdf,
+    getallmenuselecteditem,
+    GettemplatebyuserId,                    
+  GetAllCustomThemeByUserIdAndModuleId, 
 } from "@/services/apiServices";
 import { successMsgPopup, errorMsgPopup } from "../../../underConstruction";
 import { Worker, Viewer } from "@react-pdf-viewer/core";
@@ -43,6 +47,8 @@ const WhatsAppModal = ({ isOpen, onClose, onSend, mobileNumber, mode = "api" }) 
     setName("");
     setMobile("");
   };
+
+
 
   const handleClose = () => {
     setName("");
@@ -202,6 +208,141 @@ const getCompanyAuthInfo = () => {
   }
 };
 
+const mergePdfs = async (urls) => {
+  const merged = await PDFDocument.create();
+
+  for (const url of urls) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch PDF: ${url}`);
+    const bytes = await res.arrayBuffer();
+    const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
+    const pages = await merged.copyPages(doc, doc.getPageIndices());
+    pages.forEach((p) => merged.addPage(p));
+  }
+
+  const out = await merged.save();
+  return URL.createObjectURL(new Blob([out], { type: "application/pdf" }));
+};
+
+
+  const SHORT_MENU_MODULE_NAME = "Back Office Theme";
+const SHORT_MENU_TEMPLATE_NAME = "Short Menu Report";
+
+const isFlagOn = (v) => v === true || v === 1 || v === "1" || v === "true";   // NEW
+
+const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock }) => ({
+  categorySlogan: config.isCategorySlogan === 0,
+  categoryInstruction: config.isCategoryInstruction === 1,
+  categoryImage: config.isCategoryImage === 0,
+  itemSlogan: config.isItemSlogan === 0,
+  itemInstruction: config.isItemInstruction === 1,
+  CompanyInfo: config.isCompanyDetails === 0,
+  companyLogo: config.isCompanyLogo === 1,
+  itemImage: config.isItemImage === 0,
+  isCombo: config.isCombo === 0,
+  partyDetails: config.isPartyDetails === 1,
+  isWithQty: config.isWithQty === 1,
+  isExtraCharges: config.isExtraCharges === 1,
+  isExcel: config.isExcel === 0,
+  isDoc: config.isDoc === 0,
+  isTermsCond: config.isTermsCond === 0,
+  size1: { label: config.size1, enabled: Boolean(config.size1 === 1) },
+  size2: { label: config.size2, enabled: Boolean(config.size2 === 0) },
+  size3: { label: config.size3, enabled: Boolean(config.size3 === 0) },
+  isWithPrice: config.isWithPrice === 0,
+  isHalfPax: isDefaultHalfPaxOn ? true : config.isHalfPax === 1,
+  is3Column: config.is3Column === 0,
+  isFunctionNextPage: config.isFunctionNextPage === 1,
+  isAddDecoration: config.isAddDecoration === 0,
+  isOnePage: config.isOnePage === 0,
+  isShowEventRemarks: config.isShowEventRemarks === 0,
+  showAdditional: config.showAdditional === 0,
+  isAgencyNextPage: config.isAgencyNextPage === 1,
+  storeIssueWise: canAccessStock ? config.storeIssueWise === 0 : false,
+  isAddStoreIssue: canAccessStock ? config.isAddStoreIssue === 0 : false,
+  is5Column: config.is5Column === 0,
+  isContactNoVisible: config.isContactNoVisible === 0,
+  isSignatureVisible: config.isSignatureVisible === 0,
+  isAddMenu: config.isAddMenu === 1,
+  isAdvancePayment: config.isAdvancePayment === 1,
+  showAddOnLabel: config.showAddOnLabel === 0,
+  withOutBg: config.withOutBg === 0,
+  withVendor: config.withVendor === 0,
+  isAllItemTogether: config.isAllItemTogether === 0,
+  isNotes: config.isNotes === 0,
+  showLastPage: false,
+});
+
+const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock }) =>
+  Object.entries({
+    CompanyInfo: config.isCompanyDetails,
+    categorySlogan: config.isCategorySlogan,
+    categoryInstruction: config.isCategoryInstruction,
+    categoryImage: config.isCategoryImage,
+    itemSlogan: config.isItemSlogan,
+    itemInstruction: config.isItemInstruction,
+    companyLogo: config.isCompanyLogo,
+    itemImage: config.isItemImage,
+    isCombo: config.isCombo,
+    partyDetails: config.isPartyDetails,
+    isWithQty: config.isWithQty,
+    size1: !!config.size1,
+    size2: !!config.size2,
+    size3: !!config.size3,
+    isWithPrice: config.isWithPrice,
+    isExtraCharges: config.isExtraCharges,
+    isExcel: config.isExcel,
+    isTermsCond: config.isTermsCond,
+    isDoc: config.isDoc,
+    isHalfPax: isDefaultHalfPaxOn ? true : config.isHalfPax,
+    is3Column: config.is3Column,
+    isFunctionNextPage: config.isFunctionNextPage,
+    isAddDecoration: config.isAddDecoration,
+    isOnePage: config.isOnePage,
+    isShowEventRemarks: config.isShowEventRemarks,
+    showAdditional: config.showAdditional,
+    isAgencyNextPage: config.isAgencyNextPage,
+    storeIssueWise: canAccessStock ? config.storeIssueWise : false,
+    isAddStoreIssue: canAccessStock ? config.isAddStoreIssue : false,
+    is5Column: config.is5Column,
+    isContactNoVisible: config.isContactNoVisible,
+    isSignatureVisible: config.isSignatureVisible,
+    isAddMenu: config.isAddMenu,
+    isAdvancePayment: config.isAdvancePayment,
+    isNotes: config.isNotes,
+    showAddOnLabel: config.showAddOnLabel,
+    withOutBg: config.withOutBg,
+    withVendor: config.withVendor,
+    isAllItemTogether: config.isAllItemTogether,
+    isAddShortMenu: isFlagOn(config.isAddShortMenu),  
+  })
+    .filter(([, value]) => value)
+    .map(([key]) => key);
+
+// Pure version of your toggleOne logic so both option sets can share it
+const applyToggle = (prev, key) => {
+  if (key === "size1")
+    return { ...prev, size1: { ...prev.size1, enabled: true }, size2: { ...prev.size2, enabled: false } };
+  if (key === "size2")
+    return { ...prev, size1: { ...prev.size1, enabled: false }, size2: { ...prev.size2, enabled: true } };
+  if (key === "size3")
+    return {
+      ...prev,
+      size1: { ...prev.size1, enabled: false },
+      size2: { ...prev.size2, enabled: false },
+      size3: { ...prev.size3, enabled: true },
+    };
+  if (key === "is3Column") {
+    const next = !prev.is3Column;
+    return { ...prev, is3Column: next, is5Column: next ? false : prev.is5Column };
+  }
+  if (key === "is5Column") {
+    const next = !prev.is5Column;
+    return { ...prev, is5Column: next, is3Column: next ? false : prev.is3Column };
+  }
+  return { ...prev, [key]: !prev[key] };
+};
+
 const MenuReport = ({
   isModalOpen,
   setIsModalOpen,
@@ -280,6 +421,19 @@ const { hasModuleAccess } = useModuleAccess();
   const canAccessStock = hasModuleAccess("Stock"); 
   const [autoAgencyContact, setAutoAgencyContact] = useState(null);
 
+const [shortMenuTemplate, setShortMenuTemplate] = useState(null); // { id, name, type }
+const [shortMenuOptions, setShortMenuOptions] = useState({});
+const [shortMenuVisibleOptions, setShortMenuVisibleOptions] = useState([]);
+const [shortMenuHasItems, setShortMenuHasItems] = useState(false);
+const [shortMenuItems, setShortMenuItems] = useState([]);
+const [shortMenuSelectedItems, setShortMenuSelectedItems] = useState([]);
+const [mainUrl, setMainUrl] = useState(null);
+const [shortMenuUrl, setShortMenuUrl] = useState(null);
+const addShortMenu =
+  visibleOptions.includes("isAddShortMenu") && !!options.isAddShortMenu;
+
+
+
 const langConfig = getLangConfig();
 const languageOptions = [
   { value: "english", label: "English" },
@@ -301,6 +455,7 @@ const languageOptions = [
     withOutBg : "With Out Background",
     withVendor : "With Vendor",
     isAllItemTogether :"Is All Item Together",
+     isAddShortMenu: "Is Add Short Menu", 
   };
 
   const fetchFonts = async () => {
@@ -511,7 +666,7 @@ if (!config) {
         setReportType(config.type);
         setMappingType(config.mappingNameEnglish || null);
         setModuleType(config.moduleNameEnglish || null);
-        
+       
         
         if (config.isRawMaterialCat === 1) {
           setisDropdownStatus(1);
@@ -520,28 +675,33 @@ if (!config) {
           setShowItemDropdown(false);
         }
 
-        if (isAdminModuleReport || agencyType == null) {
-          setisDropdownStatus(0);
-          setShowAgencyDropdown(false);
-          setShowItemDropdown(false);
-          setShowCategoryDropdown(false);
-        } else if (config.isAgency === 1 && config.isItem === 1) {
-          setisDropdownStatus(1);
-          setShowAgencyDropdown(true);
-          setShowItemDropdown(true);
-          setShowCategoryDropdown(false);
-        } else if (config.isAgency === 1) {
-          setisDropdownStatus(1);
-          setShowAgencyDropdown(true);
-          setShowCategoryDropdown(false);
-        } else if (config.isItem === 1) {
-          setisDropdownStatus(1);
-          setShowItemDropdown(true);
-          setShowCategoryDropdown(false);
-        }
+      if (isAdminModuleReport) {
+  setisDropdownStatus(0);
+  setShowAgencyDropdown(false);
+  setShowItemDropdown(false);
+  setShowCategoryDropdown(false);
+} else if (config.isRawMaterialCat === 1) {
+  setisDropdownStatus(1);
+  setShowCategoryDropdown(true);
+  setShowAgencyDropdown(false);
+  setShowItemDropdown(false);
+} else {
+  // Agency dropdown only makes sense when we actually have an agencyType
+  // to filter by — it stays independent of Item/Category below.
+  const canShowAgency = config.isAgency === 1 && agencyType != null;
+  const canShowItem = config.isItem === 1;
 
-        if (config.isDate === 1) setisDateStatus(1);
-        if (config.isStatus == 1) {
+  setShowAgencyDropdown(canShowAgency);
+  setShowItemDropdown(canShowItem);
+  setShowCategoryDropdown(false);
+  setisDropdownStatus(canShowAgency || canShowItem ? 1 : 0);
+}
+
+if (config.isDate === 1 || config.isStartDate === 1 || config.isEndDate === 1) {
+  setisDateStatus(1);
+} else {
+  setisDateStatus(0);
+}if (config.isStatus == 1) {
           setShowStatusDropdown(true);
           setSelectedStatus([0, 1, 2, 3]);
           setShowAgencyDropdown(false);
@@ -592,7 +752,7 @@ if (!config) {
           withVendor : config.withVendor === 0,
           isAllItemTogether: config.isAllItemTogether === 0,
           isNotes : config.isNotes === 0,
-
+          isAddShortMenu: false,        
   showLastPage:  false,
         });
 
@@ -637,6 +797,7 @@ showAddOnLabel : config.showAddOnLabel,
 withOutBg : config.withOutBg,
 withVendor : config.withVendor,
 isAllItemTogether: config.isAllItemTogether,
+isAddShortMenu: isFlagOn(config.isAddShortMenu),
  })
             .filter(([_, value]) => value)
             .map(([key]) => key),
@@ -690,14 +851,14 @@ const agencyRes = await GetAgenciesForReportFilter(
 
     fetchAgencies();
   }, [
-    isModalOpen,
-    isDropdownStatus,
-    eventFunctionId,
-    eventId,
-    agencyType,
-    isAdminModuleReport,
-    preSelectedAgencyId,
-  ]);
+     isModalOpen,
+  showAgencyDropdown,
+  eventFunctionId,
+  eventId,
+  agencyType,
+  isAdminModuleReport,
+  preSelectedAgencyId,
+]);
 
   useEffect(() => {
     if (!isModalOpen || isAdminModuleReport) return;
@@ -760,47 +921,149 @@ useEffect(() => {
 }, [isModalOpen, isDropdownStatus, eventId, agencyType, userId]);
 
   useEffect(() => {
-    if (
-      !isModalOpen ||
-      isDropdownStatus !== 1 ||
-      selectedAgency.length === 0 ||
-      isAdminModuleReport
-    ) {
-      setItems([]);
-      setSelectedItems([]);
-      return;
-    }
+  if (!isModalOpen || isDropdownStatus !== 1 || !showItemDropdown || isAdminModuleReport) {
+    setItems([]);
+    setSelectedItems([]);
+    return;
+  }
 
-    const fetchItemsByAgency = async () => {
-      setLoadingFilters(true);
-      try {
-        const itemsRes = await GetSelectedItemsForReportFilter(
-          eventFunctionId,
-          eventId,
-          selectedAgency,
-        );
-        if (itemsRes?.data?.success && itemsRes?.data?.data) {
-          setItems(itemsRes.data.data);
-        } else {
-          setItems([]);
-        }
-      } catch (err) {
-        errorMsgPopup("Failed to load items");
-        setItems([]);
-      } finally {
-        setLoadingFilters(false);
+  // No Agency dropdown (e.g. date-driven configs, or any isItem-only config)
+  // → fetch all items via the simpler menu-preparation endpoint, no party filter.
+  const fetchWithoutAgencyFilter = !showAgencyDropdown;
+
+  if (!fetchWithoutAgencyFilter && selectedAgency.length === 0) {
+    setItems([]);
+    setSelectedItems([]);
+    return;
+  }
+
+  const singleFunctionId = Array.isArray(eventFunctionId)
+    ? (eventFunctionId.find((id) => id !== -1) ?? -1)
+    : (eventFunctionId ?? -1);
+
+ const fetchItems = async () => {
+  setLoadingFilters(true);
+  try {
+    const itemsRes = fetchWithoutAgencyFilter
+      ? await getallmenuselecteditem(eventId, singleFunctionId)
+      : await GetSelectedItemsForReportFilter(eventFunctionId, eventId, selectedAgency);
+
+    if (itemsRes?.data?.success && itemsRes?.data?.data) {
+      // getallmenuselecteditem returns menuItemId instead of id — normalize
+      // so the rest of the component (Select options, payload.itemId) can
+      // treat both endpoints' results the same way.
+      const normalizedItems = fetchWithoutAgencyFilter
+        ? itemsRes.data.data.map((i) => ({
+            ...i,
+            id: i.menuItemId,
+          }))
+        : itemsRes.data.data;
+
+      setItems(normalizedItems);
+      if (fetchWithoutAgencyFilter) {
+        setSelectedItems(normalizedItems.map((i) => i.id));
       }
-    };
+    } else {
+      setItems([]);
+    }
+  } catch (err) {
+    errorMsgPopup("Failed to load items");
+    setItems([]);
+  } finally {
+    setLoadingFilters(false);
+  }
+};
+  fetchItems();
+}, [
+  isModalOpen,
+  isDropdownStatus,
+  showItemDropdown,
+  showAgencyDropdown,
+  eventFunctionId,
+  eventId,
+  selectedAgency,
+  isAdminModuleReport,
+]);
 
-    fetchItemsByAgency();
-  }, [
-    isModalOpen,
-    isDropdownStatus,
-    eventFunctionId,
-    eventId,
-    selectedAgency,
-    isAdminModuleReport,
-  ]);
+// Load Short Menu template + its configuration when the flag is on
+useEffect(() => {
+  if (!isModalOpen || !addShortMenu) {
+    setShortMenuTemplate(null);
+    return;
+  }
+  let cancelled = false;
+
+  const loadShortMenu = async () => {
+    try {
+      const modRes = await GettemplatebyuserId();
+      const backOffice = modRes?.data?.data?.find(
+        (m) => m.nameEnglish === SHORT_MENU_MODULE_NAME && m.isActive && !m.isDelete,
+      );
+      if (!backOffice) {
+        errorMsgPopup("Back Office Theme not found for Short Menu Report");
+        return;
+      }
+
+      const themeRes = await GetAllCustomThemeByUserIdAndModuleId(userId, backOffice.id);
+      const theme = themeRes?.data?.data?.find(
+        (t) => t.templateMaster?.name === SHORT_MENU_TEMPLATE_NAME,
+        // or: t.templateMappingResponseDto?.nameEnglish === "Type 5"
+      );
+      if (!theme) {
+        errorMsgPopup("Short Menu Report template not found");
+        return;
+      }
+
+      const shortMappingId = theme.templateMappingResponseDto?.id || theme.id;
+      const cfgRes = await GetReportConfiguration(shortMappingId, backOffice.id);
+      const cfg = cfgRes?.data?.data?.[0];
+      if (!cfg || cancelled) return;
+
+      const ctx = { isDefaultHalfPaxOn, canAccessStock };
+      setShortMenuOptions(buildOptionsFromConfig(cfg, ctx));
+      setShortMenuVisibleOptions(getVisibleOptionKeys(cfg, ctx));
+      setShortMenuHasItems(cfg.isItem === 1);
+      setShortMenuTemplate({
+        id: theme.id, // this is the adminTemplateModuleId (5146 in your sample)
+        name: theme.templateMaster?.name || SHORT_MENU_TEMPLATE_NAME,
+        type: cfg.type || null,
+      });
+    } catch (err) {
+      console.error("Short menu config error", err);
+      errorMsgPopup("Failed to load Short Menu Report configuration");
+    }
+  };
+
+  loadShortMenu();
+  return () => {
+    cancelled = true;
+  };
+}, [isModalOpen, addShortMenu, userId, isDefaultHalfPaxOn, canAccessStock]);
+
+// Load items for the Short Menu (its config has isItem = 1)
+useEffect(() => {
+  if (!isModalOpen || !addShortMenu || !shortMenuHasItems) {
+    setShortMenuItems([]);
+    setShortMenuSelectedItems([]);
+    return;
+  }
+  const fnId = Array.isArray(eventFunctionId)
+    ? (eventFunctionId.find((id) => id !== -1) ?? -1)
+    : (eventFunctionId ?? -1);
+
+  (async () => {
+    try {
+      const res = await getallmenuselecteditem(eventId, fnId);
+      if (res?.data?.success && res?.data?.data) {
+        const list = res.data.data.map((i) => ({ ...i, id: i.menuItemId }));
+        setShortMenuItems(list);
+        setShortMenuSelectedItems(list.map((i) => i.id)); // all selected by default
+      }
+    } catch {
+      errorMsgPopup("Failed to load Short Menu items");
+    }
+  })();
+}, [isModalOpen, addShortMenu, shortMenuHasItems, eventId, eventFunctionId]);
 
 
 const openWebWhatsApp = (mobile, recipientName) => {
@@ -834,240 +1097,270 @@ const openWebWhatsApp = (mobile, recipientName) => {
     });
   };
 
-  const toggleOne = (key) => {
-    setOptions((prev) => {
-      if (key === "size1")
-        return {
-          ...prev,
-          size1: { ...prev.size1, enabled: true },
-          size2: { ...prev.size2, enabled: false },
-        };
-      if (key === "size2")
-        return {
-          ...prev,
-          size1: { ...prev.size1, enabled: false },
-          size2: { ...prev.size2, enabled: true },
-        };
-      if (key === "size3")
-        return {
-          ...prev,
-          size1: { ...prev.size1, enabled: false },
-          size2: { ...prev.size2, enabled: false },
-          size3: { ...prev.size3, enabled: true },
-        };
- if (key === "is3Column") {
-      const next = !prev.is3Column;
-      return {
-        ...prev,
-        is3Column: next,
-        is5Column: next ? false : prev.is5Column,
-      };
-    }
-    if (key === "is5Column") {
-      const next = !prev.is5Column;
-      return {
-        ...prev,
-        is5Column: next,
-        is3Column: next ? false : prev.is3Column,
-      };
-    }
+  const toggleOne = (key) => setOptions((prev) => applyToggle(prev, key));
 
-      return { ...prev, [key]: !prev[key] };
+const toggleShortMenuOne = (key) =>
+  setShortMenuOptions((prev) => applyToggle(prev, key));
+
+const toggleAllShortMenu = (checked) =>
+  setShortMenuOptions((prev) => {
+    const updated = { ...prev };
+    shortMenuVisibleOptions.forEach((key) => {
+      if (key !== "size1" && key !== "size2" && key !== "size3") updated[key] = checked;
     });
-  };
+    return updated;
+  });
+
+const isShortMenuCheckAll =
+  shortMenuVisibleOptions.length > 0 &&
+  shortMenuVisibleOptions.every((key) => shortMenuOptions[key]);
 
   const isCheckAll =
     visibleOptions.length > 0 && visibleOptions.every((key) => options[key]);
 
-  const handleReport = async () => {
-    if (isNamePlateTheme) {
-      setShowNamePlateUI(true);
+ const buildPayload = (opts, visible, overrides = {}) => {
+  const pageSize = opts.size1?.enabled
+    ? opts.size1.label
+    : opts.size2?.enabled
+      ? opts.size2.label
+      : opts.size3?.enabled
+        ? opts.size3.label
+        : "";
+
+  return {
+    eventId: eventId || -1,
+    customPackageId: customPackageId || 0,
+    partyId: selectedParty || -1,
+    eventFunctionId: Array.isArray(eventFunctionId)
+      ? (eventFunctionId[0] ?? -1)
+      : (eventFunctionId ?? -1),
+    eventFunctionIds: Array.isArray(eventFunctionId)
+      ? eventFunctionId.filter((id) => id !== -1)
+      : [],
+    adminTemplateModuleId: isAdminModuleReport
+      ? (selectedTemplateId ?? mappingId)
+      : (selectedTemplateId ?? 0),
+    type: reportType || null,
+    userId,
+    lang: selectedLanguage === "english" ? 0 : selectedLanguage === "hindi" ? 1 : 2,
+    isCategoryImage: opts.categoryImage,
+    isCategoryInstruction: opts.categoryInstruction,
+    isCategorySlogan: opts.categorySlogan,
+    isItemImage: opts.itemImage,
+    isCombo: opts.isCombo,
+    isItemInstruction: opts.itemInstruction,
+    isItemSlogan: opts.itemSlogan,
+    isCompanyDetails: opts.CompanyInfo,
+    isCompanyLogo: opts.companyLogo,
+    isPartyDetails: opts.partyDetails,
+    isWithQty: opts.isWithQty,
+    isDoc: visible.includes("isDoc") ? opts.isDoc : false,
+    isExcel: visible.includes("isExcel") ? opts.isExcel : false,
+    pageSize,
+    isWithPrice: opts.isWithPrice,
+    isExtraCharges: opts.isExtraCharges,
+    isTermsCond: opts.isTermsCond,
+    isHalfPax: opts.isHalfPax,
+    is3Column: opts.is3Column,
+    isFunctionNextPage: opts.isFunctionNextPage,
+    isAddDecoration: opts.isAddDecoration,
+    isOnePage: opts.isOnePage,
+    isShowEventRemarks: opts.isShowEventRemarks,
+    showAdditional: opts.showAdditional,
+    isAgencyNextPage: opts.isAgencyNextPage,
+    storeIssueWise: opts.storeIssueWise,
+    isAddStoreIssue: opts.isAddStoreIssue,
+    is5Column: opts.is5Column,
+    isContactNoVisible: opts.isContactNoVisible,
+    isAddMenu: opts.isAddMenu,
+    isAdvancePayment: opts.isAdvancePayment,
+    withOutBg: opts.withOutBg,
+    withVendor: opts.withVendor,
+    isAllItemTogether: opts.isAllItemTogether,
+    isNotes: opts.isNotes,
+    showAddOnLabel: opts.showAddOnLabel,
+    showLastPage: 1,
+    isSignatureVisible: opts.isSignatureVisible,
+    agencyId: selectedAgency,
+    managerIds: selectedManager,
+    itemId: selectedItems,
+    rawMaterialCatIds: selectedCategory,
+    ...(adminStartDate
+      ? { startDate: formatAdminDate(adminStartDate) }
+      : startDate
+        ? { startDate: formatAdminDate(startDate) }
+        : {}),
+    ...(adminEndDate
+      ? { endDate: formatAdminDate(adminEndDate) }
+      : endDate
+        ? { endDate: formatAdminDate(endDate) }
+        : {}),
+    ...(showStatusDropdown && { eventStatus: selectedStatus }),
+    catFontId: catFontId || -1,
+    itemFontId: itemFontId || -1,
+    sloganFontId: sloganFontId || -1,
+    catFontSize: catFontSize || -1,
+    itemFontSize: itemFontSize || -1,
+    sloganFontSize: sloganFontSize || -1,
+    leadAssignId: 0,
+    priority: "",
+    sourceId: 0,
+    statusId: 0,
+    ...overrides,
+  };
+};
+
+const submitReport = async (payload) => {
+  const formData = new FormData();
+  Object.entries(payload).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      value.forEach((v) => formData.append(`${key}[]`, v));
+    } else {
+      formData.append(key, value === true ? "1" : value === false ? "0" : value);
+    }
+  });
+  const { data } = await AddExclusiveReport(formData);
+  return data;
+};
+
+const handleReport = async () => {
+  if (isNamePlateTheme) {
+    setShowNamePlateUI(true);
+    return;
+  }
+
+  const payload = buildPayload(options, visibleOptions);
+
+  if (!customPackageId && !payload.eventId) {
+    errorMsgPopup("Missing required data");
+    return;
+  }
+  if (!payload.adminTemplateModuleId) {
+    errorMsgPopup("Missing required data");
+    return;
+  }
+
+  // Short Menu payload (only when isAddShortMenu = 1)
+  let shortMenuPayload = null;
+  if (addShortMenu) {
+    if (!shortMenuTemplate) {
+      errorMsgPopup("Short Menu Report is still loading, please try again");
       return;
     }
-
-    const pageSize = options.size1?.enabled
-      ? options.size1.label
-      : options.size2?.enabled
-        ? options.size2.label
-        : options.size3?.enabled
-          ? options.size3.label
-          : "";
-
-    const payload = {
-      eventId : eventId || -1,
-       customPackageId: customPackageId || 0, 
-      partyId: selectedParty || -1,
-      eventFunctionId: Array.isArray(eventFunctionId)
-        ? (eventFunctionId[0] ?? -1)
-        : (eventFunctionId ?? -1),
-      // eventFunctionIds: Array.isArray(eventFunctionId)
-      //   ? eventFunctionId.filter((id) => id !== -1)
-      //   : eventFunctionId
-      //     ? [eventFunctionId]
-      //     : [],
-      eventFunctionIds: Array.isArray(eventFunctionId)
-  ? eventFunctionId.filter((id) => id !== -1)
-  : [],
-      adminTemplateModuleId: isAdminModuleReport
-        ? (selectedTemplateId ?? mappingId)
-        : (selectedTemplateId ?? 0),
-      type: reportType || null,
-      userId,
-      lang:
-        selectedLanguage === "english"
-          ? 0
-          : selectedLanguage === "hindi"
-            ? 1
-            : 2,
-      isCategoryImage: options.categoryImage,
-      isCategoryInstruction: options.categoryInstruction,
-      isCategorySlogan: options.categorySlogan,
-      isItemImage: options.itemImage,
-      isCombo: options.isCombo,
-      isItemInstruction: options.itemInstruction,
-      isItemSlogan: options.itemSlogan,
-      isCompanyDetails: options.CompanyInfo,
-      isCompanyLogo: options.companyLogo,
-      isPartyDetails: options.partyDetails,
-      isWithQty: options.isWithQty,
-      isDoc: visibleOptions.includes('isDoc') ? options.isDoc : false,
-      isExcel: visibleOptions.includes('isExcel') ? options.isExcel : false,   
-
-      pageSize,
-      isWithPrice: options.isWithPrice,
-      
-      isExtraCharges: options.isExtraCharges,
-      isTermsCond: options.isTermsCond,
-     isHalfPax: options.isHalfPax, 
-     is3Column:options.is3Column,
-     isFunctionNextPage:options.isFunctionNextPage, 
-     isAddDecoration:options.isAddDecoration,
-     isOnePage:options.isOnePage,
-     isShowEventRemarks:options.isShowEventRemarks,
-     showAdditional:options.showAdditional, 
-     isAgencyNextPage:options.isAgencyNextPage, 
-     storeIssueWise:options.storeIssueWise,
-     isAddStoreIssue:options.isAddStoreIssue,
-     is5Column:options.is5Column,
-     isContactNoVisible: options.isContactNoVisible,
-     isAddMenu: options.isAddMenu,
-     isAdvancePayment: options.isAdvancePayment,
-     withOutBg: options.withOutBg,
-     withVendor: options.withVendor,
-     isAllItemTogether:options.isAllItemTogether,
-     isNotes : options.isNotes,
-     showAddOnLabel: options.showAddOnLabel,
-     showLastPage: 1,
-     isSignatureVisible : options.isSignatureVisible , 
-      agencyId: selectedAgency,
-      managerIds: selectedManager,
-      itemId: selectedItems,
-      rawMaterialCatIds: selectedCategory,
-      ...(adminStartDate && { startDate: formatAdminDate(adminStartDate) }),
-      ...(adminEndDate && { endDate: formatAdminDate(adminEndDate) }),
-      ...(showStatusDropdown && { eventStatus: selectedStatus }),
-
-      catFontId: catFontId || -1,
-      itemFontId: itemFontId || -1,
-      sloganFontId: sloganFontId || -1,
-      catFontSize: catFontSize || -1,
-      itemFontSize: itemFontSize || -1,
-      sloganFontSize: sloganFontSize || -1,
-      leadAssignId: 0,
-  priority: "",
-  sourceId: 0,
-  statusId: 0,
-    };
- if (!customPackageId && !payload.eventId) {
-  errorMsgPopup("Missing required data");
-  return;
-}
-if (!payload.adminTemplateModuleId) {
-  errorMsgPopup("Missing required data");
-  return;
-}
-
-    const formData = new FormData();
-    Object.entries(payload).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        value.forEach((v) => formData.append(`${key}[]`, v));
-      } else {
-        formData.append(
-          key,
-          value === true ? "1" : value === false ? "0" : value,
-        );
-      }
+    if (shortMenuHasItems && shortMenuSelectedItems.length === 0) {
+      errorMsgPopup("Please select items for Short Menu Report");
+      return;
+    }
+    shortMenuPayload = buildPayload(shortMenuOptions, shortMenuVisibleOptions, {
+      adminTemplateModuleId: shortMenuTemplate.id,
+      type: shortMenuTemplate.type,
+      isDoc: false,   // short menu is always a PDF
+      isExcel: false,
+      agencyId: [],
+      rawMaterialCatIds: [],
+      itemId: shortMenuSelectedItems,
     });
+  }
 
-    setLoading(true);
-    try {
-      const { data } = await AddExclusiveReport(formData);
-      if (data?.success && data?.report_path) {
-        successMsgPopup(data?.msg || "Report generated");
-
-        // if (options.isDoc) {
-        //   const link = document.createElement("a");
-        //   link.href = data.report_path;
-          
-        //   const fileName = data.report_path.split("/").pop() || "report.docx";
-        //   link.setAttribute("download", fileName);
-        //   document.body.appendChild(link);
-        //   link.click();
-        //   document.body.removeChild(link);
-        // } else {
-        //   setPdfUrl(data.report_path);
-        // }
-
-        const agencyContact =
-    Array.isArray(data?.data) && data.data.length === 1 && data.data[0]?.contactNo
-      ? data.data[0]
-      : null;
-  setAutoAgencyContact(agencyContact);
-    const fileName = data.report_path.split("/").pop() || "";
-const isPdf = fileName.toLowerCase().endsWith(".pdf");
-
-if ((options.isDoc || options.isExcel) && !isPdf) {
-  // triggers the force-download blob logic
+  setLoading(true);
   try {
-    const response = await fetch(data.report_path);
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
+    const data = await submitReport(payload);
 
-    const link = document.createElement("a");
-    link.href = blobUrl;
-    link.setAttribute("download", fileName || (options.isExcel ? "report.xlsx" : "report.docx"));
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
-  } catch {
-    window.open(data.report_path, "_blank");
-  }
-} else {
-    setPdfUrl(data.report_path);
+    if (data?.success && data?.report_path) {
+      successMsgPopup(data?.msg || "Report generated");
 
-    
-    if (agencyContact?.contactNo) {
-      await handleWhatsAppSend(
-        `+91${agencyContact.contactNo.replace(/\D/g, "")}`,
-        agencyContact.nameEnglish || "",
-        data.report_path, 
-      );
-    }
-  }
-} else {
-        errorMsgPopup(data?.msg || "Failed to generate report");
+      const agencyContact =
+        Array.isArray(data?.data) && data.data.length === 1 && data.data[0]?.contactNo
+          ? data.data[0]
+          : null;
+      setAutoAgencyContact(agencyContact);
+
+      const fileName = data.report_path.split("/").pop() || "";
+      const isPdf = fileName.toLowerCase().endsWith(".pdf");
+      const isFileDownload = (options.isDoc || options.isExcel) && !isPdf;
+
+      if (isFileDownload) {
+        try {
+          const response = await fetch(data.report_path);
+          const blob = await response.blob();
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = blobUrl;
+          link.setAttribute(
+            "download",
+            fileName || (options.isExcel ? "report.xlsx" : "report.docx"),
+          );
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        } catch {
+          window.open(data.report_path, "_blank");
+        }
+      } else {
+        setPdfUrl(data.report_path);
+        setMainUrl(data.report_path);
+
+        if (agencyContact?.contactNo) {
+          await handleWhatsAppSend(
+            `+91${agencyContact.contactNo.replace(/\D/g, "")}`,
+            agencyContact.nameEnglish || "",
+            data.report_path,
+          );
+        }
       }
-    } catch (err) {
-      errorMsgPopup(err?.response?.data?.msg || "Something went wrong");
-    } finally {
-      setLoading(false);
+
+      // ---- NEW: second API call for Short Menu Report ----
+      if (shortMenuPayload) {
+  try {
+    const shortData = await submitReport(shortMenuPayload);
+
+    if (shortData?.success && shortData?.report_path) {
+      if (isFileDownload) {
+        // main was an Excel/Doc download, so just show the short menu
+        setShortMenuUrl(shortData.report_path);
+        setPdfUrl(shortData.report_path);
+      } else {
+        try {
+          // Raw Material first, Short Menu appended after it
+          const mergedUrl = await mergePdfs([
+            data.report_path,
+            shortData.report_path,
+          ]);
+          setPdfUrl(mergedUrl);
+        } catch (mergeErr) {
+          console.error("PDF merge failed", mergeErr);
+          setShortMenuUrl(shortData.report_path); // fallback: tabs
+          errorMsgPopup("Could not combine the reports, showing them separately");
+        }
+      }
+    } else {
+      errorMsgPopup(shortData?.msg || "Failed to generate Short Menu Report");
     }
-  };
+  } catch (err) {
+    errorMsgPopup(
+      err?.response?.data?.msg || "Failed to generate Short Menu Report",
+    );
+  }
+}
+    } else {
+      errorMsgPopup(data?.msg || "Failed to generate report");
+    }
+  } catch (err) {
+    errorMsgPopup(err?.response?.data?.msg || "Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleClose = () => {
     if (isPrintingRef.current || document.hidden) return;
+    if (pdfUrl?.startsWith("blob:")) URL.revokeObjectURL(pdfUrl);
     setPdfUrl(null);
+    setMainUrl(null);
+setShortMenuUrl(null);
+setShortMenuTemplate(null);
+setShortMenuSelectedItems([]);
     setShowNamePlateUI(false);
     setIsModalOpen(false);
     setSelectedAgency([]);
@@ -1365,7 +1658,7 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
     <div className="grid grid-cols-2 gap-4">
       <div>
         <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-          Start Date
+            Start Date <span className="text-red-500">*</span>
         </label>
         <input
           type="date"
@@ -1376,7 +1669,7 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
       </div>
       <div>
         <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-          End Date
+            End Date <span className="text-red-500">*</span>
         </label>
         <input
           type="date"
@@ -1397,74 +1690,62 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
                 showCategoryDropdown) && (
                 <div className="p-5 rounded-xl border-2">
                   <div className="grid grid-cols-2 gap-4">
-                    {showAgencyDropdown && (
-                      <>
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-                            <TeamOutlined className="mr-1" />
-                            Agency
-                          </label>
-                          <Select
-                            mode="multiple"
-                            value={selectedAgency}
-                            onChange={setSelectedAgency}
-                            placeholder="Select agencies..."
-                            className="w-full"
-                            size="large"
-                            loading={loadingFilters}
-                            showSearch
-                            optionFilterProp="children"
-                            filterOption={(input, option) =>
-                              (option?.label ?? "")
-                                .toLowerCase()
-                                .includes(input.toLowerCase())
-                            }
-                            options={agencies.map((a) => ({
-                              value: a.id,
-                              label: a.nameEnglish,
-                            }))}
-                            getPopupContainer={() => document.body}
-  dropdownStyle={{ zIndex: 10000 }}
-                            maxTagCount="responsive"
-                            allowClear
-                          />
-                        </div>
-                        {showItemDropdown && (
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-                              <AppstoreOutlined className="mr-1" />
-                              Items
-                            </label>
-                            <Select
-                              mode="multiple"
-                              value={selectedItems}
-                              onChange={setSelectedItems}
-                              placeholder="Select items..."
-                              className="w-full"
-                              size="large"
-                              loading={loadingFilters}
-                              showSearch
-                              optionFilterProp="children"
-                              filterOption={(input, option) =>
-                                (option?.label ?? "")
-                                  .toLowerCase()
-                                  .includes(input.toLowerCase())
-                              }
-                              options={items.map((i) => ({
-                                value: i.id,
-                                label: i.nameEnglish,
-                              }))}
-                              getPopupContainer={() => document.body}
-  dropdownStyle={{ zIndex: 10000 }}
-                              maxTagCount="responsive"
-                              allowClear
-                              disabled={selectedAgency.length === 0}
-                            />
-                          </div>
-                        )}
-                      </>
-                    )}
+                   {showAgencyDropdown && (
+  <div>
+    <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+      <TeamOutlined className="mr-1" />
+      Agency
+    </label>
+    <Select
+      mode="multiple"
+      value={selectedAgency}
+      onChange={setSelectedAgency}
+      placeholder="Select agencies..."
+      className="w-full"
+      size="large"
+      loading={loadingFilters}
+      showSearch
+      optionFilterProp="children"
+      filterOption={(input, option) =>
+        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+      }
+      options={agencies.map((a) => ({ value: a.id, label: a.nameEnglish }))}
+      getPopupContainer={() => document.body}
+      dropdownStyle={{ zIndex: 10000 }}
+      maxTagCount="responsive"
+      allowClear
+    />
+  </div>
+)}
 
+{showItemDropdown && (
+  <div>
+    <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+      <AppstoreOutlined className="mr-1" />
+      Items <span className="text-red-500">*</span>
+    </label>
+    <Select
+      mode="multiple"
+      value={selectedItems}
+      onChange={setSelectedItems}
+      placeholder="Select items..."
+      className="w-full"
+      size="large"
+      loading={loadingFilters}
+      showSearch
+      optionFilterProp="children"
+      filterOption={(input, option) =>
+        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+      }
+      options={items.map((i) => ({ value: i.id, label: i.nameEnglish }))}
+      getPopupContainer={() => document.body}
+      dropdownStyle={{ zIndex: 10000 }}
+      maxTagCount="responsive"
+      allowClear
+      disabled={showAgencyDropdown && selectedAgency.length === 0}
+    />
+  </div>
+)}
                     {showCategoryDropdown && (
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
@@ -1612,7 +1893,79 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
                   ))}
                 </div>
               </>
+              
             )}
+
+
+            {!isNamePlateTheme && addShortMenu && (
+  <div className="p-5 rounded-xl border-2 space-y-4">
+    <h3 className="font-semibold text-gray-800">Short Menu Report Configuration</h3>
+
+    {!shortMenuTemplate ? (
+      <p className="text-sm text-gray-500">Loading Short Menu configuration...</p>
+    ) : (
+      <>
+        {shortMenuHasItems && (
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+              <AppstoreOutlined className="mr-1" />
+              Items <span className="text-red-500">*</span>
+            </label>
+            <Select
+              mode="multiple"
+              value={shortMenuSelectedItems}
+              onChange={setShortMenuSelectedItems}
+              placeholder="Select items..."
+              className="w-full"
+              size="large"
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+              }
+              options={shortMenuItems.map((i) => ({ value: i.id, label: i.nameEnglish }))}
+              getPopupContainer={() => document.body}
+              dropdownStyle={{ zIndex: 10000 }}
+              maxTagCount="responsive"
+              allowClear
+            />
+          </div>
+        )}
+
+        <div className="flex justify-between items-center border-b pb-3">
+          <span className="font-semibold text-gray-700">Check All Options</span>
+          <Toggle
+            checked={isShortMenuCheckAll}
+            onChange={() => toggleAllShortMenu(!isShortMenuCheckAll)}
+          />
+        </div>
+
+        <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+          {shortMenuVisibleOptions.map((key) => (
+            <div
+              key={key}
+              className="flex justify-between items-center py-2 px-3 rounded-lg hover:bg-gray-50 transition"
+            >
+              <span className="capitalize text-gray-700">
+                {key === "size1" || key === "size2" || key === "size3"
+                  ? `Size ${shortMenuOptions[key]?.label}`
+                  : optionDisplayLabels[key] || key.replace(/([A-Z])/g, " $1")}
+              </span>
+              <Toggle
+                checked={
+                  key === "size1" || key === "size2" || key === "size3"
+                    ? shortMenuOptions[key]?.enabled
+                    : shortMenuOptions[key]
+                }
+                onChange={() => toggleShortMenuOne(key)}
+              />
+            </div>
+          ))}
+        </div>
+      </>
+    )}
+  </div>
+)}
           </div>
         ) : (
           // <div style={{ height: "80vh" }}>
@@ -1645,23 +1998,46 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
   </button>
 </div> */
 
-          <div style={{ height: "80vh" }}>
-            <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-              <Viewer
-                fileUrl={pdfUrl}
-                plugins={[pdfPlugin]}
-                renderLoader={(percentages) => (
-                  <div className="flex flex-col items-center justify-center h-full">
-                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <>
+  {mainUrl && shortMenuUrl && (
+    <div className="flex gap-2 mb-3">
+      {[
+        { label: selectedTemplateName || "Report", url: mainUrl },
+        { label: "Short Menu Report", url: shortMenuUrl },
+      ].map((t) => (
+        <button
+          key={t.label}
+          onClick={() => setPdfUrl(t.url)}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+            pdfUrl === t.url
+              ? "bg-[#005BA8] text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )}
 
-                    <p className="mt-4 text-gray-600 font-medium">
-                      Loading PDF... {Math.round(percentages)}%
-                    </p>
-                  </div>
-                )}
-              />
-            </Worker>
+  <div style={{ height: "75vh" }}>
+    <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
+      <Viewer
+        key={pdfUrl}
+        fileUrl={pdfUrl}
+        plugins={[pdfPlugin]}
+        renderLoader={(percentages) => (
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-gray-600 font-medium">
+              Loading PDF... {Math.round(percentages)}%
+            </p>
           </div>
+        )}
+      />
+    </Worker>
+  </div>
+</>
         )}
       </CustomModal>
     </>

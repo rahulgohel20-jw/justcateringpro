@@ -1,13 +1,21 @@
 import { useState, useEffect } from "react";
+import dayjs from "dayjs";
 import BaseSelect from "../ui/BaseSelect";
 import BaseInput from "../ui/BaseInput";
 import Swal from "sweetalert2";
 import { OutsideContactName } from "@/services/apiServices";
 
+const getFunctionTime24 = (functionStartDateTime) => {
+  if (!functionStartDateTime || !/\d{1,2}:\d{2}/.test(functionStartDateTime)) return "";
+  const parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
+  return parsed.isValid() ? parsed.format("HH:mm") : "";
+};
+
 export default function AllocateRowChef({
   onAllocate,
   vendorRefreshTrigger = 0,
   selectedCount,
+  functionStartDateTime, // ⬅ NEW
 }) {
   const userid = localStorage.getItem("userId");
   const [vendors, setVendors] = useState([]);
@@ -16,11 +24,18 @@ export default function AllocateRowChef({
   const [quantity, setQuantity] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [shiftTransPrice, setShiftTransPrice] = useState("");
+  const [reportingTime, setReportingTime] = useState(() =>
+    getFunctionTime24(functionStartDateTime),
+  ); // ⬅ defaults to function time
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchdata();
   }, [vendorRefreshTrigger]);
+
+  useEffect(() => {
+    setReportingTime(getFunctionTime24(functionStartDateTime));
+  }, [functionStartDateTime]);
 
   const fetchdata = async () => {
     try {
@@ -41,7 +56,8 @@ export default function AllocateRowChef({
       !serviceType &&
       (!pax || pax <= 0) &&
       (!quantity || quantity <= 0) &&
-      (!shiftTransPrice || shiftTransPrice <= 0)
+      (!shiftTransPrice || shiftTransPrice <= 0) &&
+      !reportingTime
     ) {
       Swal.fire({
         title: "Missing Information",
@@ -76,6 +92,7 @@ export default function AllocateRowChef({
     if (quantity && quantity > 0) allocationData.quantity = quantity;
     if (shiftTransPrice && shiftTransPrice >= 0)
       allocationData.shiftTransPrice = shiftTransPrice;
+    if (reportingTime) allocationData.reportingTime = reportingTime;
 
     const success = onAllocate(allocationData);
 
@@ -85,6 +102,7 @@ export default function AllocateRowChef({
       setQuantity("");
       setServiceType("");
       setShiftTransPrice("");
+      setReportingTime(getFunctionTime24(functionStartDateTime));
     }
   };
 
@@ -95,7 +113,7 @@ export default function AllocateRowChef({
           Bulk Allocate {selectedCount > 0 && `(${selectedCount} selected)`}
         </span>
       </div>
-      <div className="grid grid-cols-7 gap-4">
+      <div className="grid grid-cols-8 gap-4">
         <BaseSelect
           value={selectedVendor}
           onChange={(e) => setSelectedVendor(e.target.value)}
@@ -142,6 +160,14 @@ export default function AllocateRowChef({
           onChange={(e) => setShiftTransPrice(e.target.value)}
           type="tel"
           min="0"
+        />
+
+        <input
+          type="time"
+          className="input"
+          value={reportingTime}
+          onChange={(e) => setReportingTime(e.target.value)}
+          placeholder="Reporting Time"
         />
 
         <button className="btn-primary col-span-2" onClick={handleAllocate}>

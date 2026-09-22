@@ -39,7 +39,8 @@ const defaultOptions = {
   isHalfPax: false,
   is3Column:false,
   isFunctionNextPage:false,
-  isAddDecoration:false, 
+  isAddDecoration:false,
+  isAddShortMenu:false,
   isOnePage:false,
   isShowEventRemarks :false, 
   showAdditional:false,
@@ -58,6 +59,8 @@ const defaultOptions = {
   showLastPage:false,
   showAddOnLabel:false,
   isAllItemTogether:false,
+  isEndDate:false,
+  isStartDate:false,
 };
 
 const optionLabels = {
@@ -110,6 +113,9 @@ const optionLabels = {
   withOutBg : "With Out Background",
   withVendor : "With Vendor",
   isAllItemTogether : "Is All Item Together",
+  isEndDate : "Is End Date",
+  isStartDate : "Is start Date",
+  isAddShortMenu : "Is Add Short Menu Report"
 };
 
 const AddReportConfig = ({
@@ -237,6 +243,7 @@ const AddReportConfig = ({
             is3Column : !!data.is3Column,
             isFunctionNextPage :!!data.isFunctionNextPage,
             isAddDecoration: !!data.isAddDecoration , 
+            isAddShortMenu : !!data.isAddShortMenu,
             isOnePage:!!data.isOnePage , 
             isShowEventRemarks: !!data.isShowEventRemarks, 
             showAdditional: !!data.showAdditional,
@@ -254,7 +261,8 @@ const AddReportConfig = ({
             withOutBg: !!data.withOutBg,
             withVendor: !!data.withVendor,
             isAllItemTogether: !!data.isAllItemTogether,
-           
+           isStartDate: !!data.isStartDate,
+           isEndDate: !!data.isEndDate,
           });
         }
       } catch (error) {
@@ -369,6 +377,7 @@ const AddReportConfig = ({
   is3Column: booleanToNumber(options.is3Column),
   isFunctionNextPage :booleanToNumber(options.isFunctionNextPage),
   isAddDecoration:booleanToNumber(options.isAddDecoration),
+  isAddShortMenu:booleanToNumber(options.isAddShortMenu),
   isOnePage:booleanToNumber(options.isOnePage),
   isShowEventRemarks:booleanToNumber(options.isShowEventRemarks) , 
   showAdditional:booleanToNumber(options.showAdditional),
@@ -386,6 +395,8 @@ const AddReportConfig = ({
     withOutBg:booleanToNumber(options.withOutBg),
     withVendor:booleanToNumber(options.withVendor),
     isAllItemTogether:booleanToNumber(options.isAllItemTogether),
+    isStartDate:booleanToNumber(options.isStartDate),
+    isEndDate:booleanToNumber(options.isEndDate),
     };
 
     try {

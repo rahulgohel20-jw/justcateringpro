@@ -1116,7 +1116,7 @@ export const GetAllInvoicedatabyfilter = (
   endDate,
   startDate,
   id,
-  isVenue,
+  isVenue = "",
   userId
 ) => {
   return GET(
@@ -1129,6 +1129,13 @@ export const GetAllVendorPayment = (eventId, isLabour) => {
     `/vendorpayment/getallvendorpaymentbyeventid?eventId=${eventId}&isLabour=${isLabour}`,
   );
 };
+
+export const GetAllPaymentDetails = (userId, isPayable ) => {
+  return GET(
+    `/vendorpayment/getallvendorpayment?userId=${userId}&isPayable=${isPayable}`,
+  );
+};
+
 
 export const GeteventInvoicedata = (id) => {
   return GET(`/eventmaster/getallbypartyid?partyId=${id}`);
@@ -1901,9 +1908,20 @@ export const GetCopyItem = (userId, isCaptainRecipe ) => {
   return GET(`/menuitems/getallexistingrawitems?userId=${userId}&isCaptainRecipe=${isCaptainRecipe}`);
 };
 
-export const Getpaymentvendordata = (eventId, isPayable, userId, vendorId) => {
+export const Getpaymentvendordata = (eventId, isPayable, userId, vendorId, vendorName) => {
+  const params = new URLSearchParams({
+    eventId,
+    isPayable,
+    userId,
+    vendorId,
+  });
+
+  if (vendorName) {
+    params.append("vendorName", vendorName);
+  }
+
   return GET(
-    `/vendorpayment/getvendorpaymentbyeventidandvendorid?eventId=${eventId}&isPayable=${isPayable}&userId=${userId}&vendorId=${vendorId}`,
+    `/vendorpayment/getvendorpaymentbyeventidandvendorid?${params.toString()}`,
   );
 };
 
@@ -2249,8 +2267,9 @@ export const AddAutoManualPOApi = (data) => {
 export const getautomanualpurchsaseid = (sotPoId) => {
   return GET(`/sot/manual-po/detail/${sotPoId}`);
 };
-export const GetAllPurchase = (userId) => {
-  return GET(`/purchaseorder/getbyuser?userId=${userId}`);
+
+export const GetAllPurchase = (userId, page = 0, size = 100 , searchName) => {
+  return GET(`/purchaseorder/getbyuser?userId=${userId}&page=${page}&size=${size}&searchName=${searchName}`);
 };
 
 export const AddStorePO = (data) => {
@@ -2262,8 +2281,8 @@ export const StatusStorePO = (poid, status) => {
 };
 
 
-export const GetAllStorePO = (userId) => {
-  return GET(`/storepo/getbyuser?userId=${userId}`);
+export const GetAllStorePO = (userId, page = 0, size = 10, searchName = "") => {
+  return GET(`/storepo/getbyuser?userId=${userId}&page=${page}&size=${size}&searchName=${searchName}`);
 };
 
 export const UpdateUserPlan = (date, id, otp) => {
@@ -2840,10 +2859,9 @@ export const AddInfoAutoManualPO = (data) => {
 };
 
 
-export const PrintAutoManualPO = (sotPoId, userId) => {
-  return GET(`/sot/manual-po/pdf/${sotPoId}?isCompanyDetails=1&userId=${userId}`);
+export const PrintAutoManualPO = (sotPoId, userId, isCompanyDetails) => {
+  return GET(`/sot/manual-po/pdf/${sotPoId}?isCompanyDetails=${isCompanyDetails}&userId=${userId}`);
 };
-
 
 export const GetInfoAutoManualPO = (sotPoId) => {
   return GET(`/sot/manual-po/info/${sotPoId}`);
@@ -3862,4 +3880,35 @@ export const addupdateguesign = (eventId, eventFunctionId, data) => {
 
 export const getreportguestsign = (eventId, isCompanyDetails, userId) => {
   return GET(`/guest-signature/generate-guest-signature-report?eventId=${eventId}&isCompanyDetails=${isCompanyDetails}&userId=${userId}`);
+};
+
+export const getallmenuselecteditem = (eventId , eventFunctionId ) => {
+  return GET(`/menupreparation/getAllMenuPreparationItems?eventId=${eventId}&eventFunctionId=${eventFunctionId}`);
+};
+
+
+export const GetEventByFilter = (endDate, eventDate, eventStatus, partyName, startDate, userId) => {
+  const params = new URLSearchParams({
+    userId,
+    startDate,
+    endDate,
+    eventDate: eventDate ?? "", // required — fall back to range start if none given
+    eventStatus: eventStatus ?? "", // required — send even if empty, see note below
+  });
+
+  if (partyName) params.append("partyName", partyName);
+
+  return GET(`/eventmaster/getalleventbyfilter?${params.toString()}`);
+};
+
+export const getpdfpurchaseapproval = (purchaseApprovalRequestId , userId) => {
+  return GET(`purchase-approval/purchase-approval-sheet-report?purchaseApprovalRequestId=${purchaseApprovalRequestId}&userId=${userId}`);
+};
+
+export const GetMenuPreparationNotifications = (managerId) => {
+  return GET(`/menu-preparation-notifications/getalladdeditemnotification?managerId=${managerId}`);
+};
+
+export const UpdateMenuPreparationNotificationVisibility = (ids, isVisible = false) => {
+  return PUT(`/menu-preparation-notifications/visibility`, { ids, isVisible });
 };

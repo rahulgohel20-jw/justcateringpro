@@ -2,9 +2,10 @@ import { Fragment, useEffect, useState } from "react";
 import { Container } from "@/components/container";
 import RecivePayment from "./components/RecivePayment";
 import PayablePayment from "./components/PayablePayment";
-import { Getpaymentvendordata, pdffordebitpaymentinaccount } from "@/services/apiServices";
+import { GetAllPaymentDetails, pdffordebitpaymentinaccount } from "@/services/apiServices";
 import Swal from "sweetalert2";
-import { FormattedMessage } from "react-intl"
+import { FormattedMessage } from "react-intl";
+
 const Toggle = ({ checked, onChange, label }) => (
   <div className="flex items-center justify-between Paymentspy-3">
     <span className="text-sm font-medium text-gray-700">{label}</span>
@@ -67,75 +68,81 @@ const ExportPdfModal = ({ isOpen, onClose, isPayable }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 pt-20">
-     <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-5">
-  <h2 className="text-lg font-semibold text-[#111827] mb-1">
-    <FormattedMessage
-      id="COMMON.EXPORT_PDF"
-      defaultMessage="Export PDF"
-    />
-  </h2>
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-5">
+        <h2 className="text-lg font-semibold text-[#111827] mb-1">
+          <FormattedMessage id="COMMON.EXPORT_PDF" defaultMessage="Export PDF" />
+        </h2>
 
-  <p className="text-sm text-gray-500 mb-2">
-    <FormattedMessage
-      id="COMMON.CHOOSE_REPORT_CONTENT"
-      defaultMessage="Choose what to include in the report."
-    />
-  </p>
+        <p className="text-sm text-gray-500 mb-2">
+          <FormattedMessage
+            id="COMMON.CHOOSE_REPORT_CONTENT"
+            defaultMessage="Choose what to include in the report."
+          />
+        </p>
 
-  <div className="divide-y divide-gray-100">
-    <Toggle
-      checked={isCompanyDetails}
-      onChange={setIsCompanyDetails}
-      label={
-        <FormattedMessage
-          id="COMMON.COMPANY_DETAILS"
-          defaultMessage="Company Details"
-        />
-      }
-    />
-  </div>
+        <div className="divide-y divide-gray-100">
+          <Toggle
+            checked={isCompanyDetails}
+            onChange={setIsCompanyDetails}
+            label={
+              <FormattedMessage id="COMMON.COMPANY_DETAILS" defaultMessage="Company Details" />
+            }
+          />
+        </div>
 
-  <div className="flex justify-end gap-2 mt-5">
-    <button
-      className="btn btn-light"
-      onClick={onClose}
-      disabled={loading}
-    >
-      <FormattedMessage
-        id="COMMON.CANCEL"
-        defaultMessage="Cancel"
-      />
-    </button>
+        <div className="flex justify-end gap-2 mt-5">
+          <button className="btn btn-light" onClick={onClose} disabled={loading}>
+            <FormattedMessage id="COMMON.CANCEL" defaultMessage="Cancel" />
+          </button>
 
-    <button
-      className="btn btn-primary"
-      onClick={handleExport}
-      disabled={loading}
-    >
-      {loading ? (
-        <FormattedMessage
-          id="COMMON.GENERATING"
-          defaultMessage="Generating..."
-        />
-      ) : (
-        <FormattedMessage
-          id="COMMON.EXPORT"
-          defaultMessage="Export"
-        />
-      )}
-    </button>
-  </div>
-</div>
+          <button className="btn btn-primary" onClick={handleExport} disabled={loading}>
+            {loading ? (
+              <FormattedMessage id="COMMON.GENERATING" defaultMessage="Generating..." />
+            ) : (
+              <FormattedMessage id="COMMON.EXPORT" defaultMessage="Export" />
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
+
+const mapVendorGroups = (vendors, isPayable) =>
+  (vendors || []).map((v) => ({
+    vendorId: v.vendorId,
+    vendorName: v.vendorName,
+    totalAmount: v.totalAmount,
+    totalReceived: v.totalReceived,
+    totalPayable: v.totalPayable,
+    totalRemaining: v.totalRemaining,
+    payments: (v.vendorPayments || []).map((p) => ({
+      id: p.id,
+      voucherno: p.invoiceCode,
+      voucherdate: p.date,
+      modeofpayment: p.payMode,
+      bankId: p.bankId,
+      bankname: p.bankName,
+      cashId: p.cashId,
+      cashname: p.cashName,
+      referenceId: p.referenceId,
+      amount: isPayable ? p.payAmount : p.receivedAmount,
+      settlementAmount: p.settlementAmount,
+      eventId: p.eventId,
+      eventName: p.eventName,
+      remarks: p.remarks,
+      isOpb: p.isOpb,
+    })),
+  }));
 
 const RecivedPayments = () => {
   const [activeTab, setActiveTab] = useState("received");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  const [receivedData, setReceivedData] = useState([]);
-  const [payableData, setPayableData] = useState([]);
+  const [receivedVendors, setReceivedVendors] = useState([]);
+  const [payableVendors, setPayableVendors] = useState([]);
+  const [receivedLoading, setReceivedLoading] = useState(false);
+  const [payableLoading, setPayableLoading] = useState(false);
 
   const [receivedSummary, setReceivedSummary] = useState({
     totalReceived: 0,
@@ -146,58 +153,44 @@ const RecivedPayments = () => {
     remainingPayable: 0,
   });
 
-  const mapPayments = (payments) =>
-    payments.map((item, index) => ({
-      id: index + 1,
-      paymentId: item.id,
-      bankId: item.bankId,
-      bankname: item.bankName,
-      voucherdate: item.date,
-      voucherno: item.invoiceCode,
-      total: item.receivedAmount,
-      totals: item.payAmount,
-      modeofpayment: item.payMode,
-      settlementAmount: item.settlementAmount,
-      accountname: item.vendorName,
-      vendorId: item.vendorId,
-      eventId: item.eventId,
-      referenceId: item.referenceId,
-      remarks: item.remarks,
-      vendorCat: item.vendorCat,
-    }));
-
   const fetchPayment = async (isPayable) => {
-    try {
-      const userId = localStorage.getItem("userId");
-      const res = await Getpaymentvendordata(-1, isPayable, userId, -1);
-      const {
-        payments,
-        totalReceived,
-        remainingBalanced,
-        totalPayable,
-        remainingPayable,
-      } = res.data.data;
+    const userId = localStorage.getItem("userId");
+    const setLoading = isPayable ? setPayableLoading : setReceivedLoading;
 
-      const mapped = mapPayments(payments);
+    setLoading(true);
+    try {
+      const res = await GetAllPaymentDetails(userId, isPayable);
+      const vendors = res?.data?.data?.data || [];
+      const mapped = mapVendorGroups(vendors, isPayable);
+
+      // No root-level summary in this response — roll it up from each vendor
+      const totalAmountSum = vendors.reduce(
+        (acc, v) => acc + (isPayable ? v.totalPayable : v.totalReceived) || 0,
+        0,
+      );
+      const totalRemainingSum = vendors.reduce((acc, v) => acc + (v.totalRemaining || 0), 0);
 
       if (isPayable) {
-        setPayableData(mapped);
-        setPayableSummary({ totalPayable, remainingPayable });
+        setPayableVendors(mapped);
+        setPayableSummary({ totalPayable: totalAmountSum, remainingPayable: totalRemainingSum });
       } else {
-        setReceivedData(mapped);
-        setReceivedSummary({ totalReceived, remainingBalanced });
+        setReceivedVendors(mapped);
+        setReceivedSummary({ totalReceived: totalAmountSum, remainingBalanced: totalRemainingSum });
       }
     } catch (err) {
       console.log(err);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (activeTab === "received" && receivedData.length === 0) {
+    if (activeTab === "received" && receivedVendors.length === 0) {
       fetchPayment(false);
-    } else if (activeTab === "payable" && payableData.length === 0) {
+    } else if (activeTab === "payable" && payableVendors.length === 0) {
       fetchPayment(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   return (
@@ -206,74 +199,64 @@ const RecivedPayments = () => {
         <div className="min-h-screen">
           <div className="flex items-center justify-between mb-7">
             <div>
-             <h1 className="text-3xl font-bold text-[#111827]">
-  <FormattedMessage
-    id="COMMON.PAYMENTS"
-    defaultMessage="Payments"
-  />
-</h1>
+              <h1 className="text-3xl font-bold text-[#111827]">
+                <FormattedMessage id="COMMON.PAYMENTS" defaultMessage="Payments" />
+              </h1>
 
-<p className="text-[13px] text-[#6b7280] mt-[2px]">
-  <FormattedMessage
-    id="COMMON.PAYMENTS_DESCRIPTION"
-    defaultMessage="Manage and track your incoming and outgoing funds."
-  />
-</p>
+              <p className="text-[13px] text-[#6b7280] mt-[2px]">
+                <FormattedMessage
+                  id="COMMON.PAYMENTS_DESCRIPTION"
+                  defaultMessage="Manage and track your incoming and outgoing funds."
+                />
+              </p>
             </div>
 
-           <button
-  className="btn btn-danger"
-  onClick={() => setIsExportModalOpen(true)}
-  title="Export PDF"
->
-  <i className="ki-filled ki-file-down me-1"></i>
-  <FormattedMessage
-    id="COMMON.EXPORT_PDF"
-    defaultMessage="Export PDF"
-  />
-</button>
+            {/* <button
+              className="btn btn-danger"
+              onClick={() => setIsExportModalOpen(true)}
+              title="Export PDF"
+            >
+              <i className="ki-filled ki-file-down me-1"></i>
+              <FormattedMessage id="COMMON.EXPORT_PDF" defaultMessage="Export PDF" />
+            </button> */}
           </div>
 
           <div className="flex gap-8 border-b border-[#e5e7eb] mb-7">
-           <button
-  onClick={() => setActiveTab("received")}
-  className={`text-lg font-medium pb-3 border-b-2 transition ${
-    activeTab === "received"
-      ? "text-primary border-primary"
-      : "text-[#6b7280] border-transparent"
-  }`}
->
-  <FormattedMessage
-    id="COMMON.RECEIVED"
-    defaultMessage="Received"
-  />
-</button>
+            <button
+              onClick={() => setActiveTab("received")}
+              className={`text-lg font-medium pb-3 border-b-2 transition ${
+                activeTab === "received"
+                  ? "text-primary border-primary"
+                  : "text-[#6b7280] border-transparent"
+              }`}
+            >
+              <FormattedMessage id="COMMON.RECEIVED" defaultMessage="Received" />
+            </button>
 
-<button
-  onClick={() => setActiveTab("payable")}
-  className={`text-lg font-medium pb-3 border-b-2 transition ${
-    activeTab === "payable"
-      ? "text-primary border-primary"
-      : "text-[#6b7280] border-transparent"
-  }`}
->
-  <FormattedMessage
-    id="COMMON.PAYABLE"
-    defaultMessage="Payable"
-  />
-</button>
+            <button
+              onClick={() => setActiveTab("payable")}
+              className={`text-lg font-medium pb-3 border-b-2 transition ${
+                activeTab === "payable"
+                  ? "text-primary border-primary"
+                  : "text-[#6b7280] border-transparent"
+              }`}
+            >
+              <FormattedMessage id="COMMON.PAYABLE" defaultMessage="Payable" />
+            </button>
           </div>
 
           {activeTab === "received" && (
             <RecivePayment
-              data={receivedData}
+              vendors={receivedVendors}
+              loading={receivedLoading}
               totalReceived={receivedSummary.totalReceived}
               remainingBalanced={receivedSummary.remainingBalanced}
             />
           )}
           {activeTab === "payable" && (
             <PayablePayment
-              data={payableData}
+              vendors={payableVendors}
+              loading={payableLoading}
               totalPayable={payableSummary.totalPayable}
               remainingPayable={payableSummary.remainingPayable}
             />
