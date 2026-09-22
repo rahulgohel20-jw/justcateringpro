@@ -1,4 +1,4 @@
-
+﻿
 import { useRef, useState, useEffect, useCallback } from "react";
 import * as Yup from "yup";
 import Select from "react-select";
@@ -34,7 +34,7 @@ const langConfig = getLangConfig();
 
   // Yup validation schema
   const validationSchema = Yup.object().shape({
-    nameEnglish: Yup.string().required("Name (English) is required"),
+    nameEnglish: Yup.string().required("Name is required"),
     // mobileno: Yup.string()
     //   .required("Mobile number is required")
     //   .matches(/^[6-9]\d{9}$/, "Please enter a valid 10-digit mobile number"),
@@ -429,21 +429,21 @@ type: selectedCustomer.type || "",
         {/* Form */}
         <div className="overflow-y-auto max-h-[90vh]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Name fields */}
+            {/* Name */}
             <div>
               <InputToTextLang
                 label={
                   <FormattedMessage
-                    id="COMMON.NAME_ENGLISH"
-                    defaultMessage="Name (English)"
+                    id="COMMON.NAME"
+                    defaultMessage="Name"
                   />
                 }
                 name="nameEnglish"
                 value={formData.nameEnglish}
                 onChange={handleChange}
                 placeholder={intl.formatMessage({
-                  id: "COMMON.NAME_ENGLISH",
-                  defaultMessage: "Name (English)",
+                  id: "COMMON.NAME",
+                  defaultMessage: "Name",
                 })}
                 lng="en-US"
                 required
@@ -454,82 +454,26 @@ type: selectedCustomer.type || "",
                 </p>
               )}
             </div>
-<InputToTextLang
-  label={
-    <FormattedMessage
-      id={langConfig.nameIntlId}
-      defaultMessage={langConfig.label}
-    />
-  }
-  name="nameGujarati"
-  placeholder={langConfig.label}
-  value={formData.nameGujarati}
-  onChange={handleChange}
-  lng="gu"
-/>
-            <InputToTextLang
-              label={
-                <FormattedMessage
-                  id="COMMON.NAME_HINDI"
-                  defaultMessage="Name (हिंदी)"
-                />
-              }
-              name="nameHindi"
-              placeholder={intl.formatMessage({
-                id: "COMMON.NAME_HINDI",
-                defaultMessage: "Name (हिंदी)",
-              })}
-              value={formData.nameHindi}
-              onChange={handleChange}
-              lng="hi"
-            />
 
             {/* Home Address */}
-            <InputToTextLang
-              label={
-                <FormattedMessage
-                  id="COMMON.HOME_ADDRESS_ENGLISH"
-                  defaultMessage="Home Address (English)"
-                />
-              }
-              name="addressEnglish"
-              placeholder={intl.formatMessage({
-                id: "COMMON.HOME_ADDRESS_ENGLISH",
-                defaultMessage: "Home Address (English)",
-              })}
-              value={formData.addressEnglish}
-              onChange={handleChange}
-              lng="en-US"
-            />
-            <InputToTextLang
-  label={
-    <FormattedMessage
-      id={langConfig.addressIntlId}
-      defaultMessage={`Home Address (${langConfig.label})`}
-    />
-  }
-  name="addressGujarati"
-  placeholder={`Home Address (${langConfig.label})`}
-  value={formData.addressGujarati}
-  onChange={handleChange}
-  lng="gu"
-/>
-            <InputToTextLang
-              label={
-                <FormattedMessage
-                  id="COMMON.HOME_ADDRESS_HINDI"
-                  defaultMessage="Home Address (हिंदी)"
-                />
-              }
-              name="addressHindi"
-              placeholder={intl.formatMessage({
-                id: "COMMON.NAME_HINDI",
-                defaultMessage: "Name (हिंदी)",
-              })}
-              value={formData.addressHindi}
-              onChange={handleChange}
-              lng="hi"
-            />
+            <div className="md:col-span-2">
+              <InputToTextLang
+                label={
+                  <FormattedMessage
+                    id="COMMON.HOME_ADDRESS"
+                    defaultMessage="Home Address"
+                  />
+                }
+                name="addressEnglish"
+                placeholder={intl.formatMessage({
+                  id: "COMMON.HOME_ADDRESS",
+                  defaultMessage: "Home Address",
+                })}
+                value={formData.addressEnglish}
+                onChange={handleChange}
+                lng="en-US"
+              />
+            </div>
 
             {/* Contact Category */}
             <div className="flex flex-col gap-1">

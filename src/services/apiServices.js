@@ -3906,10 +3906,10 @@ export const getpdfpurchaseapproval = (purchaseApprovalRequestId , userId) => {
   return GET(`purchase-approval/purchase-approval-sheet-report?purchaseApprovalRequestId=${purchaseApprovalRequestId}&userId=${userId}`);
 };
 
-export const adduploadsignature = (file, userId) => {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("userId", userId);
+export const GetMenuPreparationNotifications = (managerId) => {
+  return GET(`/menu-preparation-notifications/getalladdeditemnotification?managerId=${managerId}`);
+};
 
-  return POST(`/user/upload-signature`, formData);
+export const UpdateMenuPreparationNotificationVisibility = (ids, isVisible = false) => {
+  return PUT(`/menu-preparation-notifications/visibility`, { ids, isVisible });
 };
