@@ -307,15 +307,19 @@ followupDay: values.followupDay || "",
   setSignatureUploading(true);
   try {
     const uploadRes = await adduploadsignature(signatureFile, userMasterId);
-    const url = uploadRes?.data?.data?.signatureUrl || uploadRes?.data?.data?.url;
-    if (!url) {
-      message.error("Signature upload failed. Please try again.");
+    const isSuccess = uploadRes?.data?.success === true;
+
+    if (!isSuccess) {
+      message.error(uploadRes?.data?.msg || "Signature upload failed. Please try again.");
       return;
     }
-    setSignaturePreview(url);
+
+    message.success(uploadRes?.data?.msg || "Signature uploaded successfully");
     setSignatureFile(null);
     setIsChanged(true);
-    message.success("Signature uploaded successfully");
+
+    // Response doesn't include the new signature URL, so refetch the profile to pick it up
+    await fetchUserData();
   } catch (err) {
     console.error("[handleSignatureUpload] Error:", err);
     message.error("Signature upload failed. Please try again.");

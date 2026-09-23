@@ -21,7 +21,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 3000,
   },
   server: {
-    port: 4000,
+    port: 5173,
     proxy: {
       "/v1/api": {
         target: "http://103.1.101.244:5101",
