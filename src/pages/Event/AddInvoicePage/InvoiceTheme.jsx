@@ -242,6 +242,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
             isAdvancePayment: config.isAdvancePayment,
             withOutBg: config.withOutBg,
             isAllItemTogether: config.isAllItemTogether ,
+            isShowFunctionImg: config.isShowFunctionImg,
             withVendor: config.withVendor,
             isNotes : config.isNotes,
             showAddOnLabel: config.showAddOnLabel,
@@ -291,6 +292,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
               isAdvancePayment:config.isAdvancePayment === 0,
               withOutBg: config.withOutBg === 0,
               isAllItemTogether: config.isAllItemTogether === 0,
+              isShowFunctionImg: config.isShowFunctionImg == 0,
               withVendor: config.withVendor === 0,
               isNotes: config.isNotes === 0,
               showAddOnLabel: config.showAddOnLabel === 0
@@ -1001,6 +1003,7 @@ isAdvancedPay:opts.isAdvancedPay ?? false,
           showAddOnLabel:opts.showAddOnLabel ?? false,
           withOutBg: opts.withOutBg === 0,
           isAllItemTogether: opts.isAllItemTogether ?? false,
+          isShowFunctionImg: opts.isShowFunctionImg ?? false,
           withVendor: opts.withVendor === 0,
           isNotes:opts.isNotes ?? false,
   is3Column: opts.is3Column ?? false,
@@ -1091,6 +1094,7 @@ const handleConfigGenerate = async (configData) => {
     const withVendor = nonExclusiveConfig?.withVendor === 0 ? 0 : 1;
     const isAllItemTogether = nonExclusiveConfig?.isAllItemTogether ? 1 : 0;
    const isSignature = nonExclusiveConfig?.isSignature ? 1 : 0;
+   const isShowFunctionImg =  nonExclusiveConfig?.isShowFunctionImg ? 1 : 0;
     
 
     // ⬅ Exclusive Theme module — pass the theme record's OWN id (e.g. 18402),

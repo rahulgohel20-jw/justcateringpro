@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { TimePicker, message } from "antd";
+import { TimePicker, message, Upload, Button } from "antd";
 import dayjs from "dayjs";
 import {
   AddFunction,
@@ -10,8 +10,9 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import Swal from "sweetalert2";
 import { FormattedMessage, useIntl } from "react-intl";
-import { getLangConfig, extractTranslations } from "@/utils/langConfig"; 
+import { getLangConfig, extractTranslations } from "@/utils/langConfig";
 import MultiLangInputBox from "../../../components/form-inputs/MultiLangInputbox";
+import { UploadOutlined } from "@ant-design/icons";
 
 const AddFunctionType = ({
   isOpen,
@@ -22,6 +23,8 @@ const AddFunctionType = ({
   const [debounceTimer, setDebounceTimer] = useState(null);
   const intl = useIntl();
   const langConfig = getLangConfig(); // ✅ Use shared util instead of local function
+  const [functionImage, setFunctionImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   const initialState = {
     nameEnglish: "",
@@ -51,26 +54,34 @@ const AddFunctionType = ({
           return;
         }
 
-        const payload = {
-          nameEnglish: values.nameEnglish,
-          nameGujarati: values.nameGujarati,
-          nameHindi: values.nameHindi,
-          startTime: values.startTime ? values.startTime.format("HH:mm A") : "",
-          endTime: values.endTime ? values.endTime.format("HH:mm A") : "",
-          userId: Id,
-        };
+        const formPayload = new FormData();
+        formPayload.append("nameEnglish", values.nameEnglish);
+        formPayload.append("nameGujarati", values.nameGujarati);
+        formPayload.append("nameHindi", values.nameHindi);
+        formPayload.append(
+          "startTime",
+          values.startTime ? values.startTime.format("HH:mm A") : "",
+        );
+        formPayload.append(
+          "endTime",
+          values.endTime ? values.endTime.format("HH:mm A") : "",
+        );
+        formPayload.append("userId", Id);
+        if (functionImage) {
+          formPayload.append("img", functionImage);
+        }
 
         let res;
 
         if (selectedFunction) {
-          res = await EditFunctionById(selectedFunction.id, payload);
+          res = await EditFunctionById(selectedFunction.id, formPayload);
           if (res?.data?.success === false) {
             Swal.fire("Error", res?.data?.msg || "Something went wrong", "error");
             return;
           }
           Swal.fire("Success", "Function updated successfully!", "success");
         } else {
-          res = await AddFunction(payload);
+          res = await AddFunction(formPayload);
           if (res?.data?.success === false) {
             Swal.fire("Error", res?.data?.msg || "Something went wrong", "error");
             return;
@@ -140,8 +151,14 @@ const AddFunctionType = ({
           ? dayjs(selectedFunction.end_time, "HH:mm A")
           : null,
       });
+            const rawImgPath = selectedFunction.imgPath || "";
+      const hasValidImage = rawImgPath && !rawImgPath.endsWith("null");
+      setImagePreview(hasValidImage ? rawImgPath : null);
+      setFunctionImage(null);
     } else {
       formik.resetForm({ values: initialState });
+      setImagePreview(null);
+      setFunctionImage(null);
     }
   }, [selectedFunction, isOpen]);
 
@@ -231,6 +248,36 @@ const AddFunctionType = ({
             </div>
           </div>
 
+          {/* Image */}
+          <div className="flex flex-col mt-6">
+            <label className="form-label text-gray-600">
+              <FormattedMessage id="USER.MASTER.FUNCTION_IMAGE" defaultMessage="Image" />
+            </label>
+
+            {imagePreview && !functionImage && (
+              <img
+                src={imagePreview}
+                alt="Function"
+                className="h-16 w-16 object-cover rounded-lg mb-2"
+              />
+            )}
+
+            <Upload
+              accept="image/*"
+              maxCount={1}
+              showUploadList={{ showRemoveIcon: true }}
+              beforeUpload={(file) => {
+                setFunctionImage(file);
+                return false;
+              }}
+              onRemove={() => setFunctionImage(null)}
+            >
+              <Button icon={<UploadOutlined />}>
+                {imagePreview ? "Replace Image" : "Upload Image"}
+              </Button>
+            </Upload>
+          </div>
+
           {/* Buttons */}
           <div className="flex w-full justify-end mt-6 gap-3">
             <button
@@ -252,7 +299,7 @@ const AddFunctionType = ({
             </button>
           </div>
         </form>
-      </div>
+      </div>  
     </div>
   );
 };
