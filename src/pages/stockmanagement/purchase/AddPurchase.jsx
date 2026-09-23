@@ -135,6 +135,33 @@ const AddPurchase = () => {
 
   const debounceRef = useRef(null);
 
+
+  const searchSelectRef = useRef(null);
+const qtyInputRefs = useRef({});
+const priceInputRefs = useRef({});
+const [focusQtyIndex, setFocusQtyIndex] = useState(null);
+
+// New items are unshifted to index 0, so whenever focusQtyIndex
+// is set, focus that row's qty field right after it renders.
+useEffect(() => {
+  if (focusQtyIndex === null) return;
+  const el = qtyInputRefs.current[focusQtyIndex];
+  if (el) {
+    const t = setTimeout(() => {
+      el.focus();
+      el.select?.();
+      setFocusQtyIndex(null);
+    }, 0);
+    return () => clearTimeout(t);
+  } else {
+    setFocusQtyIndex(null);
+  }
+}, [items, focusQtyIndex]);
+
+const focusSearchInput = useCallback(() => {
+  searchSelectRef.current?.focus?.();
+}, []);
+
   const handleSearch = (value) => {
     setSearchQuery(value);
   };
@@ -417,6 +444,7 @@ useEffect(() => {
       isAddInStock: true,
     };
     setItems((prev) => [newRow, ...prev]);
+     setFocusQtyIndex(0);
   },
   [form.supplier_id, userId],
 );
@@ -927,12 +955,13 @@ const finalAmount =
           <div className="px-6 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center gap-3">
             <div className="relative w-full max-w-md">
               <div className="relative">
-                <Select
-                  showSearch
-                  placeholder={intl.formatMessage({
-                    id: "PURCHASE.SEARCH_ITEM",
-                    defaultMessage: "Search & add item...",
-                  })}
+               <Select
+  ref={searchSelectRef}
+  showSearch
+  placeholder={intl.formatMessage({
+    id: "PURCHASE.SEARCH_ITEM",
+    defaultMessage: "Search & add item...",
+  })}
                   value={undefined}
                   filterOption={false}
                   onSearch={handleSearch}
@@ -1120,21 +1149,27 @@ const finalAmount =
 </td>
                         {/* Qty */}
                         <td className="px-1 py-2 w-20">
-                          <input
-                            type="tel"
-                            value={item.qty}
-                            onChange={(e) =>
-                              updateItem(i, "qty", e.target.value)
-                            }
-                            placeholder="0"
-                            className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
-                            ${
-                              !item.qty
-                                ? "border-amber-300 bg-amber-50 text-amber-700 placeholder-amber-400 focus:border-amber-400 focus:ring-amber-300"
-                                : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"
-                            }`}
-                          />
-                        </td>
+  <input
+    type="tel"
+    ref={(el) => (qtyInputRefs.current[i] = el)}
+    value={item.qty}
+    onChange={(e) => updateItem(i, "qty", e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        priceInputRefs.current[i]?.focus();
+        priceInputRefs.current[i]?.select?.();
+      }
+    }}
+    placeholder="0"
+    className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
+    ${
+      !item.qty
+        ? "border-amber-300 bg-amber-50 text-amber-700 placeholder-amber-400 focus:border-amber-400 focus:ring-amber-300"
+        : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"
+    }`}
+  />
+</td>
 
                         {/* Unit */}
                         <td className="px-3 py-2 w-20">
@@ -1145,21 +1180,26 @@ const finalAmount =
 
                         {/* Price/Unit */}
                         <td className="px-1 py-2 w-28">
-                          <input
-                            type="tel"
-                            value={item.price_per_unit}
-                            onChange={(e) =>
-                              updateItem(i, "price_per_unit", e.target.value)
-                            }
-                            placeholder="0.00"
-                            className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
-                            ${
-                              !item.price_per_unit
-                                ? "border-amber-300 bg-amber-50 text-amber-700 placeholder-amber-400 focus:border-amber-400 focus:ring-amber-300"
-                                : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"
-                            }`}
-                          />
-                        </td>
+  <input
+    type="tel"
+    ref={(el) => (priceInputRefs.current[i] = el)}
+    value={item.price_per_unit}
+    onChange={(e) => updateItem(i, "price_per_unit", e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        focusSearchInput(); // loop back to raw material search
+      }
+    }}
+    placeholder="0.00"
+    className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
+    ${
+      !item.price_per_unit
+        ? "border-amber-300 bg-amber-50 text-amber-700 placeholder-amber-400 focus:border-amber-400 focus:ring-amber-300"
+        : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"
+    }`}
+  />
+</td>
 
                         {/* Other Charges */}
                         <td className="px-1 py-2 w-24">

@@ -2010,10 +2010,14 @@ export const GetAllfunctioneventbyid = (eventId) => {
   return GET(`eventfunction/getalleventfunctionByeventid?eventId=${eventId}`);
 };
 
-export const GetAllEventFunction = (userId) => {
-  return GET(
-    `eventfunction/getalleventfunction?page=1&size=1000&userId=${userId}`,
-  );
+export const GetAllEventFunction = (userId, { page = 1, size = 1000, search = "" } = {}) => {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+  if (search) params.set("search", search);
+
+  return GET(`eventfunction/getalleventfunction?${params.toString()}&userId=${userId}`);
 };
 
 export const GetCopyMenuPlanning = (
