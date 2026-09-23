@@ -3913,3 +3913,10 @@ export const GetMenuPreparationNotifications = (managerId) => {
 export const UpdateMenuPreparationNotificationVisibility = (ids, isVisible = false) => {
   return PUT(`/menu-preparation-notifications/visibility`, { ids, isVisible });
 };
+export const adduploadsignature = (file, userId) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("userId", userId);
+
+  return POST(`/user/upload-signature`, formData);
+};
