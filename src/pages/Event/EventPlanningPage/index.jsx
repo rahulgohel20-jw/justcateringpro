@@ -3341,7 +3341,7 @@ const buildFullChangeSummary = (prev, next) => {
                 eventId: Number(eventId) || 0,
                 user: getUserEmail(),
               }).catch((err) => console.error("Failed to save log:", err));
-
+useMenuPrepStore.getState().bumpMenuPrepNotify();
               await animateProgress(85, 100, 500);
 
               Swal.fire({

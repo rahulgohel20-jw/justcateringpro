@@ -390,10 +390,10 @@ const HeaderTopbar = () => {
   const { isRTL } = useLanguage();
 
   const location = useLocation();
-  const prepStatus = useMenuPrepStore((state) => state.prepStatus);
-  const isMenuPrepRoute = location.pathname.includes("/menu-preparation");
-  const isStatusComplete = prepStatus === "COMPLETED" || prepStatus === "Complete";
-
+const menuPrepNotifyVersion = useMenuPrepStore((state) => state.menuPrepNotifyVersion);
+const prepStatus = useMenuPrepStore((state) => state.prepStatus);
+const isMenuPrepRoute = location.pathname.includes("/menu-preparation");
+const isStatusComplete = prepStatus === "COMPLETED" || prepStatus === "Complete";
   const itemChatRef          = useRef(null);
   const itemUserRef          = useRef(null);
   const itemNotificationsRef = useRef(null);
@@ -551,7 +551,7 @@ const [shakeBell, setShakeBell] = useState(false);
       .finally(() => setMenuPrepLoading(false));
   }, [getLoginUserManagerId]);
 
-    // Fetch badge count on load and poll every 15 seconds when user has Menu Extra Features access
+    // Fetch badge count on load, and again whenever a save elsewhere bumps menuPrepNotifyVersion
 const fetchMenuPrepBadgeRef = useRef(fetchMenuPrepBadge);
 useEffect(() => {
   fetchMenuPrepBadgeRef.current = fetchMenuPrepBadge;
@@ -560,12 +560,9 @@ useEffect(() => {
 useEffect(() => {
   if (!canAccessMenuExtraFeature) return;
   fetchMenuPrepBadgeRef.current();
-  const timer = setInterval(() => {
-    fetchMenuPrepBadgeRef.current();
-  }, 15000);
-  return () => clearInterval(timer);
-}, [canAccessMenuExtraFeature]); // no fetchMenuPrepBadge dependency — won't restart on every render
-  // Shake + sound when unread count increases
+}, [canAccessMenuExtraFeature, menuPrepNotifyVersion]);
+
+
   useEffect(() => {
     if (isFirstLoadRef.current) {
       prevUnreadCountRef.current = menuPrepUnreadCount;

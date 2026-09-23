@@ -456,9 +456,9 @@ const languageOptions = [
     showAddOnLabel : "Show Add On Label",
     withOutBg : "With Out Background",
     withVendor : "With Vendor",
-    isAllItemTogether :"Is All Item Together",
-    isShowFunctionImg: "is Show Function",
-     isAddShortMenu: "Is Add Short Menu", 
+    isAllItemTogether :"All Item Together",
+    isShowFunctionImg: "Show Function Img",
+     isAddShortMenu: "Add Short Menu", 
   };
 
   const fetchFonts = async () => {
