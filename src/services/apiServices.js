@@ -3851,9 +3851,11 @@ export const addUpdatePurchaseRequest = (data) => {
   return POST(`/purchase-approval/add-update` ,data);
 };
 
-export const getallpurchasereport = (userId ,status ) => {
-  return GET(`/purchase-approval/getAll?userId=${userId}&status=${status}`);
-}
+export const getallpurchasereport = (userId, status = "ALL", page = 0, size = 10, searchName = "") => {
+  return GET(
+    `/purchase-approval/getAll?userId=${userId}&status=${status}&page=${page}&size=${size}&searchName=${encodeURIComponent(searchName)}`
+  );
+};
 
 export const getpurchaseapprovalbyid = (purchaseRequestId) => {
   return GET(`/purchase-approval/getById?purchaseRequestId=${purchaseRequestId}`);
