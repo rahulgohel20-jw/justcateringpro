@@ -729,7 +729,7 @@ const handleWebWhatsAppClick = useCallback(
         ? dayjs(shiftsToSend[0].labordatetime, "DD/MM/YYYY hh:mm A").format("DD.MM.YYYY")
         : "";
 
-      const timeStr = shiftsToSend[0]?.labordatetime                          // ⬅ NEW
+      const timeStr = shiftsToSend[0]?.labordatetime                          
         ? dayjs(shiftsToSend[0].labordatetime, "DD/MM/YYYY hh:mm A").format("hh:mm A")
         : "";
 
@@ -1893,11 +1893,11 @@ const handleSaveNotes = useCallback(
                 <span className="text-sm">
                   <FormattedMessage
                     id="EVENT_MENU_ALLOCATION.EVENT_VENUE"
-                    defaultMessage="Event Venue:"
+                    defaultMessage="Event Venue/Banquet:"
                   />
                 </span>
                 <span className="text-sm font-medium text-gray-900">
-                  {eventData?.venue?.nameEnglish || "-"}
+                  {eventData?.venue?.nameEnglish || eventData?.banquetHallName || "-"}
                 </span>
               </div>
             </div>
