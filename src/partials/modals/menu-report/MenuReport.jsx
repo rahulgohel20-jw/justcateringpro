@@ -269,6 +269,7 @@ const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock }) 
   withOutBg: config.withOutBg === 0,
   withVendor: config.withVendor === 0,
   isAllItemTogether: config.isAllItemTogether === 0,
+  isShowFunctionImg:config.isShowFunctionImg === 0,
   isNotes: config.isNotes === 0,
   showLastPage: false,
 });
@@ -314,6 +315,7 @@ const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock }) =>
     withOutBg: config.withOutBg,
     withVendor: config.withVendor,
     isAllItemTogether: config.isAllItemTogether,
+    isShowFunctionImg: config.isShowFunctionImg,
     isAddShortMenu: isFlagOn(config.isAddShortMenu),  
   })
     .filter(([, value]) => value)
@@ -455,6 +457,7 @@ const languageOptions = [
     withOutBg : "With Out Background",
     withVendor : "With Vendor",
     isAllItemTogether :"Is All Item Together",
+    isShowFunctionImg: "is Show Function",
      isAddShortMenu: "Is Add Short Menu", 
   };
 
@@ -658,6 +661,7 @@ if (!config) {
           withOutBg: false,
           withVendor: false,
           isAllItemTogether: false,
+          isShowFunctionImg: false,
         });
         setVisibleOptions([]);
         return;
@@ -751,6 +755,7 @@ if (config.isDate === 1 || config.isStartDate === 1 || config.isEndDate === 1) {
           withOutBg : config.withOutBg === 0,
           withVendor : config.withVendor === 0,
           isAllItemTogether: config.isAllItemTogether === 0,
+          isShowFunctionImg :config.isShowFunctionImg === 0,
           isNotes : config.isNotes === 0,
           isAddShortMenu: false,        
   showLastPage:  false,
@@ -797,6 +802,7 @@ showAddOnLabel : config.showAddOnLabel,
 withOutBg : config.withOutBg,
 withVendor : config.withVendor,
 isAllItemTogether: config.isAllItemTogether,
+isShowFunctionImg: config.isShowFunctionImg,
 isAddShortMenu: isFlagOn(config.isAddShortMenu),
  })
             .filter(([_, value]) => value)
@@ -1177,6 +1183,7 @@ const isShortMenuCheckAll =
     withOutBg: opts.withOutBg,
     withVendor: opts.withVendor,
     isAllItemTogether: opts.isAllItemTogether,
+    isShowFunctionImg: opts.isShowFunctionImg,
     isNotes: opts.isNotes,
     showAddOnLabel: opts.showAddOnLabel,
     showLastPage: 1,

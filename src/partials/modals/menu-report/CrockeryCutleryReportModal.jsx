@@ -158,6 +158,7 @@ const CrockeryCutleryReportModal = ({
           withOutBg : config.withOutBg === 0,
           withVendor : config.withVendor === 0,
           isAllItemTogether : config.isAllItemTogether === 0,
+          isShowFunctionImg: config.isShowFunctionImg === 0,
         });
 
         setVisibleOptions(
@@ -186,6 +187,7 @@ const CrockeryCutleryReportModal = ({
             withOutBg: config.withOutBg,
             withVendor: config.withVendor,
             isAllItemTogether:config.isAllItemTogether,
+            isShowFunctionImg:config.isShowFunctionImg,
           })
             .filter(([_, value]) => value === 1)
             .map(([key]) => key),
@@ -400,6 +402,7 @@ const CrockeryCutleryReportModal = ({
        withOutBg: options.withOutBg,
        withVendor: options.withVendor,
        isAllItemTogether:options.isAllItemTogether,
+       isShowFunctionImg:options.isShowFunctionImg,
        isNotes : options.isNotes,
        showLastPage : option.showLastPage,
        isSignatureVisible: options.isSignatureVisible,

@@ -405,7 +405,9 @@ const HeaderTopbar = () => {
   const [menuPrepNotifications, setMenuPrepNotifications] = useState([]);
   const [menuPrepUnreadCount, setMenuPrepUnreadCount] = useState(0);
   const dismissedNotificationIdsRef = useRef(new Set());
-
+const prevUnreadCountRef = useRef(0);
+const isFirstLoadRef = useRef(true);
+const [shakeBell, setShakeBell] = useState(false);
   const [menuPrepLoading, setMenuPrepLoading] = useState(false);
   const [checkInModal, setCheckInModal] = useState(false);
   const [openMenuKey, setOpenMenuKey]   = useState(null);
@@ -549,15 +551,38 @@ const HeaderTopbar = () => {
       .finally(() => setMenuPrepLoading(false));
   }, [getLoginUserManagerId]);
 
-  // Fetch badge count on load and poll every 15 seconds when user has Menu Extra Features access
+    // Fetch badge count on load and poll every 15 seconds when user has Menu Extra Features access
+const fetchMenuPrepBadgeRef = useRef(fetchMenuPrepBadge);
+useEffect(() => {
+  fetchMenuPrepBadgeRef.current = fetchMenuPrepBadge;
+}, [fetchMenuPrepBadge]);
+
+useEffect(() => {
+  if (!canAccessMenuExtraFeature) return;
+  fetchMenuPrepBadgeRef.current();
+  const timer = setInterval(() => {
+    fetchMenuPrepBadgeRef.current();
+  }, 15000);
+  return () => clearInterval(timer);
+}, [canAccessMenuExtraFeature]); // no fetchMenuPrepBadge dependency — won't restart on every render
+  // Shake + sound when unread count increases
   useEffect(() => {
-    if (!canAccessMenuExtraFeature) return;
-    fetchMenuPrepBadge();
-    const timer = setInterval(() => {
-      fetchMenuPrepBadge();
-    }, 15000);
-    return () => clearInterval(timer);
-  }, [canAccessMenuExtraFeature, fetchMenuPrepBadge]);
+    if (isFirstLoadRef.current) {
+      prevUnreadCountRef.current = menuPrepUnreadCount;
+      isFirstLoadRef.current = false;
+      return;
+    }
+
+    if (menuPrepUnreadCount > prevUnreadCountRef.current) {
+      const audio = new Audio("/media/app/notify1.wav");
+      audio.play().catch(() => {});
+
+      setShakeBell(true);
+      setTimeout(() => setShakeBell(false), 600);
+    }
+
+    prevUnreadCountRef.current = menuPrepUnreadCount;
+  }, [menuPrepUnreadCount]);
 
   const handleDismissMenuPrepItem = useCallback(async (id) => {
     try {
@@ -778,17 +803,17 @@ const fetchFollowUps = useCallback(() => {
                     ],
                   }}
                 >
-                  <MenuToggle className="btn btn-icon btn-icon-lg relative cursor-pointer size-9 rounded-full hover:bg-primary-clarity hover:text-primary text-gray-500">
-                    <KeenIcon icon="notification-on" />
-                    {menuPrepUnreadCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-danger rounded-full border-2 border-white flex items-center justify-center animate-pulse">
-                        <span className="text-[9px] text-white font-medium">
-                          {menuPrepUnreadCount > 9 ? "9+" : menuPrepUnreadCount}
-                        </span>
-                      </span>
-                    )}
-                  </MenuToggle>
-                  {DropdownMenuPrepNotifications({
+<MenuToggle className={`btn btn-icon btn-icon-lg relative cursor-pointer size-9 rounded-full hover:bg-primary-clarity hover:text-primary text-gray-500 ${shakeBell ? "bell-shake" : ""}`}>
+  <KeenIcon icon="notification-on" />
+  {menuPrepUnreadCount > 0 && (
+    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-danger rounded-full border-2 border-white flex items-center justify-center animate-pulse">
+      <span className="text-[9px] text-white font-medium">
+        {menuPrepUnreadCount > 9 ? "9+" : menuPrepUnreadCount}
+      </span>
+    </span>
+  )}
+</MenuToggle>
+                {DropdownMenuPrepNotifications({
                     menuItemRef: itemMenuPrepNotifRef,
                     notifications: menuPrepNotifications,
                     loading: menuPrepLoading,
