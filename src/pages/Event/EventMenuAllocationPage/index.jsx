@@ -876,6 +876,8 @@ const TableHeader = ({
   );
 };
 
+const stripHtmlTags = (str) => (str || "").replace(/<\/?[^>]+(>|$)/g, "");
+
 const TableRow = ({ row, onChange, disabled, placeOptions = [] }) => {
   const [localPersonCount, setLocalPersonCount] = useState(row.personCount);
   const [hasError, setHasError] = useState(false);
@@ -1017,7 +1019,9 @@ const TableRow = ({ row, onChange, disabled, placeOptions = [] }) => {
   };
 
 const handleInstructionChange = (e) => {
-  const val = e.target.value;
+  const rawVal = e.target.value;
+  const val = stripHtmlTags(rawVal); // ← strip any HTML tags
+
   onChange({ ...row, instructions: val });
 
   // Auto-translate with debounce
@@ -1132,14 +1136,14 @@ const handleInstructionChange = (e) => {
   </div>
 
 <div className="col-span-2 flex items-center gap-1">
-  <Input
-    size="small"
-    placeholder="Add note..."
-    value={row.instructions}
-    onChange={handleInstructionChange}
-    className="w-full text-sm"
-    onDoubleClick={() => setIsTranslateOpen(true)}
-  />
+ <Input
+  size="small"
+  placeholder="Add note..."
+  value={stripHtmlTags(row.instructions)}
+  onChange={handleInstructionChange}
+  className="w-full text-sm"
+  onDoubleClick={() => setIsTranslateOpen(true)}
+/>
   <button
     type="button"
     onClick={() => setIsTranslateOpen(true)}
@@ -1633,9 +1637,9 @@ const resolveReportingTime = (alloc, row) =>
   if (!placeNum || isNaN(placeNum)) return "0";
   return String(placeNum);
 })(),
-        instructions: item.instructions || "",
-        instructionsHindi: item.instructionsHindi || "",      
-  instructionsGujarati: item.instructionsGujarati || "",
+        instructions: stripHtmlTags(item.instructions) || "",
+instructionsHindi: stripHtmlTags(item.instructionsHindi) || "",
+instructionsGujarati: stripHtmlTags(item.instructionsGujarati) || "",
         eventId: item.eventId,
         eventFunctionId: item.eventFunctionId,
         menuCategoryId: item.menuCategoryId,
@@ -2840,7 +2844,7 @@ const buildMenuExecutionChangeSummary = (prevRows, currentRows) => {
     eventId: validEventId,
     id: r.id || 0,
     inside: r.inside || false,
-    instructions: r.instructions || "",
+    instructions: stripHtmlTags(r.instructions) || "",
     instructionsHindi: r.instructionsHindi || "",      
   instructionsGujarati: r.instructionsGujarati || "", 
     isPaxChange: rowHadPaxChange,
@@ -3063,7 +3067,7 @@ rows.forEach((r, i) => {
     eventId: validEventId,
     id: r.id || 0,
     inside: r.inside || false,
-    instructions: r.instructions || "",
+    instructions: stripHtmlTags(r.instructions) || "",
     instructionsHindi: r.instructionsHindi || "",      
   instructionsGujarati: r.instructionsGujarati || "",
     isPaxChange: changedPaxRowsRef.current.has(r.key),
