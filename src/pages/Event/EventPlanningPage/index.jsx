@@ -4591,18 +4591,33 @@ const buildFullChangeSummary = (prev, next) => {
 
 
             </div>      
-              <div className="fixed bottom-20 right-6 z-40">
-                {canAccessStock && (
-          <button
-            onClick={openAiModal}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-bold shadow-lg"
-            style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7)", boxShadow: "0 4px 18px rgba(99,102,241,.5)" }}
-          >
-            <Wand2 size={15} />
-            <FormattedMessage id="USER.EVENT_PLANNING.AI_GENERATE_MENU_BTN" defaultMessage="AI Generate Menu" />
-          </button>
-                )}
-          </div>
+              <div className="fixed bottom-20 right-4 z-40">
+  {canAccessStock && (
+    <div className="group relative">
+      {/* Blinking ring — hidden on hover via opacity, animation itself doesn't need to stop */}
+      <span
+        className="absolute inset-0 rounded-full animate-ping pointer-events-none opacity-75 group-hover:opacity-0 transition-opacity duration-650"
+        style={{ background: "#fbbf24" }}
+      />
+
+      <button
+        onClick={openAiModal}
+        className="relative flex items-center rounded-full text-white shadow-lg h-12 w-12 group-hover:w-auto group-hover:pr-5 group-hover:pl-4 overflow-hidden transition-[width,padding] duration-300 ease-out"
+        style={{
+          background: "linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7)",
+          boxShadow: "0 4px 18px rgba(99,102,241,.5)",
+        }}
+      >
+        <span className="relative flex items-center justify-center w-12 h-12 flex-shrink-0">
+          <Wand2 size={18} />
+        </span>
+        <span className="relative max-w-0 group-hover:max-w-[160px] opacity-0 group-hover:opacity-100 whitespace-nowrap overflow-hidden transition-all duration-300 delay-75 ease-out text-sm font-bold">
+          <FormattedMessage id="USER.EVENT_PLANNING.AI_GENERATE_MENU_BTN" defaultMessage="AI Generate Menu" />
+        </span>
+      </button>
+    </div>
+  )}
+</div>
 
               {/* <div className="bg-white">
                 <div className="flex items-center justify-end px-2 py-3">
