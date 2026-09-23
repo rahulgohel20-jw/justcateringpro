@@ -566,41 +566,66 @@ const MenuViewPage = () => {
   const handleVerified = (data) => {
     setMenuData(data);
     const pre = new Set();
-    (data.selectedMenuPreparationItems || []).forEach((cat) => {
-      (cat.selectedMenuPreparationItems || []).forEach((it) =>
-        pre.add(it.menuItemId),
-      );
+    (data?.selectedMenuPreparationItems || []).forEach((cat) => {
+      (cat?.selectedMenuPreparationItems || []).forEach((it) => {
+        const menuItemId = it?.menuItemId ?? it?.id;
+        if (menuItemId !== undefined && menuItemId !== null) {
+          pre.add(Number(menuItemId));
+        }
+      });
     });
     setSelectedIds(pre);
   };
 
   const grouped = useMemo(() => {
     if (!menuData) return [];
-     console.log("menuData:", menuData);
-  console.log("first category raw:", menuData.menuPreparationItems?.[0]);
+
+    const selectedGroups = menuData.selectedMenuPreparationItems || [];
+    if (!selectedGroups.length) return [];
+
     const map = new Map();
-    (menuData.menuPreparationItems || []).forEach((catGroup) => {
-      const key = catGroup.nameEnglish || "Other";
+
+    selectedGroups.forEach((catGroup) => {
+      const key =
+        catGroup.menuCategoryName ||
+        catGroup.catNickNameEnglish ||
+        catGroup.nameEnglish ||
+        "Other";
+
       if (!map.has(key)) {
         map.set(key, {
           catName: key,
-          catId: catGroup.categoryId || 0,
-          catNameHindi: catGroup.nameHindi || key,
-          catNameGujarati: catGroup.nameGujarati || key,
-          slogan: catGroup.items?.[0]?.categorySlogan || "",
+          catId: catGroup.menuCategoryId || catGroup.categoryId || 0,
+          catNameHindi:
+            catGroup.menuCategoryNameHindi ||
+            catGroup.catNickNameHindi ||
+            catGroup.nameHindi ||
+            key,
+          catNameGujarati:
+            catGroup.menuCategoryNameGujarati ||
+            catGroup.catNickNameGujarati ||
+            catGroup.nameGujarati ||
+            key,
+          slogan: catGroup.menuSlogan || catGroup.slogan || "",
           allItems: [],
         });
       }
-      (catGroup.items || []).forEach((it) => {
+
+      (catGroup.selectedMenuPreparationItems || []).forEach((it) => {
+        const menuItemId = it?.menuItemId ?? it?.id;
+        if (menuItemId === undefined || menuItemId === null) return;
+
         map.get(key).allItems.push({
-          menuItemId: it.menuItemId,
-          menuItemName: it.menuItemName,
-          menuItemNameHindi: it.menuItemNameHindi || it.menuItemName,
-          menuItemNameGujarati: it.menuItemNameGujarati || it.menuItemName,
-          menuCategoryId: it.menuCategoryId,
+          menuItemId: Number(menuItemId),
+          menuItemName: it.menuItemName || "",
+          menuItemNameHindi: it.menuItemNameHindi || it.menuItemName || "",
+          menuItemNameGujarati: it.menuItemNameGujarati || it.menuItemName || "",
+          menuCategoryId: catGroup.menuCategoryId || catGroup.categoryId || 0,
           menuCategoryName: key,
-          menuCategoryNameHindi: catGroup.nameHindi || key,
-          menuCategoryNameGujarati: catGroup.nameGujarati || key,
+          menuCategoryNameHindi:
+            catGroup.menuCategoryNameHindi || catGroup.catNickNameHindi || key,
+          menuCategoryNameGujarati:
+            catGroup.menuCategoryNameGujarati || catGroup.catNickNameGujarati || key,
           imagePath: it.imagePath || "",
           itemSlogan: it.itemSlogan || "",
           itemPrice: it.itemPrice || 0,
@@ -610,6 +635,7 @@ const MenuViewPage = () => {
         });
       });
     });
+
     return Array.from(map.values());
   }, [menuData]);
 

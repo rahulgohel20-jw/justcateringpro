@@ -281,9 +281,10 @@ export const GetQuotationReport = (
   exclusiveThemeId,
   backOfficeId,
   showLastPage,
+  isSignature
 ) => {
   return POST(
-    `/quotationreport/generatequotation?adminTemplateModuleId=${adminTemplateModuleId}&eventId=${eventId}&lang=${language}&userId=${userId}&isInvoice=${isInvoice}&isQrCode=${isQrCode}&isTermsCond=${isTermsCond}&isAdvance=${isAdvance}&isWithPrice=${isWithPrice}&isCompanyDetails=${isCompanyDetails}&isDecore=${isDecor}&isOnePage=${isOnePage}&isCombo=${isCombo}&isNotes=${isNotes}&exclusiveThemeId=${exclusiveThemeId}&backOfficeId=${backOfficeId}&showLastPage=${showLastPage}`,
+    `/quotationreport/generatequotation?adminTemplateModuleId=${adminTemplateModuleId}&eventId=${eventId}&lang=${language}&userId=${userId}&isInvoice=${isInvoice}&isQrCode=${isQrCode}&isTermsCond=${isTermsCond}&isAdvance=${isAdvance}&isWithPrice=${isWithPrice}&isCompanyDetails=${isCompanyDetails}&isDecore=${isDecor}&isOnePage=${isOnePage}&isCombo=${isCombo}&isNotes=${isNotes}&exclusiveThemeId=${exclusiveThemeId}&backOfficeId=${backOfficeId}&showLastPage=${showLastPage}&isSignature=${isSignature}`,
   );
 };
 
@@ -3903,4 +3904,12 @@ export const GetEventByFilter = (endDate, eventDate, eventStatus, partyName, sta
 
 export const getpdfpurchaseapproval = (purchaseApprovalRequestId , userId) => {
   return GET(`purchase-approval/purchase-approval-sheet-report?purchaseApprovalRequestId=${purchaseApprovalRequestId}&userId=${userId}`);
+};
+
+export const GetMenuPreparationNotifications = (managerId) => {
+  return GET(`/menu-preparation-notifications/getalladdeditemnotification?managerId=${managerId}`);
+};
+
+export const UpdateMenuPreparationNotificationVisibility = (ids, isVisible = false) => {
+  return PUT(`/menu-preparation-notifications/visibility`, { ids, isVisible });
 };

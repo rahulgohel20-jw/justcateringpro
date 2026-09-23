@@ -5,3 +5,4 @@ export * from "./DropdownNotificationsTeam";
 export * from "./DropdownNotificationsFollowing";
 export * from "./DropdownMails";
 export * from "./DropdownFollowUp";
+export * from "./DropdownMenuPrepNotifications";

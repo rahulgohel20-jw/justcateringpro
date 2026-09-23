@@ -13,8 +13,15 @@ import { useAuthContext } from "@/auth";
 import { createPortal } from "react-dom";
 import { useAuthStore } from "../../../store/useAuthStore";
 import { DropdownFollowUp } from "../../../partials/dropdowns/notifications/DropdownFollowUp";
+import { DropdownMenuPrepNotifications } from "../../../partials/dropdowns/notifications";
 import dayjs from "dayjs";
-import { followupnotiy } from "@/services/apiServices";
+import {
+  followupnotiy,
+  GetMenuPreparationNotifications,
+  UpdateMenuPreparationNotificationVisibility,
+  GetPreparationStatus,
+} from "@/services/apiServices";
+import { useMenuPrepStore } from "../../../store/useMenuPrepStore";
 import { useModuleAccess } from "../../../hooks/useModuleAccess";
 
 const PATH_TO_RIGHTS_KEY = {
@@ -363,6 +370,7 @@ const HeaderTopbar = () => {
     const { hasModuleAccess } = useModuleAccess();
   
       const canAccessfollowup = hasModuleAccess("followup");
+    const canAccessMenuExtraFeature = hasModuleAccess("Menu Extra Features");
 
  const navigate    = useNavigate();
   const storeUser = useAuthStore((state) => state.user);
@@ -381,16 +389,238 @@ const HeaderTopbar = () => {
 
   const { isRTL } = useLanguage();
 
+  const location = useLocation();
+  const prepStatus = useMenuPrepStore((state) => state.prepStatus);
+  const isMenuPrepRoute = location.pathname.includes("/menu-preparation");
+  const isStatusComplete = prepStatus === "COMPLETED" || prepStatus === "Complete";
+
   const itemChatRef          = useRef(null);
   const itemUserRef          = useRef(null);
   const itemNotificationsRef = useRef(null);
   const itemFollowUpRef      = useRef(null);
+  const itemMenuPrepNotifRef = useRef(null);
   const [isFollowUpOpen, setIsFollowUpOpen] = useState(false);
-const [followUps, setFollowUps] = useState([]);
-const [followUpLoading, setFollowUpLoading] = useState(false);
+  const [followUps, setFollowUps] = useState([]);
+  const [followUpLoading, setFollowUpLoading] = useState(false);
+  const [menuPrepNotifications, setMenuPrepNotifications] = useState([]);
+  const [menuPrepUnreadCount, setMenuPrepUnreadCount] = useState(0);
+  const dismissedNotificationIdsRef = useRef(new Set());
+
+  const [menuPrepLoading, setMenuPrepLoading] = useState(false);
   const [checkInModal, setCheckInModal] = useState(false);
   const [openMenuKey, setOpenMenuKey]   = useState(null);
   const { user, refreshUser } = useUser();
+
+  useEffect(() => {
+    if (!isMenuPrepRoute) return;
+    const match = location.pathname.match(/\/menu-preparation\/(\d+)/);
+    if (match && match[1] && prepStatus === null) {
+      GetPreparationStatus(match[1])
+        .then((res) => {
+          if (res?.data?.data) {
+            useMenuPrepStore.getState().setPrepStatus(res.data.data, match[1]);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [location.pathname, isMenuPrepRoute, prepStatus]);
+
+  const getLoginUserManagerId = useCallback(() => {
+    const storeUserObj = useAuthStore.getState().user;
+    const rawAuth = localStorage.getItem("auth-storage");
+    let parsedUser = null;
+    if (rawAuth) {
+      try {
+        parsedUser = JSON.parse(rawAuth)?.state?.user;
+      } catch (e) {}
+    }
+    const uid =
+      storeUserObj?.id ||
+      storeUserObj?.managerId ||
+      parsedUser?.id ||
+      parsedUser?.managerId ||
+      currentUser?.id ||
+      currentUser?.managerId ||
+      localStorage.getItem("userId") ||
+      localStorage.getItem("mainId");
+    return uid ? Number(uid) : null;
+  }, [currentUser]);
+
+  // Shared helper: parse API response into a flat list of enriched items
+  const parseNotificationResponse = (res) => {
+    const body = res?.data;
+    const eventNotifications =
+      body?.data?.eventNotification ||
+      body?.eventNotification ||
+      [];
+
+    const flatList = [];
+    (Array.isArray(eventNotifications) ? eventNotifications : []).forEach((event) => {
+      const eventName  = event?.eventName || event?.eventNameGujarati || `Event #${event?.eventId}`;
+      const eventStart = event?.eventStartDateTime || "";
+      const eventEnd   = event?.eventEndDateTime   || "";
+
+      (event?.eventFunctions || event?.functions || []).forEach((fn) => {
+        const functionName = fn?.eventFunctionName || fn?.functionName || fn?.eventFunctionNameGujarati || "";
+        const fnStart = fn?.eventFunctionStartDateTime || fn?.startDateTime || eventStart;
+        const fnEnd   = fn?.eventFunctionEndDateTime   || fn?.endDateTime   || eventEnd;
+
+        (fn?.categories || fn?.menuCategories || []).forEach((cat) => {
+          const categoryName = cat?.menuCategoryName || cat?.categoryName || cat?.menuCategoryNameGujarati || "";
+
+          (cat?.items || cat?.menuItems || []).forEach((item) => {
+            const notifId =
+              item.notificationId ??
+              item.id ??
+              `${event?.eventId}_${fn?.eventFunctionId}_${cat?.menuCategoryId}_${item?.menuItemId}`;
+
+            flatList.push({
+              notificationId:       notifId,
+              menuItemId:           item.menuItemId,
+              menuItemName:         item.menuItemName,
+              menuItemNameHindi:    item.menuItemNameHindi,
+              menuItemNameGujarati: item.menuItemNameGujarati,
+              isVisible:            item.isVisible,
+              eventId:              event.eventId,
+              eventName,
+              eventStartDateTime:   eventStart,
+              eventEndDateTime:     eventEnd,
+              eventFunctionId:      fn.eventFunctionId,
+              functionName,
+              fnStartDateTime:      fnStart,
+              fnEndDateTime:        fnEnd,
+              menuCategoryId:       cat.menuCategoryId,
+              categoryName,
+            });
+          });
+        });
+      });
+    });
+    return flatList;
+  };
+
+  // Background fetch — sets badge count for active notifications and merges into display list
+  const fetchMenuPrepBadge = useCallback(() => {
+    const managerId = getLoginUserManagerId();
+    if (!managerId) return;
+
+    GetMenuPreparationNotifications(managerId)
+      .then((res) => {
+        const flatList = parseNotificationResponse(res);
+        const activeList = flatList.filter(
+          (item) => item.isVisible !== false && !dismissedNotificationIdsRef.current.has(item.notificationId)
+        );
+        setMenuPrepUnreadCount(activeList.length);
+
+        // Merge items into display list (so they're ready when dropdown opens)
+        setMenuPrepNotifications((prev) => {
+          const existingIds = new Set(prev.map((i) => i.notificationId));
+          const brandNew = activeList.filter((i) => !existingIds.has(i.notificationId));
+          return [...prev, ...brandNew];
+        });
+      })
+      .catch(() => {});
+  }, [getLoginUserManagerId]);
+
+  // Dropdown-open fetch — shows items & sets badge count to active items (never increments)
+  const fetchMenuPrepNotifications = useCallback(() => {
+    const managerId = getLoginUserManagerId();
+    if (!managerId) return;
+
+    setMenuPrepLoading(true);
+    GetMenuPreparationNotifications(managerId)
+      .then((res) => {
+        const flatList = parseNotificationResponse(res);
+        const activeList = flatList.filter(
+          (item) => item.isVisible !== false && !dismissedNotificationIdsRef.current.has(item.notificationId)
+        );
+
+        // Merge new items — existing notifications stay visible
+        setMenuPrepNotifications((prev) => {
+          const existingIds = new Set(prev.map((i) => i.notificationId));
+          const brandNew = activeList.filter((i) => !existingIds.has(i.notificationId));
+          return [...prev, ...brandNew];
+        });
+
+        // Set badge count directly to active items (accurate count, never increments)
+        setMenuPrepUnreadCount(activeList.length);
+      })
+      .catch((err) => console.error("[MenuPrepNotif] Fetch failed:", err))
+      .finally(() => setMenuPrepLoading(false));
+  }, [getLoginUserManagerId]);
+
+  // Fetch badge count on load and poll every 15 seconds when user has Menu Extra Features access
+  useEffect(() => {
+    if (!canAccessMenuExtraFeature) return;
+    fetchMenuPrepBadge();
+    const timer = setInterval(() => {
+      fetchMenuPrepBadge();
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [canAccessMenuExtraFeature, fetchMenuPrepBadge]);
+
+  const handleDismissMenuPrepItem = useCallback(async (id) => {
+    try {
+      if (id) {
+        dismissedNotificationIdsRef.current.add(id);
+        UpdateMenuPreparationNotificationVisibility([id], false).catch((err) =>
+          console.error("Failed to update notification visibility:", err)
+        );
+      }
+      setMenuPrepNotifications((prev) =>
+        prev.filter((item) => item.notificationId !== id)
+      );
+      setMenuPrepUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error("Failed to dismiss notification:", err);
+    }
+  }, []);
+
+  const handleNotificationItemClick = useCallback(async (item) => {
+    const id = item?.notificationId;
+    try {
+      if (id) {
+        dismissedNotificationIdsRef.current.add(id);
+        // Call visibility API to mark notification as read
+        UpdateMenuPreparationNotificationVisibility([id], false).catch((err) =>
+          console.error("Failed to update notification visibility:", err)
+        );
+      }
+      setMenuPrepNotifications((prev) =>
+        prev.filter((i) => i.notificationId !== id)
+      );
+      setMenuPrepUnreadCount((prev) => Math.max(0, prev - 1));
+
+      // Close dropdown
+      if (itemMenuPrepNotifRef?.current) {
+        itemMenuPrepNotifRef.current.hide();
+      }
+
+      // Navigate to menu preparation for this event if eventId is present
+      if (item?.eventId) {
+        navigate(`/menu-preparation/${item.eventId}`);
+      }
+    } catch (err) {
+      console.error("Error handling notification item click:", err);
+    }
+  }, [navigate]);
+
+  const handleClearAllMenuPrep = useCallback(async () => {
+    const ids = menuPrepNotifications
+      .map((item) => item.notificationId)
+      .filter(Boolean);
+    if (!ids.length) return;
+    try {
+      ids.forEach((id) => dismissedNotificationIdsRef.current.add(id));
+      setMenuPrepNotifications([]);
+      setMenuPrepUnreadCount(0);
+      UpdateMenuPreparationNotificationVisibility(ids, false).catch((err) =>
+        console.error("Failed to clear all notifications visibility:", err)
+      );
+    } catch (err) {
+      console.error("Failed to clear all notifications:", err);
+    }
+  }, [menuPrepNotifications]);
 
   useEffect(() => { refreshUser(); }, [refreshUser]);
 
@@ -531,6 +761,45 @@ const fetchFollowUps = useCallback(() => {
     Upgrade
   </button>
 )}
+            {canAccessMenuExtraFeature && (
+              <Menu>
+                <MenuItem
+                  ref={itemMenuPrepNotifRef}
+                  toggle="dropdown"
+                  trigger="click"
+                  onShow={fetchMenuPrepNotifications}
+                  dropdownProps={{
+                    placement: isRTL() ? "bottom-start" : "bottom-end",
+                    modifiers: [
+                      {
+                        name: "offset",
+                        options: { offset: isRTL() ? [-70, 10] : [70, 10] },
+                      },
+                    ],
+                  }}
+                >
+                  <MenuToggle className="btn btn-icon btn-icon-lg relative cursor-pointer size-9 rounded-full hover:bg-primary-clarity hover:text-primary text-gray-500">
+                    <KeenIcon icon="notification-on" />
+                    {menuPrepUnreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-danger rounded-full border-2 border-white flex items-center justify-center animate-pulse">
+                        <span className="text-[9px] text-white font-medium">
+                          {menuPrepUnreadCount > 9 ? "9+" : menuPrepUnreadCount}
+                        </span>
+                      </span>
+                    )}
+                  </MenuToggle>
+                  {DropdownMenuPrepNotifications({
+                    menuItemRef: itemMenuPrepNotifRef,
+                    notifications: menuPrepNotifications,
+                    loading: menuPrepLoading,
+                    onDismissItem: handleDismissMenuPrepItem,
+                    onClearAll: handleClearAllMenuPrep,
+                    onEventClick: (eventId) => navigate(`/menu-preparation/${eventId}`),
+                    onItemClick: handleNotificationItemClick,
+                  })}
+                </MenuItem>
+              </Menu>
+            )}
             <Menu>
               <MenuItem
                 ref={itemChatRef}

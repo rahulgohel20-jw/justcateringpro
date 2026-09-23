@@ -58,6 +58,7 @@
           UploadDecorImagePlanning ,
           UploadMenuItemImage,
           } from "@/services/apiServices";
+          import { useMenuPrepStore } from "@/store/useMenuPrepStore";
           import AddMenuItem from "@/partials/modals/add-menu-item/AddMenuItem";
           import AddMenuCategory from "@/partials/modals/add-menu-category/AddMenuCategory";
           import { useParams, useNavigate, useBlocker } from "react-router-dom";
@@ -1616,8 +1617,9 @@ import { QRCodeCanvas } from "qrcode.react";
           try {
           setPrepStatusLoading(true);
           const res = await GetPreparationStatus(eventId);
-          setPrepStatus(res?.data?.data ?? null);
-
+          const statusVal = res?.data?.data ?? null;
+          setPrepStatus(statusVal);
+          useMenuPrepStore.getState().setPrepStatus(statusVal, eventId);
 
           } catch (err) {
           console.error("Failed to fetch prep status:", err);
@@ -1630,14 +1632,18 @@ import { QRCodeCanvas } from "qrcode.react";
           fetchPrepStatus();
           }, [fetchPrepStatus]);
 
-
-
+          useEffect(() => {
+            return () => {
+              useMenuPrepStore.getState().resetPrepStatus();
+            };
+          }, []);
 
           const handlePrepStatusChange = async (newStatus) => {
           try {
           setPrepStatusLoading(true);
           await ChangePreparationStatus(eventId, newStatus);
           setPrepStatus(newStatus);
+          useMenuPrepStore.getState().setPrepStatus(newStatus, eventId);
           Swal.fire({
             icon: "success",
             title: "Status updated!",
