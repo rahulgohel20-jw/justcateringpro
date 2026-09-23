@@ -2010,10 +2010,14 @@ export const GetAllfunctioneventbyid = (eventId) => {
   return GET(`eventfunction/getalleventfunctionByeventid?eventId=${eventId}`);
 };
 
-export const GetAllEventFunction = (userId) => {
-  return GET(
-    `eventfunction/getalleventfunction?page=1&size=1000&userId=${userId}`,
-  );
+export const GetAllEventFunction = (userId, { page = 1, size = 1000, search = "" } = {}) => {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+  if (search) params.set("search", search);
+
+  return GET(`eventfunction/getalleventfunction?${params.toString()}&userId=${userId}`);
 };
 
 export const GetCopyMenuPlanning = (
@@ -3847,9 +3851,11 @@ export const addUpdatePurchaseRequest = (data) => {
   return POST(`/purchase-approval/add-update` ,data);
 };
 
-export const getallpurchasereport = (userId ,status ) => {
-  return GET(`/purchase-approval/getAll?userId=${userId}&status=${status}`);
-}
+export const getallpurchasereport = (userId, status = "ALL", page = 0, size = 10, searchName = "") => {
+  return GET(
+    `/purchase-approval/getAll?userId=${userId}&status=${status}&page=${page}&size=${size}&searchName=${encodeURIComponent(searchName)}`
+  );
+};
 
 export const getpurchaseapprovalbyid = (purchaseRequestId) => {
   return GET(`/purchase-approval/getById?purchaseRequestId=${purchaseRequestId}`);

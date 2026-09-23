@@ -357,12 +357,14 @@ import InquiryList from "../pages/Event/Inquiry/InquiryList.jsx";
 import PurchaseApprovalRequest from "../pages/stockmanagement/PurchaseApproveRequest/index.jsx";
 import AddPurchaseApproveReq from "../pages/stockmanagement/PurchaseApproveRequest/AddPurchaseApproveReq.jsx";
 import PurchaseApprovalList from "../pages/stockmanagement/PurchaseApproveRequest/PurchaseApproveList.jsx";
-
+import ActiveUserGuard from "../auth/ActiveUserGuard";
 
 const AppRoutingSetup = () => {
   return (
     <Routes>
       <Route element={<RequireAuth />}>
+    <Route path="/approvepending" element={<ApprovalPendingPage />} />
+       <Route element={<ActiveUserGuard />}>
         <Route element={<Demo1Layout />}>
           {/* project routs */}
           <Route path="/tapinquiry" element={<TapInquiryListPage/>}/>
@@ -384,7 +386,7 @@ const AppRoutingSetup = () => {
            <Route path="/dashboard" element={<ClientDashboard />} />
         <Route path="/event-remark" element={<EventRemark/>}/>
           <Route path="/menuplaaningmaster" element={<MenuPlannerPage />} />
-          <Route path="/approvepending" element={<ApprovalPendingPage />} />
+          
           <Route path="/captainrecipe" element={<CaptainRecipe />} />
 
           <Route
@@ -1228,6 +1230,8 @@ const AppRoutingSetup = () => {
             element={<AuthenticationGetStartedPage />}
           />
         </Route>
+
+       </Route>
       </Route>
 
       <Route path="/menu-share/verify" element={<MenuViewPage />} />
