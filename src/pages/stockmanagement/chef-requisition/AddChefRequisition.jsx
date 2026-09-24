@@ -107,12 +107,11 @@ const AddChefRequisition = () => {
   const isEdit = !!editData;
   const [categoryList, setCategoryList] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("ALL");
-
   const backDatePermission = usePermission("Lock Back Date Entry");
 const isBackDateLocked = backDatePermission.add || backDatePermission.edit;
 const { isSuperUser, filterStockTypes } = useStockTypePermission();
 const todayStr = new Date().toISOString().split("T")[0];
-
+const [loadingSupplier, setLoadingSupplier] = useState(true);
   const [currentLanguage, setCurrentLanguage] = useState(
     localStorage.getItem("lang") || "en",
   );
@@ -276,11 +275,14 @@ const todayStr = new Date().toISOString().split("T")[0];
 
   const fetchSupplier = async () => {
     try {
+       setLoadingSupplier(true);
       const data = await GetEventMaster(userId, isChildUser);
       setSupplier(data?.data?.data["Event Details"] || []);
     } catch (error) {
-      console.log(error);
-    }
+    console.log(error);
+  } finally {                                                        // ADD
+    setLoadingSupplier(false);                                       // ADD
+  }   
   };
 
   const handleSelectItem = (rawItem) => {
@@ -541,6 +543,8 @@ const typeOptions = allowedStockTypes.map((t) => ({
                 showSearch
                 allowClear
                 placeholder="Search party…"
+                loading={loadingSupplier}                                          // ADD
+  notFoundContent={loadingSupplier ? "Loading..." : "No party found"} 
                 style={{ width: "100%", height: "38px" }}
                 value={form.party_id }
                 onChange={(val, option) => setForm((prev) => ({ ...prev, party_id: val, party_name: option?.label || "" }))}

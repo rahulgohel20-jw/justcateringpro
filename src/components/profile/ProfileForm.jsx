@@ -701,14 +701,6 @@ followupDay: values.followupDay || "",
   }
   className="mb-8"
 >
-  {signaturePreview && !signatureFile && (
-    <img
-      src={signaturePreview}
-      alt="Signature"
-      className="h-12 mb-2 object-contain"
-    />
-  )}
-  <div className="flex items-center gap-3">
     <Upload
       accept="image/*"
       maxCount={1}
@@ -724,6 +716,14 @@ followupDay: values.followupDay || "",
         {signaturePreview ? "Replace Signature" : "Choose Signature"}
       </Button>
     </Upload>
+  {signaturePreview && !signatureFile && (
+    <img
+      src={signaturePreview}
+      alt="Signature"
+      className="h-12 mb-2 object-contain"
+    />
+  )}
+  <div className="flex items-center gap-3">
 
     {signatureFile && (
       <Button
