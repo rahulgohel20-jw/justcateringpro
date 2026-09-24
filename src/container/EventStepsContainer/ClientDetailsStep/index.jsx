@@ -285,6 +285,18 @@ useEffect(() => {
                       defaultMessage="M/S."
                     />
                   </option>
+                    <option value="Shri.">
+                    <FormattedMessage
+                      id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_DETAILS_CLIENT_DETAILS_PREFIX_MS"
+                      defaultMessage="Shri."
+                    />
+                  </option>
+                    <option value="Smt">
+                    <FormattedMessage
+                      id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_DETAILS_CLIENT_DETAILS_PREFIX_MS"
+                      defaultMessage="Smt"
+                    />
+                  </option>
                 </select>
                 <div className="sg__inner flex items-center gap-1 relative w-full">
                   <i className="ki-filled ki-user ms-2.5"></i>

@@ -544,6 +544,8 @@ isExtraCharges: item.isExtraCharges === true,
               isEventFunction: item.isEventFunction === true,
               id: 0, // new invoice rows — no existing invoice item id
               isNewRow: false,
+               isRoom: item.isRoom === true,
+  eventRoomId: item.eventRoomId ?? null,
             };
           })
         : qInfo.event?.eventFunctions?.length > 0
@@ -797,6 +799,8 @@ if (invoiceDetails.invoiceCode) {
                   amount: item.amount ?? 0,
                     extraTaxPct: item.extraTax ?? 0,   // ✅ carry forward if the invoice API returns it
     taxRate: item.taxRate ?? 0, 
+     isRoom: item.isRoom === true,
+    eventRoomId: item.eventRoomId ?? null,
                   isCustom: isManuallyAdded,
                   isEventFunction: item.isEventFunction === true,
                   id: item.id || 0,
@@ -1226,6 +1230,8 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
           taxRate: Number(r.taxRate) || 0, 
           extraChargesId: r.extraChargesId || null,
     isExtraCharges: r.isExtraCharges || false,
+    isRoom: r.isRoom || false,
+  eventRoomId: r.isRoom ? (r.eventRoomId || null) : null,
         })),
         notes: footerData.notes,
         

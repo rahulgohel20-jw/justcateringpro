@@ -507,10 +507,11 @@ formData.append("showAdditional", 0);
  formData.append("withOutBg",0);
  formData.append("withVendor",0);
  formData.append("isAllItemTogether",0);
+ formData.append("isShowRoomDetails",0);
  formData.append("showAddOnLabel",0);
  formData.append("showLastPage", 0);
  formData.append("isSignatureVisible", 0);
-
+formData.append("isShowFunctionImg",0);
 formData.append("leadAssignId", 0);
 formData.append("priority", "");
 formData.append("sourceId", 0);

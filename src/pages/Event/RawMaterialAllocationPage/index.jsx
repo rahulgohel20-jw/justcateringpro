@@ -1898,11 +1898,11 @@ const handleSaveRemarksPopup = (updatedRemarks) => {
                 <span className="text-sm">
                   <FormattedMessage
                     id="EVENT_MENU_ALLOCATION.EVENT_VENUE"
-                    defaultMessage="Event Venue:"
+                    defaultMessage="Event Venue/Banquet:"
                   />
                 </span>
                 <span className="text-sm font-medium text-gray-900">
-                  {eventData?.venue?.nameEnglish || "-"}
+                  {eventData?.venue?.nameEnglish || eventData?.banquetHallName || "-"}
                 </span>
               </div>
             </div>

@@ -59,6 +59,9 @@ const defaultOptions = {
   showLastPage:false,
   showAddOnLabel:false,
   isAllItemTogether:false,
+  isShowRoomDetails:false,
+  isShowFunctionImg:false,
+  isSignature:false,
   isEndDate:false,
   isStartDate:false,
 };
@@ -113,6 +116,9 @@ const optionLabels = {
   withOutBg : "With Out Background",
   withVendor : "With Vendor",
   isAllItemTogether : "Is All Item Together",
+  isShowRoomDetails : " Show Room Details",
+  isShowFunctionImg : "is Show function Img",
+  isSignature : "Is signature",
   isEndDate : "Is End Date",
   isStartDate : "Is start Date",
   isAddShortMenu : "Is Add Short Menu Report"
@@ -261,6 +267,9 @@ const AddReportConfig = ({
             withOutBg: !!data.withOutBg,
             withVendor: !!data.withVendor,
             isAllItemTogether: !!data.isAllItemTogether,
+            isShowRoomDetails: !!data.isShowRoomDetails,
+            isShowFunctionImg: !!data.isShowFunctionImg,
+            isSignature: !!data.isSignature,
            isStartDate: !!data.isStartDate,
            isEndDate: !!data.isEndDate,
           });
@@ -395,6 +404,9 @@ const AddReportConfig = ({
     withOutBg:booleanToNumber(options.withOutBg),
     withVendor:booleanToNumber(options.withVendor),
     isAllItemTogether:booleanToNumber(options.isAllItemTogether),
+    isShowRoomDetails:booleanToNumber(options.isShowRoomDetails),
+    isShowFunctionImg:booleanToNumber(options.isShowFunctionImg),
+    isSignature:booleanToNumber(options.isSignature),
     isStartDate:booleanToNumber(options.isStartDate),
     isEndDate:booleanToNumber(options.isEndDate),
     };

@@ -75,6 +75,7 @@ const FunctionsMaster = () => {
       nameEnglish: item.nameEnglish,
       nameHindi: item.nameHindi,
       nameGujarati: item.nameGujarati,
+      imgPath: item.imgPath, 
       proforma_invoice: (
         <Tooltip
           className="cursor-pointer"

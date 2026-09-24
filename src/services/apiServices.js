@@ -281,9 +281,10 @@ export const GetQuotationReport = (
   exclusiveThemeId,
   backOfficeId,
   showLastPage,
+  isSignature
 ) => {
   return POST(
-    `/quotationreport/generatequotation?adminTemplateModuleId=${adminTemplateModuleId}&eventId=${eventId}&lang=${language}&userId=${userId}&isInvoice=${isInvoice}&isQrCode=${isQrCode}&isTermsCond=${isTermsCond}&isAdvance=${isAdvance}&isWithPrice=${isWithPrice}&isCompanyDetails=${isCompanyDetails}&isDecore=${isDecor}&isOnePage=${isOnePage}&isCombo=${isCombo}&isNotes=${isNotes}&exclusiveThemeId=${exclusiveThemeId}&backOfficeId=${backOfficeId}&showLastPage=${showLastPage}`,
+    `/quotationreport/generatequotation?adminTemplateModuleId=${adminTemplateModuleId}&eventId=${eventId}&lang=${language}&userId=${userId}&isInvoice=${isInvoice}&isQrCode=${isQrCode}&isTermsCond=${isTermsCond}&isAdvance=${isAdvance}&isWithPrice=${isWithPrice}&isCompanyDetails=${isCompanyDetails}&isDecore=${isDecor}&isOnePage=${isOnePage}&isCombo=${isCombo}&isNotes=${isNotes}&exclusiveThemeId=${exclusiveThemeId}&backOfficeId=${backOfficeId}&showLastPage=${showLastPage}&isSignature=${isSignature}`,
   );
 };
 
@@ -2009,10 +2010,14 @@ export const GetAllfunctioneventbyid = (eventId) => {
   return GET(`eventfunction/getalleventfunctionByeventid?eventId=${eventId}`);
 };
 
-export const GetAllEventFunction = (userId) => {
-  return GET(
-    `eventfunction/getalleventfunction?page=1&size=1000&userId=${userId}`,
-  );
+export const GetAllEventFunction = (userId, { page = 1, size = 1000, search = "" } = {}) => {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+  if (search) params.set("search", search);
+
+  return GET(`eventfunction/getalleventfunction?${params.toString()}&userId=${userId}`);
 };
 
 export const GetCopyMenuPlanning = (
@@ -2383,9 +2388,9 @@ export const GetStockReport = (itemName, id, catId, stockId, fromDate, toDate, p
   );
 };
 
-export const GetStockPdfReport2 = (id, catId, stockId, isCompanyDetails, itemName , kitchenTypeId = 0) => {
+export const GetStockPdfReport2 = (id, catId, stockId, isCompanyDetails, itemName , kitchenTypeId = 0 , withImage) => {
   return GET(
-    `datewisestockreport/pdf?categoryId=${catId}&stockTypeId=${stockId}&userId=${id}&isCompanyDetails=${isCompanyDetails}&itemName=${itemName}&kitchenTypeId=${kitchenTypeId}`,
+    `datewisestockreport/pdf?categoryId=${catId}&stockTypeId=${stockId}&userId=${id}&isCompanyDetails=${isCompanyDetails}&itemName=${itemName}&kitchenTypeId=${kitchenTypeId}&withImage=${withImage}`,
   );
 };
 
@@ -2395,9 +2400,9 @@ export const GetStockExcelReport = (id, catId, stockId, fromDate, toDate, itemNa
   );
 };
 
-export const GetStockPdfReport = (id, catId, stockId, fromDate, toDate, isCompanyDetails, itemName, kitchenTypeId = 0) => {
+export const GetStockPdfReport = (id, catId, stockId, fromDate, toDate, isCompanyDetails, itemName, kitchenTypeId = 0, withImage) => {
   return GET(
-    `datewisestockreport/pdf?categoryId=${catId}&stockTypeId=${stockId}&userId=${id}&fromDate=${fromDate}&toDate=${toDate}&isCompanyDetails=${isCompanyDetails}&itemName=${itemName}&kitchenTypeId=${kitchenTypeId}`,
+    `datewisestockreport/pdf?categoryId=${catId}&stockTypeId=${stockId}&userId=${id}&fromDate=${fromDate}&toDate=${toDate}&isCompanyDetails=${isCompanyDetails}&itemName=${itemName}&kitchenTypeId=${kitchenTypeId}&withImage=${withImage}`,
   );
 };
 
@@ -3846,9 +3851,11 @@ export const addUpdatePurchaseRequest = (data) => {
   return POST(`/purchase-approval/add-update` ,data);
 };
 
-export const getallpurchasereport = (userId ,status ) => {
-  return GET(`/purchase-approval/getAll?userId=${userId}&status=${status}`);
-}
+export const getallpurchasereport = (userId, status = "ALL", page = 0, size = 10, searchName = "") => {
+  return GET(
+    `/purchase-approval/getAll?userId=${userId}&status=${status}&page=${page}&size=${size}&searchName=${encodeURIComponent(searchName)}`
+  );
+};
 
 export const getpurchaseapprovalbyid = (purchaseRequestId) => {
   return GET(`/purchase-approval/getById?purchaseRequestId=${purchaseRequestId}`);
@@ -3911,4 +3918,11 @@ export const GetMenuPreparationNotifications = (managerId) => {
 
 export const UpdateMenuPreparationNotificationVisibility = (ids, isVisible = false) => {
   return PUT(`/menu-preparation-notifications/visibility`, { ids, isVisible });
+};
+export const adduploadsignature = (file, userId) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("userId", userId);
+
+  return POST(`/user/upload-signature`, formData);
 };

@@ -147,8 +147,11 @@ nicknames: {
 },
     imagePath:            rawItem.imagePath                || "",
      images:               Array.isArray(rawItem.images) ? rawItem.images : [], 
-    rate:                 Number(rawItem[fields.itemPrice] ?? rawItem.itemPrice ?? rawItem.rate ?? 0),
-
+rate: (() => {
+  const p = Number(rawItem[fields.itemPrice] ?? rawItem.itemPrice ?? rawItem.rate ?? 0);
+  return p > 0 ? p : Number(rawItem.categoryPrice ?? 0);
+})(),
+categoryPrice:        Number(rawItem.categoryPrice ?? 0),
     // keep a stable "menuCategory*" shape internally so CategoryList /
     // SelectedItems / MenuItemGrid never need to know the mode
     menuCategoryName:         rawItem[fields.categoryName]          || rawItem.menuCategoryName         || "Uncategorized",
@@ -325,28 +328,20 @@ const items = dedupedSourceItems.map((it) => {
   },
       imagePath:            it.imagePath                 || flat.imagePath                 || "",
 rate: (() => {
-  const savedPrice =
-    it[fields.itemPrice] ?? it["decoreItemPrice"] ?? null;
+  const toNum = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
-  const isFallback =
-    savedPrice === null ||
-    savedPrice === undefined ||
-    savedPrice === "" ||
-    Number(savedPrice) === 0;
+  // 1. saved price from selectedMenuPreparationItems
+  const savedPrice = toNum(it[fields.itemPrice] ?? it["decoreItemPrice"]);
+  if (savedPrice > 0) return savedPrice;
 
-  if (!isFallback) return Number(savedPrice);
+  // 2. price from menuPreparationItems
+  const flatPrice = toNum(flat[fields.itemPrice] ?? flat["decoreItemPrice"]);
+  if (flatPrice > 0) return flatPrice;
 
-  // flat item from menuPreparationItems has itemPrice directly
-  const flatPrice =
-    flat[fields.itemPrice] ??   // "itemPrice" — works for both menu & decor flat lists
-    flat["itemPrice"]      ??   // explicit fallback in case fields.itemPrice resolved differently
-    flat["decoreItemPrice"] ??
-    0;
-
-  console.log("[rate fallback]", { id: rawId, savedPrice, flatPrice, flat });
-
-  return Number(flatPrice);
-})(),   menuCategoryName:     catName,
+  // 3. category price
+  return toNum(flat.categoryPrice ?? it.categoryPrice);
+})(),
+categoryPrice: Number(flat.categoryPrice ?? it.categoryPrice ?? 0),   menuCategoryName:     catName,
       menuCategoryNameHindi:    catNameHindi,
       menuCategoryNameGujarati: catNameGujarati,
       reportNameEnglish:  it.reportNameEnglish  || flat.reportNameEnglish  || firstFlatItem?.reportNameEnglish  || originalCatName,
@@ -511,8 +506,7 @@ changedAfterCompletion:   allItems[0]?.changedAfterCompletion ?? null,
         itemHeadingHindi:     (item.itemHeadingHindi    || "").replace(/&amp;/gi, "&"),
         itemHeadingGujarati:  (item.itemHeadingGujarati || "").replace(/&amp;/gi, "&"),
         itemSortOrder:        itemIndex,
-        itemPrice:            Number(item.rate),
-        menuItemId:           Number(item.id),
+itemPrice:            Number(item.rate) || Number(item.categoryPrice) || 0,        menuItemId:           Number(item.id),
         menuItemName:         item.nameEnglish || "",
         menuItemNameHindi:    item.nameHindi   || item.nameEnglish || "",
         menuItemNameGujarati: item.nameGujarati|| item.nameEnglish || "",

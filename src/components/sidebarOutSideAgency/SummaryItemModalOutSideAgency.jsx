@@ -271,6 +271,8 @@ const singleFunctionInfo =
   formData.append("withOutBg",0);
  formData.append("withVendor",0);
  formData.append("isAllItemTogether",0);
+ formData.append("isShowRoomDetails",0);
+ formData.append("isShowFunctionImg",0);
   formData.append("showAddOnLabel",0);
   formData.append("showLastPage",0);
   formData.append("isSignatureVisible" ,0);

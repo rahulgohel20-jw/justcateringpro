@@ -230,7 +230,7 @@ const SHORT_MENU_TEMPLATE_NAME = "Short Menu Report";
 
 const isFlagOn = (v) => v === true || v === 1 || v === "1" || v === "true";   // NEW
 
-const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock }) => ({
+const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock , canShowRoomDetails  }) => ({
   categorySlogan: config.isCategorySlogan === 0,
   categoryInstruction: config.isCategoryInstruction === 1,
   categoryImage: config.isCategoryImage === 0,
@@ -269,11 +269,13 @@ const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock }) 
   withOutBg: config.withOutBg === 0,
   withVendor: config.withVendor === 0,
   isAllItemTogether: config.isAllItemTogether === 0,
+ isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails === 0 : false,
+  isShowFunctionImg:config.isShowFunctionImg === 0,
   isNotes: config.isNotes === 0,
   showLastPage: false,
 });
 
-const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock }) =>
+const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock  , canShowRoomDetails }) =>
   Object.entries({
     CompanyInfo: config.isCompanyDetails,
     categorySlogan: config.isCategorySlogan,
@@ -314,6 +316,8 @@ const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock }) =>
     withOutBg: config.withOutBg,
     withVendor: config.withVendor,
     isAllItemTogether: config.isAllItemTogether,
+ isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails : false,
+     isShowFunctionImg: config.isShowFunctionImg,
     isAddShortMenu: isFlagOn(config.isAddShortMenu),  
   })
     .filter(([, value]) => value)
@@ -377,6 +381,7 @@ const MenuReport = ({
 }) => {
   const pdfPlugin = defaultLayoutPlugin();
   const userId = localStorage.getItem("userId");
+  const canShowRoomDetails = String(userId) === "757"; 
   const defaultHalfPaxOnUserIds = ["298", "299"];
 const isDefaultHalfPaxOn = defaultHalfPaxOnUserIds.includes(String(userId)); 
   const [visibleOptions, setVisibleOptions] = useState([]);
@@ -454,8 +459,10 @@ const languageOptions = [
     showAddOnLabel : "Show Add On Label",
     withOutBg : "With Out Background",
     withVendor : "With Vendor",
-    isAllItemTogether :"Is All Item Together",
-     isAddShortMenu: "Is Add Short Menu", 
+    isAllItemTogether :"All Item Together",
+    isShowRoomDetails : "Show Room Details",
+    isShowFunctionImg: "Show Function Img",
+     isAddShortMenu: "Add Short Menu", 
   };
 
   const fetchFonts = async () => {
@@ -658,6 +665,8 @@ if (!config) {
           withOutBg: false,
           withVendor: false,
           isAllItemTogether: false,
+          isShowRoomDetails: false,
+          isShowFunctionImg: false,
         });
         setVisibleOptions([]);
         return;
@@ -751,6 +760,7 @@ if (config.isDate === 1 || config.isStartDate === 1 || config.isEndDate === 1) {
           withOutBg : config.withOutBg === 0,
           withVendor : config.withVendor === 0,
           isAllItemTogether: config.isAllItemTogether === 0,
+          isShowFunctionImg :config.isShowFunctionImg === 0,
           isNotes : config.isNotes === 0,
           isAddShortMenu: false,        
   showLastPage:  false,
@@ -797,6 +807,7 @@ showAddOnLabel : config.showAddOnLabel,
 withOutBg : config.withOutBg,
 withVendor : config.withVendor,
 isAllItemTogether: config.isAllItemTogether,
+isShowFunctionImg: config.isShowFunctionImg,
 isAddShortMenu: isFlagOn(config.isAddShortMenu),
  })
             .filter(([_, value]) => value)
@@ -1019,7 +1030,7 @@ useEffect(() => {
       const cfg = cfgRes?.data?.data?.[0];
       if (!cfg || cancelled) return;
 
-      const ctx = { isDefaultHalfPaxOn, canAccessStock };
+      const ctx = { isDefaultHalfPaxOn, canAccessStock , canShowRoomDetails  };
       setShortMenuOptions(buildOptionsFromConfig(cfg, ctx));
       setShortMenuVisibleOptions(getVisibleOptionKeys(cfg, ctx));
       setShortMenuHasItems(cfg.isItem === 1);
@@ -1038,7 +1049,7 @@ useEffect(() => {
   return () => {
     cancelled = true;
   };
-}, [isModalOpen, addShortMenu, userId, isDefaultHalfPaxOn, canAccessStock]);
+}, [isModalOpen, addShortMenu, userId, isDefaultHalfPaxOn, canAccessStock , canShowRoomDetails]);
 
 // Load items for the Short Menu (its config has isItem = 1)
 useEffect(() => {
@@ -1177,6 +1188,7 @@ const isShortMenuCheckAll =
     withOutBg: opts.withOutBg,
     withVendor: opts.withVendor,
     isAllItemTogether: opts.isAllItemTogether,
+    isShowFunctionImg: opts.isShowFunctionImg,
     isNotes: opts.isNotes,
     showAddOnLabel: opts.showAddOnLabel,
     showLastPage: 1,

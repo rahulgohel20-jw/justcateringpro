@@ -775,6 +775,7 @@ formData.append("cess", parseFloat(values.cess) || 0);
       </span>
     )}
   </div>
+  
    <div className="flex flex-col">
     <label className="form-label">Max Stock</label>
     <input
