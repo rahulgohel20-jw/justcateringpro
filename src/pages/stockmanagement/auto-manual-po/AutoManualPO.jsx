@@ -205,12 +205,13 @@ const handleConfirmPrint = async () => {
 const handleWhatsApp = (item) => {
   const sotPoId = item?.id || item?.sotPoId;
   shareViaWhatsApp({
-    generatePdf: () => PrintAutoManualPO(sotPoId, userId),
+    generatePdf: (isCompanyDetails) => PrintAutoManualPO(sotPoId, userId, isCompanyDetails),
     moduleName: "Auto/Manual PO",
     defaultName: item?.partyName || "",
     defaultMobile: item?.mobile || item?.partyMobile || "",
     whatsAppApi: WhatsAppPdf,
     userId,
+    showCompanyDetailsToggle: true,
   });
 };
 

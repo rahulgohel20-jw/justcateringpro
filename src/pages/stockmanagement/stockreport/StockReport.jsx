@@ -339,8 +339,9 @@ const [dwsKitchenType, setDwsKitchenType]   = useState(undefined);
   const [modalExcelLoading, setModalExcelLoading] = useState(false);
   const { filterStockTypes } = useStockTypePermission();
 const [printModalOpen, setPrintModalOpen] = useState(false);
-const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default off
-const [pendingPrintFn, setPendingPrintFn] = useState(null); // (isCompanyDetails) => void
+const [showCompanyDetails, setShowCompanyDetails] = useState(false); 
+const [showwithimages, setShowwithimages] = useState(false);
+const [pendingPrintFn, setPendingPrintFn] = useState(null); 
 
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -366,14 +367,16 @@ const getFilters = useCallback((section) => ({
 
 const handleOpenPrintModal = (printFn) => {
   setPendingPrintFn(() => printFn);
-  setShowCompanyDetails(false); // reset default off
+  setShowCompanyDetails(false); 
+  setShowwithimages(false);
   setPrintModalOpen(true);
 };
 
 const handleConfirmPrint = () => {
   const isCompanyDetails = showCompanyDetails ? 1 : 0;
+  const withImageVal = showwithimages ? 1 : 0;
   setPrintModalOpen(false);
-  pendingPrintFn?.(isCompanyDetails);
+  pendingPrintFn?.(isCompanyDetails, withImageVal); // ← was missing withImageVal
 };
   // ── Fetch report data ─────────────────────────────────────────────────────
 const fetchReportData = useCallback(async ({ section, page = 1, size = pageSize, itemName = "" }) => {
@@ -508,10 +511,10 @@ useEffect(() => {
     setDwsType("");
   };
 
-const handleModalPrint = (isCompanyDetails = 1) => {
+const handleModalPrint = (isCompanyDetails = 1, withimages = 0) => {
   const { catId, stockId, kitchenTypeId, fromDate, toDate } = getFilters(activeSection);
   downloadPdf(
-    () => GetStockPdfReport(userId, catId, stockId, fromDate, toDate, isCompanyDetails, "", kitchenTypeId),
+    () => GetStockPdfReport(userId, catId, stockId, fromDate, toDate, isCompanyDetails, "", kitchenTypeId, withimages), // ← added withimages
     setPrintLoading
   );
 };
@@ -556,14 +559,15 @@ const handleModalExcel = () => {
     </div>
     <div className="flex items-center gap-2">
      <ActionButton
-  onClick={() => handleOpenPrintModal((isCompanyDetails) =>
+  onClick={() => handleOpenPrintModal((isCompanyDetails, withImage) =>
     downloadPdf(
       () => GetStockPdfReport(
         userId,
         dwsCategory || 0,
         dwsAllType || dwsGodownType || dwsKitchenType || 0,
         formatDate(dwsFrom), formatDate(dwsTo), isCompanyDetails, "",
-        dwsGodownType || dwsKitchenType || 0
+        dwsGodownType || dwsKitchenType || 0,
+        withImage
       ),
       setDwsPrintLoading
     )
@@ -595,10 +599,10 @@ const handleModalExcel = () => {
       </div>
     </div>
     <div className="flex justify-end gap-2">
-     <ActionButton
-  onClick={() => handleOpenPrintModal((isCompanyDetails) =>
+<ActionButton
+  onClick={() => handleOpenPrintModal((isCompanyDetails, withImage) =>
     downloadPdf(
-      () => GetStockPdfReport(userId, soCategory || 0, 0, "", "", isCompanyDetails, "", 0),
+      () => GetStockPdfReport(userId, soCategory || 0, 0, "", "", isCompanyDetails, "", 0, withImage),
       setSoPrintLoading
     )
   )}
@@ -645,6 +649,13 @@ const handleModalExcel = () => {
     <Switch
       checked={showCompanyDetails}
       onChange={(checked) => setShowCompanyDetails(checked)}
+    />
+  </div>
+  <div className="flex items-center justify-between py-2">
+    <span className="text-sm text-gray-700">With Images</span>
+    <Switch
+      checked={showwithimages}
+      onChange={(checked) => setShowwithimages(checked)}
     />
   </div>
 </Modal>
