@@ -32,7 +32,8 @@ const prefill = location.state || {};
 const [isDayModalOpen, setIsDayModalOpen] = useState(false);
 const [selectedDay, setSelectedDay] = useState(null);
 const [statusFilter, setStatusFilter] = useState(-1);
-
+const [statusCounts, setStatusCounts] = useState({});
+const [rMenuCount, setRMenuCount] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return String(now.getMonth() + 1).padStart(2, "0"); // "06"
@@ -242,85 +243,96 @@ const FetchEventdetails = (month = currentMonth, year = currentYear, status = st
     .then((res) => {
       const eventdata = res?.data?.data?.["Event Details"] || [];
 
-      setData(
-        eventdata
-          .map((item, index) => {
-            try {
-              // For user/manager 683, use the function-wise date range from eventFunctions.
-              // Otherwise keep using the top-level event start/end dates.
-              const shouldUseFunctionDates = isFunctionDateUser(item);
-              const { start: rawStart, end: rawEnd } = shouldUseFunctionDates
-                ? getFunctionWiseRange(
-                    item.eventFunctions,
-                    item.eventStartDateTime,
-                    item.eventEndDateTime || item.eventStartDateTime
-                  )
-                : {
-                    start: item.eventStartDateTime,
-                    end: item.eventEndDateTime || item.eventStartDateTime,
-                  };
+      const mappedEvents = eventdata
+        .map((item, index) => {
+          try {
+            // For user/manager 683, use the function-wise date range from eventFunctions.
+            // Otherwise keep using the top-level event start/end dates.
+            const shouldUseFunctionDates = isFunctionDateUser(item);
+            const { start: rawStart, end: rawEnd } = shouldUseFunctionDates
+              ? getFunctionWiseRange(
+                  item.eventFunctions,
+                  item.eventStartDateTime,
+                  item.eventEndDateTime || item.eventStartDateTime
+                )
+              : {
+                  start: item.eventStartDateTime,
+                  end: item.eventEndDateTime || item.eventStartDateTime,
+                };
 
-              const { date: startDate, time12 } = splitDateTime(rawStart);
-              const { date: endDate } = splitDateTime(rawEnd);
+            const { date: startDate, time12 } = splitDateTime(rawStart);
+            const { date: endDate } = splitDateTime(rawEnd);
 
-              const color = getStatusColor(item.status, item.isRMenu);
-              const hasODC = canAccessBanquet
-                ? (item.banquetHallId === null || item.banquetHallId === 0 || !item.banquetHallId)
-                : false;
-              const banquetSuffix = hasODC ? " = " : "";
+            const color = getStatusColor(item.status, item.isRMenu);
+            const hasODC = canAccessBanquet
+              ? (item.banquetHallId === null || item.banquetHallId === 0 || !item.banquetHallId)
+              : false;
+            const banquetSuffix = hasODC ? " = " : "";
 
-              return {
-                eventid: item.id,
-                eventTypeId: item.eventType?.id || null,
-                title:
-                  banquetSuffix +
-                  (item.prefix || "") +
-                  getLocalizedText(item.party, "name") +
-                  " - " +
-                  getLocalizedText(item.eventType, "name"),
-                start: startDate,
-                end: addOneDay(endDate),
-                time: time12,
-                mobile: item.party?.mobileno || "N/A",
-                statusCode: item.status,
-                isRMenu: item?.isRMenu,
-                banquetHallId: item.banquetHallId || null,
-                banquetHallName: item.banquetHallId ? item.banquetHallName : null,
-                address: getLocalizedText(item.venue, "name"),
-                event: getLocalizedText(item.eventType, "name"),
-                eventRooms: item.eventRooms || [],
-                remark: item.remark || "",
-                remarksGujarati: item.remarksGujarati || "",
-                remarksHindi: item.remarksHindi || "",
-                color: color,
-                allDay: true,
-                createdAt: item.createdAt,
-              };
-            } catch (error) {
-              console.error(`Error processing event item ${index}:`, item, error);
-              return null;
-            }
-          })
-          .filter((item) => item !== null)
-          .filter((item) => {
-            if (!canAccessBanquet) return true;           // non-banquet users see all events
-            return isHallAllowed(item.banquetHallId || 0); // banquet users: check hall rights
-          })
-          .filter((item) => {
-            if (isInquiryVisible) return true;   // allowed to see inquiries
-            return item.statusCode !== 0;        // status 0 = Inquiry, hide it otherwise
-          })
-      );
+            return {
+              eventid: item.id,
+              eventTypeId: item.eventType?.id || null,
+              title:
+                banquetSuffix +
+                (item.prefix || "") +
+                getLocalizedText(item.party, "name") +
+                " - " +
+                getLocalizedText(item.eventType, "name"),
+              start: startDate,
+              end: addOneDay(endDate),
+              time: time12,
+              mobile: item.party?.mobileno || "N/A",
+              statusCode: item.status,
+              isRMenu: item?.isRMenu,
+              banquetHallId: item.banquetHallId || null,
+              banquetHallName: item.banquetHallId ? item.banquetHallName : null,
+              address: getLocalizedText(item.venue, "name"),
+              event: getLocalizedText(item.eventType, "name"),
+              eventRooms: item.eventRooms || [],
+              remark: item.remark || "",
+              remarksGujarati: item.remarksGujarati || "",
+              remarksHindi: item.remarksHindi || "",
+              color: color,
+              allDay: true,
+              createdAt: item.createdAt,
+            };
+          } catch (error) {
+            console.error(`Error processing event item ${index}:`, item, error);
+            return null;
+          }
+        })
+        .filter((item) => item !== null)
+        .filter((item) => {
+          if (!canAccessBanquet) return true;           // non-banquet users see all events
+          return isHallAllowed(item.banquetHallId || 0); // banquet users: check hall rights
+        })
+        .filter((item) => {
+          if (isInquiryVisible) return true;   // allowed to see inquiries
+          return item.statusCode !== 0;        // status 0 = Inquiry, hide it otherwise
+        });
 
-        setEvents(res.data);
-      })
-      .catch((error) => {
-        console.log(error);
-      })
-      .finally(() => {
-      setLoadingEvents(false); 
+      setData(mappedEvents);
+
+      // ── Count events per status for the legend badges ──
+      const counts = mappedEvents.reduce((acc, item) => {
+        const code = item.statusCode;
+        acc[code] = (acc[code] || 0) + 1;
+        return acc;
+      }, {});
+      setStatusCounts(counts);
+const rMenuTotal = mappedEvents.filter(
+  (item) => item.statusCode === 1 && item.isRMenu === true
+).length;
+setRMenuCount(rMenuTotal);
+      setEvents(res.data);
+    })
+    .catch((error) => {
+      console.log(error);
+    })
+    .finally(() => {
+      setLoadingEvents(false);
     });
-  };
+};
 
  const handleDateClick = (info) => {
   if (canAccessBanquet) {
@@ -350,6 +362,7 @@ const FetchEventdetails = (month = currentMonth, year = currentYear, status = st
                   id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_INQUIRY",
                   defaultMessage: "Inquiry",
                 })}
+                ({statusCounts[0] || 0})
               </span>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
@@ -359,6 +372,7 @@ const FetchEventdetails = (month = currentMonth, year = currentYear, status = st
                   id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CONFIRM_WITHOUT_MENU",
                   defaultMessage: "Remaining Menu",
                 })}
+                {" "}({rMenuCount})
               </span>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
@@ -371,6 +385,7 @@ const FetchEventdetails = (month = currentMonth, year = currentYear, status = st
                   id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_COMPLETED",
                   defaultMessage: "Confirm",
                 })}
+                ({statusCounts[1] || 0})
               </span>
             </div>
              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
@@ -380,6 +395,7 @@ const FetchEventdetails = (month = currentMonth, year = currentYear, status = st
                   id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_TENTATIVE",
                   defaultMessage: "Tentative",
                 })}
+                 {" "}({statusCounts[3] || 0})
               </span>
             </div>
             <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
@@ -392,44 +408,50 @@ const FetchEventdetails = (month = currentMonth, year = currentYear, status = st
                   id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CANCEL",
                   defaultMessage: "Cancel",
                 })}
+                ({statusCounts[2] || 0})
               </span>
             </div>
           </div>
 
           {/* Desktop: Horizontal Pills with Create Button */}
           <div className="hidden md:flex md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium bg-[#3788d8] rounded-lg px-4 py-2 text-white">
-                {intl.formatMessage({
-                  id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_INQUIRY",
-                  defaultMessage: "Inquiry",
-                })}
-              </span>
-              <span className="text-sm font-medium bg-[#E75480] rounded-lg px-4 py-2 text-white">
-                {intl.formatMessage({
-                  id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CONFIRM_WITHOUT_MENU",
-                  defaultMessage: "Remaining Menu",
-                })}
-              </span>
-              <span className="text-sm font-medium bg-success rounded-lg px-4 py-2 text-white">
-                {intl.formatMessage({
-                  id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_COMPLETED",
-                  defaultMessage: "Confirm",
-                })}
-              </span>
-              <span className="text-sm font-medium bg-[#757677] rounded-lg px-4 py-2 text-white">
-                {intl.formatMessage({
-                  id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_TENTATIVE",
-                  defaultMessage: "Tentative",
-                })}
-              </span>
-              <span className="text-sm font-medium bg-danger rounded-lg px-4 py-2 text-white">
-                {intl.formatMessage({
-                  id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CANCEL",
-                  defaultMessage: "Cancel",
-                })}
-              </span>
-            </div>
+  <div className="flex flex-wrap items-center gap-2">
+    <span className="text-sm font-medium bg-[#3788d8] rounded-lg px-4 py-2 text-white">
+      {intl.formatMessage({
+        id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_INQUIRY",
+        defaultMessage: "Inquiry",
+      })}
+      {" "}({statusCounts[0] || 0})
+    </span>
+    <span className="text-sm font-medium bg-[#E75480] rounded-lg px-4 py-2 text-white">
+      {intl.formatMessage({
+        id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CONFIRM_WITHOUT_MENU",
+        defaultMessage: "Remaining Menu",
+      })}
+      {" "}({rMenuCount})
+    </span>
+    <span className="text-sm font-medium bg-success rounded-lg px-4 py-2 text-white">
+      {intl.formatMessage({
+        id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_COMPLETED",
+        defaultMessage: "Confirm",
+      })}
+      {" "}({statusCounts[1] || 0})
+    </span>
+    <span className="text-sm font-medium bg-[#757677] rounded-lg px-4 py-2 text-white">
+      {intl.formatMessage({
+        id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_TENTATIVE",
+        defaultMessage: "Tentative",
+      })}
+      {" "}({statusCounts[3] || 0})
+    </span>
+    <span className="text-sm font-medium bg-danger rounded-lg px-4 py-2 text-white">
+      {intl.formatMessage({
+        id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CANCEL",
+        defaultMessage: "Cancel",
+      })}
+      {" "}({statusCounts[2] || 0})
+    </span>
+  </div>
 
             <div className="flex items-center gap-2">
                           {/* Status Filter Dropdown */}
