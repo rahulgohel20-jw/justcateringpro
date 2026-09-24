@@ -118,6 +118,7 @@ const [isVenueTranslating, setIsVenueTranslating] = useState(false);
     not_permissable_item: "",
     internal_staff_discussion: "",
     rate_discussion: "",
+    eventRooms: [],
   };
 }, []);
 
@@ -327,16 +328,67 @@ cordinatorPersonContactNo: event.cordinatorPersonContactNo || "",
 };
             }),
 
-            eventRooms: (event.eventRooms || []).map((room) => ({
-              id: room.id || Date.now() + Math.random(),
-              eventId: room.eventId || 0,
-              roomId: room.roomId ? String(room.roomId) : "",
-              qty: room.qty || 1,
-              price: room.price || 0,
-              total: room.total || 0,
-              bookingdate: room.bookingdate || "",
-              bookingcheckoutdate: room.bookingcheckoutdate || "",
-            })),
+            eventRooms: (event.eventRooms || []).map((room) => {
+              const rawCheckInTime = room.bookingDateCheckInTime || "";
+              const rawCheckInDate = room.bookingdate || "";
+              const rawCheckOutTime = room.bookingCheckOutTime || "";
+              const rawCheckOutDate = room.bookingcheckoutdate || "";
+
+              let checkInDate = rawCheckInDate;
+              let checkInTime = rawCheckInTime;
+              if (checkInTime && /^\d{1,2}:\d{2}(:\d{2})?$/.test(checkInTime.trim())) {
+                checkInTime = checkInTime.trim().slice(0, 5);
+              } else if (checkInTime && (checkInTime.includes("/") || checkInTime.includes("-"))) {
+                const parsed = dayjs(checkInTime, [
+                  "DD/MM/YYYY hh:mm A",
+                  "DD/MM/YYYY HH:mm",
+                  "YYYY-MM-DD HH:mm:ss",
+                  "YYYY-MM-DDTHH:mm:ss",
+                ]);
+                if (parsed.isValid()) checkInTime = parsed.format("HH:mm");
+              }
+              if (checkInDate && checkInDate.includes(" ")) {
+                const parsed = dayjs(checkInDate, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY HH:mm"]);
+                if (parsed.isValid()) {
+                  checkInDate = parsed.format("DD/MM/YYYY");
+                  if (!checkInTime) checkInTime = parsed.format("HH:mm");
+                }
+              }
+
+              let checkOutDate = rawCheckOutDate;
+              let checkOutTime = rawCheckOutTime;
+              if (checkOutTime && /^\d{1,2}:\d{2}(:\d{2})?$/.test(checkOutTime.trim())) {
+                checkOutTime = checkOutTime.trim().slice(0, 5);
+              } else if (checkOutTime && (checkOutTime.includes("/") || checkOutTime.includes("-"))) {
+                const parsed = dayjs(checkOutTime, [
+                  "DD/MM/YYYY hh:mm A",
+                  "DD/MM/YYYY HH:mm",
+                  "YYYY-MM-DD HH:mm:ss",
+                  "YYYY-MM-DDTHH:mm:ss",
+                ]);
+                if (parsed.isValid()) checkOutTime = parsed.format("HH:mm");
+              }
+              if (checkOutDate && checkOutDate.includes(" ")) {
+                const parsed = dayjs(checkOutDate, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY HH:mm"]);
+                if (parsed.isValid()) {
+                  checkOutDate = parsed.format("DD/MM/YYYY");
+                  if (!checkOutTime) checkOutTime = parsed.format("HH:mm");
+                }
+              }
+
+              return {
+                id: room.id || Date.now() + Math.random(),
+                eventId: room.eventId || 0,
+                roomId: room.roomId ? String(room.roomId) : "",
+                qty: room.qty || 1,
+                price: room.price || 0,
+                total: room.total || 0,
+                bookingDateCheckInTime: checkInTime,
+                bookingCheckOutTime: checkOutTime,
+                bookingdate: checkInDate,
+                bookingcheckoutdate: checkOutDate,
+              };
+            }),
             mealTypeId: event.mealType?.id || "",
             meal_notes: event.meal_notes || "",
             meal_notes_gujarati: event.meal_notes_gujarati || "",
@@ -793,15 +845,57 @@ const sendLog = useCallback(
 };
       }),
 
-      eventRooms: (formData.eventRooms || []).map((room) => ({
-        eventId: mode === "edit" && eventId ? Number(eventId) : 0,
-        roomId: Number(room.roomId) || 0,
-        qty: Number(room.qty) || 0,
-        price: Number(room.price) || 0,
-        total: Number(room.total) || 0,
-        bookingdate: room.bookingdate || "",
-        bookingcheckoutdate: room.bookingcheckoutdate || "",
-      })),
+      eventRooms: (formData.eventRooms || []).map((room) => {
+        let checkInTime = (room.bookingDateCheckInTime || "").trim();
+        if (checkInTime && (checkInTime.includes("/") || checkInTime.includes("-"))) {
+          const parsed = dayjs(checkInTime, [
+            "DD/MM/YYYY hh:mm A",
+            "DD/MM/YYYY HH:mm",
+            "YYYY-MM-DD HH:mm:ss",
+            "YYYY-MM-DDTHH:mm:ss",
+          ]);
+          if (parsed.isValid()) checkInTime = parsed.format("HH:mm");
+        } else if (checkInTime.length > 5 && checkInTime.includes(":")) {
+          checkInTime = checkInTime.slice(0, 5);
+        }
+
+        let checkOutTime = (room.bookingCheckOutTime || "").trim();
+        if (checkOutTime && (checkOutTime.includes("/") || checkOutTime.includes("-"))) {
+          const parsed = dayjs(checkOutTime, [
+            "DD/MM/YYYY hh:mm A",
+            "DD/MM/YYYY HH:mm",
+            "YYYY-MM-DD HH:mm:ss",
+            "YYYY-MM-DDTHH:mm:ss",
+          ]);
+          if (parsed.isValid()) checkOutTime = parsed.format("HH:mm");
+        } else if (checkOutTime.length > 5 && checkOutTime.includes(":")) {
+          checkOutTime = checkOutTime.slice(0, 5);
+        }
+
+        let checkInDate = (room.bookingdate || "").trim();
+        if (checkInDate.includes(" ")) {
+          const parsed = dayjs(checkInDate, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY HH:mm"]);
+          if (parsed.isValid()) checkInDate = parsed.format("DD/MM/YYYY");
+        }
+
+        let checkOutDate = (room.bookingcheckoutdate || "").trim();
+        if (checkOutDate.includes(" ")) {
+          const parsed = dayjs(checkOutDate, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY HH:mm"]);
+          if (parsed.isValid()) checkOutDate = parsed.format("DD/MM/YYYY");
+        }
+
+        return {
+          eventId: mode === "edit" && eventId ? Number(eventId) : 0,
+          roomId: Number(room.roomId) || 0,
+          qty: Number(room.qty) || 0,
+          price: Number(room.price) || 0,
+          total: Number(room.total) || 0,
+          bookingDateCheckInTime: checkInTime,
+          bookingCheckOutTime: checkOutTime,
+          bookingdate: checkInDate,
+          bookingcheckoutdate: checkOutDate,
+        };
+      }),
     };
 
     try {

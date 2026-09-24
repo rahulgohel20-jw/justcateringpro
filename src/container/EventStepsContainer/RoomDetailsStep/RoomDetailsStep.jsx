@@ -1,23 +1,72 @@
 import { useEffect, useState } from "react";
-import { DatePicker } from "antd";
+import { DatePicker, TimePicker } from "antd";
 import { BedDouble, Plus, Trash2 } from "lucide-react";
 import { GetAllRooms } from "@/services/apiServices";
 import AddRoomModal from "../../../partials/modals/add-room/AddRoomModal";
 import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+
+dayjs.extend(customParseFormat);
+
+const parseTimeValue = (val) => {
+  if (!val) return null;
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(trimmed)) {
+      const parsed = dayjs(trimmed, ["HH:mm", "HH:mm:ss"]);
+      return parsed.isValid() ? parsed : null;
+    }
+    const parsed = dayjs(trimmed, [
+      "DD/MM/YYYY hh:mm A",
+      "DD/MM/YYYY HH:mm",
+      "DD/MM/YYYY hh:mm a",
+      "YYYY-MM-DD HH:mm:ss",
+      "YYYY-MM-DDTHH:mm:ss",
+    ]);
+    return parsed.isValid() ? parsed : null;
+  }
+  return dayjs.isDayjs(val) && val.isValid() ? val : null;
+};
+
+const parseDateValue = (val) => {
+  if (!val) return null;
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    const parsed = dayjs(trimmed, [
+      "DD/MM/YYYY",
+      "DD/MM/YYYY hh:mm A",
+      "DD/MM/YYYY HH:mm",
+      "YYYY-MM-DD",
+      "YYYY-MM-DD HH:mm:ss",
+      "YYYY-MM-DDTHH:mm:ss",
+    ]);
+    return parsed.isValid() ? parsed : null;
+  }
+  return dayjs.isDayjs(val) && val.isValid() ? val : null;
+};
 
 const createEmptyRoom = (startDate) => {
   const base = startDate
-    ? dayjs(startDate, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY"])
+    ? dayjs(startDate, ["DD/MM/YYYY hh:mm A", "DD/MM/YYYY HH:mm", "DD/MM/YYYY"])
     : dayjs();
+  const checkInDate = base.isValid()
+    ? base.format("DD/MM/YYYY")
+    : dayjs().format("DD/MM/YYYY");
+  const checkOutDate = base.isValid()
+    ? base.add(1, "day").format("DD/MM/YYYY")
+    : dayjs().add(1, "day").format("DD/MM/YYYY");
+  const checkInTime = base.isValid() ? base.format("HH:mm") : dayjs().format("HH:mm");
+  const checkOutTime = base.isValid() ? base.format("HH:mm") : dayjs().format("HH:mm");
+
   return {
     id: Date.now() + Math.random(),
     roomId: "",
     qty: 1,
     price: "",
-    bookingdate: base.isValid() ? base.format("DD/MM/YYYY") : dayjs().format("DD/MM/YYYY"),
-    bookingcheckoutdate: base.isValid()
-      ? base.add(1, "day").format("DD/MM/YYYY")
-      : dayjs().add(1, "day").format("DD/MM/YYYY"),
+    bookingdate: checkInDate,
+    bookingcheckoutdate: checkOutDate,
+    bookingDateCheckInTime: checkInTime,
+    bookingCheckOutTime: checkOutTime,
     total: 0,
     eventId: 0,
   };
@@ -66,6 +115,7 @@ const RoomDetailsStep = ({ formData, setFormData, eventStartDateTime }) => {
     const updated = getRoomRows().map((row, i) => {
       if (i !== idx) return row;
       const newRow = { ...row, [field]: value };
+
       if (field === "roomId") {
         const found = roomList.find((r) => String(r.value) === String(value));
         if (found) newRow.price = found.price;
@@ -119,8 +169,10 @@ const RoomDetailsStep = ({ formData, setFormData, eventStartDateTime }) => {
                         </button>
                       </div>
                     </th>
-                    <th className="text-left p-3 font-semibold text-gray-700 min-w-[130px]">Check-in Date</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 min-w-[130px]">Check-out Date</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 min-w-[140px]">Check-in Date</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 min-w-[120px]">Check-in Time</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 min-w-[140px]">Check-out Date</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 min-w-[120px]">Check-out Time</th>
                     <th className="text-left p-3 font-semibold text-gray-700 w-[90px]">Qty</th>
                     <th className="text-left p-3 font-semibold text-gray-700 w-[110px]">Price</th>
                     <th className="text-left p-3 font-semibold text-gray-700 w-[110px]">Total</th>
@@ -142,26 +194,73 @@ const RoomDetailsStep = ({ formData, setFormData, eventStartDateTime }) => {
                           ))}
                         </select>
                       </td>
+                      {/* Check-In Date */}
                       <td className="p-2">
                         <DatePicker
                           format="DD/MM/YYYY"
-                          value={row.bookingdate ? dayjs(row.bookingdate, "DD/MM/YYYY") : null}
-                          onChange={(date) => handleRoomFieldChange(idx, "bookingdate", date ? date.format("DD/MM/YYYY") : "")}
+                          value={parseDateValue(row.bookingdate)}
+                          onChange={(date) =>
+                            handleRoomFieldChange(
+                              idx,
+                              "bookingdate",
+                              date ? date.format("DD/MM/YYYY") : "",
+                            )
+                          }
                           className="w-full"
-                          placeholder="Check-in Date"
+                          placeholder="DD/MM/YYYY"
                         />
                       </td>
+                      {/* Check-In Time (24h) */}
+                      <td className="p-2">
+                        <TimePicker
+                          format="HH:mm"
+                          value={parseTimeValue(row.bookingDateCheckInTime)}
+                          onChange={(time) =>
+                            handleRoomFieldChange(
+                              idx,
+                              "bookingDateCheckInTime",
+                              time ? time.format("HH:mm") : "",
+                            )
+                          }
+                          className="w-full"
+                          placeholder="HH:mm"
+                        />
+                      </td>
+                      {/* Check-Out Date */}
                       <td className="p-2">
                         <DatePicker
                           format="DD/MM/YYYY"
-                          value={row.bookingcheckoutdate ? dayjs(row.bookingcheckoutdate, "DD/MM/YYYY") : null}
-                          onChange={(date) => handleRoomFieldChange(idx, "bookingcheckoutdate", date ? date.format("DD/MM/YYYY") : "")}
+                          value={parseDateValue(row.bookingcheckoutdate)}
+                          onChange={(date) =>
+                            handleRoomFieldChange(
+                              idx,
+                              "bookingcheckoutdate",
+                              date ? date.format("DD/MM/YYYY") : "",
+                            )
+                          }
                           className="w-full"
-                          placeholder="Check-out Date"
+                          placeholder="DD/MM/YYYY"
                           disabledDate={(current) => {
-                            if (!row.bookingdate) return false;
-                            return current && current.isBefore(dayjs(row.bookingdate, "DD/MM/YYYY"), "day");
+                            const checkInVal = parseDateValue(row.bookingdate);
+                            if (!checkInVal) return false;
+                            return current && current.isBefore(checkInVal, "day");
                           }}
+                        />
+                      </td>
+                      {/* Check-Out Time (24h) */}
+                      <td className="p-2">
+                        <TimePicker
+                          format="HH:mm"
+                          value={parseTimeValue(row.bookingCheckOutTime)}
+                          onChange={(time) =>
+                            handleRoomFieldChange(
+                              idx,
+                              "bookingCheckOutTime",
+                              time ? time.format("HH:mm") : "",
+                            )
+                          }
+                          className="w-full"
+                          placeholder="HH:mm"
                         />
                       </td>
                       <td className="p-2">
