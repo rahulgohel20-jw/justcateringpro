@@ -370,7 +370,10 @@ const autoMatchedEventTypeRef = useRef(null);
 
 const currentUserId = localStorage.getItem("userId");
 const CAN_EDIT_RATE_WITH_PACKAGE = currentUserId == 356; 
-
+const isApiRow = (f) => f?.eventFuncId && f.eventFuncId !== 0;
+const hasApiRows = () => (formData.eventFunction || []).some(isApiRow);
+const apiEventDatesRef = useRef(null);
+const baselineEventTypeRef = useRef(null);
 
   useEffect(() => {
     const storedLang = localStorage.getItem("lang") || "en";
@@ -587,7 +590,7 @@ useEffect(() => {
 
   if (prevBanquet === newBanquet) return;
   prevBanquetIdRef.current = newBanquet;
-
+ if (hasApiRows() && !prevBanquet) return;
   if (!newBanquet || newBanquet === "ODC") return;
 
   setFormData((prev) => ({
@@ -895,11 +898,20 @@ const handleFunctionBanquetChange = async (index, banquetIds) => {
 };
   
 
+useEffect(() => {
+  if (apiEventDatesRef.current) return;
+  if (!hasApiRows() || !eventStartDateTime) return;
+  
+  apiEventDatesRef.current = { start: eventStartDateTime, end: eventEndDateTime };
+}, [formData.eventFunction, eventStartDateTime, eventEndDateTime]);
 
   useEffect(() => {
     if (!enableAdvancedDateSync) return;
     if (!formData?.eventFunction?.length) return;
     if (!eventStartDateTime && !eventEndDateTime) return;
+  const base = apiEventDatesRef.current;                                                    // ADD
+  if (base && base.start === eventStartDateTime && base.end === eventEndDateTime) return;   // ADD
+
 
     setFormData((prev) => {
       let changed = false;
@@ -1142,6 +1154,10 @@ useEffect(() => {
 
   useEffect(() => {
     if (!formData.eventTypeId) return;
+    if (hasApiRows()) {                                                                                 // ADD
+    if (baselineEventTypeRef.current == null) baselineEventTypeRef.current = formData.eventTypeId;    // ADD
+    if (String(baselineEventTypeRef.current) === String(formData.eventTypeId)) return;                // ADD
+  }     
     if (!eventTypeRawList.length || !options.length) return;
     if (autoMatchedEventTypeRef.current === formData.eventTypeId) return;
 
@@ -1489,7 +1505,11 @@ useEffect(() => {
       (o) => String(o.value) === String(func.shiftId)
     );
     if (!selectedShift) return;
-
+if (
+  isApiRow(func) &&
+  func.originalShiftId &&
+  String(func.shiftId) === String(func.originalShiftId)
+) return
     const currentStart = dayjs(func.functionStartDateTime, "DD/MM/YYYY hh:mm A");
     const currentEnd = dayjs(func.functionEndDateTime, "DD/MM/YYYY hh:mm A");
     const shiftStart = dayjs(selectedShift.startTime, "HH:mm");
