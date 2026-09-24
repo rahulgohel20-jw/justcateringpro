@@ -541,6 +541,27 @@ const handleSaveRemarks = async (data) => {
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 space-y-2">
+               {/* <button
+  
+  className="w-full flex items-center justify-between bg-green-50 hover:bg-green-50 transition-all rounded-2xl px-2 py-1 group"
+>
+  <div className="flex items-center gap-3">
+    <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-green-100">
+      <i className="ki-filled ki-note text-green-600 text-xl"></i>
+    </div>
+    <div className="flex flex-col items-start">
+      <span className="text-green-600 font-semibold text-sm">
+  <FormattedMessage
+    id="USER.DASHBOARD.EVENT_VIEW.REMARKS"
+    defaultMessage="
+Exhibition quotation "
+  />
+</span>
+
+    </div>
+  </div>
+  <i className="ki-filled ki-right text-amber-600 text-sm group-hover:translate-x-1 transition-transform"></i>
+</button>  */}
   <button
   onClick={() => setIsRemarksModal(true)}
   className="w-full flex items-center justify-between bg-amber-50 hover:bg-amber-100 transition-all rounded-2xl px-2 py-1 group"

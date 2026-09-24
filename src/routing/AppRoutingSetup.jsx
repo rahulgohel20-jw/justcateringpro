@@ -358,6 +358,7 @@ import PurchaseApprovalRequest from "../pages/stockmanagement/PurchaseApproveReq
 import AddPurchaseApproveReq from "../pages/stockmanagement/PurchaseApproveRequest/AddPurchaseApproveReq.jsx";
 import PurchaseApprovalList from "../pages/stockmanagement/PurchaseApproveRequest/PurchaseApproveList.jsx";
 import ActiveUserGuard from "../auth/ActiveUserGuard";
+import ExhibitionQuotation from "../partials/modals/calendar-event/Exhibitionquotation/Exhibitionquotation.jsx";
 
 const AppRoutingSetup = () => {
   return (
@@ -388,11 +389,12 @@ const AppRoutingSetup = () => {
           <Route path="/menuplaaningmaster" element={<MenuPlannerPage />} />
           
           <Route path="/captainrecipe" element={<CaptainRecipe />} />
-
+<Route path="/Exhibitionquotation" element={<ExhibitionQuotation/>}/>
           <Route
             path="/event-view/assginMemberview/mangerorder"
             element={<ManagerViewOrder />}
           />
+
           <Route
             path="/event-view/assginMemberview/:eventId"
             element={<ViewAssignMember />}

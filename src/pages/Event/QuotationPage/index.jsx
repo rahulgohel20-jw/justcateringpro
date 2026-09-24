@@ -897,6 +897,8 @@ taxRate: (item.defaultFunctionId != null && item.isEventFunction === false) ? "0
                     isFromQuotationItems: item.isEventFunction === true,
                     extraChargesId: item.extraChargesId ?? null,
 isExtraCharges: item.isExtraCharges === true,
+isRoom: item.isRoom === true,
+eventRoomId: item.eventRoomId ?? item.eventRoonId ?? null,
                     isExtraQuotationFunction:
                       item.defaultFunctionId != null &&
                       item.isEventFunction === false,
@@ -1243,6 +1245,10 @@ useEffect(() => {
   });
 }, [totals.amountAfterDiscount]);
 
+const allRoomFunctions =
+  quotationData.functions.length > 0 &&
+  quotationData.functions.every((fn) => fn.isRoom);
+
     const handleAddFunction = () => {
       const eventStartDate = quotationData.estimateDate
         ? dayjs(quotationData.estimateDate, "DD MMMM YYYY")
@@ -1381,7 +1387,7 @@ useEffect(() => {
     const base = effectivePax * rate;
     const total = parseFloat(value) || 0;
 
-    if (base > 0) {
+    if (base > 0 && !current.isRoom) {
       const taxRateVal = total - base;
       const extraTax = (taxRateVal / base) * 100;
 
@@ -1610,6 +1616,8 @@ const grandTotal =
           customPackageName: fn.customPackageName || "",
           extraChargesId: fn.extraChargesId || null,
   isExtraCharges: fn.isExtraCharges || false,
+  isRoom: fn.isRoom || false,
+eventRoomId: fn.isRoom ? (fn.eventRoomId || null) : null,
           customPackagePrice: fn.customPackagePrice
             ? Number(fn.customPackagePrice)
             : 0,
@@ -2943,7 +2951,7 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
     <FormattedMessage id="COMMON.FUNCTION" defaultMessage="Function" />
   </div>
 
-  {!isDecor && (
+  {!isDecor &&  !allRoomFunctions &&(
     <div className="text-sm font-semibold text-gray-900 flex-1 px-2">
       <FormattedMessage id="COMMON.DATE" defaultMessage="Date" />
     </div>
@@ -2953,7 +2961,7 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
     <FormattedMessage id="COMMON.PERSON" defaultMessage="Person" />
   </div>
 
-  {!isDecor && (
+  {!isDecor && !allRoomFunctions &&(
     <div className="text-sm font-semibold text-gray-900 w-24 px-2">
       <FormattedMessage id="COMMON.EXTRA_PERSON" defaultMessage="Extra person" />
     </div>
@@ -2975,13 +2983,13 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
   </div>
 
  
-  {!isDecor && quotationData.functions.some(fn => fn.customPackageName !== undefined && canAccessBanquet) && (
+  {!isDecor && !allRoomFunctions  && quotationData.functions.some(fn => fn.customPackageName !== undefined && canAccessBanquet) && (
     <div className="text-sm font-semibold text-gray-900 w-32 px-2">
       <FormattedMessage id="COMMON.OPTION" defaultMessage="Option" />
     </div>
   )}
 
-  {!isDecor &&  !hideTaxColumns &&(
+  {!isDecor &&  !hideTaxColumns && !allRoomFunctions && (
     <>
       <div className="text-sm font-semibold text-gray-900 w-24 px-2">
         <FormattedMessage id="COMMON.TAX_PERCENT" defaultMessage="Tax %" />
@@ -3024,25 +3032,29 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
           value={fn.name}
           onChange={(e) => handleFunctionChange(index, "name", e.target.value)}
           placeholder="Function"
-          readOnly={(isLocked && !isPostLockEditable(fn) && !fn.isExtraQuotationFunction)}
+          readOnly={fn.isRoom || (isLocked && !isPostLockEditable(fn) && !fn.isExtraQuotationFunction)}
         />
       </div>
 
       {/* Date — HIDE for decor */}
-      {!isDecor && !fn.isExtraQuotationFunction && !fn.isNewFunction && (
-        <div className="flex-1 md:px-2">
-          <label className="mobile-field-label md:hidden">Date</label>
-          <DatePicker
-            showTime={{ use12Hours: true, format: "hh:mm A" }}
-            format="DD/MM/YYYY hh:mm A"
-            value={fn.date}
-            onChange={(date) => handleFunctionChange(index, "date", date)}
-            placeholder="Select date & time"
-            disabled={fn.isFromQuotationItems || (isLocked && !isPostLockEditable(fn))}
-            className="input w-full"
-          />
-        </div>
-      )}
+    {!isDecor && !fn.isExtraQuotationFunction && (
+  fn.isRoom || fn.isNewFunction ? (
+    <div className="hidden md:block flex-1 md:px-2" />
+  ) : (
+    <div className="flex-1 md:px-2">
+      <label className="mobile-field-label md:hidden">Date</label>
+      <DatePicker
+        showTime={{ use12Hours: true, format: "hh:mm A" }}
+        format="DD/MM/YYYY hh:mm A"
+        value={fn.date}
+        onChange={(date) => handleFunctionChange(index, "date", date)}
+        placeholder="Select date & time"
+        disabled={fn.isFromQuotationItems || (isLocked && !isPostLockEditable(fn))}
+        className="input w-full"
+      />
+    </div>
+  )
+)}
 
       {/* Persons */}
       {!fn.isExtraQuotationFunction && (
@@ -3053,7 +3065,7 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
             value={fn.persons}
             onChange={(e) => handleFunctionChange(index, "persons", e.target.value)}
             placeholder="Pax"
-            readOnly={isLocked}
+            readOnly={isLocked }
             type="tel"
             min="0"
           />
@@ -3061,35 +3073,43 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
       )}
 
       {/* Extra Person — HIDE for decor */}
-      {!isDecor  &&   (
-        <div className="w-full md:w-24 md:px-2">
-          <label className="mobile-field-label md:hidden">Extra Person</label>
-          <input
-            className="input w-full text-sm"
-            value={fn.extraPax ?? ""}
-            onChange={(e) => handleFunctionChange(index, "extraPax", e.target.value)}
-            placeholder="Extra Pax"
-            type="tel"
-            min="0"
-          />
-        </div>
-      )}
+      {!isDecor && (
+  fn.isRoom ? (
+    <div className="hidden md:block w-24 md:px-2" />
+  ) : (
+    <div className="w-full md:w-24 md:px-2">
+      <label className="mobile-field-label md:hidden">Extra Person</label>
+      <input
+        className="input w-full text-sm"
+        value={fn.extraPax ?? ""}
+        onChange={(e) => handleFunctionChange(index, "extraPax", e.target.value)}
+        placeholder="Extra Pax"
+        type="tel"
+        min="0"
+      />
+    </div>
+  )
+)}
 
 
       {isOfferRateUser && !fn.isExtraQuotationFunction && (
-        <div className="w-full md:w-24 md:px-2">
-          <label className="mobile-field-label md:hidden">Rate</label>
-          <input
-            className="input w-full text-sm"
-            value={fn.offeredRate ?? ""}
-            onChange={(e) => handleFunctionChange(index, "offeredRate", e.target.value)}
-            placeholder="Rate"
-            type="tel"
-            min="0"
-            readOnly
-          />
-        </div>
-      )}
+  fn.isRoom ? (
+    <div className="hidden md:block w-24 md:px-2" />
+  ) : (
+    <div className="w-full md:w-24 md:px-2">
+      <label className="mobile-field-label md:hidden">Rate</label>
+      <input
+        className="input w-full text-sm"
+        value={fn.offeredRate ?? ""}
+        onChange={(e) => handleFunctionChange(index, "offeredRate", e.target.value)}
+        placeholder="Rate"
+        type="tel"
+        min="0"
+        readOnly
+      />
+    </div>
+  )
+)}
 
       {/* Rate */}
       {!fn.isExtraQuotationFunction && (
@@ -3114,53 +3134,64 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
       
 
       {/* Package/Option — HIDE for decor */}
-      {!isDecor && fn.customPackageName !== undefined && canAccessBanquet && !fn.isNewFunction && !fn.isExtraQuotationFunction && (
-        <div className="w-full md:w-32 md:px-2">
-          <label className="mobile-field-label md:hidden">Package</label>
-          <input
-            className="input w-full text-sm"
-            value={fn.customPackageName || ""}
-            onChange={(e) => handleFunctionChange(index, "customPackageName", e.target.value)}
-            placeholder="Package name"
-            type="text"
-            readOnly={isLocked}
-          />
-        </div>
-      )}
+     {!isDecor && fn.customPackageName !== undefined && canAccessBanquet && !fn.isExtraQuotationFunction && (
+  fn.isRoom || fn.isNewFunction ? (
+    <div className="hidden md:block w-32 md:px-2" />
+  ) : (
+    <div className="w-full md:w-32 md:px-2">
+      <label className="mobile-field-label md:hidden">Package</label>
+      <input
+        className="input w-full text-sm"
+        value={fn.customPackageName || ""}
+        onChange={(e) => handleFunctionChange(index, "customPackageName", e.target.value)}
+        placeholder="Package name"
+        type="text"
+        readOnly={isLocked}
+      />
+    </div>
+  )
+)}
 
-      {/* Tax % — HIDE for decor */}
    {/* Tax % — HIDE for decor and for user 356 */}
-      {!isDecor && !hideTaxColumns && !fn.isNewFunction && !fn.isExtraQuotationFunction && (
-        <div className="w-full md:w-24 md:px-2">
-          <label className="mobile-field-label md:hidden">Tax %</label>
-          <input
-            className="input w-full text-sm"
-            value={fn.extraTax}
-            onChange={(e) => handleFunctionChange(index, "extraTax", e.target.value)}
-            placeholder="Tax %"
-            type="tel"
-            min="0"
-            max="100"
-            readOnly={isLocked}
-          />
-        </div>
-      )}
+  {!isDecor && !hideTaxColumns && !fn.isExtraQuotationFunction && (
+  fn.isRoom || fn.isNewFunction ? (
+    <div className="hidden md:block w-24 md:px-2" />
+  ) : (
+    <div className="w-full md:w-24 md:px-2">
+      <label className="mobile-field-label md:hidden">Tax %</label>
+      <input
+        className="input w-full text-sm"
+        value={fn.extraTax}
+        onChange={(e) => handleFunctionChange(index, "extraTax", e.target.value)}
+        placeholder="Tax %"
+        type="tel"
+        min="0"
+        max="100"
+        readOnly={isLocked}
+      />
+    </div>
+  )
+)}
 
       {/* Extra Amount — HIDE for decor */}
-      {!isDecor && !fn.isNewFunction && !fn.isExtraQuotationFunction &&  !hideTaxColumns && (
-        <div className="w-full md:w-24 md:px-2">
-          <label className="mobile-field-label md:hidden">Extra Amount (₹)</label>
-          <input
-            className="input w-full text-sm"
-            value={fn.taxRate ?? "0"}
-            placeholder="0"
-            type="tel"
-            min="0"
-            onChange={(e) => handleFunctionChange(index, "taxRate", e.target.value)}
-            readOnly={isLocked}
-          />
-        </div>
-      )}
+     {!isDecor && !fn.isExtraQuotationFunction && !hideTaxColumns && (
+  fn.isRoom || fn.isNewFunction ? (
+    <div className="hidden md:block w-24 md:px-2" />
+  ) : (
+    <div className="w-full md:w-24 md:px-2">
+      <label className="mobile-field-label md:hidden">Extra Amount (₹)</label>
+      <input
+        className="input w-full text-sm"
+        value={fn.taxRate ?? "0"}
+        placeholder="0"
+        type="tel"
+        min="0"
+        onChange={(e) => handleFunctionChange(index, "taxRate", e.target.value)}
+        readOnly={isLocked}
+      />
+    </div>
+  )
+)}
 
       {/* Total Price */}
       <div className="w-full md:w-28 md:px-2">
@@ -3177,8 +3208,7 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
           placeholder="Total Price"
           type="tel"
           min="0"
-          readOnly={fn.isFromQuotationItems || (isLocked && !isPostLockEditable(fn) && !fn.isExtraQuotationFunction)}
-        />
+ readOnly={fn.isRoom || fn.isFromQuotationItems || (isLocked && !isPostLockEditable(fn) && !fn.isExtraQuotationFunction)}        />
       </div>
 
       {/* Actions */}
