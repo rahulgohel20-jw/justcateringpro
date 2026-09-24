@@ -2388,9 +2388,9 @@ export const GetStockReport = (itemName, id, catId, stockId, fromDate, toDate, p
   );
 };
 
-export const GetStockPdfReport2 = (id, catId, stockId, isCompanyDetails, itemName , kitchenTypeId = 0) => {
+export const GetStockPdfReport2 = (id, catId, stockId, isCompanyDetails, itemName , kitchenTypeId = 0 , withImage) => {
   return GET(
-    `datewisestockreport/pdf?categoryId=${catId}&stockTypeId=${stockId}&userId=${id}&isCompanyDetails=${isCompanyDetails}&itemName=${itemName}&kitchenTypeId=${kitchenTypeId}`,
+    `datewisestockreport/pdf?categoryId=${catId}&stockTypeId=${stockId}&userId=${id}&isCompanyDetails=${isCompanyDetails}&itemName=${itemName}&kitchenTypeId=${kitchenTypeId}&withImage=${withImage}`,
   );
 };
 
@@ -2400,9 +2400,9 @@ export const GetStockExcelReport = (id, catId, stockId, fromDate, toDate, itemNa
   );
 };
 
-export const GetStockPdfReport = (id, catId, stockId, fromDate, toDate, isCompanyDetails, itemName, kitchenTypeId = 0) => {
+export const GetStockPdfReport = (id, catId, stockId, fromDate, toDate, isCompanyDetails, itemName, kitchenTypeId = 0, withImage) => {
   return GET(
-    `datewisestockreport/pdf?categoryId=${catId}&stockTypeId=${stockId}&userId=${id}&fromDate=${fromDate}&toDate=${toDate}&isCompanyDetails=${isCompanyDetails}&itemName=${itemName}&kitchenTypeId=${kitchenTypeId}`,
+    `datewisestockreport/pdf?categoryId=${catId}&stockTypeId=${stockId}&userId=${id}&fromDate=${fromDate}&toDate=${toDate}&isCompanyDetails=${isCompanyDetails}&itemName=${itemName}&kitchenTypeId=${kitchenTypeId}&withImage=${withImage}`,
   );
 };
 
