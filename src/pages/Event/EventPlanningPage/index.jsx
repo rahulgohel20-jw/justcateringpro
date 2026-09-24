@@ -79,7 +79,7 @@
           import { useModuleAccess } from "../../../hooks/useModuleAccess";
           import FoodFestivalModal from "../../../partials/modals/food-festival/FoodFestivalModal";
           import RevisionHistoryModal from "../../../partials/modals/revision-history/RevisionHistoryModal";
-          import { getPlanningConfig } from "./planningConfig";
+          import { getPlanningConfig } from "./PlanningConfig";
           import AdvancePaymentModal from "../../../partials/modals/advance-payment-status/AdvancePaymentModal";
           import AddDecorItemModal from "../../../partials/modals/add-decor-item/AddDecorItem";
           import AddDecorCategoryModal from "../../../partials/modals/add-decor-category/AddDecorCategory";
@@ -88,7 +88,7 @@
           import { FormattedMessage, useIntl } from "react-intl";
           import PermissableNonPermissableModal from "../../../partials/modals/permissable-nonpermissable/PermissableNonPermissableModal";
           import EditFunctionDetailsModal from "./components/EditFunctionDetailsModal";
-import { QRCodeCanvas } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";  
 
 
           const SearchWithSuggestions = ({
@@ -601,7 +601,13 @@ import { QRCodeCanvas } from "qrcode.react";
           </div>
           );
           };
-
+const getItemRate = (m) => {
+  const p = Number(m?.itemPrice);
+  if (p > 0) return p;
+  const r = Number(m?.rate);
+  if (r > 0) return r;
+  return Number(m?.categoryPrice) || 0;
+};
           const EventPlanningPage = ({ mode = "menu" }) => {
           useNetworkSpeed({ enabled: true });
           const intl = useIntl();
@@ -2092,8 +2098,8 @@ const handleMenuItemImageUpload = useCallback(
 
                 
                 const newList = cats[categoryName] ? [...cats[categoryName]] : [];
-                const appliedRate = Number(menuItem.itemPrice ?? menuItem.rate ?? 0);
-
+const appliedRate = getItemRate(menuItem);
+categoryPrice: Number(menuItem.categoryPrice ?? 0),
                 newList.push({
                   id: itemId,
                   nameEnglish: menuItem.nameEnglish || menuItem.menuItemName || "",
@@ -2240,8 +2246,8 @@ reportNameGujarati: categoryNameGujarati || selectedCategoryInfo.reportNameGujar
               const cats = { ...b.categories };
               const list = cats[categoryName] ? [...cats[categoryName]] : [];
 
-              const appliedRate = Number(menuItem.itemPrice ?? menuItem.rate ?? 0);
-
+const appliedRate = getItemRate(menuItem);
+categoryPrice: Number(menuItem.categoryPrice ?? 0),
               list.push({
                 id: itemId,
                 nameEnglish: menuItem.nameEnglish || menuItem.menuItemName || "",
