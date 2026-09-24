@@ -651,6 +651,10 @@ const AppRoutingSetup = () => {
             path="/master/contact-categories"
             element={<ContactCategoryMaster />}
           />
+          <Route
+            path="/contact-categories"
+            element={<ContactCategoryMaster />}
+          />
           <Route path="/master/banquet-master" element={<BanquetMaster />} />
 
           {/* Stock Management Route */}

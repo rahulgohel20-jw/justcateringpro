@@ -36,8 +36,12 @@ const RoomDetailsModal = ({ isOpen, onClose, eventRooms = [] }) => {
                   <td className="p-3 border-b border-gray-100 font-medium">
                     {room.roomNameEnglish || "—"}
                   </td>
-                  <td className="p-3 border-b border-gray-100">{room.bookingdate || "—"}</td>
-                  <td className="p-3 border-b border-gray-100">{room.bookingcheckoutdate || "—"}</td>
+                  <td className="p-3 border-b border-gray-100">
+                    {[room.bookingdate, room.bookingDateCheckInTime].filter(Boolean).join(" ") || "—"}
+                  </td>
+                  <td className="p-3 border-b border-gray-100">
+                    {[room.bookingcheckoutdate, room.bookingCheckOutTime].filter(Boolean).join(" ") || "—"}
+                  </td>
                   <td className="p-3 border-b border-gray-100 text-center">{room.qty ?? "—"}</td>
                   <td className="p-3 border-b border-gray-100 text-right">{room.price ?? "—"}</td>
                   <td className="p-3 border-b border-gray-100 text-right font-semibold">
