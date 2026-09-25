@@ -749,9 +749,15 @@ const getItemRate = (m) => {
           const [rawMaterialCategoryFilter, setRawMaterialCategoryFilter] = useState(0);
           const [rawMaterialNameMap, setRawMaterialNameMap] = useState({});
           const lastSavedPermissionRawMaterialsRef = useRef(null);
-
-
-
+const [navigatingMode, setNavigatingMode] = useState(null); 
+useEffect(() => {
+  setNavigatingMode(null);
+}, [mode]);
+useEffect(() => {
+  if (!navigatingMode) return;
+  const t = setTimeout(() => setNavigatingMode(null), 8000);
+  return () => clearTimeout(t);
+}, [navigatingMode]);
           const totalSelectedCount = useMemo(() => {
           const bucket = selectedByFunction[selectedFunction];
           if (!bucket || !bucket.categories) return 0;
@@ -3781,6 +3787,22 @@ useMenuPrepStore.getState().bumpMenuPrepNotify();
 
           return (
           <Fragment>
+            {(navigatingMode || isPrepLoading) && (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[998] flex items-center justify-center">
+    <div className="flex flex-col items-center gap-3 bg-white rounded-xl px-8 py-6 shadow-xl">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+      <span className="text-gray-700 text-sm font-semibold">
+        {navigatingMode === "decor"
+          ? "Switching to Decor Planning..."
+          : navigatingMode === "menu"
+          ? "Switching to Menu Planning..."
+          : mode === "decor"
+          ? "Loading decor items..."
+          : "Loading menu items..."}
+      </span>
+    </div>
+  </div>
+)}
             {/* Unsaved Changes Warning Modal */}
             {blocker.state === "blocked" && (
               <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
@@ -3970,28 +3992,43 @@ useMenuPrepStore.getState().bumpMenuPrepNotify();
 
                 {/* Preparation Status Dropdown */}
           <div className="flex felx-col justify-end gap-2 mt-5">
-          {canAccessDecor  && (
-          <button
-          type="button"
-          onClick={() => navigate(`/menu-preparation/${eventId}`)}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          >
-          <ChefHat size={18} />
-          <FormattedMessage id="USER.EVENT_PLANNING.MENU_PLANNING_BTN" defaultMessage="Menu Planning" />
-          </button>
-          )}
+      {canAccessDecor && (
+  <button
+    type="button"
+    disabled={navigatingMode === "menu"}
+    onClick={() => {
+      setNavigatingMode("menu");
+      navigate(`/menu-preparation/${eventId}`);
+    }}
+    className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+  >
+    {navigatingMode === "menu" ? (
+      <Loader2 size={18} className="animate-spin" />
+    ) : (
+      <ChefHat size={18} />
+    )}
+    <FormattedMessage id="USER.EVENT_PLANNING.MENU_PLANNING_BTN" defaultMessage="Menu Planning" />
+  </button>
+)}
 
-          {canAccessDecor  && (
-          <button
-          type="button"
-          onClick={() => navigate(`/decor-preparation/${eventId}`)}
-          className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          >
-          <Sparkles size={18} />
-          <FormattedMessage id="USER.EVENT_PLANNING.DECOR_PLANNING_BTN" defaultMessage="Decor Planning" />
-          </button>
-
-          )}
+       {canAccessDecor && (
+  <button
+    type="button"
+    disabled={navigatingMode === "decor"}
+    onClick={() => {
+      setNavigatingMode("decor");
+      navigate(`/decor-preparation/${eventId}`);
+    }}
+    className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+  >
+    {navigatingMode === "decor" ? (
+      <Loader2 size={18} className="animate-spin" />
+    ) : (
+      <Sparkles size={18} />
+    )}
+    <FormattedMessage id="USER.EVENT_PLANNING.DECOR_PLANNING_BTN" defaultMessage="Decor Planning" />
+  </button>
+)}
 
           <button
           type="button"
