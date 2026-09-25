@@ -3843,8 +3843,6 @@ export const GetAllApprovedPurchase = (userId,page, size) => {
 
 export const generatePurchaseRequestCode = (userId) => {
   return GET(`/purchase-approval/generate-purchase-request-code?userId=${userId}`);
-
-
 };
 
 export const addUpdatePurchaseRequest = (data) => {
