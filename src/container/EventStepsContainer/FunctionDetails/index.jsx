@@ -370,6 +370,7 @@ const autoMatchedEventTypeRef = useRef(null);
 
 const currentUserId = localStorage.getItem("userId");
 const CAN_EDIT_RATE_WITH_PACKAGE = ["356", "757"].includes(String(currentUserId));
+const CAN_PRESERVE_MANUAL_FUNCTION_TIME = ["298","299"].includes(String(currentUserId)); 
 const isApiRow = (f) => f?.eventFuncId && f.eventFuncId !== 0;
 const hasApiRows = () => (formData.eventFunction || []).some(isApiRow);
 const apiEventDatesRef = useRef(null);
@@ -1197,7 +1198,10 @@ useEffect(() => {
             timeSource: "event",
           };
         }
-      } else if (!updated[0].functionTouched) {
+        } else if (
+        !updated[0].functionTouched &&
+        !updated[0].dateTouched
+      ) {
         const existingShift = (updated[0].shiftOptions || []).find(
           (o) => String(o.value) === String(updated[0].shiftId)
         );
@@ -1331,9 +1335,11 @@ const handleInputChange = async (index, field, value) => {
   const updatedArray = [...formData.eventFunction];
     updatedArray[index] = { ...updatedArray[index], [field]: value };
 
-    if (enableAdvancedDateSync && (field === "functionStartDateTime" || field === "functionEndDateTime")) {
+         if (field === "functionStartDateTime" || field === "functionEndDateTime") {
       updatedArray[index].dateTouched = true;
-      updatedArray[index].timeSource = "manual";
+      if (enableAdvancedDateSync) {
+        updatedArray[index].timeSource = "manual";
+      }
     }
 
     if (field === "functionStartDateTime" && updatedArray[index].banquetHallId) {
@@ -1499,7 +1505,8 @@ const handlePackageChange = async (index, packageId) => {
 useEffect(() => {
    if (enableAdvancedDateSync) return;
   formData.eventFunction?.forEach((func, index) => {
-    if (!func.shiftId || !func.shiftOptions?.length) return;
+         if (!func.shiftId || !func.shiftOptions?.length) return;
+    if (CAN_PRESERVE_MANUAL_FUNCTION_TIME) return;
 
     const selectedShift = func.shiftOptions.find(
       (o) => String(o.value) === String(func.shiftId)
@@ -1726,7 +1733,12 @@ const isODCRow =
   });
 
  if (selected) {
-  if (enableAdvancedDateSync) {
+  const updatedArray = [...formData.eventFunction];
+  if (CAN_PRESERVE_MANUAL_FUNCTION_TIME) {
+    // For this user, shift selection must never change the function time — only record the shift.
+    updatedArray[index] = { ...updatedArray[index], shiftId: val };
+    setFormData({ ...formData, eventFunction: updatedArray });
+  } else if (enableAdvancedDateSync) {
     const { start, end } = computeFunctionDateTime(
       { ...func, shiftId: val },
       "shift",
@@ -1734,7 +1746,6 @@ const isODCRow =
       eventEndDateTime,
       options
     );
-    const updatedArray = [...formData.eventFunction];
     updatedArray[index] = {
       ...updatedArray[index],
       shiftId: val,
@@ -1751,7 +1762,6 @@ const isODCRow =
     const shiftStart = dayjs(selected.startTime, "HH:mm");
     const shiftEnd = dayjs(selected.endTime, "HH:mm");
 
-    const updatedArray = [...formData.eventFunction];
     updatedArray[index] = {
       ...updatedArray[index],
       shiftId: val,
