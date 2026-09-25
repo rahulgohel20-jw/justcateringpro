@@ -1,5 +1,27 @@
 import { useState } from "react";
-import { Trash2, Lock, Plus, Calendar, ChevronDown, IndianRupee, Clock, Bell, Wallet } from "lucide-react";
+import {
+  Trash2,
+  Lock,
+  Plus,
+  Calendar,
+  ChevronDown,
+  FilePlus2,
+  Settings,
+  Printer,
+  Save,
+  ClipboardList,
+  Palette,
+  Pencil,
+  User,
+  MapPin,
+  Phone,
+  Wallet,
+  IndianRupee,
+  Clock,
+  Bell,
+  Presentation,
+  Store,
+} from "lucide-react";
 import { DatePicker } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -13,28 +35,7 @@ const initialA = [
   { id: 3, name: "Fascia Board & Lighting", qty: 6, rate: 1200 },
 ];
 
-const initialDays = [
-  {
-    id: "d1",
-    date: "09/09/2026",
-    label: "Day 1 Rigging & Floor",
-    open: true,
-    rows: [
-      { id: 1, name: "Heavy Duty Carpet Installation 500 sqm", qty: 500, rate: 65 },
-      { id: 2, name: "VIP Lounge Modular Sofas", qty: 8, rate: 2200 },
-    ],
-  },
-  {
-    id: "d2",
-    date: "10/09/2026",
-    label: "Day 2 AV & Console Tech",
-    open: true,
-    rows: [
-      { id: 1, name: "Sound System & PA Console setup", qty: 1, rate: 18000 },
-      { id: 2, name: "Plasma Display 65-inch with Stand", qty: 3, rate: 4500 },
-    ],
-  },
-];
+const initialDays = [];
 
 function money(n) {
   return "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -133,6 +134,7 @@ function EstimateTable({ title, tag, rows, setRows, onDeleteEstimate, canDelete 
       </div>
 
       {/* Estimate Rows */}
+      <div className="overflow-x-auto scroll-visible">
       <table className="w-full border-collapse text-[13px]">
         <thead>
           <tr>
@@ -187,32 +189,14 @@ function EstimateTable({ title, tag, rows, setRows, onDeleteEstimate, canDelete 
           ))}
         </tbody>
       </table>
+      </div>
 
-      <button onClick={addRow} className="text-blue-600 text-[13px] font-semibold py-2 px-1">
+      <button onClick={addRow} className="text-primary text-[13px] font-semibold py-2 px-1">
         + Add Row
       </button>
 
-      {/* TAX + SUMMARY - 2 COLUMNS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-3 border border-slate-200 rounded-xl p-3.5">
-        {/* LEFT COLUMN */}
-        <div className="flex items-start">
-          <div>
-            <div className="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">
-              TAX &amp; STATUTORY NOTES
-            </div>
-            <div className="border border-slate-200 rounded-lg p-3 text-[11.5px] leading-relaxed text-slate-500 max-w-[330px]">
-              <div className="flex gap-2">
-                <span className="text-blue-600 mt-0.5">♢</span>
-                <span>
-                  Standard interstate GST levied at 18% (9% CGST + 9% SGST). TDS deductible under Section
-                  194C @ 2% on contractor payments.
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN */}
+      {/* SUMMARY */}
+      <div className="mt-3 border border-slate-200 rounded-xl p-3.5">
         <div className="text-[12px]">
           <div className="flex justify-between items-center py-1">
             <span className="font-semibold text-blue-700">Subtotal</span>
@@ -327,6 +311,7 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
 
       {day.open && (
         <div className="mt-3">
+          <div className="overflow-x-auto scroll-visible">
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr>
@@ -375,7 +360,8 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
               ))}
             </tbody>
           </table>
-          <button onClick={() => onAddRow(day.id)} className="text-blue-600 text-[13px] font-semibold py-2 px-1">
+          </div>
+          <button onClick={() => onAddRow(day.id)} className="text-primary text-[13px] font-semibold py-2 px-1">
             + Add Particulars Row
           </button>
           <div className="flex justify-between items-center text-[12.5px] mt-2">
@@ -392,7 +378,7 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
 }
 function SectionHeader({ no, title, open, onToggle, right }) {
   return (
-    <div className="flex justify-between items-center text-[12px] font-bold text-blue-600 tracking-wide mt-5 mb-2">
+    <div className="flex justify-between items-center text-[12px] font-bold text-primary tracking-wide mt-5 mb-2">
       <button type="button" onClick={onToggle} className="flex items-center gap-2 text-left">
         <ChevronDown size={16} className={`text-slate-500 transition-transform ${open ? "" : "-rotate-90"}`} />
         <span className="text-[13px] font-extrabold text-blue-800 tracking-tight">
@@ -416,6 +402,9 @@ export default function ExhibitionQuotation() {
     },
   ]);
   const [days, setDays] = useState(initialDays);
+  const [notes, setNotes] = useState(
+    "Standard interstate GST levied at 18% (9% CGST + 9% SGST). TDS deductible under Section 194C @ 2% on contractor payments."
+  );
 const [openSections, setOpenSections] = useState({ s1: true, s2: true, s3: true, s4: true });
 const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 const [payments, setPayments] = useState([
@@ -522,26 +511,65 @@ const remaining = finalGrandTotal - totalPaid;
 
   return (
     <div className="min-h-screen font-sans text-slate-800">
+      <style>{`
+        .scroll-visible {
+          scrollbar-width: thin;
+          scrollbar-color: #94a3b8 #f1f5f9;
+        }
+        .scroll-visible::-webkit-scrollbar {
+          height: 8px;
+        }
+        .scroll-visible::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 9999px;
+        }
+        .scroll-visible::-webkit-scrollbar-thumb {
+          background: #94a3b8;
+          border-radius: 9999px;
+        }
+        .scroll-visible::-webkit-scrollbar-thumb:hover {
+          background: #64748b;
+        }
+      `}</style>
       {/* Top bar */}
       <div className="sticky top-0 z-10 bg-white border-b border-slate-200 flex items-center justify-between px-4 py-3 gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-            EQ
-          </div>
-          <div>
-            <div className="font-bold text-[15px]">Exhibition Quotation</div>
-            <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
-            </div>
-          </div>
-        </div>
+  <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center">
+    <Store  size={18} strokeWidth={2.2} />
+  </div>
+
+  <div>
+    <div className="font-bold text-[15px]">
+      Exhibition Quotation
+    </div>
+
+    <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
+    </div>
+  </div>
+</div>
         <div className="flex gap-2 flex-wrap">
-          <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium">
-            Extra Quotation
-          </button>
-          <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium">Setup</button>
-          <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium">Print</button>
-          <button className="bg-blue-600 text-white rounded-lg px-3 py-1.5 text-[13px] font-medium">Save</button>
-        </div>
+
+  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+    <FilePlus2 size={14} />
+    Extra Quotation
+  </button>
+
+  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+    <Settings size={14} />
+    Setup
+  </button>
+
+  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+    <Printer size={14} />
+    Print
+  </button>
+
+  <button className="bg-primary text-white rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+    <Save size={14} />
+    Save
+  </button>
+
+</div>
       </div>
 
       <div className="mx-auto px-4 pb-10 pt-4">
@@ -553,36 +581,54 @@ const remaining = finalGrandTotal - totalPaid;
               <div className="text-xl font-bold mt-0.5">Reception</div>
             </div>
             <div className="flex gap-2">
-              <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium">
-                Menu Planning
-              </button>
-              <button className="bg-blue-600 text-white rounded-lg px-3 py-1.5 text-[13px] font-medium">
-                Decor Quotation
-              </button>
-              <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium">
-                Edit Event
-              </button>
-               <button className="border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-medium flex items-center gap-1">
-            <Lock size={13} />
-            Lock
-          </button>
-            </div>
+
+  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+    <ClipboardList size={14} />
+    Menu Planning
+  </button>
+
+  <button className="bg-primary text-white rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+    <Palette size={14} />
+    Decor Quotation
+  </button>
+
+  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+    <Pencil size={14} />
+    Edit Event
+  </button>
+
+  <button className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium flex items-center gap-1.5">
+    <Lock size={13} />
+    Lock
+  </button>
+
+</div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3">
-            {[
-              ["Party Name", "AVSAR SIR"],
-              ["Venue Name", "Swambhoomi Party Plot"],
-              ["Event Date", "09 September 2026"],
-              ["Mobile Number", "08153985521"],
-              ["Quotation Date", "18/02/2026"],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <div className="text-[11px] text-slate-500">{label}</div>
-                <div className="text-[13.5px] font-semibold">{value}</div>
-              </div>
-            ))}
-          </div>
+       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3">
+
+  {[
+    ["Party Name", "AVSAR SIR", User],
+    ["Venue Name", "Swambhoomi Party Plot", MapPin],
+    ["Event Date", "09 September 2026", Calendar],
+    ["Mobile Number", "08153985521", Phone],
+    ["Quotation Date", "18/02/2026", Calendar],
+  ].map(([label, value, Icon]) => (
+    <div key={label}>
+
+      <div className="text-[11px] text-slate-500 flex items-center gap-1">
+        <Icon size={12} className="text-slate-400" />
+        {label}
+      </div>
+
+      <div className="text-[13.5px] font-semibold mt-0.5">
+        {value}
+      </div>
+
+    </div>
+  ))}
+
+</div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
             <div>
@@ -611,13 +657,7 @@ const remaining = finalGrandTotal - totalPaid;
       <span className="text-slate-500 font-medium">
         {estimates.length} {estimates.length === 1 ? "Estimate" : "Estimates"} Active
       </span>
-      <button
-        onClick={addEstimate}
-        className="border border-blue-200 bg-blue-50 text-blue-600 rounded-lg px-2.5 py-1 text-xs font-semibold flex items-center gap-1 hover:bg-blue-100"
-      >
-        <Plus size={13} />
-        Add Estimate
-      </button>
+    
     </div>
   }
 />
@@ -634,7 +674,22 @@ const remaining = finalGrandTotal - totalPaid;
       onDeleteEstimate={() => deleteEstimate(estimate.id)}
     />
   ))}
-    <button onClick={addDate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-blue-600 font-semibold mt-2.5 flex items-center justify-center gap-2">
+
+  {/* Shared notes for Section 01 as a whole, instead of repeating per estimate */}
+  <div className="border border-slate-200 rounded-lg p-3 text-[11.5px] leading-relaxed text-slate-500 mt-2.5">
+    <div className="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">
+      TAX &amp; STATUTORY NOTES
+    </div>
+    <textarea
+      value={notes}
+      onChange={(e) => setNotes(e.target.value)}
+      rows={3}
+      placeholder="Add tax & statutory notes..."
+      className="w-full resize-y border border-slate-200 rounded-lg px-2.5 py-2 text-[11.5px] leading-relaxed text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+    />
+  </div>
+
+    <button onClick={addEstimate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-primary font-semibold mt-2.5 flex items-center justify-center gap-2">
     <Calendar size={15} /> Add Estimate
   </button>
 </div>
@@ -671,13 +726,13 @@ const remaining = finalGrandTotal - totalPaid;
         {/* Payment Details — dynamic list of advance payments */}
         <div className="bg-white border border-slate-200 rounded-xl p-3.5 mt-3">
           <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-2 text-blue-600 font-bold text-[13px]">
+            <div className="flex items-center gap-2 text-primary font-bold text-[13px]">
               <Wallet size={15} />
               Payment Details
             </div>
             <button
               onClick={addPayment}
-              className="bg-blue-600 text-white rounded-full px-3 py-1.5 text-xs font-semibold flex items-center gap-1 hover:bg-blue-700"
+              className="bg-primary text-white rounded-full px-3 py-1.5 text-xs font-semibold flex items-center gap-1 hover:bg-blue-700"
             >
               <Plus size={13} />
               Add Advance Payment
@@ -783,10 +838,20 @@ const remaining = finalGrandTotal - totalPaid;
   title="Estimate Amount (Other)"
   open={openSections.s3}
   onToggle={() => toggleSection("s3")}
-  right={<span className="text-slate-500 font-medium text-[12px]">{days.length} Dates Specified</span>}
+  right={
+    <span className="text-slate-500  font-medium flex items-center gap-1.5 text-[12px]">
+      <Calendar size={13} className="text-slate-400" />
+      {days.length} Dates Specified
+    </span>
+  }
 />
 
-<div className={openSections.s3 ? "" : "hidden"}>
+<div className={`border m-3 border-blue-100 rounded-lg p-3 ${openSections.s3 ? "" : "hidden"}`}>
+  {days.length === 0 && (
+    <div className="text-center text-slate-400 text-[12.5px] py-4">
+      No dates added yet — use the button below to add one.
+    </div>
+  )}
   {days.map((day) => (
     <DayCard
       key={day.id}
@@ -798,7 +863,7 @@ const remaining = finalGrandTotal - totalPaid;
       onUpdateField={updateDayField}
     />
   ))}
-  <button onClick={addDate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-blue-600 font-semibold mt-2.5 flex items-center justify-center gap-2">
+  <button onClick={addDate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-primary font-semibold mt-2.5 flex items-center justify-center gap-2">
     <Calendar size={15} /> Add Date Particulars Scope
   </button>
 </div>
@@ -819,7 +884,7 @@ const remaining = finalGrandTotal - totalPaid;
   </div>
  <div className={openSections.s4 ? "" : "hidden"}>  
   {/* Combined Grand Total */}
-  <div className="flex justify-between items-center bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3">
+  <div className="flex m-3 justify-between items-center bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3">
     <span className="text-[13px] font-semibold text-blue-800">Combined Grand Total</span>
     <span className="text-lg font-bold text-blue-700">{money(finalGrandTotal)}</span>
   </div>
@@ -827,13 +892,13 @@ const remaining = finalGrandTotal - totalPaid;
   {/* Payment Details */}
   <div className="bg-white border border-slate-200 rounded-xl m-2 p-3.5 mt-3">
     <div className="flex justify-between items-center mb-3">
-      <div className="flex items-center gap-2 text-blue-600 font-bold text-[13px]">
+      <div className="flex items-center gap-2 text-primary font-bold text-[13px]">
         <Wallet size={15} />
         Payment Details
       </div>
       <button
         onClick={addPayment}
-        className="bg-blue-600 text-white rounded-full px-3 py-1.5 text-xs font-semibold flex items-center gap-1 hover:bg-blue-700"
+        className="bg-primary text-white rounded-full px-3 py-1.5 text-xs font-semibold flex items-center gap-1 hover:bg-blue-700"
       >
         <Plus size={13} />
         Add Advance Payment
@@ -910,7 +975,7 @@ const remaining = finalGrandTotal - totalPaid;
   </div>
 
   {/* Total Paid */}
-  <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-xl px-3.5 py-3 mt-3">
+  <div className="m-3 flex justify-between items-center bg-green-50 border border-green-200 rounded-xl px-3.5 py-3 mt-3">
     <span className="flex items-center gap-2 text-[15px] font-semibold">
       <span className="w-2 h-2 rounded-full bg-green-500" />
       Total Paid
@@ -919,7 +984,7 @@ const remaining = finalGrandTotal - totalPaid;
   </div>
 
   {/* Remaining */}
-  <div className="flex justify-between items-center bg-red-50 border border-red-200 rounded-xl px-3.5 py-3 mt-2.5">
+  <div className="m-3 flex justify-between items-center bg-red-50 border border-red-200 rounded-xl px-3.5 py-3 mt-2.5">
     <div className="flex items-center gap-2.5">
       <div className="w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center flex-none">
         <Bell size={14} />
@@ -935,6 +1000,6 @@ const remaining = finalGrandTotal - totalPaid;
   </div>      
   </div>        
 </div>          
-        
+    
   );
 }
