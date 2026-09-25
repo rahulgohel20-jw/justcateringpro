@@ -329,9 +329,9 @@ cordinatorPersonContactNo: event.cordinatorPersonContactNo || "",
             }),
 
             eventRooms: (event.eventRooms || []).map((room) => {
-              const rawCheckInTime = room.bookingDateCheckInTime || "";
+const rawCheckInTime = room.bookingDateChecInTime || "";  
               const rawCheckInDate = room.bookingdate || "";
-              const rawCheckOutTime = room.bookingCheckOutTime || "";
+                const rawCheckOutTime = room.bookingDateCheckOutTime || "";
               const rawCheckOutDate = room.bookingcheckoutdate || "";
 
               let checkInDate = rawCheckInDate;
@@ -383,8 +383,8 @@ cordinatorPersonContactNo: event.cordinatorPersonContactNo || "",
                 qty: room.qty || 1,
                 price: room.price || 0,
                 total: room.total || 0,
-                bookingDateCheckInTime: checkInTime,
-                bookingCheckOutTime: checkOutTime,
+               bookingDateCheckInTime: checkInTime,   
+    bookingCheckOutTime: checkOutTime, 
                 bookingdate: checkInDate,
                 bookingcheckoutdate: checkOutDate,
               };
