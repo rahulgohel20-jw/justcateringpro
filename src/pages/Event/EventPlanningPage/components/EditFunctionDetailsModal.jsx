@@ -294,7 +294,8 @@ const [venueModalIndex, setVenueModalIndex] = useState(null);
 const [notesModalOpen, setNotesModalOpen] = useState(false);
 const [notesModalIndex, setNotesModalIndex] = useState(null);
 const [banquetNotesModal, setBanquetNotesModal] = useState({ open: false, index: null });
-
+const currentUserId = localStorage.getItem("userId");
+const CAN_EDIT_RATE_WITH_PACKAGE = ["356", "757"].includes(String(currentUserId));
   // ── Load dropdown reference data whenever the modal opens ──
   useEffect(() => {
     if (!isOpen) return;
@@ -759,8 +760,12 @@ const handleBanquetNotesSave = (val) => {
                       <Input
                         className="w-full text-center text-xs"
                         value={row.rate}
-                        readOnly={!!row.customPackageId}
-                        style={row.customPackageId ? { background: "#f3f4f6", cursor: "not-allowed" } : {}}
+                        readOnly={!CAN_EDIT_RATE_WITH_PACKAGE && !!row.customPackageId}
+  style={
+    !CAN_EDIT_RATE_WITH_PACKAGE && row.customPackageId
+      ? { background: "#f3f4f6", cursor: "not-allowed" }
+      : {}
+  }
                         onChange={(e) => handleChange(index, "rate", e.target.value)}
                       />
                     </td>
