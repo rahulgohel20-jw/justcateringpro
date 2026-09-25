@@ -293,7 +293,8 @@ const [isShowLastPage, setIsShowLastPage] = useState(
               isAdvancePayment:config.isAdvancePayment === 0,
               withOutBg: config.withOutBg === 0,
               isAllItemTogether: config.isAllItemTogether === 0,
-isShowRoomDetails: canShowRoomDetails && config.isShowRoomDetails === 0,              isShowFunctionImg: config.isShowFunctionImg == 0,
+isShowRoomDetails: canShowRoomDetails && config.isShowRoomDetails === 0,  
+            isShowFunctionImg: config.isShowFunctionImg == 0,
               withVendor: config.withVendor === 0,
               isNotes: config.isNotes === 0,
               showAddOnLabel: config.showAddOnLabel === 0

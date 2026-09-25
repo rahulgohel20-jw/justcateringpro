@@ -369,7 +369,7 @@ const [eventTypeRawList, setEventTypeRawList] = useState([]);
 const autoMatchedEventTypeRef = useRef(null);
 
 const currentUserId = localStorage.getItem("userId");
-const CAN_EDIT_RATE_WITH_PACKAGE = currentUserId == 356; 
+const CAN_EDIT_RATE_WITH_PACKAGE = ["356", "757"].includes(String(currentUserId));
 const isApiRow = (f) => f?.eventFuncId && f.eventFuncId !== 0;
 const hasApiRows = () => (formData.eventFunction || []).some(isApiRow);
 const apiEventDatesRef = useRef(null);

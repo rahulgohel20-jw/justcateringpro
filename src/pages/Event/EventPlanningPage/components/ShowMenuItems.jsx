@@ -3,21 +3,14 @@ import { CustomModal } from "@/components/custom-modal/CustomModal";
 import { toAbsoluteUrl } from "@/utils";
 import { GetRawmaterialItemByRecipe } from "@/services/apiServices";
 
-
-
-
-
-const extractImageUrl = (raw) => {
-  if (!raw || typeof raw !== "string") return null;
-  const match = raw.match(/imagePath=([^,)]+)/g);
-  if (!match) return null;
-  // Get the last imagePath= match (the item's own path, not nested entity paths)
-  const last = match[match.length - 1];
-  const url = last.replace("imagePath=", "").trim();
-  if (!url || url === "null" || url === "" || !/\.(jpg|jpeg|png|webp|gif)/i.test(url)) return null;
-  return url;
-};
-
+const isValidImagePath = (raw) =>
+  raw &&
+  typeof raw === "string" &&
+  raw.trim() !== "" &&
+  raw !== "null" &&
+  raw !== "undefined" &&
+  !raw.toLowerCase().includes("/null") &&
+  /\.(jpg|jpeg|png|webp|gif)$/i.test(raw);
 
 const getYoutubeEmbedUrl = (url) => {
   if (!url) return "";
@@ -40,6 +33,9 @@ const ShowMenuItems = ({ isOpen, onClose, item }) => {
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
   const autoSlideRef = useRef(null);
 
+  const authStorage = JSON.parse(localStorage.getItem("auth-storage") || "{}");
+  const userLogo = authStorage?.state?.user?.logo || "";
+
   const videoEmbedUrl = getYoutubeEmbedUrl(item?.url || item?.video);
 
   // ✅ MOVE THESE UP — before any useEffect that references them
@@ -49,10 +45,10 @@ const ShowMenuItems = ({ isOpen, onClose, item }) => {
     ? [item.imagePath]
     : [];
 
-  const imageUrls = rawImages.map(extractImageUrl).filter(Boolean);
+  const imageUrls = rawImages.filter(isValidImagePath);
   const displayImages = imageUrls.length > 0
     ? imageUrls
-    : [toAbsoluteUrl("/media/menu/noImage.jpg")];
+    : [userLogo || toAbsoluteUrl("/media/menu/noImage.jpg")];
 
   // ✅ Now useEffects can safely reference displayImages
   useEffect(() => {
@@ -92,14 +88,11 @@ const ShowMenuItems = ({ isOpen, onClose, item }) => {
         isSync,
       );
 
-     
-
       const rawMaterialsArray =
         response?.data?.data?.menuItemRawMaterials || [];
 
       if (rawMaterialsArray.length > 0) {
         setRawMaterials(rawMaterialsArray);
-        
       } else {
         setRawMaterials([]);
         console.warn("No raw materials found in response");
@@ -111,7 +104,6 @@ const ShowMenuItems = ({ isOpen, onClose, item }) => {
   };
 
   const handleModalClose = () => {
-  
     onClose();
   };
 
@@ -258,16 +250,13 @@ const ShowMenuItems = ({ isOpen, onClose, item }) => {
 
           {item?.itemSlogan && (
             <p className="mt-2 text-gray-600 text-sm sm:text-base italic">
-              “{item.itemSlogan}”
+              "{item.itemSlogan}"
             </p>
           )}
         </div>
 
         {/* Divider */}
         <div className="my-6 border-t border-gray-200" />
-
-        {/* Raw Materials */}
-        
 
         {/* Raw Materials */}
 {rawMaterials.length > 0 && (
@@ -314,7 +303,6 @@ const ShowMenuItems = ({ isOpen, onClose, item }) => {
   </div>
 )}
 
-       
       </div>
     </CustomModal>
   );

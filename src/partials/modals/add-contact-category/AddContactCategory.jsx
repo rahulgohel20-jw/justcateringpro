@@ -3,12 +3,15 @@ import {
   Addcontactcategory,
   EditContactCategory,
   GetAllContactType,
+  Translateapi,
 } from "@/services/apiServices";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import Swal from "sweetalert2";
 import { FormattedMessage, useIntl } from "react-intl";
-
+import { getLangConfig, extractTranslations } from "@/utils/langConfig";
+import MultiLangInputBox from "../../../components/form-inputs/MultiLangInputbox";
+ 
 const AddContactCategory = ({
   isOpen,
   onClose,
@@ -18,7 +21,7 @@ const AddContactCategory = ({
   excludeCustomerType = false,
 }) => {
   if (!isOpen) return null;
-
+ 
   const initialFormState = {
     nameEnglish: "",
     nameGujarati: "",
@@ -26,11 +29,11 @@ const AddContactCategory = ({
     sequence: "",
     contcatTypeId: "",
   };
-
+ 
   const intl = useIntl();
   const [contactTypes, setContactTypes] = useState([]);
   const Id = JSON.parse(localStorage.getItem("userId"));
-
+ 
   useEffect(() => {
     if (Id) {
       GetAllContactType(1)
@@ -44,39 +47,29 @@ const AddContactCategory = ({
         .catch((err) => console.error(err));
     }
   }, [Id, labourOnly]);
-
+ 
   const validationSchema = Yup.object().shape({
     nameEnglish: Yup.string().required("Name is required"),
     contcatTypeId: Yup.string().required("Contact Type is required"),
-    sequence: Yup.number()
-      .typeError("Sequence must be a number")
-      .min(0, "Sequence cannot be a negative number")
-      .nullable(),
   });
-
+ 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
       if (!Id) {
         alert("User data not found");
         return;
       }
-
-      if (values.sequence !== "" && values.sequence !== null && Number(values.sequence) < 0) {
-        Swal.fire("Error!", "Sequence cannot be a negative number.", "error");
-        setSubmitting(false);
-        return;
-      }
-
+ 
       const matchedType = contactTypes.find(
         (t) => t.nameEnglish === values.contcatTypeId
       );
-
+ 
       const payload = {
         ...values,
         userId: Id,
         contcatTypeId: matchedType?.id ?? values.contcatTypeId,
       };
-
+ 
       if (contactCategory) {
         await EditContactCategory(contactCategory.contactid, payload);
         Swal.fire("Updated!", "Contact category updated successfully.", "success");
@@ -84,7 +77,7 @@ const AddContactCategory = ({
         await Addcontactcategory(payload);
         Swal.fire("Saved!", "Contact category added successfully.", "success");
       }
-
+ 
       refreshData();
       onClose();
       resetForm();
@@ -94,7 +87,7 @@ const AddContactCategory = ({
       setSubmitting(false);
     }
   };
-
+ 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl w-full max-w-5xl p-6 relative overflow-y-auto max-h-[90vh]">
@@ -117,7 +110,7 @@ const AddContactCategory = ({
             &times;
           </button>
         </div>
-
+ 
         {/* Form */}
         <Formik
           initialValues={
@@ -135,27 +128,59 @@ const AddContactCategory = ({
           onSubmit={handleSubmit}
           enableReinitialize
         >
-          {({ isSubmitting }) => {
+          {({ isSubmitting, values, setFieldValue, errors, touched }) => {
+            const [debounceTimer, setDebounceTimer] = useState(null);
+ 
+            const formData = {
+              nameEnglish: values.nameEnglish,
+              nameGujarati: values.nameGujarati,
+              nameHindi: values.nameHindi,
+            };
+ 
+            const setFormData = (updated) => {
+              Object.entries(updated).forEach(([key, val]) => {
+                setFieldValue(key, val);
+              });
+            };
+ 
+            useEffect(() => {
+              if (!values.nameEnglish?.trim()) return;
+ 
+              if (debounceTimer) clearTimeout(debounceTimer);
+ 
+              const timer = setTimeout(() => {
+                Translateapi(values.nameEnglish)
+                  .then((res) => {
+                    const { regional, hindi } = extractTranslations(res.data);
+                    setFieldValue("nameGujarati", regional);
+                    setFieldValue("nameHindi", hindi);
+                  })
+                  .catch((err) => console.error("Translation error:", err));
+              }, 500);
+ 
+              setDebounceTimer(timer);
+              return () => clearTimeout(timer);
+            }, [values.nameEnglish]);
+ 
             return (
               <Form>
                 <div className="grid grid-cols-1 gap-4">
-                  {/* Name (English) */}
-                  <InputWithFormik
-                    label={
-                      <FormattedMessage
-                        id="COMMON.NAME_ENGLISH"
-                        defaultMessage="Name (English)"
-                      />
-                    }
-                    name="nameEnglish"
-                    type="text"
-                    placeholder={intl.formatMessage({
-                      id: "COMMON.NAME_ENGLISH",
-                      defaultMessage: "Name (English)",
+                  <MultiLangInputBox
+                    label={intl.formatMessage({
+                      id: "COMMON.NAME",
+                      defaultMessage: "Name",
                     })}
-                    required={true}
+                    formData={formData}
+                    setFormData={setFormData}
+                    error={touched.nameEnglish && errors.nameEnglish}
+                    cols={3}
+                    keys={{
+                      english: "nameEnglish",
+                      regional: "nameGujarati",
+                      hindi: "nameHindi",
+                    }}
                   />
-
+ 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Contact Type Dropdown */}
                     <div className="flex flex-col">
@@ -191,7 +216,7 @@ const AddContactCategory = ({
                         className="text-red-500 text-sm mt-1"
                       />
                     </div>
-
+ 
                     {/* Sequence */}
                     <InputWithFormik
                       label={
@@ -201,13 +226,7 @@ const AddContactCategory = ({
                         />
                       }
                       name="sequence"
-                      type="number"
-                      min="0"
-                      onKeyDown={(e) => {
-                        if (["-", "+", "e", "E"].includes(e.key)) {
-                          e.preventDefault();
-                        }
-                      }}
+                      type="tel"
                       placeholder={intl.formatMessage({
                         id: "USER.MASTER.PRIORITY",
                         defaultMessage: "sequence",
@@ -216,7 +235,7 @@ const AddContactCategory = ({
                     />
                   </div>
                 </div>
-
+ 
                 {/* Actions */}
                 <div className="flex w-full justify-end mt-6 gap-3">
                   <button
@@ -246,16 +265,8 @@ const AddContactCategory = ({
     </div>
   );
 };
-
-const InputWithFormik = ({
-  label,
-  name,
-  type = "text",
-  placeholder,
-  required = true,
-  min,
-  onKeyDown,
-}) => (
+ 
+const InputWithFormik = ({ label, name, type = "text", placeholder, required = true }) => (
   <div className="flex flex-col">
     <label className="block text-gray-600 mb-1">
       {label}
@@ -264,8 +275,6 @@ const InputWithFormik = ({
     <Field
       type={type}
       name={name}
-      min={min}
-      onKeyDown={onKeyDown}
       placeholder={placeholder}
       className="border border-gray-300 rounded-lg p-2 w-full"
     />
@@ -274,5 +283,5 @@ const InputWithFormik = ({
     )}
   </div>
 );
-
+ 
 export default AddContactCategory;
