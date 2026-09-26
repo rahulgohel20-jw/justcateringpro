@@ -389,8 +389,7 @@ const AppRoutingSetup = () => {
           <Route path="/menuplaaningmaster" element={<MenuPlannerPage />} />
           
           <Route path="/captainrecipe" element={<CaptainRecipe />} />
-<Route path="/Exhibitionquotation" element={<ExhibitionQuotation/>}/>
-          <Route
+<Route path="/exhibition-quotation/:eventId" element={<ExhibitionQuotation/>}/>          <Route
             path="/event-view/assginMemberview/mangerorder"
             element={<ManagerViewOrder />}
           />

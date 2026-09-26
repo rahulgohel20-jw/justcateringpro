@@ -10,7 +10,7 @@ import {
   TranslateGujarati,
   AddLogs,
   updateeventmaster,
-  GetUserlogs ,
+  GetUserlogs,
 } from "@/services/apiServices";
 import { errorMsgPopup, successMsgPopup } from "../../../underConstruction";
 import MenuReport from "@/partials/modals/menu-report/MenuReport";
@@ -70,74 +70,74 @@ const EventViewModal = ({
   const [translatedAddress, setTranslatedAddress] = useState("");
   const [isSelectMenuReport, setIsSelectMenuReport] = useState(false);
   const [isRoomModal, setIsRoomModal] = useState(false);
-const [isRemarksModal, setIsRemarksModal] = useState(false);
-const [remarks, setRemarks] = useState({ english: "", gujarati: "", hindi: "" });
-const [isEventHistoryOpen, setIsEventHistoryOpen] = useState(false);
-const [eventHistoryLogs, setEventHistoryLogs] = useState([]);
-const [eventHistoryLoading, setEventHistoryLoading] = useState(false);
-const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
-const userId = localStorage.getItem("userId");
-const [contextMenu, setContextMenu] = useState(null); 
+  const [isRemarksModal, setIsRemarksModal] = useState(false);
+  const [remarks, setRemarks] = useState({ english: "", gujarati: "", hindi: "" });
+  const [isEventHistoryOpen, setIsEventHistoryOpen] = useState(false);
+  const [eventHistoryLogs, setEventHistoryLogs] = useState([]);
+  const [eventHistoryLoading, setEventHistoryLoading] = useState(false);
+  const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
+  const userId = localStorage.getItem("userId");
+  const [contextMenu, setContextMenu] = useState(null);
 
-const handleItemContextMenu = (e, item) => {
-  if (item.disabled || !item.path) return;
-  e.preventDefault();
-  setContextMenu({ x: e.clientX, y: e.clientY, path: item.path });
-};
-
-useEffect(() => {
-  if (!contextMenu) return;
-  const close = () => setContextMenu(null);
-  window.addEventListener("click", close);
-  window.addEventListener("scroll", close, true);
-  window.addEventListener("keydown", (e) => e.key === "Escape" && close());
-  return () => {
-    window.removeEventListener("click", close);
-    window.removeEventListener("scroll", close, true);
+  const handleItemContextMenu = (e, item) => {
+    if (item.disabled || !item.path) return;
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, path: item.path });
   };
-}, [contextMenu]);
 
-const handleOpenInNewTab = () => {
-  if (contextMenu?.path) {
-    window.open(contextMenu.path, "_blank", "noopener,noreferrer");
-  }
-  setContextMenu(null);
-};
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => setContextMenu(null);
+    window.addEventListener("click", close);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("keydown", (e) => e.key === "Escape" && close());
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [contextMenu]);
 
-useEffect(() => {
-  if (isModalOpen) {
-    setRemarks({
-      english: eventDataAll?.remark || "",
-      gujarati: eventDataAll?.remarksGujarati || "",
-      hindi: eventDataAll?.remarksHindi || "",
-    });
-  }
-}, [isModalOpen, eventDataAll?.remark, eventDataAll?.remarksGujarati, eventDataAll?.remarksHindi]);
+  const handleOpenInNewTab = () => {
+    if (contextMenu?.path) {
+      window.open(contextMenu.path, "_blank", "noopener,noreferrer");
+    }
+    setContextMenu(null);
+  };
+
+  useEffect(() => {
+    if (isModalOpen) {
+      setRemarks({
+        english: eventDataAll?.remark || "",
+        gujarati: eventDataAll?.remarksGujarati || "",
+        hindi: eventDataAll?.remarksHindi || "",
+      });
+    }
+  }, [isModalOpen, eventDataAll?.remark, eventDataAll?.remarksGujarati, eventDataAll?.remarksHindi]);
 
   const { hasModuleAccess } = useModuleAccess();
-    const canAccessBanquet = hasModuleAccess("Banquet" );
-    const canAccessAssignManger = hasModuleAccess("Assign Manager");
-    const canAccessMenuExtraFeature = hasModuleAccess("Menu Extra Features");
-    const canAccessfollowup = hasModuleAccess("followup");
+  const canAccessBanquet = hasModuleAccess("Banquet");
+  const canAccessAssignManger = hasModuleAccess("Assign Manager");
+  const canAccessMenuExtraFeature = hasModuleAccess("Menu Extra Features");
+  const canAccessfollowup = hasModuleAccess("followup");
 
-    const [prepStatus, setPrepStatus] = useState(null);
+  const [prepStatus, setPrepStatus] = useState(null);
 
-useEffect(() => {
-  const fetchStatus = async () => {
-    if (!safeEventId) return;
-    try {
-      const res = await GetPreparationStatus(safeEventId);
-      setPrepStatus(res?.data?.data ?? null);
-    } catch (err) {
-      console.error("Failed to fetch prep status:", err);
+  useEffect(() => {
+    const fetchStatus = async () => {
+      if (!safeEventId) return;
+      try {
+        const res = await GetPreparationStatus(safeEventId);
+        setPrepStatus(res?.data?.data ?? null);
+      } catch (err) {
+        console.error("Failed to fetch prep status:", err);
+      }
+    };
+    if (isModalOpen && safeEventId) {
+      fetchStatus();
     }
-  };
-  if (isModalOpen && safeEventId) {
-    fetchStatus();
-  }
-}, [isModalOpen, safeEventId]);
+  }, [isModalOpen, safeEventId]);
 
-const isCompleted = prepStatus === "COMPLETED";
+  const isCompleted = prepStatus === "COMPLETED";
 
 
   useEffect(() => {
@@ -157,7 +157,7 @@ const isCompleted = prepStatus === "COMPLETED";
         }
       }
 
-    
+
       const i18nConfig = localStorage.getItem("i18nConfig");
       let selectedLang = "en";
 
@@ -240,14 +240,14 @@ const isCompleted = prepStatus === "COMPLETED";
   }, [eventData, isModalOpen]);
 
   useEffect(() => {
-  if (isModalOpen) {
-    setRemarks({
-      english: eventDataAll?.remark || "",
-      gujarati: eventDataAll?.remarksGujarati || "",
-      hindi: eventDataAll?.remarksHindi || "",
-    });
-  }
-}, [isModalOpen, eventDataAll?.remark, eventDataAll?.remarksGujarati, eventDataAll?.remarksHindi]);
+    if (isModalOpen) {
+      setRemarks({
+        english: eventDataAll?.remark || "",
+        gujarati: eventDataAll?.remarksGujarati || "",
+        hindi: eventDataAll?.remarksHindi || "",
+      });
+    }
+  }, [isModalOpen, eventDataAll?.remark, eventDataAll?.remarksGujarati, eventDataAll?.remarksHindi]);
 
   const hasPermission = (rightsList, pageId, type = "view") => {
     const page = rightsList?.find((p) => p.pageid === pageId);
@@ -255,38 +255,38 @@ const isCompleted = prepStatus === "COMPLETED";
   };
 
   const formatCreatedDate = (ddmmyyyy) => {
-  if (!ddmmyyyy) return "N/A";
-  const [day, month, year] = ddmmyyyy.split("/");
-  if (!day || !month || !year) return ddmmyyyy;
-  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-};
+    if (!ddmmyyyy) return "N/A";
+    const [day, month, year] = ddmmyyyy.split("/");
+    if (!day || !month || !year) return ddmmyyyy;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  };
 
-const handleOpenEventHistory = async () => {
-  if (!safeEventId) {
-    errorMsgPopup("Event ID missing.");
-    return;
-  }
-  setIsEventHistoryOpen(true);
-  setEventHistoryLoading(true);
-  try {
-    const email = getUserEmail();
-    const res = await GetUserlogs("", "", "", safeEventId, userId);
-    const allLogs = res?.data?.data || [];
-    // Show every log tied to this event — menu planning, quotation, invoice,
-    // deletion, etc. — sorted newest first.
-    const sorted = Array.isArray(allLogs)
-      ? [...allLogs].sort(
+  const handleOpenEventHistory = async () => {
+    if (!safeEventId) {
+      errorMsgPopup("Event ID missing.");
+      return;
+    }
+    setIsEventHistoryOpen(true);
+    setEventHistoryLoading(true);
+    try {
+      const email = getUserEmail();
+      const res = await GetUserlogs("", "", "", safeEventId, userId);
+      const allLogs = res?.data?.data || [];
+      // Show every log tied to this event — menu planning, quotation, invoice,
+      // deletion, etc. — sorted newest first.
+      const sorted = Array.isArray(allLogs)
+        ? [...allLogs].sort(
           (a, b) => new Date(b.createAt) - new Date(a.createAt)
         )
-      : [];
-    setEventHistoryLogs(sorted);
-  } catch (err) {
-    console.error("Failed to fetch event history:", err);
-    setEventHistoryLogs([]);
-  } finally {
-    setEventHistoryLoading(false);
-  }
-};
+        : [];
+      setEventHistoryLogs(sorted);
+    } catch (err) {
+      console.error("Failed to fetch event history:", err);
+      setEventHistoryLogs([]);
+    } finally {
+      setEventHistoryLoading(false);
+    }
+  };
 
 
   const handleModalClose = () => {
@@ -319,7 +319,7 @@ const handleOpenEventHistory = async () => {
     try {
       const payload = {
         childUserId: 0,
-        eventIds: [Number(safeEventId)], 
+        eventIds: [Number(safeEventId)],
       };
 
       const response = await AssignEventsToChild(payload);
@@ -365,34 +365,34 @@ const handleOpenEventHistory = async () => {
     });
   };
 
-const handleSaveRemarks = async (data) => {
-  if (!safeEventId) {
-    errorMsgPopup("Event ID missing.");
-    return;
-  }
-  try {
-    const payload = {
-      eventId: Number(safeEventId),
-      nameEnglish: data.english,
-      nameGujarati: data.gujarati,
-      nameHindi: data.hindi,
-    };
-
-    const response = await updateeventmaster(payload);
-
-    if (response?.data?.success || response?.success) {
-      setRemarks(data);
-      successMsgPopup("Remarks saved successfully!");
-      setIsRemarksModal(false);
-      onEventsUpdated?.();
-    } else {
-      errorMsgPopup(response?.data?.msg || "Failed to save remarks.");
+  const handleSaveRemarks = async (data) => {
+    if (!safeEventId) {
+      errorMsgPopup("Event ID missing.");
+      return;
     }
-  } catch (error) {
-    errorMsgPopup(error?.data?.msg || "Something went wrong.");
-    console.error("Error saving remarks:", error);
-  }
-};
+    try {
+      const payload = {
+        eventId: Number(safeEventId),
+        nameEnglish: data.english,
+        nameGujarati: data.gujarati,
+        nameHindi: data.hindi,
+      };
+
+      const response = await updateeventmaster(payload);
+
+      if (response?.data?.success || response?.success) {
+        setRemarks(data);
+        successMsgPopup("Remarks saved successfully!");
+        setIsRemarksModal(false);
+        onEventsUpdated?.();
+      } else {
+        errorMsgPopup(response?.data?.msg || "Failed to save remarks.");
+      }
+    } catch (error) {
+      errorMsgPopup(error?.data?.msg || "Something went wrong.");
+      console.error("Error saving remarks:", error);
+    }
+  };
 
   const DeleteEvent = () => {
     Swal.fire({
@@ -412,7 +412,7 @@ const handleSaveRemarks = async (data) => {
           return;
         }
 
-       
+
         const customerName = eventData?.event?._def?.title || "N/A";
         const eventNo = eventDataAll?.eventNo || `#${eventId}`;
         const venueName = eventDataAll?.address || "N/A";
@@ -511,128 +511,128 @@ const handleSaveRemarks = async (data) => {
               </h3>
 
               <p className="text-gray-600">
-  {eventDataAll?.banquetHallName ? (
-  <FormattedMessage
-    id="USER.DASHBOARD.EVENT_VIEW.BANQUET"
-    defaultMessage="Banquet"
-  />
-) : (
-  <FormattedMessage
-    id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_VIEW_DETAILS_VENUE"
-    defaultMessage="Venue"
-  />
-)}
-</p>
-<h3 className="font-semibold text-base mb-2">
-  {eventDataAll?.banquetHallName
-    ? eventDataAll.banquetHallName
-    : translatedAddress || eventDataAll?.address || "N/A"}
-</h3>
+                {eventDataAll?.banquetHallName ? (
+                  <FormattedMessage
+                    id="USER.DASHBOARD.EVENT_VIEW.BANQUET"
+                    defaultMessage="Banquet"
+                  />
+                ) : (
+                  <FormattedMessage
+                    id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_VIEW_DETAILS_VENUE"
+                    defaultMessage="Venue"
+                  />
+                )}
+              </p>
+              <h3 className="font-semibold text-base mb-2">
+                {eventDataAll?.banquetHallName
+                  ? eventDataAll.banquetHallName
+                  : translatedAddress || eventDataAll?.address || "N/A"}
+              </h3>
 
-<p className="text-gray-600">
+              <p className="text-gray-600">
                 <FormattedMessage
                   id="USER.DASHBOARD.DASHBOARD_CALENDAR_CREATED_DATE"
                   defaultMessage="Created Date"
                 />
               </p>
               <h3 className="font-semibold text-base mb-2">
-  {formatCreatedDate(eventDataAll?.createdAt)}
-</h3>
+                {formatCreatedDate(eventDataAll?.createdAt)}
+              </h3>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 space-y-2">
-               {/* <button
-  
-  className="w-full flex items-center justify-between bg-green-50 hover:bg-green-50 transition-all rounded-2xl px-2 py-1 group"
->
-  <div className="flex items-center gap-3">
-    <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-green-100">
-      <i className="ki-filled ki-note text-green-600 text-xl"></i>
-    </div>
-    <div className="flex flex-col items-start">
-      <span className="text-green-600 font-semibold text-sm">
-  <FormattedMessage
-    id="USER.DASHBOARD.EVENT_VIEW.REMARKS"
-    defaultMessage="
+              <button
+                onClick={() => navigate(`/exhibition-quotation/${safeEventId}`)}
+                className="w-full flex items-center justify-between bg-green-50 hover:bg-green-50 transition-all rounded-2xl px-2 py-1 group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-green-100">
+                    <i className="ki-filled ki-note text-green-600 text-xl"></i>
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-green-600 font-semibold text-sm">
+                      <FormattedMessage
+                        id="USER.DASHBOARD.EVENT_VIEW.REMARKS"
+                        defaultMessage="
 Exhibition quotation "
-  />
-</span>
+                      />
+                    </span>
 
-    </div>
-  </div>
-  <i className="ki-filled ki-right text-amber-600 text-sm group-hover:translate-x-1 transition-transform"></i>
-</button>  */}
-  <button
-  onClick={() => setIsRemarksModal(true)}
-  className="w-full flex items-center justify-between bg-amber-50 hover:bg-amber-100 transition-all rounded-2xl px-2 py-1 group"
->
-  <div className="flex items-center gap-3">
-    <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-amber-100">
-      <i className="ki-filled ki-note text-amber-600 text-xl"></i>
-    </div>
-    <div className="flex flex-col items-start">
-      <span className="text-amber-600 font-semibold text-sm">
-  <FormattedMessage
-    id="USER.DASHBOARD.EVENT_VIEW.REMARKS"
-    defaultMessage="Event Remarks"
-  />
-</span>
+                  </div>
+                </div>
+                <i className="ki-filled ki-right text-amber-600 text-sm group-hover:translate-x-1 transition-transform"></i>
+              </button>
+              <button
+                onClick={() => setIsRemarksModal(true)}
+                className="w-full flex items-center justify-between bg-amber-50 hover:bg-amber-100 transition-all rounded-2xl px-2 py-1 group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-amber-100">
+                    <i className="ki-filled ki-note text-amber-600 text-xl"></i>
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-amber-600 font-semibold text-sm">
+                      <FormattedMessage
+                        id="USER.DASHBOARD.EVENT_VIEW.REMARKS"
+                        defaultMessage="Event Remarks"
+                      />
+                    </span>
 
-    </div>
-  </div>
-  <i className="ki-filled ki-right text-amber-600 text-sm group-hover:translate-x-1 transition-transform"></i>
-</button>
+                  </div>
+                </div>
+                <i className="ki-filled ki-right text-amber-600 text-sm group-hover:translate-x-1 transition-transform"></i>
+              </button>
 
 
               {/* Manager View and All Task Button — goes straight to the Manager Details page, which now hosts the All Task / Chef, Outside & Labour View picker */}
               {canAccessAssignManger && (
-              <button
-                onClick={() => navigate(`/event-view/assginMemberview/${safeEventId}`)}
-                className="w-full flex items-center justify-between bg-indigo-50 hover:bg-indigo-100 transition-all rounded-2xl px-2 py-1 group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-indigo-100">
-                    <i className="ki-filled ki-profile-circle text-primary text-xl"></i>
-                  </div>
-
-                  <div className="flex flex-col items-start">
-                    <span className="text-primary font-semibold text-sm">
-                      <FormattedMessage
-                         id="USER.DASHBOARD.EVENT_VIEW.MANAGER_VIEW_ALL_TASK"
-                        defaultMessage="Manager View & Task"
-                      />
-                    </span>
-                  </div>
-                </div>
-
-
-                <i className="ki-filled ki-right text-primary text-sm group-hover:translate-x-1 transition-transform"></i>
-              </button>
-               )} 
-
-
-{ canAccessfollowup &&  (
                 <button
-  onClick={() => setIsFollowUpModalOpen(true)}
-  className="w-full flex items-center justify-between bg-blue-50 hover:bg-blue-100 transition-all rounded-2xl px-2 py-1 group"
->
-  <div className="flex items-center gap-3">
-    <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-blue-100">
-      <i className="ki-filled ki-note text-blue-600 text-xl"></i>
-    </div>
-    <div className="flex flex-col items-start">
-      <span className="text-blue-600 font-semibold text-sm">
-  <FormattedMessage
-    id="USER.DASHBOARD.EVENT_VIEW.REMARKS"
-    defaultMessage="Event Follow Up"
-  />
-</span>
+                  onClick={() => navigate(`/event-view/assginMemberview/${safeEventId}`)}
+                  className="w-full flex items-center justify-between bg-indigo-50 hover:bg-indigo-100 transition-all rounded-2xl px-2 py-1 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-indigo-100">
+                      <i className="ki-filled ki-profile-circle text-primary text-xl"></i>
+                    </div>
 
-    </div>
-  </div>
-  <i className="ki-filled ki-right text-blue-600 text-sm group-hover:translate-x-1 transition-transform"></i>
-</button> 
-)}
+                    <div className="flex flex-col items-start">
+                      <span className="text-primary font-semibold text-sm">
+                        <FormattedMessage
+                          id="USER.DASHBOARD.EVENT_VIEW.MANAGER_VIEW_ALL_TASK"
+                          defaultMessage="Manager View & Task"
+                        />
+                      </span>
+                    </div>
+                  </div>
+
+
+                  <i className="ki-filled ki-right text-primary text-sm group-hover:translate-x-1 transition-transform"></i>
+                </button>
+              )}
+
+
+              {canAccessfollowup && (
+                <button
+                  onClick={() => setIsFollowUpModalOpen(true)}
+                  className="w-full flex items-center justify-between bg-blue-50 hover:bg-blue-100 transition-all rounded-2xl px-2 py-1 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-blue-100">
+                      <i className="ki-filled ki-note text-blue-600 text-xl"></i>
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-blue-600 font-semibold text-sm">
+                        <FormattedMessage
+                          id="USER.DASHBOARD.EVENT_VIEW.REMARKS"
+                          defaultMessage="Event Follow Up"
+                        />
+                      </span>
+
+                    </div>
+                  </div>
+                  <i className="ki-filled ki-right text-blue-600 text-sm group-hover:translate-x-1 transition-transform"></i>
+                </button>
+              )}
 
               {/* Status Section */}
               <div>
@@ -655,11 +655,11 @@ Exhibition quotation "
                     />
                   </option>
                   <option value="3">
-  <FormattedMessage
-    id="USER.DASHBOARD.EVENT_VIEW.STATUS_TENTATIVE"
-    defaultMessage="Tentative"
-  />
-</option>
+                    <FormattedMessage
+                      id="USER.DASHBOARD.EVENT_VIEW.STATUS_TENTATIVE"
+                      defaultMessage="Tentative"
+                    />
+                  </option>
 
                   <option value="1">
                     <FormattedMessage
@@ -674,7 +674,7 @@ Exhibition quotation "
                       defaultMessage="Cancel"
                     />
                   </option>
-                  
+
                 </select>
               </div>
 
@@ -752,7 +752,7 @@ Exhibition quotation "
                   />
                 ),
                 icon: "/media/eventviewicon/labour.png",
-                 path: `/labour-and-other-management/${safeEventId}`,
+                path: `/labour-and-other-management/${safeEventId}`,
                 onClick: () =>
                   navigate(`/labour-and-other-management/${safeEventId}`),
                 show: permissionLabourManagement.view,
@@ -766,7 +766,7 @@ Exhibition quotation "
                   />
                 ),
                 icon: "/media/eventviewicon/dishcost.png",
-                 path: `/dish-costing/${safeEventId}`,
+                path: `/dish-costing/${safeEventId}`,
                 onClick: () => navigate(`/dish-costing/${safeEventId}`),
                 show: permissionDishCosting.view,
               },
@@ -836,26 +836,26 @@ Exhibition quotation "
             ]
               .filter((item) => item.show !== false)
               .map((item, idx) => (
-  <div
-    key={idx}
-    onClick={item.disabled ? undefined : item.onClick}
-    onContextMenu={(e) => handleItemContextMenu(e, item)}
-    className={`bg-white p-4 md:p-6 rounded-xl shadow flex flex-col items-center justify-center min-h-[120px] transition
-      ${item.disabled 
-        ? "opacity-40 cursor-not-allowed" 
-        : "cursor-pointer hover:shadow-md"
-      }`}
-  >
-    <div className="text-blue-600 text-3xl mb-2">
-      <img
-        src={toAbsoluteUrl(item.icon)}
-        alt={item.label}
-        className="w-8 h-8 md:w-10 md:h-10"
-      />
-    </div>
-    <p className="font-large text-gray font-bold text-center">{item.label}</p>
-  </div>
-))}
+                <div
+                  key={idx}
+                  onClick={item.disabled ? undefined : item.onClick}
+                  onContextMenu={(e) => handleItemContextMenu(e, item)}
+                  className={`bg-white p-4 md:p-6 rounded-xl shadow flex flex-col items-center justify-center min-h-[120px] transition
+      ${item.disabled
+                      ? "opacity-40 cursor-not-allowed"
+                      : "cursor-pointer hover:shadow-md"
+                    }`}
+                >
+                  <div className="text-blue-600 text-3xl mb-2">
+                    <img
+                      src={toAbsoluteUrl(item.icon)}
+                      alt={item.label}
+                      className="w-8 h-8 md:w-10 md:h-10"
+                    />
+                  </div>
+                  <p className="font-large text-gray font-bold text-center">{item.label}</p>
+                </div>
+              ))}
           </div>
         </div>
 
@@ -887,15 +887,15 @@ Exhibition quotation "
           )} */}
 
           <button
-  className="bg-gray-700 text-white w-full sm:w-[250px] md:w-[300px] h-12 rounded-md font-medium"
-  onClick={handleOpenEventHistory}
->
-  <i className="ki-filled ki-time"></i>{" "}
-  <FormattedMessage
-    id="USER.DASHBOARD.EVENT_VIEW.HISTORY"
-    defaultMessage="Event History"
-  />
-</button>
+            className="bg-gray-700 text-white w-full sm:w-[250px] md:w-[300px] h-12 rounded-md font-medium"
+            onClick={handleOpenEventHistory}
+          >
+            <i className="ki-filled ki-time"></i>{" "}
+            <FormattedMessage
+              id="USER.DASHBOARD.EVENT_VIEW.HISTORY"
+              defaultMessage="Event History"
+            />
+          </button>
 
 
 
@@ -924,39 +924,39 @@ Exhibition quotation "
               className="bg-primary text-white w-full sm:w-[250px] md:w-[300px] h-12 rounded-md font-medium"
             >
               <FormattedMessage
-  id="USER.DASHBOARD.EVENT_VIEW.CROCKERY_CONFIGURATION"
-  defaultMessage="Crockery Configuration"
-/>
+                id="USER.DASHBOARD.EVENT_VIEW.CROCKERY_CONFIGURATION"
+                defaultMessage="Crockery Configuration"
+              />
             </button>
           )}
 
-     {canAccessBanquet && permissionRoomDetails.view && (
-  <button
-    className="bg-[#0891b2] text-white w-full sm:w-[250px] md:w-[300px] h-12 rounded-md font-medium"
-    onClick={() => setIsRoomModal(true)}
-  >
-    <i className="ki-filled ki-home me-1"></i>
-    <FormattedMessage
-  id="USER.DASHBOARD.EVENT_VIEW.ROOM_DETAILS"
-  defaultMessage="Room Details"
-/>
-  </button>
+          {canAccessBanquet && permissionRoomDetails.view && (
+            <button
+              className="bg-[#0891b2] text-white w-full sm:w-[250px] md:w-[300px] h-12 rounded-md font-medium"
+              onClick={() => setIsRoomModal(true)}
+            >
+              <i className="ki-filled ki-home me-1"></i>
+              <FormattedMessage
+                id="USER.DASHBOARD.EVENT_VIEW.ROOM_DETAILS"
+                defaultMessage="Room Details"
+              />
+            </button>
 
-     )}
+          )}
 
-     {permissions.edit && canAccessAssignManger && (
-  <button
-    className="bg-[#4F46E5] text-white w-full sm:w-[250px] md:w-[300px] h-12 rounded-md font-medium"
-    onClick={() => navigate(`/event-view/eventassignmember/${safeEventId}`)}
-  >
-    <i className="ki-filled ki-people me-1"></i>{" "}
-    <FormattedMessage
-      id="USER.DASHBOARD.EVENT_VIEW.ASSIGN_MANAGER"
-      defaultMessage="Assign Manager"
-    />
-  </button>
-)}
-          
+          {permissions.edit && canAccessAssignManger && (
+            <button
+              className="bg-[#4F46E5] text-white w-full sm:w-[250px] md:w-[300px] h-12 rounded-md font-medium"
+              onClick={() => navigate(`/event-view/eventassignmember/${safeEventId}`)}
+            >
+              <i className="ki-filled ki-people me-1"></i>{" "}
+              <FormattedMessage
+                id="USER.DASHBOARD.EVENT_VIEW.ASSIGN_MANAGER"
+                defaultMessage="Assign Manager"
+              />
+            </button>
+          )}
+
           {permissions.delete && (
             <button
               className="bg-danger text-white w-full sm:w-[250px] md:w-[300px] h-12 rounded-md font-medium"
@@ -988,143 +988,143 @@ Exhibition quotation "
           eventId={menuReportEventId}
         />
 
-       <FollowUpTrackModal
-  isOpen={isFollowUpModalOpen}
-  onClose={() => setIsFollowUpModalOpen(false)}
-  eventId={safeEventId}
-  userId={localStorage.getItem("userId")}
-  canAdd={permFollowUp.add}
-  canEdit={permFollowUp.edit}
-  canDelete={permFollowUp.delete}
+        <FollowUpTrackModal
+          isOpen={isFollowUpModalOpen}
+          onClose={() => setIsFollowUpModalOpen(false)}
+          eventId={safeEventId}
+          userId={localStorage.getItem("userId")}
+          canAdd={permFollowUp.add}
+          canEdit={permFollowUp.edit}
+          canDelete={permFollowUp.delete}
 
-  eventInfo={{
-    customerName: translatedTitle || eventData?.event?._def?.title || "",
-    mobile: eventDataAll?.mobile || "",
-    eventName: eventDataAll?.banquetHallName
-      ? eventDataAll.banquetHallName
-      : translatedAddress || eventDataAll?.address || "",
-    eventDate: eventData?.event?.start?.toLocaleDateString?.("en-CA") || "",
-  }}
-/>
+          eventInfo={{
+            customerName: translatedTitle || eventData?.event?._def?.title || "",
+            mobile: eventDataAll?.mobile || "",
+            eventName: eventDataAll?.banquetHallName
+              ? eventDataAll.banquetHallName
+              : translatedAddress || eventDataAll?.address || "",
+            eventDate: eventData?.event?.start?.toLocaleDateString?.("en-CA") || "",
+          }}
+        />
 
         <RoomDetailsModal
-  isOpen={isRoomModal}
-  onClose={() => setIsRoomModal(false)}
-  eventRooms={eventDataAll?.eventRooms || []}
-/>
-<EventNotes
-  isOpen={isRemarksModal}
-  onClose={() => setIsRemarksModal(false)}
-  notes={remarks}
-  onSave={handleSaveRemarks}
-  itemId={safeEventId}
-/>
+          isOpen={isRoomModal}
+          onClose={() => setIsRoomModal(false)}
+          eventRooms={eventDataAll?.eventRooms || []}
+        />
+        <EventNotes
+          isOpen={isRemarksModal}
+          onClose={() => setIsRemarksModal(false)}
+          notes={remarks}
+          onSave={handleSaveRemarks}
+          itemId={safeEventId}
+        />
 
 
-          {isEventHistoryOpen && (
-  <>
-    <div
-      className="fixed inset-0 bg-black/40 z-50"
-      onClick={() => setIsEventHistoryOpen(false)}
-    />
-    <div
-      className="fixed top-1/2 left-1/2 z-50 bg-white rounded-2xl shadow-2xl custom-scrollbar"
-      style={{ transform: "translate(-50%,-50%)", width: "min(600px,95vw)", maxHeight: "80vh" }}
-    >
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <h3 className="text-base font-bold text-gray-800">
-          Event History
-        </h3>
-        <button
-          onClick={() => setIsEventHistoryOpen(false)}
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100"
-        >
-          ✕
-        </button>
-      </div>
-
-      <div className="px-6 py-4 overflow-y-auto" style={{ maxHeight: "60vh" }}>
-        {eventHistoryLoading ? (
-          <div className="flex justify-center items-center py-10">
-            <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-          </div>
-        ) : eventHistoryLogs.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-10">
-            No history found for this event.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {eventHistoryLogs.map((log) => {
-              const isError = log.eventType?.includes("Error");
-              const isLock = log.eventType?.includes("Lock");
-              const isDelete = log.eventType?.toLowerCase().includes("delete");
-
-              // Derive a readable label + color from the raw eventType string
-              // (e.g. "MenuQuotation_Save" -> "Menu Quotation", "Delete" -> "Delete")
-              const moduleLabel = log.eventType
-                ?.replace(/_Save_Error|_Save|_Lock_Error|_Lock/g, "")
-                ?.replace(/([a-z])([A-Z])/g, "$1 $2") || "Activity";
-
-              const badgeColor = isError
-                ? "bg-red-100 text-red-700"
-                : isDelete
-                  ? "bg-red-100 text-red-700"
-                  : isLock
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-green-100 text-green-700";
-
-              return (
-                <div
-                  key={log.id}
-                  className="border border-gray-200 rounded-lg p-3 bg-gray-50"
+        {isEventHistoryOpen && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/40 z-50"
+              onClick={() => setIsEventHistoryOpen(false)}
+            />
+            <div
+              className="fixed top-1/2 left-1/2 z-50 bg-white rounded-2xl shadow-2xl custom-scrollbar"
+              style={{ transform: "translate(-50%,-50%)", width: "min(600px,95vw)", maxHeight: "80vh" }}
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <h3 className="text-base font-bold text-gray-800">
+                  Event History
+                </h3>
+                <button
+                  onClick={() => setIsEventHistoryOpen(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}>
-                      {moduleLabel}
-                      {isError ? " Failed" : ""}
-                    </span>
-                    <span className="text-xs text-gray-500">{log.createAt}</span>
+                  ✕
+                </button>
+              </div>
+
+              <div className="px-6 py-4 overflow-y-auto" style={{ maxHeight: "60vh" }}>
+                {eventHistoryLoading ? (
+                  <div className="flex justify-center items-center py-10">
+                    <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
                   </div>
-                  {log.user && (
-                    <p className="text-xs text-gray-500 mb-1">By: {log.user}</p>
-                  )}
-                  <div className="text-sm text-gray-700 whitespace-pre-line">
-                    {log.description}
+                ) : eventHistoryLogs.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-10">
+                    No history found for this event.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {eventHistoryLogs.map((log) => {
+                      const isError = log.eventType?.includes("Error");
+                      const isLock = log.eventType?.includes("Lock");
+                      const isDelete = log.eventType?.toLowerCase().includes("delete");
+
+                      // Derive a readable label + color from the raw eventType string
+                      // (e.g. "MenuQuotation_Save" -> "Menu Quotation", "Delete" -> "Delete")
+                      const moduleLabel = log.eventType
+                        ?.replace(/_Save_Error|_Save|_Lock_Error|_Lock/g, "")
+                        ?.replace(/([a-z])([A-Z])/g, "$1 $2") || "Activity";
+
+                      const badgeColor = isError
+                        ? "bg-red-100 text-red-700"
+                        : isDelete
+                          ? "bg-red-100 text-red-700"
+                          : isLock
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-green-100 text-green-700";
+
+                      return (
+                        <div
+                          key={log.id}
+                          className="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}>
+                              {moduleLabel}
+                              {isError ? " Failed" : ""}
+                            </span>
+                            <span className="text-xs text-gray-500">{log.createAt}</span>
+                          </div>
+                          {log.user && (
+                            <p className="text-xs text-gray-500 mb-1">By: {log.user}</p>
+                          )}
+                          <div className="text-sm text-gray-700 whitespace-pre-line">
+                            {log.description}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
-              );
-            })}
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                <button
+                  className="h-9 px-4 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-500 hover:text-gray-700"
+                  onClick={() => setIsEventHistoryOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {contextMenu && (
+          <div
+            className="fixed z-[9999] bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px]"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+              onClick={handleOpenInNewTab}
+            >
+              <i className="ki-filled ki-exit-right-corner text-primary"></i>
+              Open in New Tab
+            </button>
           </div>
         )}
-      </div>
-
-      <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-        <button
-          className="h-9 px-4 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-500 hover:text-gray-700"
-          onClick={() => setIsEventHistoryOpen(false)}
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  </>
-)}
-
-{contextMenu && (
-  <div
-    className="fixed z-[9999] bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px]"
-    style={{ top: contextMenu.y, left: contextMenu.x }}
-    onClick={(e) => e.stopPropagation()}
-  >
-    <button
-      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-      onClick={handleOpenInNewTab}
-    >
-      <i className="ki-filled ki-exit-right-corner text-primary"></i>
-      Open in New Tab
-    </button>
-  </div>
-)}
 
       </CustomModal>
     )

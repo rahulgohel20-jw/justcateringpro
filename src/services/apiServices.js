@@ -3843,8 +3843,6 @@ export const GetAllApprovedPurchase = (userId,page, size) => {
 
 export const generatePurchaseRequestCode = (userId) => {
   return GET(`/purchase-approval/generate-purchase-request-code?userId=${userId}`);
-
-
 };
 
 export const addUpdatePurchaseRequest = (data) => {
@@ -3926,3 +3924,27 @@ export const adduploadsignature = (file, userId) => {
 
   return POST(`/user/upload-signature`, formData);
 };
+
+export const getbyexhibitionevenybuuser  = (eventId , userId) => {
+  return GET(`/exhibition/quotations/by-event-user?eventId=${eventId}&userId=${userId}`);
+};
+
+export const updateehibition = (quotationId , data) => {
+  return PUT(`/exhibition/quotations/update?quotationId=${quotationId}`,data);
+};
+
+export const getExhibitionSetupByEventUser = (eventId, userId) => {
+  return GET(`/exhibition/setup/by-event-user?eventId=${eventId}&userId=${userId}`);
+};
+
+export const saveExhibitionSetup = (data) => {
+  return POST(`/exhibition/setup/add`, data);
+};
+
+export const deleteExhibitionSetupDetail = (id) => {
+  return DELETE(`/exhibition/setup/delete?id=${id}`);
+};
+
+export const deleteExhibitionSetupItemDetail = (id) => {
+  return DELETE(`/exhibition/setup/item/delete?id=${id}`);
+};

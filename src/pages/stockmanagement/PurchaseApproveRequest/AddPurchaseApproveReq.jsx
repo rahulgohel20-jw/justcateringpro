@@ -17,7 +17,6 @@ import dayjs from "dayjs";
 import { TableComponent } from "../../../components/table/TableComponent";
 import {
   GetAllRawMaterialcategory,
-  generatePurchaseRequestCode,
   getRawMaterialbyPurchaseRequestId,
   getpurchaseapprovalbyid,
   addUpdatePurchaseRequest,
@@ -48,8 +47,9 @@ const AddPurchaseApproveReq = () => {
   const mainId = localStorage.getItem("mainId");
 
   // ── Header fields ────────────────────────────────────────────────────────
-  const [requestCode, setRequestCode] = useState("");
-  const [requestCodeLoading, setRequestCodeLoading] = useState(false);
+  // requestCode is only ever populated from the server (edit/approve load).
+  // It's no longer auto-generated on Add, and the field isn't shown there.
+  const [requestCode, setRequestCode] = useState(null);
   // Default both to today so the filters are "ready" as soon as a category is picked
   const [startDate, setStartDate] = useState(() => dayjs());
   const [endDate, setEndDate] = useState(() => dayjs());
@@ -100,32 +100,6 @@ const redirectPath = isApproveMode ? APPROVE_REDIRECT_PATH : ADD_EDIT_REDIRECT_P
   const [approvedBy, setApprovedBy] = useState(0); // TODO: default from logged-in user context if you track one
   const [requestLoading, setRequestLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-
-  // ── Request code ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (isApproveMode) return; // approving an existing request — code already assigned
-
-    let isCurrent = true;
-    setRequestCodeLoading(true);
-
-    generatePurchaseRequestCode(userId)
-      .then((res) => {
-        if (!isCurrent) return;
-        const code = res?.data?.data ?? res?.data ?? res;
-        if (typeof code === "string") setRequestCode(code);
-      })
-      .catch((err) => {
-        console.error("Failed to generate purchase request code:", err);
-      })
-      .finally(() => {
-        if (isCurrent) setRequestCodeLoading(false);
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mainId, isApproveMode]);
 
       // ── Category dropdown ────────────────────────────────────────────────────
   const fetchCategories = useCallback(
@@ -783,16 +757,21 @@ const handleSaveRequest = async () => {
           </div>
 
           <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
-            <div>
-              <label className={labelClass}>
-                <Hash size={16} /> Request Code
-              </label>
-              <input
-                disabled
-                value={requestCodeLoading ? "Generating..." : requestCode}
-                className={`${fieldClass} bg-slate-50 text-slate-400`}
-              />
-            </div>
+            {/* Request Code is server-assigned, not generated on Add — only
+                shown once it actually exists (Edit/Approve, loaded from the
+                stored request). */}
+            {isExistingRequest && (
+              <div>
+                <label className={labelClass}>
+                  <Hash size={16} /> Request Code
+                </label>
+                <input
+                  disabled
+                  value={requestCode}
+                  className={`${fieldClass} bg-slate-50 text-slate-400`}
+                />
+              </div>
+            )}
 
             <div>
               <label className={labelClass}>

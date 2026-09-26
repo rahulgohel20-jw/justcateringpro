@@ -376,6 +376,28 @@ const rawCheckInTime = room.bookingDateChecInTime || "";
                 }
               }
 
+              if (!checkInTime) {
+                if (event.eventStartDateTime) {
+                  const parsed = dayjs(event.eventStartDateTime, [
+                    "DD/MM/YYYY hh:mm A",
+                    "DD/MM/YYYY HH:mm",
+                  ]);
+                  if (parsed.isValid()) checkInTime = parsed.format("HH:mm");
+                }
+                if (!checkInTime) checkInTime = "12:00";
+              }
+
+              if (!checkOutTime) {
+                if (event.eventEndDateTime) {
+                  const parsed = dayjs(event.eventEndDateTime, [
+                    "DD/MM/YYYY hh:mm A",
+                    "DD/MM/YYYY HH:mm",
+                  ]);
+                  if (parsed.isValid()) checkOutTime = parsed.format("HH:mm");
+                }
+                if (!checkOutTime) checkOutTime = "11:00";
+              }
+
               return {
                 id: room.id || Date.now() + Math.random(),
                 eventId: room.eventId || 0,
@@ -858,6 +880,18 @@ const sendLog = useCallback(
         } else if (checkInTime.length > 5 && checkInTime.includes(":")) {
           checkInTime = checkInTime.slice(0, 5);
         }
+        if (!checkInTime) {
+          if (formData.eventStartDateTime) {
+            const parsedStart = dayjs(formData.eventStartDateTime, [
+              "DD/MM/YYYY hh:mm A",
+              "DD/MM/YYYY HH:mm",
+            ]);
+            if (parsedStart.isValid()) {
+              checkInTime = parsedStart.format("HH:mm");
+            }
+          }
+          if (!checkInTime) checkInTime = "12:00";
+        }
 
         let checkOutTime = (room.bookingCheckOutTime || "").trim();
         if (checkOutTime && (checkOutTime.includes("/") || checkOutTime.includes("-"))) {
@@ -870,6 +904,18 @@ const sendLog = useCallback(
           if (parsed.isValid()) checkOutTime = parsed.format("HH:mm");
         } else if (checkOutTime.length > 5 && checkOutTime.includes(":")) {
           checkOutTime = checkOutTime.slice(0, 5);
+        }
+        if (!checkOutTime) {
+          if (formData.eventEndDateTime) {
+            const parsedEnd = dayjs(formData.eventEndDateTime, [
+              "DD/MM/YYYY hh:mm A",
+              "DD/MM/YYYY HH:mm",
+            ]);
+            if (parsedEnd.isValid()) {
+              checkOutTime = parsedEnd.format("HH:mm");
+            }
+          }
+          if (!checkOutTime) checkOutTime = "11:00";
         }
 
         let checkInDate = (room.bookingdate || "").trim();
