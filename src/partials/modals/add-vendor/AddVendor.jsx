@@ -427,7 +427,7 @@ useEffect(() => {
   };
 
   return (
-   <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[1100] p-4">
+   <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-[110] p-4">
       <div
       className="bg-[#F2F7FB] rounded-xl w-full max-w-5xl p-6 relative"
       onClick={(e) => e.stopPropagation()}   
