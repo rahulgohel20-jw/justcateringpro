@@ -118,6 +118,11 @@ const [isVenueTranslating, setIsVenueTranslating] = useState(false);
     not_permissable_item: "",
     internal_staff_discussion: "",
     rate_discussion: "",
+    celbName: "",
+    celbInstaLink: "",
+    celbBirthDate: "",
+    celb_community: "",
+    celbMobileno: "",
     eventRooms: [],
   };
 }, []);
@@ -439,6 +444,14 @@ const rawCheckInTime = room.bookingDateChecInTime || "";
             bride_community: event.bride_community || "",
             brideMobileno: event.brideMobileno || "",
             banquetId: event.banquetHallId || "ODC",
+              celbName: event.celbName || "",
+            celbInstaLink: event.celbInstaLink || "",
+celbBirthDate: event.celbBirthDate
+  ? (dayjs(event.celbBirthDate, ["YYYY-MM-DD", "DD/MM/YYYY"], true).isValid()
+      ? dayjs(event.celbBirthDate, ["YYYY-MM-DD", "DD/MM/YYYY"], true).format("DD/MM/YYYY")
+      : event.celbBirthDate)
+  : "",            celb_community: event.celb_community || "",
+            celbMobileno: event.celbMobileno || "",
             shiftId: event.shiftId || "",
           }));
           setOriginalShiftId(event.shiftId ? String(event.shiftId) : null);

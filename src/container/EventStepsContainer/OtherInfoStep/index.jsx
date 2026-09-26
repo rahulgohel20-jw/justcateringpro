@@ -1,5 +1,5 @@
 import { DatePicker, TimePicker } from "antd";
-import { Crown, Sparkles, BedDouble, Plus, Trash2 } from "lucide-react";
+import { Crown, Sparkles, BedDouble, Plus, Trash2  ,Star } from "lucide-react";
 import MealTypeDropdown from "@/components/dropdowns/MealTypeDropdown";
 import { useEffect, useState, useRef, useMemo } from "react";
 import ManagerDropdown from "@/components/dropdowns/ManagerDropdown";
@@ -228,7 +228,12 @@ useTranslate("remark", "remarksGujarati", "remarksHindi");
       brideBirthDate: date ? dayjs(date).format(dateFormat) : "",
     });
   };
-
+const handleCelbBirthDateChange = (date) => {
+    setFormData({
+      ...formData,
+      celbBirthDate: date ? dayjs(date).format(dateFormat) : "",
+    });
+  };
   const handleCommunityChange = (e) => {
     const { name, value } = e.target;
     if ((value.match(/\d/g) || []).length > 10) return;
@@ -947,7 +952,7 @@ useTranslate("remark", "remarksGujarati", "remarksHindi");
           </div>
         </div>
 
-        {/* ── Bride Information ─────────────────────────────────────────────── */}
+               {/* ── Bride Information ─────────────────────────────────────────────── */}
         <div className="card min-w-full">
           <div className="flex flex-col flex-1">
             <div className="flex flex-wrap items-center gap-2 p-4">
@@ -1060,6 +1065,124 @@ useTranslate("remark", "remarksGujarati", "remarksHindi");
             </div>
           </div>
         </div>
+
+        {/* ── Celebrity Information ─────────────────────────────────────────── */}
+        <div className="card min-w-full">
+          <div className="flex flex-col flex-1">
+            <div className="flex flex-wrap items-center gap-2 p-4">
+              <Star className="text-primary" />
+              <p className="text-base font-medium text-gray-900">
+                <FormattedMessage
+                  id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_DETAILS_CELEBRITY_INFORMATION"
+                  defaultMessage="Celebrity Information"
+                />
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-between items-center border-t border-gray-200 rounded-b-xl gap-3 p-4 grid grid-cols-1 md:grid-cols-3">
+              <div className="flex flex-col">
+                <label className="form-label">
+                  <FormattedMessage
+                    id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_DETAILS_CELEBRITY_NAME"
+                    defaultMessage="Celebrity Name"
+                  />
+                </label>
+                <div className="input">
+                  <i className="ki-filled ki-autobrightness"></i>
+                  <input
+                    className="h-full"
+                    type="text"
+                    name="celbName"
+                    placeholder="Celebrity name"
+                    value={formData.celbName || ""}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <label className="form-label">
+                  <FormattedMessage
+                    id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_DETAILS_CELEBRITY_INSTAGRAM_LINK"
+                    defaultMessage="Instagram Link"
+                  />
+                </label>
+                <div className="input">
+                  <i className="ki-filled ki-instagram"></i>
+                  <input
+                    className="h-full"
+                    type="text"
+                    name="celbInstaLink"
+                    placeholder="Instagram Link"
+                    value={formData.celbInstaLink || ""}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <label className="form-label">
+                  <FormattedMessage
+                    id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_DETAILS_CELEBRITY_BIRTH_DATE"
+                    defaultMessage="Birth Date"
+                  />
+                </label>
+                <DatePicker
+                  className="input"
+                  placeholder="Celebrity Birth Date"
+                  format={dateFormat}
+                  value={
+                    formData.celbBirthDate
+                      ? dayjs(formData.celbBirthDate, dateFormat)
+                      : null
+                  }
+                  onChange={handleCelbBirthDateChange}
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="form-label">
+                  <FormattedMessage
+                    id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_DETAILS_CELEBRITY_COMMUNITY"
+                    defaultMessage="Community"
+                  />
+                </label>
+                <div className="input">
+                  <i className="ki-filled ki-autobrightness"></i>
+                  <input
+                    className="h-full"
+                    type="text"
+                    name="celb_community"
+                    placeholder="Celebrity Community"
+                    value={formData.celb_community || ""}
+                    onChange={handleCommunityChange}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <label className="form-label">
+                  <FormattedMessage
+                    id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_DETAILS_CELEBRITY_PHONE_NUMBER"
+                    defaultMessage="Phone Number"
+                  />
+                </label>
+                <div className="input">
+                  <i className="ki-filled ki-phone"></i>
+                  <input
+                    className="h-full"
+                    type="tel"
+                    maxLength={10}
+                    minLength={10}
+                    name="celbMobileno"
+                    placeholder="Celebrity number"
+                    value={formData.celbMobileno || ""}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        
+      
 
         <AddMeal
           isOpen={showCustomerModal}

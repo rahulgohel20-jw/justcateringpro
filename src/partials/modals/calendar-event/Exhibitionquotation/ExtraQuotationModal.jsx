@@ -5,11 +5,12 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 
 dayjs.extend(customParseFormat);
 
-const PAYMENT_MODES = ["Bank Transfer (RTGS/NEFT)", "Cash", "Cheque", "UPI", "Card"];
+const PAYMENT_MODES = ["Bank Transfer (RTGS/NEFT)", "UPI", "Cash", "Cheque", "Other", "Card"];
 const MODE_TO_API = {
   "Bank Transfer (RTGS/NEFT)": "BANK_TRANSFER",
   Cash: "CASH",
   Cheque: "CHEQUE",
+  Other: "OTHER",
   UPI: "UPI",
   Card: "CARD",
 };
@@ -55,6 +56,8 @@ export default function ExtraQuotationModal({ open, onClose, group, onSave, sect
   }, [open, group]);
 
   const subtotal = useMemo(() => rows.reduce((sum, row) => sum + Number(row.qty || 0) * Number(row.rate || 0), 0), [rows]);
+  const totalQuantity = rows.reduce((sum, row) => sum + Number(row.qty || 0), 0);
+  const totalRate = rows.reduce((sum, row) => sum + Number(row.rate || 0), 0);
   const discount = subtotal * Number(discountPercent || 0) / 100;
   const taxable = subtotal - discount;
   const grandTotal = taxable + taxable * Number(gstPercent || 0) / 100 - taxable * Number(tdsPercent || 0) / 100;
@@ -64,8 +67,8 @@ export default function ExtraQuotationModal({ open, onClose, group, onSave, sect
 
   const updateRow = (id, field, value) => setRows((current) => current.map((row) => row.id === id ? { ...row, [field]: value } : row));
   const updatePayment = (id, field, value) => setPayments((current) => current.map((payment) => payment.id === id ? { ...payment, [field]: value } : payment));
-  const save = () => {
-    onSave({
+  const save = async () => {
+    const saved = await onSave({
       id: group?.id || null,
       groupType: "EXTRA",
       discountPercent: Number(discountPercent || 0),
@@ -73,7 +76,7 @@ export default function ExtraQuotationModal({ open, onClose, group, onSave, sect
       tdsPercent: Number(tdsPercent || 0),
       modules: [{
         id: group?.modules?.[0]?.id || null,
-        moduleType: "ESTIMATE",
+        moduleType: "EXTRA",
         displayOrder: 1,
         discountPercent: Number(discountPercent || 0),
         cgstPercent: Number(gstPercent || 0) / 2,
@@ -91,7 +94,7 @@ export default function ExtraQuotationModal({ open, onClose, group, onSave, sect
         paymentMode: MODE_TO_API[payment.mode] || "BANK_TRANSFER",
       })),
     });
-    onClose();
+    if (saved !== false) onClose();
   };
 
   return (
@@ -116,7 +119,7 @@ export default function ExtraQuotationModal({ open, onClose, group, onSave, sect
                 <td className="px-3 py-2 font-semibold">{amount(Number(row.qty || 0) * Number(row.rate || 0))}</td>
                 <td className="px-3 py-2"><button aria-label="Delete item" onClick={() => setRows((current) => current.filter((item) => item.id !== row.id))} className="text-rose-500"><Trash2 size={14} /></button></td>
               </tr>)}</tbody>
-              <tfoot><tr className="border-t bg-slate-50 font-semibold"><td colSpan="4" className="px-3 py-2 text-right text-[10px] uppercase text-slate-500">Subtotal</td><td className="px-3 py-2">{amount(subtotal)}</td><td /></tr></tfoot>
+              <tfoot><tr className="border-t bg-slate-50 font-semibold"><td colSpan="2" className="px-3 py-2 text-right text-[10px] uppercase text-slate-500">Totals</td><td className="px-3 py-2 text-right">{totalQuantity}</td><td className="px-3 py-2 text-right text-slate-500">{amount(totalRate)}</td><td className="px-3 py-2">{amount(subtotal)}</td><td /></tr></tfoot>
             </table>
             <button onClick={() => setRows((current) => [...current, makeRow()])} className="m-3 inline-flex items-center gap-1 rounded-md border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700"><Plus size={14} /> Add Item</button>
           </div>
@@ -126,7 +129,7 @@ export default function ExtraQuotationModal({ open, onClose, group, onSave, sect
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
               {[ ["Discount (%)", discountPercent, setDiscountPercent], ["GST (%)", gstPercent, setGstPercent], ["TDS (%)", tdsPercent, setTdsPercent] ].map(([label, value, setter]) => <label key={label} className="text-[11px] text-slate-500">{label}<input type="number" min="0" value={value} onChange={(event) => setter(event.target.value)} className="mt-1 w-full rounded border px-3 py-2 text-sm text-slate-800" /></label>)}
             </div>
-            <div className="mt-3 flex justify-between rounded bg-blue-50 px-3 py-2 text-sm font-bold text-blue-700"><span>Grand Total</span><span>{amount(grandTotal)}</span></div>
+            <div className="mt-3 flex justify-between rounded-lg border border-blue-100 bg-slate-50 px-4 py-3 text-sm font-bold text-blue-700"><span>Combined Grand Total</span><span className="text-base">{amount(grandTotal)}</span></div>
           </div>
 
           <div className="mt-4 rounded-lg border bg-white p-4">

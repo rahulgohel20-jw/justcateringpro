@@ -69,9 +69,10 @@ const initialDays = [];
 
 const PAYMENT_MODE_TO_API = {
   "Bank Transfer (RTGS/NEFT)": "BANK_TRANSFER",
+  "UPI": "UPI",
   "Cash": "CASH",
   "Cheque": "CHEQUE",
-  "UPI": "UPI",
+  "Other": "OTHER",
   "Card": "CARD",
 };
 const PAYMENT_MODE_FROM_API = Object.fromEntries(
@@ -148,7 +149,7 @@ function formatEventDate(raw) {
 // now editable per estimate instead of fixed values.
 function calcTotals(
   rows,
-  { tdsPercent = 0, discountPercent = 0, cgstPercent = 2.5, sgstPercent = 2.5, roundOff = 0 } = {}
+  { tdsPercent = 0.0, discountPercent = 0.0, cgstPercent = 2.5, sgstPercent = 2.5, igstPercent = 0, roundOff = 0 } = {}
 ) {
   const subtotal = rows.reduce(
     (sum, row) => sum + Number(row.qty || 0) * Number(row.rate || 0),
@@ -159,7 +160,7 @@ function calcTotals(
   const tds = amountAfterDiscount * (Number(tdsPercent || 0) / 100);
   const cgst = amountAfterDiscount * (Number(cgstPercent || 0) / 100);
   const sgst = amountAfterDiscount * (Number(sgstPercent || 0) / 100);
-  const igst = 0;
+  const igst = amountAfterDiscount * (Number(igstPercent || 0) / 100);
   const roundOffValue = Number(roundOff || 0);
   const grandTotal = amountAfterDiscount + cgst + sgst + igst - tds + roundOffValue;
 
@@ -191,6 +192,8 @@ function EstimateTable({
   onCgstPercentChange,
   sgstPercent,
   onSgstPercentChange,
+  igstPercent,
+  onIgstPercentChange,
   roundOff,
   onRoundOffChange,
 }) {
@@ -199,6 +202,7 @@ function EstimateTable({
     discountPercent,
     cgstPercent,
     sgstPercent,
+    igstPercent,
     roundOff,
   });
  const [open, setOpen] = useState(true); 
@@ -206,7 +210,7 @@ function EstimateTable({
     setRows(
       rows.map((row) =>
         row.id === id
-          ? { ...row, [field]: field === "qty" || field === "rate" ? Number(value) : value }
+          ? { ...row, [field]: value }
           : row
       )
     );
@@ -255,19 +259,10 @@ function EstimateTable({
 <div className={open ? "" : "hidden"}>
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 my-2.5 flex-wrap">
-        <input
-          className="flex-1 min-w-[140px] border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm text-slate-500"
-          placeholder="Search function..."
-        />
+        
         <div className="flex items-center gap-2.5">
         
-          <button
-            onClick={addRow}
-            className="border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-medium flex items-center gap-1"
-          >
-            <Plus size={13} />
-            Add Row
-          </button>
+      
          
         </div>
       </div>
@@ -302,7 +297,8 @@ function EstimateTable({
               </td>
               <td className="py-2 px-1.5 border-b border-slate-200">
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px] text-center"
                   value={row.qty}
                   onChange={(e) => updateRow(row.id, "qty", e.target.value)}
@@ -310,7 +306,8 @@ function EstimateTable({
               </td>
               <td className="py-2 px-1.5 border-b border-slate-200">
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px] text-right"
                   value={row.rate}
                   onChange={(e) => updateRow(row.id, "rate", e.target.value)}
@@ -336,7 +333,7 @@ function EstimateTable({
 
       {/* SUMMARY */}
       <div className="mt-3 border border-slate-200 rounded-xl p-3.5">
-        <div className="text-[12px]">
+        <div className="text-[14px]">
           <div className="flex justify-between items-center py-1">
             <span className="font-semibold text-blue-700">Subtotal</span>
             <span className="font-bold text-slate-800">{money(subtotal)}</span>
@@ -351,12 +348,13 @@ function EstimateTable({
             </div>
             <div className="flex gap-1.5 items-center">
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 step="0.01"
                 min="0"
                 className="w-16 border border-slate-200 rounded-md px-2 py-1 text-xs text-center"
                 value={discountPercent}
-                onChange={(e) => onDiscountPercentChange(Number(e.target.value))}
+                onChange={(e) => onDiscountPercentChange(e.target.value)}
               />
               <span className="text-xs text-slate-500">%</span>
               <input
@@ -374,31 +372,29 @@ function EstimateTable({
           </div>
 
           <div className="flex justify-between items-center py-1.5">
-            <span className="flex items-center gap-2">
-              TDS u/s 194C @
+            <span>TDS u/s 194C</span>
+            <div className="flex items-center gap-2">
               <input
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 className="w-16 border border-slate-200 rounded-md px-2 py-1 text-xs text-center"
                 value={tdsPercent}
-                onChange={(e) => onTdsPercentChange(Number(e.target.value))}
+                onChange={(e) => onTdsPercentChange(e.target.value)}
               />
-              %
-            </span>
-            <span className="text-red-500 font-semibold">-{money(tds)}</span>
+              <span>%</span>
+              <span className="border border-slate-200 bg-slate-50 text-red-500 rounded-md px-3 py-1 min-w-[105px] text-right">-{money(tds)}</span>
+            </div>
           </div>
 
           <div className="flex justify-between items-center py-1.5">
             <span>CGST</span>
             <div className="flex items-center gap-2">
               <input
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 className="w-16 border border-slate-200 rounded-md px-2 py-1 text-xs text-center"
                 value={cgstPercent}
-                onChange={(e) => onCgstPercentChange(Number(e.target.value))}
+                onChange={(e) => onCgstPercentChange(e.target.value)}
               />
               <span>%</span>
               <span className="border border-slate-200 bg-slate-50 text-slate-500 rounded-md px-3 py-1 min-w-[105px] text-right cursor-not-allowed">
@@ -411,12 +407,11 @@ function EstimateTable({
             <span>SGST</span>
             <div className="flex items-center gap-2">
               <input
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 className="w-16 border border-slate-200 rounded-md px-2 py-1 text-xs text-center"
                 value={sgstPercent}
-                onChange={(e) => onSgstPercentChange(Number(e.target.value))}
+                onChange={(e) => onSgstPercentChange(e.target.value)}
               />
               <span>%</span>
               <span className="border border-slate-200 bg-slate-50 text-slate-500 rounded-md px-3 py-1 min-w-[105px] text-right cursor-not-allowed">
@@ -428,20 +423,26 @@ function EstimateTable({
           <div className="flex justify-between items-center py-1.5">
             <span>IGST</span>
             <div className="flex items-center gap-2">
-              <span className="border border-slate-200 rounded-md px-3 py-1">0</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                className="w-16 border border-slate-200 rounded-md px-2 py-1 text-xs text-center"
+                value={igstPercent}
+                onChange={(e) => onIgstPercentChange(e.target.value)}
+              />
               <span>%</span>
-              <span className="border border-slate-200 rounded-md px-3 py-1 min-w-[105px] text-right">{money(igst)}</span>
+              <span className="border border-slate-200 bg-slate-50 text-slate-500 rounded-md px-3 py-1 min-w-[105px] text-right">{money(igst)}</span>
             </div>
           </div>
 
           <div className="flex justify-between items-center py-1.5">
             <span>Round Off</span>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
               className="border border-slate-200 rounded-md px-3 py-1 min-w-[170px] text-right text-xs"
               value={roundOff}
-              onChange={(e) => onRoundOffChange(Number(e.target.value))}
+              onChange={(e) => onRoundOffChange(e.target.value)}
             />
           </div>
 
@@ -489,7 +490,6 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
 
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => onToggle(day.id)}>
           <div className="text-right">
-            <div className="text-[10.5px] text-slate-500">Day Subtotal</div>
             <div className="text-[15px] font-bold text-blue-700">{money(total)}</div>
           </div>
           <ChevronDown size={16} className={`text-slate-500 transition-transform ${day.open ? "" : "-rotate-90"}`} />
@@ -588,7 +588,7 @@ const userId = localStorage.getItem("userId");
    const [estimates, setEstimates] = useState([]);
   const [days, setDays] = useState(initialDays);
   const [notes, setNotes] = useState("");
-const [openSections, setOpenSections] = useState({ s1: true, s2: true, s3: true, s4: true });
+const [openSections, setOpenSections] = useState({ s1: false, s2: false, s3: false, s4: false });
 const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
   // Section 02 and Section 04 now track their own, independent advance
@@ -608,7 +608,7 @@ const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !pre
   // Single statutory TDS rate the user can edit (Section 01's "TDS u/s 194C
   // @ X%" input) — drives every estimate's TDS calc, the combined summary,
   // and the ESTIMATE group/module tdsPercent sent in the payload.
-  const [tdsPercent, setTdsPercent] = useState(0);
+  const [tdsPercent, setTdsPercent] = useState(0.0);
 
   // Backend ids for the top-level groups, filled in once an existing
   // quotation loads (Section 01 estimates = ESTIMATE, Section 03 date-wise
@@ -620,9 +620,9 @@ const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !pre
   const [otherGroupId, setOtherGroupId] = useState(null);
   const [extraGroup, setExtraGroup] = useState({
     id: null,
-    discountPercent: 0,
-    gstPercent: 0,
-    tdsPercent: 0,
+    discountPercent: 0.0,
+    gstPercent: 0.0,
+    tdsPercent: 0.0,
     modules: [],
     payments: [],
   });
@@ -653,9 +653,9 @@ const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !pre
           if (extra) {
             setExtraGroup({
               id: extra.id || null,
-              discountPercent: extra.discountPercent || 0,
-              gstPercent: extra.gstPercent || 0,
-              tdsPercent: extra.tdsPercent || 0,
+              discountPercent: extra.discountPercent || 0.0,
+              gstPercent: extra.gstPercent || 0.0,
+              tdsPercent: extra.tdsPercent || 0.0,
               modules: extra.modules || [],
               payments: extra.payments || [],
             });
@@ -669,9 +669,10 @@ const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !pre
               moduleId: m.id || null,
               title: `Estimate ${String.fromCharCode(65 + idx)}`,
              tag: m.scopeLabel || `Estimate ${String.fromCharCode(65 + idx)}`,
-             discountPercent: typeof m.discountPercent === "number" ? m.discountPercent : 0,
+             discountPercent: typeof m.discountPercent === "number" ? m.discountPercent : 0.0,
              cgstPercent: typeof m.cgstPercent === "number" ? m.cgstPercent : 2.5,
              sgstPercent: typeof m.sgstPercent === "number" ? m.sgstPercent : 2.5,
+             igstPercent: typeof m.igstPercent === "number" ? m.igstPercent : 0.0,
              roundOff: typeof m.roundOff === "number" ? m.roundOff : 0,
              rows: itemsToRows(m.items),
            }));     
@@ -749,15 +750,16 @@ setNotes(quotation.notes ?? "");
   const mobileNumber = eventInfo?.mobileno || "-";
   const eventNameDisplay = eventInfo?.eventType?.nameEnglish || "-";
 
-  // Generic add/update/remove trio, shared by Section 02's and Section 04's
-  // independent advance-payment lists.
-  const createPaymentHandlers = (setter) => ({
+ const createPaymentHandlers = (setter) => ({
     add: () =>
       setter((prev) => [
         ...prev,
         { id: Date.now(), amount: 0, mode: "Bank Transfer (RTGS/NEFT)", dateTime: "", description: "" },
       ]),
-    update: (id, field, value) => setter((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))),
+    update: (id, field, value) => {
+      console.log("[payment update]", { id, field, value }); // ← ADD THIS
+      setter((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+    },
     remove: (id) => setter((prev) => prev.filter((p) => p.id !== id)),
   });
 
@@ -775,9 +777,10 @@ setNotes(quotation.notes ?? "");
           moduleId: null,
           title: `Estimate ${letter}`,
           tag: "Additional Scope",
-          discountPercent: 0,
+          discountPercent: 0.0,
           cgstPercent: 2.5,
           sgstPercent: 2.5,
+          igstPercent: 0.0,
           roundOff: 0,
           rows: [{ id: Date.now(), name: "", qty: 1, rate: 0 }],
         },
@@ -809,9 +812,17 @@ setNotes(quotation.notes ?? "");
     (sum, r) => sum + Number(r.qty || 0) * Number(r.rate || 0),
     0
   );
-  const combinedGST = combinedSubtotal * 0.18;
-  const combinedTDS = combinedSubtotal * (Number(tdsPercent || 0) / 100);
-  const combinedGrandTotal = combinedSubtotal + combinedGST - combinedTDS;
+  const estimateTotals = estimates.map((estimate) => calcTotals(estimate.rows, {
+    tdsPercent,
+    discountPercent: estimate.discountPercent,
+    cgstPercent: estimate.cgstPercent,
+    sgstPercent: estimate.sgstPercent,
+    igstPercent: estimate.igstPercent,
+    roundOff: estimate.roundOff,
+  }));
+  const combinedGST = estimateTotals.reduce((sum, totals) => sum + totals.cgst + totals.sgst + totals.igst, 0);
+  const combinedTDS = estimateTotals.reduce((sum, totals) => sum + totals.tds, 0);
+  const combinedGrandTotal = estimateTotals.reduce((sum, totals) => sum + totals.grandTotal, 0);
   const totalPaidMain = paymentsMain.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 // Section 03 (date-wise) total
 const otherTotal = days.reduce(
@@ -863,11 +874,11 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
       id: estimate.moduleId || null,
       moduleType: MODULE_TYPE_ESTIMATE,
       displayOrder: idx + 1,
-      discountPercent: Number(estimate.discountPercent || 0),
+      discountPercent: Number(estimate.discountPercent || 0.0),
       cgstPercent: Number(estimate.cgstPercent ?? 2.5),
       sgstPercent: Number(estimate.sgstPercent ?? 2.5),
-      igstPercent: 0,
-      tdsPercent,
+      igstPercent: Number(estimate.igstPercent ?? 0.0),
+      tdsPercent: Number(tdsPercent || 0.0),
       roundOff: Number(estimate.roundOff || 0),
       scopeDate: "",
       scopeLabel: estimate.tag || estimate.title,
@@ -879,71 +890,78 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
       id: day.moduleId || null,
       moduleType: MODULE_TYPE_OTHER,
       displayOrder: idx + 1,
-      discountPercent: 0,
-      cgstPercent: 0,
-      sgstPercent: 0,
-      igstPercent: 0,
-      tdsPercent: 0,
-      roundOff: 0,
+      discountPercent: 0.0,
+      cgstPercent: 0.0,
+      sgstPercent: 0.0,
+      igstPercent: 0.0,
+      tdsPercent: 0.0,
+      roundOff: 0.0,
       scopeDate: day.date || "",
       scopeLabel: day.label || "",
       items: rowsToItems(day.rows),
     }));
 
-  const buildPayload = () => ({
-    billingname: billingName,
-    duedate: dueDate,
-    eventId: Number(eventId),
-    quotationCode,
-    quotationdate: quotationDate,
-    gstnumber: gstNumber,
-    notes,
-    userId: Number(userId) || 0,
-    groups: [
-      {
-        id: estimateGroupId || null,
-        groupType: GROUP_TYPE_ESTIMATE,
-        discountPercent: 0,
-        gstPercent: 5, // 2.5% CGST + 2.5% SGST, per estimate row above
-        tdsPercent,
-        modules: buildEstimateModules(),
-        payments: paymentsMain.map(toApiPayment),
-      },
-      {
-        id: otherGroupId || null,
-        groupType: GROUP_TYPE_OTHER,
-        discountPercent: 0,
-        gstPercent: 18, // matches the "Consolidated GST (18%)" shown in Section 02
-        tdsPercent: 0,
-        modules: buildOtherModules(),
-        payments: paymentsFinal.map(toApiPayment),
-      },
-      {
-        // No UI drives this group yet — sent back exactly as fetched so
-        // saving from this screen doesn't blank out anything stored there.
-        id: extraGroup.id || null,
-        groupType: GROUP_TYPE_EXTRA,
-        discountPercent: extraGroup.discountPercent,
-        gstPercent: extraGroup.gstPercent,
-        tdsPercent: extraGroup.tdsPercent,
-        modules: extraGroup.modules,
-        payments: extraGroup.payments,
-      },
-    ],
-  });
+  const buildPayload = () => {
+    console.log("[buildPayload] paymentsMain:", paymentsMain); // ← ADD THIS
+    console.log("[buildPayload] paymentsFinal:", paymentsFinal); // ← ADD THIS
+    console.log("[buildPayload] mapped ESTIMATE payments:", paymentsMain.map(toApiPayment)); // ← ADD THIS
+    console.log("[buildPayload] mapped OTHER payments:", paymentsFinal.map(toApiPayment)); // ← ADD THIS
+
+    return {
+      billingname: billingName,
+      duedate: dueDate,
+      eventId: Number(eventId),
+      quotationCode,
+      quotationdate: quotationDate,
+      gstnumber: gstNumber,
+      notes,
+      userId: Number(userId) || 0,
+      groups: [
+        {
+          id: estimateGroupId || null,
+          groupType: GROUP_TYPE_ESTIMATE,
+          discountPercent: 0.0,
+          gstPercent: 5,
+          tdsPercent: Number(tdsPercent || 0.0),
+          modules: buildEstimateModules(),
+          payments: paymentsMain.map(toApiPayment),
+        },
+        {
+          id: otherGroupId || null,
+          groupType: GROUP_TYPE_OTHER,
+          discountPercent: 0.0,
+          gstPercent: 18,
+          tdsPercent: 0.0,
+          modules: buildOtherModules(),
+          payments: paymentsFinal.map(toApiPayment),
+        },
+        {
+          id: extraGroup.id || null,
+          groupType: GROUP_TYPE_EXTRA,
+          discountPercent: extraGroup.discountPercent,
+          gstPercent: extraGroup.gstPercent,
+          tdsPercent: extraGroup.tdsPercent,
+          modules: extraGroup.modules,
+          payments: extraGroup.payments,
+        },
+      ],
+    };
+  };
 
   // ---- Save / Update the quotation itself ----
-  const handleSaveQuotation = async () => {
+ const handleSaveQuotation = async () => {
     if (!eventId) {
        console.error("Event ID missing.");
       return;
     }
 
-    const payload = buildPayload();
+  const payload = buildPayload();
+    console.log("[handleSaveQuotation] full payload sent to API:", JSON.stringify(payload, null, 2));
 
     setSaving(true);
     try {
           const response = await updateehibition(quotationId, payload);
+          console.log("[handleSaveQuotation] API response:", response);
        const success = response?.data?.success ?? response?.success;
        const message = response?.data?.msg ?? response?.msg ?? "Something went wrong.";
        if (success) {
@@ -955,9 +973,6 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
          const savedId = response?.data?.data?.id ?? response?.data?.id;
 
          if (savedId) setQuotationId(savedId);
-         // Re-fetch so we pick up backend-assigned ids (new modules/items/
-         // payments) and any server-computed totals, instead of trusting
-         // our own optimistic local state.
          await fetchExistingQuotation();
        } else {
         console.error(message);
@@ -1105,16 +1120,28 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
         {label}
       </div>
 
-      <div className="text-[13.5px] font-semibold mt-0.5">
-        {eventInfoLoading ? "Loading..." : value}
-      </div>
+      {label === "Quotation Date" ? (
+        <DatePicker
+          value={quotationDate ? dayjs(quotationDate, [DATE_FORMAT, "YYYY-MM-DD"], true) : null}
+          format={DATE_FORMAT}
+          placeholder="Select quotation date"
+          allowClear={false}
+          className="mt-0.5"
+          style={{ width: "100%" }}
+          onChange={(_, dateString) => setQuotationDate(dateString)}
+        />
+      ) : (
+        <div className="text-[13.5px] font-semibold mt-0.5">
+          {eventInfoLoading ? "Loading..." : value}
+        </div>
+      )}
 
     </div>
   ))}
 
 </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-3">
             <div>
               <div className="text-[11px] text-slate-500 mb-0.5">Billing Name</div>
               <input
@@ -1141,6 +1168,12 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
                 style={{ width: "100%" }}
                 onChange={(_, dateString) => setDueDate(dateString)}
               />
+            </div>
+            <div>
+              <div className="text-[11px] text-slate-500 mb-0.5">Quotation Code</div>
+              <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-[13.5px] font-medium text-slate-700">
+                {quotationCode || "—"}
+              </div>
             </div>
           </div>
         </div>
@@ -1173,12 +1206,14 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
       onDeleteEstimate={() => deleteEstimate(estimate.id)}
       tdsPercent={tdsPercent}
       onTdsPercentChange={setTdsPercent}
-      discountPercent={estimate.discountPercent ?? 0}
+      discountPercent={estimate.discountPercent ?? 0.0}
       onDiscountPercentChange={(val) => updateEstimateField(estimate.id, "discountPercent", val)}
       cgstPercent={estimate.cgstPercent ?? 2.5}
       onCgstPercentChange={(val) => updateEstimateField(estimate.id, "cgstPercent", val)}
       sgstPercent={estimate.sgstPercent ?? 2.5}
       onSgstPercentChange={(val) => updateEstimateField(estimate.id, "sgstPercent", val)}
+      igstPercent={estimate.igstPercent ?? 0}
+      onIgstPercentChange={(val) => updateEstimateField(estimate.id, "igstPercent", val)}
       roundOff={estimate.roundOff ?? 0}
       onRoundOffChange={(val) => updateEstimateField(estimate.id, "roundOff", val)}
     />
@@ -1218,7 +1253,7 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
       <span>{money(combinedSubtotal)}</span>
     </div>
     <div className="flex justify-between py-1.5 text-[13.5px]">
-      <span>Consolidated GST (18%)</span>
+      <span>Total GST (CGST + SGST + IGST)</span>
       <span>{money(combinedGST)}</span>
     </div>
     <div className="flex justify-between py-1.5 text-[13.5px] text-red-600">
@@ -1279,9 +1314,10 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
                     onChange={(e) => mainPayments.update(p.id, "mode", e.target.value)}
                   >
                     <option>Bank Transfer (RTGS/NEFT)</option>
+                    <option>UPI</option>
                     <option>Cash</option>
                     <option>Cheque</option>
-                    <option>UPI</option>
+                    <option>Other</option>
                     <option>Card</option>
                   </select>
                 </div>
@@ -1449,9 +1485,10 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
               onChange={(e) => finalPayments.update(p.id, "mode", e.target.value)}
             >
               <option>Bank Transfer (RTGS/NEFT)</option>
+              <option>UPI</option>
               <option>Cash</option>
               <option>Cheque</option>
-              <option>UPI</option>
+              <option>Other</option>
               <option>Card</option>
             </select>
           </div>
