@@ -57,6 +57,7 @@
           GetPermissableNonPermissable,
           UploadDecorImagePlanning ,
           UploadMenuItemImage,
+          Getmenusubcategory,
           } from "@/services/apiServices";
           import { useMenuPrepStore } from "@/store/useMenuPrepStore";
           import AddMenuItem from "@/partials/modals/add-menu-item/AddMenuItem";
@@ -601,6 +602,242 @@ import { QRCodeCanvas } from "qrcode.react";
           </div>
           );
           };
+
+
+          const SearchWithSubCategorySuggestions = ({
+  value,
+  onChange,
+  selectedCategoryId,
+  selectedSubCategoryId,
+  onSubCategoryChange,
+  userId,
+  isDisabled,
+}) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [subCategories, setSubCategories] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const dropdownRef = useRef(null);
+  const itemRefs = useRef([]);
+
+  const noParentSelected = !selectedCategoryId || selectedCategoryId === 0;
+
+  // Fetch sub-categories whenever the parent category changes
+  useEffect(() => {
+    const fetchSubCats = async () => {
+      if (!userId || noParentSelected) {
+        setSubCategories([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        const res = await Getmenusubcategory(selectedCategoryId, userId);
+        const raw = res?.data?.data?.["Menu Sub Category Details"] || [];
+        setSubCategories(raw);
+      } catch (err) {
+        console.error("Sub-category fetch error:", err);
+        setSubCategories([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSubCats();
+  }, [selectedCategoryId, userId, noParentSelected]);
+
+  // close on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target))
+        setShowDropdown(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // scroll active into view
+  useEffect(() => {
+    if (activeIdx >= 0 && itemRefs.current[activeIdx]) {
+      itemRefs.current[activeIdx].scrollIntoView({ block: "nearest" });
+    }
+  }, [activeIdx]);
+
+  const filtered = useMemo(() => {
+    if (!value.trim()) return subCategories;
+    const lower = value.trim().toLowerCase();
+    return subCategories.filter(
+      (sc) =>
+        (sc.nameEnglish || "").toLowerCase().includes(lower) ||
+        (sc.nameHindi || "").toLowerCase().includes(lower) ||
+        (sc.nameGujarati || "").toLowerCase().includes(lower),
+    );
+  }, [value, subCategories]);
+
+  const highlight = (text, query) => {
+    if (!query || !text) return text;
+    const parts = text.split(
+      new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"),
+    );
+    return parts.map((part, i) =>
+      part.toLowerCase() === query.toLowerCase() ? (
+        <mark key={i} className="rounded px-0.5 bg-blue-100 text-blue-800">
+          {part}
+        </mark>
+      ) : (
+        part
+      ),
+    );
+  };
+
+  const handleSelect = (sc) => {
+    onSubCategoryChange(sc.nameEnglish, sc.id, sc);
+    onChange("");
+    setShowDropdown(false);
+    setActiveIdx(-1);
+  };
+
+  const handleClearSubCategory = () => {
+    onSubCategoryChange("All", 0, {
+      id: 0,
+      nameEnglish: "All",
+      nameHindi: "सभी",
+      nameGujarati: "બધા",
+    });
+    onChange("");
+    setShowDropdown(false);
+    setActiveIdx(-1);
+  };
+
+  const handleKeyDown = (e) => {
+    if (!showDropdown) return;
+    const total = filtered.length + 1; // +1 for "All"
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIdx((p) => Math.min(p + 1, total - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIdx((p) => Math.max(p - 1, -1));
+    } else if (e.key === "Enter" && activeIdx === 0) {
+      handleClearSubCategory();
+    } else if (e.key === "Enter" && activeIdx > 0) {
+      handleSelect(filtered[activeIdx - 1]);
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
+    }
+  };
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <div className="flex items-center gap-1 p-3 border-b">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            className="input input-md w-full pr-7"
+            placeholder={
+              noParentSelected ? "Select a category first" : "Search sub categories"
+            }
+            value={value}
+            autoComplete="off"
+            disabled={isDisabled || noParentSelected}
+            onChange={(e) => {
+              onChange(e.target.value);
+              setShowDropdown(true);
+              setActiveIdx(-1);
+            }}
+            onFocus={() => {
+              if (!noParentSelected) setShowDropdown(true);
+            }}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+            onKeyDown={handleKeyDown}
+          />
+          {value && (
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-base leading-none"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange("");
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showDropdown && !noParentSelected && (
+        <div
+          className="absolute left-0 right-0 z-50 bg-white border border-gray-200 rounded-b-lg shadow-lg overflow-hidden"
+          style={{ top: "100%", maxHeight: 280, overflowY: "auto" }}
+        >
+          <div
+            ref={(el) => (itemRefs.current[0] = el)}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              handleClearSubCategory();
+            }}
+            onMouseEnter={() => setActiveIdx(0)}
+            className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer border-b border-gray-100
+              ${activeIdx === 0 ? "bg-primary" : selectedSubCategoryId === 0 ? "bg-primary/10" : "hover:bg-gray-50"}`}
+          >
+            <span
+              className={`text-sm font-semibold ${activeIdx === 0 ? "text-white" : selectedSubCategoryId === 0 ? "text-primary" : "text-gray-700"}`}
+            >
+              All Sub Categories
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="px-3 py-4 text-sm text-gray-400 text-center flex items-center justify-center gap-2">
+              <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
+              Loading…
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="px-3 py-3 text-sm text-gray-400 text-center">
+              No sub categories found
+            </div>
+          ) : (
+            filtered.map((sc, idx) => {
+              const flatIdx = idx + 1;
+              const isActive = activeIdx === flatIdx;
+              const isSelected = selectedSubCategoryId === sc.id;
+              return (
+                <div
+                  key={sc.id}
+                  ref={(el) => (itemRefs.current[flatIdx] = el)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleSelect(sc);
+                  }}
+                  onMouseEnter={() => setActiveIdx(flatIdx)}
+                  className={`flex items-center gap-2 px-3 py-2.5 cursor-pointer border-b border-gray-50 last:border-0
+                    ${isActive ? "bg-primary" : isSelected ? "bg-primary/10" : "hover:bg-gray-50"}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className={`text-sm truncate font-medium ${isActive ? "text-white" : isSelected ? "text-primary" : "text-gray-900"}`}
+                    >
+                      {highlight(sc.nameEnglish, value)}
+                    </div>
+                    {sc.nameHindi && (
+                      <div
+                        className={`text-xs truncate ${isActive ? "text-white/70" : "text-gray-400"}`}
+                      >
+                        {sc.nameHindi}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+
 const getItemRate = (m) => {
   const p = Number(m?.itemPrice);
   if (p > 0) return p;
@@ -749,6 +986,17 @@ const getItemRate = (m) => {
           const [rawMaterialCategoryFilter, setRawMaterialCategoryFilter] = useState(0);
           const [rawMaterialNameMap, setRawMaterialNameMap] = useState({});
           const lastSavedPermissionRawMaterialsRef = useRef(null);
+          const [selectedSubCategory, setSelectedSubCategory] = useState("All");
+const [selectedSubCategoryId, setSelectedSubCategoryId] = useState(0);
+const [subCategorySearchTerm, setSubCategorySearchTerm] = useState("");
+const [selectedSubCategoryInfo, setSelectedSubCategoryInfo] = useState({
+  id: 0,
+  nameEnglish: "All",
+  nameHindi: "सभी",
+  nameGujarati: "બધા",
+});
+
+
 const [navigatingMode, setNavigatingMode] = useState(null); 
 useEffect(() => {
   setNavigatingMode(null);
@@ -763,6 +1011,35 @@ useEffect(() => {
           if (!bucket || !bucket.categories) return 0;
           return Object.values(bucket.categories).reduce((sum, items) => sum + items.length, 0);
           }, [selectedByFunction, selectedFunction]);
+
+const overLimitItemIds = useMemo(() => {
+  const result = new Set();
+
+  // Only for this specific user
+  if (currentUserId !== 757) return result;
+  if (!selectedFunction || !packageAppliedForFunction[selectedFunction]) return result;
+
+  const limits = packageCategoryLimitsByFunction[selectedFunction] || {};
+  const bucket = selectedByFunction[selectedFunction];
+  if (!bucket || !bucket.categories) return result;
+
+  Object.entries(bucket.categories).forEach(([catName, items]) => {
+    const limit = Number(limits[catName] || 0);
+    // Any positive limit — 1, 2, 3, whatever the package defines
+    if (limit > 0 && items.length > limit) {
+      // Items beyond the allowed count are "extra" — mark them
+      items.slice(limit).forEach((item) => result.add(Number(item.id)));
+    }
+  });
+
+  return result;
+}, [
+  currentUserId,
+  selectedFunction,
+  packageAppliedForFunction,
+  packageCategoryLimitsByFunction,
+  selectedByFunction,
+]);
 
 
           const AI_LOADING_MESSAGES = [
@@ -3544,20 +3821,38 @@ useMenuPrepStore.getState().bumpMenuPrepNotify();
   [],
 );
 
-          const handleCategoryChange = (categoryName, categoryId, categoryInfo) => {
-          setSelectedCategory(categoryName);
-          setSelectedCategoryId(categoryId);
-          if (categoryInfo) {
-            setSelectedCategoryInfo(categoryInfo);
-          } else {
-            setSelectedCategoryInfo({
-              id: 0,
-              nameEnglish: "All",
-              nameHindi: "सभी",
-              nameGujarati: "બધા",
-            });
-          }
-          };
+         const handleCategoryChange = (categoryName, categoryId, categoryInfo) => {
+  setSelectedCategory(categoryName);
+  setSelectedCategoryId(categoryId);
+  if (categoryInfo) {
+    setSelectedCategoryInfo(categoryInfo);
+  } else {
+    setSelectedCategoryInfo({
+      id: 0,
+      nameEnglish: "All",
+      nameHindi: "सभी",
+      nameGujarati: "બધા",
+    });
+  }
+  // sub-category depends on category — clear it out
+  setSelectedSubCategory("All");
+  setSelectedSubCategoryId(0);
+  setSubCategorySearchTerm("");
+  setSelectedSubCategoryInfo({
+    id: 0,
+    nameEnglish: "All",
+    nameHindi: "सभी",
+    nameGujarati: "બધા",
+  });
+};
+
+const handleSubCategoryChange = (subCatName, subCatId, subCatInfo) => {
+  setSelectedSubCategory(subCatName);
+  setSelectedSubCategoryId(subCatId);
+  setSelectedSubCategoryInfo(
+    subCatInfo || { id: 0, nameEnglish: "All", nameHindi: "सभी", nameGujarati: "બધા" },
+  );
+};
 
           const openItemNotesModal = (itemId) => {
           const bucket = selectedByFunction[selectedFunction];
@@ -4339,19 +4634,29 @@ useMenuPrepStore.getState().bumpMenuPrepNotify();
 
           {/* Category column */}
           <div className="w-full lg:w-[30%] border-b lg:border-b-0 lg:border-r flex flex-col flex-shrink-0 lg:min-h-0">
-            <SearchWithCategorySuggestions
-              searchCategoriesFn={cfg.api.searchCategories}
-              value={categorySearchTerm}
-              onChange={(v) => setCategorySearchTerm(v)}
-              onAdd={canEdit ? () => setIsCategoryModalOpen(true) : undefined}
-              selectedCategoryId={selectedCategoryId}
-              onCategoryChange={handleCategoryChange}
-              refreshKey={refreshList}
-              packageCategories={currentPackageCategories}
-              savedCategoriesOrder={selectedByFunction[selectedFunction]?.categoriesOrder || []}
-              isDisabled={isMenuItemLoading}
-              userId={userId}
-            />
+           <SearchWithCategorySuggestions
+  searchCategoriesFn={cfg.api.searchCategories}
+  value={categorySearchTerm}
+  onChange={(v) => setCategorySearchTerm(v)}
+  onAdd={canEdit ? () => setIsCategoryModalOpen(true) : undefined}
+  selectedCategoryId={selectedCategoryId}
+  onCategoryChange={handleCategoryChange}
+  refreshKey={refreshList}
+  packageCategories={currentPackageCategories}
+  savedCategoriesOrder={selectedByFunction[selectedFunction]?.categoriesOrder || []}
+  isDisabled={isMenuItemLoading}
+  userId={userId}
+/>
+
+{/* <SearchWithSubCategorySuggestions
+  value={subCategorySearchTerm}
+  onChange={(v) => setSubCategorySearchTerm(v)}
+  selectedCategoryId={selectedCategoryId}
+  selectedSubCategoryId={selectedSubCategoryId}
+  onSubCategoryChange={handleSubCategoryChange}
+  isDisabled={isMenuItemLoading}
+  userId={userId}
+/> */}
 
             <div className="overflow-x-auto no-scrollbar p-2 flex-shrink-0
                             lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:custom-scrollbar lg:p-3">
@@ -4488,6 +4793,7 @@ useMenuPrepStore.getState().bumpMenuPrepNotify();
             loading={isPrepLoading}
             functionRate={Number(defaultRate) || 0}
             packageInfo={packageInfoByFunction[selectedFunction] || null} 
+             overLimitItemIds={overLimitItemIds}  
               onQtyChange={handleQtyChange}
               mode={mode}
               key={selectedFunction}
@@ -4582,6 +4888,7 @@ useMenuPrepStore.getState().bumpMenuPrepNotify();
                 loading={isPrepLoading}
                 functionRate={Number(defaultRate) || 0}
                 packageInfo={packageInfoByFunction[selectedFunction] || null}
+                overLimitItemIds={overLimitItemIds}
                 onQtyChange={handleQtyChange}
                 mode={mode}
                 key={`sheet-${selectedFunction}`}

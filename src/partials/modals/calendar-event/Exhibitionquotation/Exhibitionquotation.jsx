@@ -28,6 +28,7 @@ import Swal from "sweetalert2";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import ExtraQuotationModal from "./ExtraQuotationModal.jsx";
+import SetupModal from "./SetupModal.jsx";
 // TODO: adjust this import path to match where apiServices actually lives
 // relative to this file (e.g. "../../../services/apiServices").
 import {
@@ -148,7 +149,7 @@ function formatEventDate(raw) {
 // now editable per estimate instead of fixed values.
 function calcTotals(
   rows,
-  { tdsPercent = 0, discountPercent = 0, cgstPercent = 2.5, sgstPercent = 2.5, igstPercent = 0, roundOff = 0 } = {}
+  { tdsPercent = 0.0, discountPercent = 0.0, cgstPercent = 2.5, sgstPercent = 2.5, igstPercent = 0, roundOff = 0 } = {}
 ) {
   const subtotal = rows.reduce(
     (sum, row) => sum + Number(row.qty || 0) * Number(row.rate || 0),
@@ -489,7 +490,6 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
 
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => onToggle(day.id)}>
           <div className="text-right">
-            <div className="text-[10.5px] text-slate-500">Day Subtotal</div>
             <div className="text-[15px] font-bold text-blue-700">{money(total)}</div>
           </div>
           <ChevronDown size={16} className={`text-slate-500 transition-transform ${day.open ? "" : "-rotate-90"}`} />
@@ -583,11 +583,12 @@ export default function ExhibitionQuotation() {
   // eventId comes from the route, e.g. /exhibition-quotation/:eventId
   const { eventId } = useParams();
   const [isExtraQuotationOpen, setIsExtraQuotationOpen] = useState(false);
+  const [isSetupOpen, setIsSetupOpen] = useState(false);
 const userId = localStorage.getItem("userId");
    const [estimates, setEstimates] = useState([]);
   const [days, setDays] = useState(initialDays);
   const [notes, setNotes] = useState("");
-const [openSections, setOpenSections] = useState({ s1: true, s2: true, s3: true, s4: true });
+const [openSections, setOpenSections] = useState({ s1: false, s2: false, s3: false, s4: false });
 const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
   // Section 02 and Section 04 now track their own, independent advance
@@ -607,7 +608,7 @@ const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !pre
   // Single statutory TDS rate the user can edit (Section 01's "TDS u/s 194C
   // @ X%" input) — drives every estimate's TDS calc, the combined summary,
   // and the ESTIMATE group/module tdsPercent sent in the payload.
-  const [tdsPercent, setTdsPercent] = useState(0);
+  const [tdsPercent, setTdsPercent] = useState(0.0);
 
   // Backend ids for the top-level groups, filled in once an existing
   // quotation loads (Section 01 estimates = ESTIMATE, Section 03 date-wise
@@ -619,9 +620,9 @@ const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !pre
   const [otherGroupId, setOtherGroupId] = useState(null);
   const [extraGroup, setExtraGroup] = useState({
     id: null,
-    discountPercent: 0,
-    gstPercent: 0,
-    tdsPercent: 0,
+    discountPercent: 0.0,
+    gstPercent: 0.0,
+    tdsPercent: 0.0,
     modules: [],
     payments: [],
   });
@@ -652,9 +653,9 @@ const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !pre
           if (extra) {
             setExtraGroup({
               id: extra.id || null,
-              discountPercent: extra.discountPercent || 0,
-              gstPercent: extra.gstPercent || 0,
-              tdsPercent: extra.tdsPercent || 0,
+              discountPercent: extra.discountPercent || 0.0,
+              gstPercent: extra.gstPercent || 0.0,
+              tdsPercent: extra.tdsPercent || 0.0,
               modules: extra.modules || [],
               payments: extra.payments || [],
             });
@@ -668,10 +669,10 @@ const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !pre
               moduleId: m.id || null,
               title: `Estimate ${String.fromCharCode(65 + idx)}`,
              tag: m.scopeLabel || `Estimate ${String.fromCharCode(65 + idx)}`,
-             discountPercent: typeof m.discountPercent === "number" ? m.discountPercent : 0,
+             discountPercent: typeof m.discountPercent === "number" ? m.discountPercent : 0.0,
              cgstPercent: typeof m.cgstPercent === "number" ? m.cgstPercent : 2.5,
              sgstPercent: typeof m.sgstPercent === "number" ? m.sgstPercent : 2.5,
-             igstPercent: typeof m.igstPercent === "number" ? m.igstPercent : 0,
+             igstPercent: typeof m.igstPercent === "number" ? m.igstPercent : 0.0,
              roundOff: typeof m.roundOff === "number" ? m.roundOff : 0,
              rows: itemsToRows(m.items),
            }));     
@@ -776,10 +777,10 @@ setNotes(quotation.notes ?? "");
           moduleId: null,
           title: `Estimate ${letter}`,
           tag: "Additional Scope",
-          discountPercent: 0,
+          discountPercent: 0.0,
           cgstPercent: 2.5,
           sgstPercent: 2.5,
-          igstPercent: 0,
+          igstPercent: 0.0,
           roundOff: 0,
           rows: [{ id: Date.now(), name: "", qty: 1, rate: 0 }],
         },
@@ -873,11 +874,11 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
       id: estimate.moduleId || null,
       moduleType: MODULE_TYPE_ESTIMATE,
       displayOrder: idx + 1,
-      discountPercent: Number(estimate.discountPercent || 0),
+      discountPercent: Number(estimate.discountPercent || 0.0),
       cgstPercent: Number(estimate.cgstPercent ?? 2.5),
       sgstPercent: Number(estimate.sgstPercent ?? 2.5),
-      igstPercent: Number(estimate.igstPercent ?? 0),
-      tdsPercent: Number(tdsPercent || 0),
+      igstPercent: Number(estimate.igstPercent ?? 0.0),
+      tdsPercent: Number(tdsPercent || 0.0),
       roundOff: Number(estimate.roundOff || 0),
       scopeDate: "",
       scopeLabel: estimate.tag || estimate.title,
@@ -889,12 +890,12 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
       id: day.moduleId || null,
       moduleType: MODULE_TYPE_OTHER,
       displayOrder: idx + 1,
-      discountPercent: 0,
-      cgstPercent: 0,
-      sgstPercent: 0,
-      igstPercent: 0,
-      tdsPercent: 0,
-      roundOff: 0,
+      discountPercent: 0.0,
+      cgstPercent: 0.0,
+      sgstPercent: 0.0,
+      igstPercent: 0.0,
+      tdsPercent: 0.0,
+      roundOff: 0.0,
       scopeDate: day.date || "",
       scopeLabel: day.label || "",
       items: rowsToItems(day.rows),
@@ -919,18 +920,18 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
         {
           id: estimateGroupId || null,
           groupType: GROUP_TYPE_ESTIMATE,
-          discountPercent: 0,
+          discountPercent: 0.0,
           gstPercent: 5,
-          tdsPercent: Number(tdsPercent || 0),
+          tdsPercent: Number(tdsPercent || 0.0),
           modules: buildEstimateModules(),
           payments: paymentsMain.map(toApiPayment),
         },
         {
           id: otherGroupId || null,
           groupType: GROUP_TYPE_OTHER,
-          discountPercent: 0,
+          discountPercent: 0.0,
           gstPercent: 18,
-          tdsPercent: 0,
+          tdsPercent: 0.0,
           modules: buildOtherModules(),
           payments: paymentsFinal.map(toApiPayment),
         },
@@ -1002,6 +1003,12 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
         sectionLabel={eventNameDisplay}
         onSave={setExtraGroup}
       />
+      <SetupModal
+        open={isSetupOpen}
+        onClose={() => setIsSetupOpen(false)}
+        eventId={eventId}
+        userId={userId}
+      />
       <style>{`
         .scroll-visible {
           scrollbar-width: thin;
@@ -1045,7 +1052,10 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
     Extra Quotation
   </button>
 
-  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+  <button
+    onClick={() => setIsSetupOpen(true)}
+    className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5 hover:bg-slate-50 transition-colors"
+  >
     <Settings size={14} />
     Setup
   </button>
@@ -1196,7 +1206,7 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
       onDeleteEstimate={() => deleteEstimate(estimate.id)}
       tdsPercent={tdsPercent}
       onTdsPercentChange={setTdsPercent}
-      discountPercent={estimate.discountPercent ?? 0}
+      discountPercent={estimate.discountPercent ?? 0.0}
       onDiscountPercentChange={(val) => updateEstimateField(estimate.id, "discountPercent", val)}
       cgstPercent={estimate.cgstPercent ?? 2.5}
       onCgstPercentChange={(val) => updateEstimateField(estimate.id, "cgstPercent", val)}

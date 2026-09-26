@@ -143,7 +143,7 @@ const RegionalLanguageFields = ({
         onChange={(e) => onGujaratiChange(e.target.value)}
       />
     </div>
-    <button
+    {/* <button
       type="button"
       onClick={onTranslate}
       disabled={isTranslating}
@@ -162,7 +162,7 @@ const RegionalLanguageFields = ({
         <Languages size={12} />
       )}
       {isTranslating ? "Translating..." : isTranslated ? "Translated" : "Translate"}
-    </button>
+    </button> */}
   </div>
 );
 
@@ -1541,7 +1541,7 @@ const [isSetupOpen, setIsSetupOpen] = useState(false);
                       <button
                         onClick={() => openSubHeadingInput(heading.id)}
                         className="flex items-center gap-1 text-xs text-primary border border-primary px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-colors font-medium"
-                        title="Add Remark"
+                        title="Add Remarks"
                       >
                         <Plus size={13} />
                         <FormattedMessage id="USER.EXTRA_CHARGES.ADD_SUB_HEADING_BTN" defaultMessage="Add Remarks" />
