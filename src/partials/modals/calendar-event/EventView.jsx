@@ -542,7 +542,7 @@ const handleSaveRemarks = async (data) => {
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 space-y-2">
                {/* <button
-  
+   onClick={() => navigate(`/exhibition-quotation/${safeEventId}`)}
   className="w-full flex items-center justify-between bg-green-50 hover:bg-green-50 transition-all rounded-2xl px-2 py-1 group"
 >
   <div className="flex items-center gap-3">

@@ -3843,8 +3843,6 @@ export const GetAllApprovedPurchase = (userId,page, size) => {
 
 export const generatePurchaseRequestCode = (userId) => {
   return GET(`/purchase-approval/generate-purchase-request-code?userId=${userId}`);
-
-
 };
 
 export const addUpdatePurchaseRequest = (data) => {
@@ -3925,4 +3923,12 @@ export const adduploadsignature = (file, userId) => {
   formData.append("userId", userId);
 
   return POST(`/user/upload-signature`, formData);
+};
+
+export const getbyexhibitionevenybuuser  = (eventId , userId) => {
+  return GET(`/exhibition/quotations/by-event-user?eventId=${eventId}&userId=${userId}`);
+};
+
+export const updateehibition = (quotationId , data) => {
+  return PUT(`/exhibition/quotations/update?quotationId=${quotationId}`,data);
 };

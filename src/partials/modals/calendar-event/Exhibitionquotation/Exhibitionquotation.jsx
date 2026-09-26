@@ -1,66 +1,205 @@
-import { useState } from "react";
-import { Trash2, Lock, Plus, Calendar, ChevronDown, IndianRupee, Clock, Bell, Wallet } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import {
+  Trash2,
+  Lock,
+  Plus,
+  Calendar,
+  ChevronDown,
+  FilePlus2,
+  Settings,
+  Printer,
+  Save,
+  ClipboardList,
+  Palette,
+  Pencil,
+  User,
+  MapPin,
+  Phone,
+  Wallet,
+  IndianRupee,
+  Clock,
+  Bell,
+  Presentation,
+  Store,
+} from "lucide-react";
 import { DatePicker } from "antd";
+import Swal from "sweetalert2";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import ExtraQuotationModal from "./ExtraQuotationModal.jsx";
+// TODO: adjust this import path to match where apiServices actually lives
+// relative to this file (e.g. "../../../services/apiServices").
+import {
+  GetEventMasterById,
+  getbyexhibitionevenybuuser,
+  updateehibition,
+} from "@/services/apiServices";
 
 dayjs.extend(customParseFormat);
 
 const DATE_FORMAT = "DD/MM/YYYY";
-const initialA = [
-  { id: 1, name: "Main Exhibition Hall A", qty: 2, rate: 45000 },
-  { id: 2, name: "Stall Octanorm No. 12", qty: 15, rate: 3500 },
-  { id: 3, name: "Fascia Board & Lighting", qty: 6, rate: 1200 },
-];
+const DATE_TIME_FORMAT = "DD/MM/YYYY hh:mm A";
 
-const initialDays = [
-  {
-    id: "d1",
-    date: "09/09/2026",
-    label: "Day 1 Rigging & Floor",
-    open: true,
-    rows: [
-      { id: 1, name: "Heavy Duty Carpet Installation 500 sqm", qty: 500, rate: 65 },
-      { id: 2, name: "VIP Lounge Modular Sofas", qty: 8, rate: 2200 },
-    ],
-  },
-  {
-    id: "d2",
-    date: "10/09/2026",
-    label: "Day 2 AV & Console Tech",
-    open: true,
-    rows: [
-      { id: 1, name: "Sound System & PA Console setup", qty: 1, rate: 18000 },
-      { id: 2, name: "Plasma Display 65-inch with Stand", qty: 3, rate: 4500 },
-    ],
-  },
-];
+const initialDays = [];
+
+/* =============================================================================
+   API PAYLOAD MAPPING
+   -----------------------------------------------------------------------------
+   These constants/helpers turn the on-screen state (estimates / days / payments)
+   into the backend payload shape you shared. Confirmed against a real GET
+   response: groupType has three values — ESTIMATE (Section 01), OTHER
+   (Section 03 date-wise), and EXTRA (the "Extra Quotation" button, which has
+   no UI here yet — its group is round-tripped unchanged so saving from this
+   screen doesn't wipe it out). Still worth double-checking:
+
+   1. PAYMENT_MODE_TO_API — only "BANK_TRANSFER" was confirmed; CASH, CHEQUE,
+      UPI, CARD are guesses. Confirm these match your backend enum exactly.
+   2. Section 01 (estimates) modules now carry their own discountPercent,
+      cgstPercent, sgstPercent and roundOff (each estimate is editable
+      independently instead of a single hardcoded 2.5%/2.5%/0).
+   3. Advance payments are now two separate lists on screen — Section 02's
+      list is sent under the ESTIMATE group, Section 04's list is sent under
+      the OTHER group. Previously all payments were pooled under ESTIMATE and
+      OTHER's payments were always sent as [].
+   4. quotationCode/quotationdate have no editable UI — whatever the backend
+      returned on fetch is echoed back unchanged on save.
+============================================================================= */
+
+const PAYMENT_MODE_TO_API = {
+  "Bank Transfer (RTGS/NEFT)": "BANK_TRANSFER",
+  "Cash": "CASH",
+  "Cheque": "CHEQUE",
+  "UPI": "UPI",
+  "Card": "CARD",
+};
+const PAYMENT_MODE_FROM_API = Object.fromEntries(
+  Object.entries(PAYMENT_MODE_TO_API).map(([label, code]) => [code, label])
+);
+
+const GROUP_TYPE_ESTIMATE = "ESTIMATE";
+const GROUP_TYPE_OTHER = "OTHER";
+const GROUP_TYPE_EXTRA = "EXTRA"; // "Extra Quotation" button — no UI yet, round-tripped as-is
+const MODULE_TYPE_ESTIMATE = "ESTIMATE";
+const MODULE_TYPE_OTHER = "OTHER";
+
+// New rows/estimates/days are keyed with Date.now(), which is always far
+// bigger than any real DB id — used to tell "not yet saved" apart from
+// "already has a backend id" without changing the existing id scheme.
+const CLIENT_ID_THRESHOLD = 1_000_000;
+const toBackendId = (id) =>
+  typeof id === "number" && id > 0 && id < CLIENT_ID_THRESHOLD ? id : null;
+
+function toApiPayment(p) {
+  return {
+    id: toBackendId(p.id),
+    amount: Number(p.amount || 0),
+    paymentDateTime: p.dateTime || "",
+    paymentDescription: p.description || "",
+    paymentMode: PAYMENT_MODE_TO_API[p.mode] || "BANK_TRANSFER",
+  };
+}
+
+function fromApiPayment(p) {
+  return {
+    id: p.id || Date.now() + Math.random(),
+    amount: p.amount,
+    mode: PAYMENT_MODE_FROM_API[p.paymentMode] || p.paymentMode,
+    dateTime: p.paymentDateTime,
+    description: p.paymentDescription,
+  };
+}
+
+function itemsToRows(items) {
+  return (items || []).map((it) => ({
+    id: it.id || Date.now() + Math.random(),
+    name: it.particularsName,
+    qty: it.quantity,
+    rate: it.rate,
+  }));
+}
+
+function rowsToItems(rows) {
+  return rows.map((row, idx) => ({
+    id: toBackendId(row.id) || null,
+    displayOrder: idx + 1,
+    particularsName: row.name,
+    quantity: Number(row.qty || 0),
+    rate: Number(row.rate || 0),
+  }));
+}
 
 function money(n) {
-  return "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Pulls "DD/MM/YYYY hh:mm A" (or plain "DD/MM/YYYY") down to just the date
+// part for display in the header card.
+function formatEventDate(raw) {
+  if (!raw) return "-";
+  const datePart = String(raw).split(" ")[0];
+  const parsed = dayjs(datePart, "DD/MM/YYYY", true);
+  return parsed.isValid() ? parsed.format("DD MMMM YYYY") : datePart;
 }
 
 // Shared totals calc so the per-estimate card and the combined summary
-// never drift apart.
-function calcTotals(rows) {
+// never drift apart. discountPercent/cgstPercent/sgstPercent/roundOff are
+// now editable per estimate instead of fixed values.
+function calcTotals(
+  rows,
+  { tdsPercent = 0, discountPercent = 0, cgstPercent = 2.5, sgstPercent = 2.5, roundOff = 0 } = {}
+) {
   const subtotal = rows.reduce(
     (sum, row) => sum + Number(row.qty || 0) * Number(row.rate || 0),
     0
   );
-  const discount = 0;
+  const discount = subtotal * (Number(discountPercent || 0) / 100);
   const amountAfterDiscount = subtotal - discount;
-  const tds = amountAfterDiscount * 0.02;
-  const cgst = amountAfterDiscount * 0.025;
-  const sgst = amountAfterDiscount * 0.025;
+  const tds = amountAfterDiscount * (Number(tdsPercent || 0) / 100);
+  const cgst = amountAfterDiscount * (Number(cgstPercent || 0) / 100);
+  const sgst = amountAfterDiscount * (Number(sgstPercent || 0) / 100);
   const igst = 0;
-  const roundOff = 0;
-  const grandTotal = amountAfterDiscount + cgst + sgst + igst - tds + roundOff;
+  const roundOffValue = Number(roundOff || 0);
+  const grandTotal = amountAfterDiscount + cgst + sgst + igst - tds + roundOffValue;
 
-  return { subtotal, discount, amountAfterDiscount, tds, cgst, sgst, igst, roundOff, grandTotal };
+  return {
+    subtotal,
+    discount,
+    amountAfterDiscount,
+    tds,
+    cgst,
+    sgst,
+    igst,
+    roundOff: roundOffValue,
+    grandTotal,
+  };
 }
 
-function EstimateTable({ title, tag, rows, setRows, onDeleteEstimate, canDelete }) {
-  const { subtotal, amountAfterDiscount, tds, cgst, sgst, igst, roundOff, grandTotal } = calcTotals(rows);
+function EstimateTable({
+  title,
+  tag,
+  rows,
+  setRows,
+  onDeleteEstimate,
+  canDelete,
+  tdsPercent,
+  onTdsPercentChange,
+  discountPercent,
+  onDiscountPercentChange,
+  cgstPercent,
+  onCgstPercentChange,
+  sgstPercent,
+  onSgstPercentChange,
+  roundOff,
+  onRoundOffChange,
+}) {
+  const { subtotal, discount, amountAfterDiscount, tds, cgst, sgst, igst, grandTotal } = calcTotals(rows, {
+    tdsPercent,
+    discountPercent,
+    cgstPercent,
+    sgstPercent,
+    roundOff,
+  });
  const [open, setOpen] = useState(true); 
   const updateRow = (id, field, value) => {
     setRows(
@@ -133,6 +272,7 @@ function EstimateTable({ title, tag, rows, setRows, onDeleteEstimate, canDelete 
       </div>
 
       {/* Estimate Rows */}
+      <div className="overflow-x-auto scroll-visible">
       <table className="w-full border-collapse text-[13px]">
         <thead>
           <tr>
@@ -187,32 +327,14 @@ function EstimateTable({ title, tag, rows, setRows, onDeleteEstimate, canDelete 
           ))}
         </tbody>
       </table>
+      </div>
 
-      <button onClick={addRow} className="text-blue-600 text-[13px] font-semibold py-2 px-1">
+      <button onClick={addRow} className="text-primary text-[13px] font-semibold py-2 px-1">
         + Add Row
       </button>
 
-      {/* TAX + SUMMARY - 2 COLUMNS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-3 border border-slate-200 rounded-xl p-3.5">
-        {/* LEFT COLUMN */}
-        <div className="flex items-start">
-          <div>
-            <div className="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">
-              TAX &amp; STATUTORY NOTES
-            </div>
-            <div className="border border-slate-200 rounded-lg p-3 text-[11.5px] leading-relaxed text-slate-500 max-w-[330px]">
-              <div className="flex gap-2">
-                <span className="text-blue-600 mt-0.5">♢</span>
-                <span>
-                  Standard interstate GST levied at 18% (9% CGST + 9% SGST). TDS deductible under Section
-                  194C @ 2% on contractor payments.
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN */}
+      {/* SUMMARY */}
+      <div className="mt-3 border border-slate-200 rounded-xl p-3.5">
         <div className="text-[12px]">
           <div className="flex justify-between items-center py-1">
             <span className="font-semibold text-blue-700">Subtotal</span>
@@ -223,12 +345,25 @@ function EstimateTable({ title, tag, rows, setRows, onDeleteEstimate, canDelete 
             <div>
               <div className="text-red-500 font-semibold">Discount</div>
               <div className="text-[10px] text-slate-400">
-                Click % to add discount by percentage, or ₹ to add discount by amount.
+                Enter a discount percentage — the amount is calculated automatically.
               </div>
             </div>
-            <div className="flex gap-1.5">
-              <input className="w-12 border border-slate-200 rounded-md px-2 py-1 text-xs text-center" defaultValue="%" />
-              <input className="w-24 border border-slate-200 rounded-md px-2 py-1 text-xs text-right" defaultValue="₹ 0.00" />
+            <div className="flex gap-1.5 items-center">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="w-16 border border-slate-200 rounded-md px-2 py-1 text-xs text-center"
+                value={discountPercent}
+                onChange={(e) => onDiscountPercentChange(Number(e.target.value))}
+              />
+              <span className="text-xs text-slate-500">%</span>
+              <input
+                className="w-24 border border-slate-200 bg-slate-50 text-slate-500 rounded-md px-2 py-1 text-xs text-right cursor-not-allowed"
+                value={money(discount)}
+                disabled
+                readOnly
+              />
             </div>
           </div>
 
@@ -238,25 +373,54 @@ function EstimateTable({ title, tag, rows, setRows, onDeleteEstimate, canDelete 
           </div>
 
           <div className="flex justify-between items-center py-1.5">
-            <span>TDS u/s 194C @ 2%</span>
+            <span className="flex items-center gap-2">
+              TDS u/s 194C @
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="w-16 border border-slate-200 rounded-md px-2 py-1 text-xs text-center"
+                value={tdsPercent}
+                onChange={(e) => onTdsPercentChange(Number(e.target.value))}
+              />
+              %
+            </span>
             <span className="text-red-500 font-semibold">-{money(tds)}</span>
           </div>
 
           <div className="flex justify-between items-center py-1.5">
             <span>CGST</span>
             <div className="flex items-center gap-2">
-              <span className="border border-slate-200 rounded-md px-3 py-1">2.5</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="w-16 border border-slate-200 rounded-md px-2 py-1 text-xs text-center"
+                value={cgstPercent}
+                onChange={(e) => onCgstPercentChange(Number(e.target.value))}
+              />
               <span>%</span>
-              <span className="border border-slate-200 rounded-md px-3 py-1 min-w-[105px] text-right">{money(cgst)}</span>
+              <span className="border border-slate-200 bg-slate-50 text-slate-500 rounded-md px-3 py-1 min-w-[105px] text-right cursor-not-allowed">
+                {money(cgst)}
+              </span>
             </div>
           </div>
 
           <div className="flex justify-between items-center py-1.5">
             <span>SGST</span>
             <div className="flex items-center gap-2">
-              <span className="border border-slate-200 rounded-md px-3 py-1">2.5</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                className="w-16 border border-slate-200 rounded-md px-2 py-1 text-xs text-center"
+                value={sgstPercent}
+                onChange={(e) => onSgstPercentChange(Number(e.target.value))}
+              />
               <span>%</span>
-              <span className="border border-slate-200 rounded-md px-3 py-1 min-w-[105px] text-right">{money(sgst)}</span>
+              <span className="border border-slate-200 bg-slate-50 text-slate-500 rounded-md px-3 py-1 min-w-[105px] text-right cursor-not-allowed">
+                {money(sgst)}
+              </span>
             </div>
           </div>
 
@@ -271,7 +435,13 @@ function EstimateTable({ title, tag, rows, setRows, onDeleteEstimate, canDelete 
 
           <div className="flex justify-between items-center py-1.5">
             <span>Round Off</span>
-            <span className="border border-slate-200 rounded-md px-3 py-1 min-w-[170px] text-right">{roundOff}</span>
+            <input
+              type="number"
+              step="0.01"
+              className="border border-slate-200 rounded-md px-3 py-1 min-w-[170px] text-right text-xs"
+              value={roundOff}
+              onChange={(e) => onRoundOffChange(Number(e.target.value))}
+            />
           </div>
 
           <div className="flex justify-between items-center border-t border-slate-200 mt-1 pt-2">
@@ -327,6 +497,7 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
 
       {day.open && (
         <div className="mt-3">
+          <div className="overflow-x-auto scroll-visible">
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr>
@@ -375,7 +546,8 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
               ))}
             </tbody>
           </table>
-          <button onClick={() => onAddRow(day.id)} className="text-blue-600 text-[13px] font-semibold py-2 px-1">
+          </div>
+          <button onClick={() => onAddRow(day.id)} className="text-primary text-[13px] font-semibold py-2 px-1">
             + Add Particulars Row
           </button>
           <div className="flex justify-between items-center text-[12.5px] mt-2">
@@ -392,7 +564,7 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
 }
 function SectionHeader({ no, title, open, onToggle, right }) {
   return (
-    <div className="flex justify-between items-center text-[12px] font-bold text-blue-600 tracking-wide mt-5 mb-2">
+    <div className="flex justify-between items-center text-[12px] font-bold text-primary tracking-wide mt-5 mb-2">
       <button type="button" onClick={onToggle} className="flex items-center gap-2 text-left">
         <ChevronDown size={16} className={`text-slate-500 transition-transform ${open ? "" : "-rotate-90"}`} />
         <span className="text-[13px] font-extrabold text-blue-800 tracking-tight">
@@ -407,41 +579,188 @@ function SectionHeader({ no, title, open, onToggle, right }) {
 }
 
 export default function ExhibitionQuotation() {
-  const [estimates, setEstimates] = useState([
-    {
-      id: "estimate-a",
-      title: "Estimate A",
-      tag: "Primary Hall Scope",
-      rows: initialA,
-    },
-  ]);
+  // eventId comes from the route, e.g. /exhibition-quotation/:eventId
+  const { eventId } = useParams();
+  const [isExtraQuotationOpen, setIsExtraQuotationOpen] = useState(false);
+const userId = localStorage.getItem("userId");
+   const [estimates, setEstimates] = useState([]);
   const [days, setDays] = useState(initialDays);
+  const [notes, setNotes] = useState("");
 const [openSections, setOpenSections] = useState({ s1: true, s2: true, s3: true, s4: true });
 const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
-const [payments, setPayments] = useState([
-    {
-      id: 1,
-      amount: 100000,
-      mode: "Bank Transfer (RTGS/NEFT)",
-      dateTime: "18/02/2026 04:50 PM",
-      description: "Ref: Advance Hall Booking #TXN-4921",
-    },
-  ]);
 
-  const addPayment = () => {
-    setPayments((prev) => [
-      ...prev,
-      { id: Date.now(), amount: 0, mode: "Bank Transfer (RTGS/NEFT)", dateTime: "", description: "" },
-    ]);
+  // Section 02 and Section 04 now track their own, independent advance
+  // payment lists rather than sharing one array.
+  const [paymentsMain, setPaymentsMain] = useState([]); // Section 02 — advance against Section 01 estimates
+  const [paymentsFinal, setPaymentsFinal] = useState([]); // Section 04 — advance against the combined final total
+
+  // ---- Fields the update payload needs that were previously uncontrolled
+  // (defaultValue) inputs. Wiring these to state doesn't change how they
+  // look — it just lets their edited values actually get saved. ----
+ const [billingName, setBillingName] = useState("");
+  const [gstNumber, setGstNumber] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [quotationDate, setQuotationDate] = useState("");
+  const [quotationCode, setQuotationCode] = useState(""); // backend generates this; we just echo it back
+
+  // Single statutory TDS rate the user can edit (Section 01's "TDS u/s 194C
+  // @ X%" input) — drives every estimate's TDS calc, the combined summary,
+  // and the ESTIMATE group/module tdsPercent sent in the payload.
+  const [tdsPercent, setTdsPercent] = useState(0);
+
+  // Backend ids for the top-level groups, filled in once an existing
+  // quotation loads (Section 01 estimates = ESTIMATE, Section 03 date-wise
+  // scope = OTHER). There's also an EXTRA group (for "Extra Quotation") that
+  // has no UI yet — we keep its raw content so saving doesn't wipe it out.
+  // null means "not created on the backend yet"; a real id is only ever set
+  // from a GET response.
+  const [estimateGroupId, setEstimateGroupId] = useState(null);
+  const [otherGroupId, setOtherGroupId] = useState(null);
+  const [extraGroup, setExtraGroup] = useState({
+    id: null,
+    discountPercent: 0,
+    gstPercent: 0,
+    tdsPercent: 0,
+    modules: [],
+    payments: [],
+  });
+
+  // ---- Event header info (party / venue / date / mobile / event name) ----
+  const [eventInfo, setEventInfo] = useState(null);
+  const [eventInfoLoading, setEventInfoLoading] = useState(false);
+
+  // Existing saved quotation, if any — lets us tell "create" from "update".
+  const [quotationId, setQuotationId] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  // Pulled out to component scope (not just inside the effect) so
+  // handleSaveQuotation can also call it, to refresh state with the
+  // backend's ids/computed totals after a successful save.
+  const fetchExistingQuotation = async () => {
+    try {
+      const res = await getbyexhibitionevenybuuser(eventId, userId);
+      const quotation = res?.data?.data ?? res?.data;
+      if (quotation) {
+        setQuotationId(quotation.id ?? null);
+
+        if (Array.isArray(quotation.groups)) {
+          // New (groups-based) schema — same shape the update payload uses.
+          const estimateGroup = quotation.groups.find((g) => g.groupType === GROUP_TYPE_ESTIMATE);
+          const otherGroup = quotation.groups.find((g) => g.groupType === GROUP_TYPE_OTHER);
+          const extra = quotation.groups.find((g) => g.groupType === GROUP_TYPE_EXTRA);
+          if (extra) {
+            setExtraGroup({
+              id: extra.id || null,
+              discountPercent: extra.discountPercent || 0,
+              gstPercent: extra.gstPercent || 0,
+              tdsPercent: extra.tdsPercent || 0,
+              modules: extra.modules || [],
+              payments: extra.payments || [],
+            });
+          }
+
+          if (estimateGroup) {
+                  setEstimateGroupId(estimateGroup.id || null);
+            setTdsPercent(typeof estimateGroup.tdsPercent === "number" ? estimateGroup.tdsPercent : 0);
+            const mappedEstimates = (estimateGroup.modules || []).map((m, idx) => ({
+              id: `estimate-${idx}`,
+              moduleId: m.id || null,
+              title: `Estimate ${String.fromCharCode(65 + idx)}`,
+             tag: m.scopeLabel || `Estimate ${String.fromCharCode(65 + idx)}`,
+             discountPercent: typeof m.discountPercent === "number" ? m.discountPercent : 0,
+             cgstPercent: typeof m.cgstPercent === "number" ? m.cgstPercent : 2.5,
+             sgstPercent: typeof m.sgstPercent === "number" ? m.sgstPercent : 2.5,
+             roundOff: typeof m.roundOff === "number" ? m.roundOff : 0,
+             rows: itemsToRows(m.items),
+           }));     
+                 setEstimates(mappedEstimates);
+         }
+
+          if (otherGroup) {
+            setOtherGroupId(otherGroup.id || null);
+            const mappedDays = (otherGroup.modules || []).map((m) => ({
+              id: `day-${m.id || Date.now() + Math.random()}`,
+              moduleId: m.id || null,
+              date: m.scopeDate || "",
+              label: m.scopeLabel || "",
+              open: true,
+              rows: itemsToRows(m.items),
+            }));
+            setDays(mappedDays);
+          }
+
+          setPaymentsMain((estimateGroup?.payments || []).map(fromApiPayment));
+          setPaymentsFinal((otherGroup?.payments || []).map(fromApiPayment));
+        } else {
+          // Fallback for the older estimates/days shape, in case the GET
+          // endpoint hasn't been migrated to the groups schema yet.
+          if (Array.isArray(quotation.estimates) && quotation.estimates.length) {
+            setEstimates(quotation.estimates);
+          }
+          if (Array.isArray(quotation.days)) {
+            setDays(quotation.days);
+          }
+          if (Array.isArray(quotation.payments) && quotation.payments.length) {
+            setPaymentsMain(quotation.payments);
+          }
+        }
+setNotes(quotation.notes ?? "");
+        setBillingName(quotation.billingname ?? "");
+        setGstNumber(quotation.gstnumber ?? "");
+        setDueDate(quotation.duedate ?? "");
+        setQuotationCode(quotation.quotationCode ?? "");
+        setQuotationDate(quotation.quotationdate ?? "");
+      }
+    } catch (err) {
+      // No saved quotation yet for this event is an expected case, not an error.
+      console.info("No existing exhibition quotation found for this event yet.");
+    }
   };
 
-  const updatePayment = (id, field, value) => {
-    setPayments((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
-  };
+  useEffect(() => {
+    if (!eventId) return;
 
-  const removePayment = (id) => {
-    setPayments((prev) => prev.filter((p) => p.id !== id));
-  };
+    const fetchEventInfo = async () => {
+      setEventInfoLoading(true);
+      try {
+        const res = await GetEventMasterById(eventId);
+        const record = res?.data?.["Event Details"]?.[0] ?? res?.data?.data?.["Event Details"]?.[0];
+        if (record) {
+          setEventInfo(record);
+        } else {
+       console.error(res?.msg || "Event not found.");
+        }
+      } catch (err) {
+      console.error("Failed to fetch event master:", err);
+      } finally {
+        setEventInfoLoading(false);
+      }
+    };
+
+    fetchEventInfo();
+    fetchExistingQuotation();
+  },[eventId, userId]);
+
+  const partyName = eventInfo?.party?.nameEnglish || "-";
+  const venueName = eventInfo?.venue?.nameEnglish || eventInfo?.banquetHallName || "-";
+  const eventDateDisplay = formatEventDate(eventInfo?.eventStartDateTime);
+  const mobileNumber = eventInfo?.mobileno || "-";
+  const eventNameDisplay = eventInfo?.eventType?.nameEnglish || "-";
+
+  // Generic add/update/remove trio, shared by Section 02's and Section 04's
+  // independent advance-payment lists.
+  const createPaymentHandlers = (setter) => ({
+    add: () =>
+      setter((prev) => [
+        ...prev,
+        { id: Date.now(), amount: 0, mode: "Bank Transfer (RTGS/NEFT)", dateTime: "", description: "" },
+      ]),
+    update: (id, field, value) => setter((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))),
+    remove: (id) => setter((prev) => prev.filter((p) => p.id !== id)),
+  });
+
+  const mainPayments = createPaymentHandlers(setPaymentsMain);
+  const finalPayments = createPaymentHandlers(setPaymentsFinal);
 
   const addEstimate = () => {
     setEstimates((prev) => {
@@ -451,8 +770,13 @@ const [payments, setPayments] = useState([
         ...prev,
         {
           id: `estimate-${letter.toLowerCase()}-${Date.now()}`,
+          moduleId: null,
           title: `Estimate ${letter}`,
           tag: "Additional Scope",
+          discountPercent: 0,
+          cgstPercent: 2.5,
+          sgstPercent: 2.5,
+          roundOff: 0,
           rows: [{ id: Date.now(), name: "", qty: 1, rate: 0 }],
         },
       ];
@@ -462,6 +786,14 @@ const [payments, setPayments] = useState([
   const updateEstimateRows = (estimateId, newRows) => {
     setEstimates((prev) =>
       prev.map((estimate) => (estimate.id === estimateId ? { ...estimate, rows: newRows } : estimate))
+    );
+  };
+
+  // Generic scalar-field updater for an estimate — used for discountPercent,
+  // cgstPercent, sgstPercent and roundOff.
+  const updateEstimateField = (estimateId, field, value) => {
+    setEstimates((prev) =>
+      prev.map((estimate) => (estimate.id === estimateId ? { ...estimate, [field]: value } : estimate))
     );
   };
 
@@ -476,9 +808,9 @@ const [payments, setPayments] = useState([
     0
   );
   const combinedGST = combinedSubtotal * 0.18;
-  const combinedTDS = combinedSubtotal * 0.02;
+  const combinedTDS = combinedSubtotal * (Number(tdsPercent || 0) / 100);
   const combinedGrandTotal = combinedSubtotal + combinedGST - combinedTDS;
-  const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const totalPaidMain = paymentsMain.reduce((sum, p) => sum + Number(p.amount || 0), 0);
 // Section 03 (date-wise) total
 const otherTotal = days.reduce(
   (sum, d) => sum + d.rows.reduce((s, r) => s + Number(r.qty || 0) * Number(r.rate || 0), 0),
@@ -487,7 +819,9 @@ const otherTotal = days.reduce(
 
 // Section 04 final totals
 const finalGrandTotal = combinedGrandTotal + otherTotal;
-const remaining = finalGrandTotal - totalPaid;
+const totalPaidFinal = paymentsFinal.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+const remainingMain = combinedGrandTotal - totalPaidMain;
+const remainingFinal = finalGrandTotal - totalPaidFinal;
   const toggleDay = (id) => setDays(days.map((d) => (d.id === id ? { ...d, open: !d.open } : d)));
   const updateDayRow = (dayId, rowId, field, value) =>
     setDays(
@@ -512,6 +846,7 @@ const remaining = finalGrandTotal - totalPaid;
       ...prev,
       {
         id: `day-${Date.now()}`,
+        moduleId: null,
         date: "",
         label: "New Scope",
         open: true,
@@ -520,28 +855,200 @@ const remaining = finalGrandTotal - totalPaid;
     ]);
   };
 
+  // ---- Build the update-API payload from current state ----
+  const buildEstimateModules = () =>
+    estimates.map((estimate, idx) => ({
+      id: estimate.moduleId || null,
+      moduleType: MODULE_TYPE_ESTIMATE,
+      displayOrder: idx + 1,
+      discountPercent: Number(estimate.discountPercent || 0),
+      cgstPercent: Number(estimate.cgstPercent ?? 2.5),
+      sgstPercent: Number(estimate.sgstPercent ?? 2.5),
+      igstPercent: 0,
+      tdsPercent,
+      roundOff: Number(estimate.roundOff || 0),
+      scopeDate: "",
+      scopeLabel: estimate.tag || estimate.title,
+      items: rowsToItems(estimate.rows),
+    }));
+
+  const buildOtherModules = () =>
+    days.map((day, idx) => ({
+      id: day.moduleId || null,
+      moduleType: MODULE_TYPE_OTHER,
+      displayOrder: idx + 1,
+      discountPercent: 0,
+      cgstPercent: 0,
+      sgstPercent: 0,
+      igstPercent: 0,
+      tdsPercent: 0,
+      roundOff: 0,
+      scopeDate: day.date || "",
+      scopeLabel: day.label || "",
+      items: rowsToItems(day.rows),
+    }));
+
+  const buildPayload = () => ({
+    billingname: billingName,
+    duedate: dueDate,
+    eventId: Number(eventId),
+    quotationCode,
+    quotationdate: quotationDate,
+    gstnumber: gstNumber,
+    notes,
+    userId: Number(userId) || 0,
+    groups: [
+      {
+        id: estimateGroupId || null,
+        groupType: GROUP_TYPE_ESTIMATE,
+        discountPercent: 0,
+        gstPercent: 5, // 2.5% CGST + 2.5% SGST, per estimate row above
+        tdsPercent,
+        modules: buildEstimateModules(),
+        payments: paymentsMain.map(toApiPayment),
+      },
+      {
+        id: otherGroupId || null,
+        groupType: GROUP_TYPE_OTHER,
+        discountPercent: 0,
+        gstPercent: 18, // matches the "Consolidated GST (18%)" shown in Section 02
+        tdsPercent: 0,
+        modules: buildOtherModules(),
+        payments: paymentsFinal.map(toApiPayment),
+      },
+      {
+        // No UI drives this group yet — sent back exactly as fetched so
+        // saving from this screen doesn't blank out anything stored there.
+        id: extraGroup.id || null,
+        groupType: GROUP_TYPE_EXTRA,
+        discountPercent: extraGroup.discountPercent,
+        gstPercent: extraGroup.gstPercent,
+        tdsPercent: extraGroup.tdsPercent,
+        modules: extraGroup.modules,
+        payments: extraGroup.payments,
+      },
+    ],
+  });
+
+  // ---- Save / Update the quotation itself ----
+  const handleSaveQuotation = async () => {
+    if (!eventId) {
+       console.error("Event ID missing.");
+      return;
+    }
+
+    const payload = buildPayload();
+
+    setSaving(true);
+    try {
+          const response = await updateehibition(quotationId, payload);
+       const success = response?.data?.success ?? response?.success;
+       const message = response?.data?.msg ?? response?.msg ?? "Something went wrong.";
+       if (success) {
+         Swal.fire({
+           icon: "success",
+           title: "Success",
+           text: message,
+         });
+         const savedId = response?.data?.data?.id ?? response?.data?.id;
+
+         if (savedId) setQuotationId(savedId);
+         // Re-fetch so we pick up backend-assigned ids (new modules/items/
+         // payments) and any server-computed totals, instead of trusting
+         // our own optimistic local state.
+         await fetchExistingQuotation();
+       } else {
+        console.error(message);
+        Swal.fire({
+          icon: "error",
+          title: "Failed",
+          text: message,
+        });
+      }
+    } catch (err) {
+      console.error("Error saving exhibition quotation:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err?.response?.data?.msg || err?.message || "Something went wrong while saving.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen font-sans text-slate-800">
+      <ExtraQuotationModal
+        open={isExtraQuotationOpen}
+        onClose={() => setIsExtraQuotationOpen(false)}
+        group={extraGroup}
+        sectionLabel={eventNameDisplay}
+        onSave={setExtraGroup}
+      />
+      <style>{`
+        .scroll-visible {
+          scrollbar-width: thin;
+          scrollbar-color: #94a3b8 #f1f5f9;
+        }
+        .scroll-visible::-webkit-scrollbar {
+          height: 8px;
+        }
+        .scroll-visible::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 9999px;
+        }
+        .scroll-visible::-webkit-scrollbar-thumb {
+          background: #94a3b8;
+          border-radius: 9999px;
+        }
+        .scroll-visible::-webkit-scrollbar-thumb:hover {
+          background: #64748b;
+        }
+      `}</style>
       {/* Top bar */}
       <div className="sticky top-0 z-10 bg-white border-b border-slate-200 flex items-center justify-between px-4 py-3 gap-3 flex-wrap">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-            EQ
-          </div>
-          <div>
-            <div className="font-bold text-[15px]">Exhibition Quotation</div>
-            <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
-            </div>
-          </div>
-        </div>
+  <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center">
+    <Store  size={18} strokeWidth={2.2} />
+  </div>
+
+  <div>
+    <div className="font-bold text-[15px]">
+      Exhibition Quotation
+    </div>
+
+    <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
+    </div>
+  </div>
+</div>
         <div className="flex gap-2 flex-wrap">
-          <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium">
-            Extra Quotation
-          </button>
-          <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium">Setup</button>
-          <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium">Print</button>
-          <button className="bg-blue-600 text-white rounded-lg px-3 py-1.5 text-[13px] font-medium">Save</button>
-        </div>
+
+  <button onClick={() => setIsExtraQuotationOpen(true)} className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+    <FilePlus2 size={14} />
+    Extra Quotation
+  </button>
+
+  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+    <Settings size={14} />
+    Setup
+  </button>
+
+  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+    <Printer size={14} />
+    Print
+  </button>
+
+  <button
+    onClick={handleSaveQuotation}
+    disabled={saving}
+    className="bg-primary text-white rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5 disabled:opacity-60"
+  >
+    <Save size={14} />
+    {saving ? "Saving..." : "Save"}
+  </button>
+
+</div>
       </div>
 
       <div className="mx-auto px-4 pb-10 pt-4">
@@ -550,52 +1057,79 @@ const remaining = finalGrandTotal - totalPaid;
           <div className="flex justify-between items-center flex-wrap gap-2.5">
             <div>
               <div className="text-[11px] text-slate-500 tracking-wide">EVENT NAME</div>
-              <div className="text-xl font-bold mt-0.5">Reception</div>
+              <div className="text-xl font-bold mt-0.5">
+                {eventInfoLoading ? "Loading..." : eventNameDisplay}
+              </div>
             </div>
             <div className="flex gap-2">
-              <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium">
-                Menu Planning
-              </button>
-              <button className="bg-blue-600 text-white rounded-lg px-3 py-1.5 text-[13px] font-medium">
-                Decor Quotation
-              </button>
-              <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium">
-                Edit Event
-              </button>
-               <button className="border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-medium flex items-center gap-1">
-            <Lock size={13} />
-            Lock
-          </button>
-            </div>
+
+  
+
+  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+    <Pencil size={14} />
+    Edit Event
+  </button>
+
+  <button className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium flex items-center gap-1.5">
+    <Lock size={13} />
+    Lock
+  </button>
+
+</div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3">
-            {[
-              ["Party Name", "AVSAR SIR"],
-              ["Venue Name", "Swambhoomi Party Plot"],
-              ["Event Date", "09 September 2026"],
-              ["Mobile Number", "08153985521"],
-              ["Quotation Date", "18/02/2026"],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <div className="text-[11px] text-slate-500">{label}</div>
-                <div className="text-[13.5px] font-semibold">{value}</div>
-              </div>
-            ))}
-          </div>
+       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-3">
+
+  {[
+    ["Party Name", partyName, User],
+    ["Venue Name", venueName, MapPin],
+    ["Event Date", eventDateDisplay, Calendar],
+    ["Mobile Number", mobileNumber, Phone],
+    ["Quotation Date", quotationDate, Calendar],
+  ].map(([label, value, Icon]) => (
+    <div key={label}>
+
+      <div className="text-[11px] text-slate-500 flex items-center gap-1">
+        <Icon size={12} className="text-slate-400" />
+        {label}
+      </div>
+
+      <div className="text-[13.5px] font-semibold mt-0.5">
+        {eventInfoLoading ? "Loading..." : value}
+      </div>
+
+    </div>
+  ))}
+
+</div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
             <div>
               <div className="text-[11px] text-slate-500 mb-0.5">Billing Name</div>
-              <input className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-[13.5px]" defaultValue="AVSAR SIR / Corporate" />
+              <input
+                className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-[13.5px]"
+                value={billingName}
+                onChange={(e) => setBillingName(e.target.value)}
+              />
             </div>
             <div>
               <div className="text-[11px] text-slate-500 mb-0.5">GST Number</div>
-              <input className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-[13.5px]" defaultValue="24ABCDE1234F1Z5" />
+              <input
+                className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-[13.5px]"
+                value={gstNumber}
+                onChange={(e) => setGstNumber(e.target.value)}
+              />
             </div>
             <div>
               <div className="text-[11px] text-slate-500 mb-0.5">Due Date</div>
-              <input type="date" className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-[13.5px]" defaultValue="2026-02-18" />
+              <DatePicker
+                value={dueDate ? dayjs(dueDate, DATE_FORMAT) : null}
+                format={DATE_FORMAT}
+                placeholder="Select due date"
+                allowClear={false}
+                style={{ width: "100%" }}
+                onChange={(_, dateString) => setDueDate(dateString)}
+              />
             </div>
           </div>
         </div>
@@ -611,13 +1145,7 @@ const remaining = finalGrandTotal - totalPaid;
       <span className="text-slate-500 font-medium">
         {estimates.length} {estimates.length === 1 ? "Estimate" : "Estimates"} Active
       </span>
-      <button
-        onClick={addEstimate}
-        className="border border-blue-200 bg-blue-50 text-blue-600 rounded-lg px-2.5 py-1 text-xs font-semibold flex items-center gap-1 hover:bg-blue-100"
-      >
-        <Plus size={13} />
-        Add Estimate
-      </button>
+    
     </div>
   }
 />
@@ -632,9 +1160,34 @@ const remaining = finalGrandTotal - totalPaid;
       setRows={(newRows) => updateEstimateRows(estimate.id, newRows)}
       canDelete={estimates.length > 1}
       onDeleteEstimate={() => deleteEstimate(estimate.id)}
+      tdsPercent={tdsPercent}
+      onTdsPercentChange={setTdsPercent}
+      discountPercent={estimate.discountPercent ?? 0}
+      onDiscountPercentChange={(val) => updateEstimateField(estimate.id, "discountPercent", val)}
+      cgstPercent={estimate.cgstPercent ?? 2.5}
+      onCgstPercentChange={(val) => updateEstimateField(estimate.id, "cgstPercent", val)}
+      sgstPercent={estimate.sgstPercent ?? 2.5}
+      onSgstPercentChange={(val) => updateEstimateField(estimate.id, "sgstPercent", val)}
+      roundOff={estimate.roundOff ?? 0}
+      onRoundOffChange={(val) => updateEstimateField(estimate.id, "roundOff", val)}
     />
   ))}
-    <button onClick={addDate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-blue-600 font-semibold mt-2.5 flex items-center justify-center gap-2">
+
+  {/* Shared notes for Section 01 as a whole, instead of repeating per estimate */}
+  <div className="border border-slate-200 rounded-lg p-3 text-[11.5px] leading-relaxed text-slate-500 mt-2.5">
+    <div className="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">
+      TAX &amp; STATUTORY NOTES
+    </div>
+    <textarea
+      value={notes}
+      onChange={(e) => setNotes(e.target.value)}
+      rows={3}
+      placeholder="Add tax & statutory notes..."
+      className="w-full resize-y border border-slate-200 rounded-lg px-2.5 py-2 text-[11.5px] leading-relaxed text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+    />
+  </div>
+
+    <button onClick={addEstimate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-primary font-semibold mt-2.5 flex items-center justify-center gap-2">
     <Calendar size={15} /> Add Estimate
   </button>
 </div>
@@ -668,27 +1221,31 @@ const remaining = finalGrandTotal - totalPaid;
   </div>
 </div>
 
-        {/* Payment Details — dynamic list of advance payments */}
+        {/* Payment Details — Section 02's own advance payments, against the
+            Section 01 combined grand total */}
         <div className="bg-white border border-slate-200 rounded-xl p-3.5 mt-3">
           <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-2 text-blue-600 font-bold text-[13px]">
-              <Wallet size={15} />
-              Payment Details
+            <div>
+              <div className="flex items-center gap-2 text-primary font-bold text-[13px]">
+                <Wallet size={15} />
+                Payment Details
+              </div>
+              <div className="text-[10.5px] text-slate-400 mt-0.5 ml-5">Advance against the combined grand total above</div>
             </div>
             <button
-              onClick={addPayment}
-              className="bg-blue-600 text-white rounded-full px-3 py-1.5 text-xs font-semibold flex items-center gap-1 hover:bg-blue-700"
+              onClick={mainPayments.add}
+              className="bg-primary text-white rounded-full px-3 py-1.5 text-xs font-semibold flex items-center gap-1 hover:bg-blue-700"
             >
               <Plus size={13} />
               Add Advance Payment
             </button>
           </div>
 
-          {payments.length === 0 && (
+          {paymentsMain.length === 0 && (
             <div className="text-center text-slate-400 text-[12.5px] py-4">No advance payments added yet.</div>
           )}
 
-          {payments.map((p) => (
+          {paymentsMain.map((p) => (
             <div key={p.id} className="border border-slate-200 rounded-lg p-3 mb-3 last:mb-0">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -699,7 +1256,7 @@ const remaining = finalGrandTotal - totalPaid;
                       type="number"
                       className="w-full border border-slate-200 rounded-lg pl-7 pr-2.5 py-2 text-[13.5px]"
                       value={p.amount}
-                      onChange={(e) => updatePayment(p.id, "amount", e.target.value)}
+                      onChange={(e) => mainPayments.update(p.id, "amount", e.target.value)}
                     />
                   </div>
                 </div>
@@ -708,7 +1265,7 @@ const remaining = finalGrandTotal - totalPaid;
                   <select
                     className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-[13.5px] bg-white"
                     value={p.mode}
-                    onChange={(e) => updatePayment(p.id, "mode", e.target.value)}
+                    onChange={(e) => mainPayments.update(p.id, "mode", e.target.value)}
                   >
                     <option>Bank Transfer (RTGS/NEFT)</option>
                     <option>Cash</option>
@@ -719,16 +1276,16 @@ const remaining = finalGrandTotal - totalPaid;
                 </div>
                 <div>
                   <div className="text-[11px] text-slate-500 mb-0.5">Payment Date &amp; Time:</div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      className="w-full border border-slate-200 rounded-lg px-2.5 pr-8 py-2 text-[13.5px]"
-                      value={p.dateTime}
-                      onChange={(e) => updatePayment(p.id, "dateTime", e.target.value)}
-                      placeholder="DD/MM/YYYY HH:MM"
-                    />
-                    <Clock size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  </div>
+                  <DatePicker
+                    showTime={{ format: "hh:mm A" }}
+                    format={DATE_TIME_FORMAT}
+                    value={p.dateTime ? dayjs(p.dateTime, DATE_TIME_FORMAT) : null}
+                    placeholder="Select date & time"
+                    allowClear={false}
+                    suffixIcon={<Clock size={14} className="text-slate-400" />}
+                    style={{ width: "100%" }}
+                    onChange={(_, dateString) => mainPayments.update(p.id, "dateTime", dateString)}
+                  />
                 </div>
                 <div>
                   <div className="text-[11px] text-slate-500 mb-0.5">Payment Description:</div>
@@ -736,14 +1293,14 @@ const remaining = finalGrandTotal - totalPaid;
                     type="text"
                     className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-[13.5px]"
                     value={p.description}
-                    onChange={(e) => updatePayment(p.id, "description", e.target.value)}
+                    onChange={(e) => mainPayments.update(p.id, "description", e.target.value)}
                     placeholder="Ref: ..."
                   />
                 </div>
               </div>
 
               <button
-                onClick={() => removePayment(p.id)}
+                onClick={() => mainPayments.remove(p.id)}
                 className="mt-3 text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1 hover:bg-red-100"
               >
                 <Trash2 size={13} />
@@ -758,7 +1315,7 @@ const remaining = finalGrandTotal - totalPaid;
             <span className="w-2 h-2 rounded-full bg-green-500" />
             Total Paid
           </span>
-          <span className="font-bold text-green-600 text-[15px]">{money(totalPaid)}</span>
+          <span className="font-bold text-green-600 text-[15px]">{money(totalPaidMain)}</span>
         </div>
 
         <div className="flex justify-between items-center bg-red-50 border border-red-200 rounded-xl px-3.5 py-3 mt-2.5">
@@ -769,11 +1326,11 @@ const remaining = finalGrandTotal - totalPaid;
             <div>
               <div className="text-[13.5px] font-semibold text-red-600">Remaining Payment Due</div>
               <div className="text-[11px] text-slate-500">
-                Grand Total ({money(combinedGrandTotal)}) minus Advance Paid ({money(totalPaid)})
+                Grand Total ({money(combinedGrandTotal)}) minus Advance Paid ({money(totalPaidMain)})
               </div>
             </div>
           </div>
-          <span className="font-bold text-red-600 text-[15px]">{money(remaining)}</span>
+          <span className="font-bold text-red-600 text-[15px]">{money(remainingMain)}</span>
         </div>
 </div>
 
@@ -783,10 +1340,20 @@ const remaining = finalGrandTotal - totalPaid;
   title="Estimate Amount (Other)"
   open={openSections.s3}
   onToggle={() => toggleSection("s3")}
-  right={<span className="text-slate-500 font-medium text-[12px]">{days.length} Dates Specified</span>}
+  right={
+    <span className="text-slate-500  font-medium flex items-center gap-1.5 text-[12px]">
+      <Calendar size={13} className="text-slate-400" />
+      {days.length} Dates Specified
+    </span>
+  }
 />
 
-<div className={openSections.s3 ? "" : "hidden"}>
+<div className={`border m-3 border-blue-100 rounded-lg p-3 ${openSections.s3 ? "" : "hidden"}`}>
+  {days.length === 0 && (
+    <div className="text-center text-slate-400 text-[12.5px] py-4">
+      No dates added yet — use the button below to add one.
+    </div>
+  )}
   {days.map((day) => (
     <DayCard
       key={day.id}
@@ -798,7 +1365,7 @@ const remaining = finalGrandTotal - totalPaid;
       onUpdateField={updateDayField}
     />
   ))}
-  <button onClick={addDate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-blue-600 font-semibold mt-2.5 flex items-center justify-center gap-2">
+  <button onClick={addDate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-primary font-semibold mt-2.5 flex items-center justify-center gap-2">
     <Calendar size={15} /> Add Date Particulars Scope
   </button>
 </div>
@@ -819,32 +1386,36 @@ const remaining = finalGrandTotal - totalPaid;
   </div>
  <div className={openSections.s4 ? "" : "hidden"}>  
   {/* Combined Grand Total */}
-  <div className="flex justify-between items-center bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3">
+  <div className="flex m-3 justify-between items-center bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3">
     <span className="text-[13px] font-semibold text-blue-800">Combined Grand Total</span>
     <span className="text-lg font-bold text-blue-700">{money(finalGrandTotal)}</span>
   </div>
 
-  {/* Payment Details */}
+  {/* Payment Details — Section 04's own advance payments, against the
+      final combined grand total (Section 01 + Section 03) */}
   <div className="bg-white border border-slate-200 rounded-xl m-2 p-3.5 mt-3">
     <div className="flex justify-between items-center mb-3">
-      <div className="flex items-center gap-2 text-blue-600 font-bold text-[13px]">
-        <Wallet size={15} />
-        Payment Details
+      <div>
+        <div className="flex items-center gap-2 text-primary font-bold text-[13px]">
+          <Wallet size={15} />
+          Payment Details
+        </div>
+        <div className="text-[10.5px] text-slate-400 mt-0.5 ml-5">Advance against the final combined grand total</div>
       </div>
       <button
-        onClick={addPayment}
-        className="bg-blue-600 text-white rounded-full px-3 py-1.5 text-xs font-semibold flex items-center gap-1 hover:bg-blue-700"
+        onClick={finalPayments.add}
+        className="bg-primary text-white rounded-full px-3 py-1.5 text-xs font-semibold flex items-center gap-1 hover:bg-blue-700"
       >
         <Plus size={13} />
         Add Advance Payment
       </button>
     </div>
 
-    {payments.length === 0 && (
+    {paymentsFinal.length === 0 && (
       <div className="text-center text-slate-400 text-[12.5px] py-4">No advance payments added yet.</div>
     )}
 
-    {payments.map((p) => (
+    {paymentsFinal.map((p) => (
       <div key={p.id} className="border border-slate-200 rounded-lg p-3 mb-3 last:mb-0">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -855,7 +1426,7 @@ const remaining = finalGrandTotal - totalPaid;
                 type="number"
                 className="w-full border border-slate-200 rounded-lg pl-7 pr-2.5 py-2 text-[13.5px]"
                 value={p.amount}
-                onChange={(e) => updatePayment(p.id, "amount", e.target.value)}
+                onChange={(e) => finalPayments.update(p.id, "amount", e.target.value)}
               />
             </div>
           </div>
@@ -864,7 +1435,7 @@ const remaining = finalGrandTotal - totalPaid;
             <select
               className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-[13.5px] bg-white"
               value={p.mode}
-              onChange={(e) => updatePayment(p.id, "mode", e.target.value)}
+              onChange={(e) => finalPayments.update(p.id, "mode", e.target.value)}
             >
               <option>Bank Transfer (RTGS/NEFT)</option>
               <option>Cash</option>
@@ -875,16 +1446,16 @@ const remaining = finalGrandTotal - totalPaid;
           </div>
           <div>
             <div className="text-[11px] text-slate-500 mb-0.5">Payment Date &amp; Time:</div>
-            <div className="relative">
-              <input
-                type="text"
-                className="w-full border border-slate-200 rounded-lg px-2.5 pr-8 py-2 text-[13.5px]"
-                value={p.dateTime}
-                onChange={(e) => updatePayment(p.id, "dateTime", e.target.value)}
-                placeholder="DD/MM/YYYY HH:MM"
-              />
-              <Clock size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            </div>
+            <DatePicker
+              showTime={{ format: "hh:mm A" }}
+              format={DATE_TIME_FORMAT}
+              value={p.dateTime ? dayjs(p.dateTime, DATE_TIME_FORMAT) : null}
+              placeholder="Select date & time"
+              allowClear={false}
+              suffixIcon={<Clock size={14} className="text-slate-400" />}
+              style={{ width: "100%" }}
+              onChange={(_, dateString) => finalPayments.update(p.id, "dateTime", dateString)}
+            />
           </div>
           <div>
             <div className="text-[11px] text-slate-500 mb-0.5">Payment Description:</div>
@@ -892,14 +1463,14 @@ const remaining = finalGrandTotal - totalPaid;
               type="text"
               className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-[13.5px]"
               value={p.description}
-              onChange={(e) => updatePayment(p.id, "description", e.target.value)}
+              onChange={(e) => finalPayments.update(p.id, "description", e.target.value)}
               placeholder="Ref: ..."
             />
           </div>
         </div>
 
         <button
-          onClick={() => removePayment(p.id)}
+          onClick={() => finalPayments.remove(p.id)}
           className="mt-3 text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1 hover:bg-red-100"
         >
           <Trash2 size={13} />
@@ -910,16 +1481,16 @@ const remaining = finalGrandTotal - totalPaid;
   </div>
 
   {/* Total Paid */}
-  <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-xl px-3.5 py-3 mt-3">
+  <div className="m-3 flex justify-between items-center bg-green-50 border border-green-200 rounded-xl px-3.5 py-3 mt-3">
     <span className="flex items-center gap-2 text-[15px] font-semibold">
       <span className="w-2 h-2 rounded-full bg-green-500" />
       Total Paid
     </span>
-    <span className="font-bold text-green-600 text-lg">{money(totalPaid)}</span>
+    <span className="font-bold text-green-600 text-lg">{money(totalPaidFinal)}</span>
   </div>
 
   {/* Remaining */}
-  <div className="flex justify-between items-center bg-red-50 border border-red-200 rounded-xl px-3.5 py-3 mt-2.5">
+  <div className="m-3 flex justify-between items-center bg-red-50 border border-red-200 rounded-xl px-3.5 py-3 mt-2.5">
     <div className="flex items-center gap-2.5">
       <div className="w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center flex-none">
         <Bell size={14} />
@@ -927,14 +1498,14 @@ const remaining = finalGrandTotal - totalPaid;
       <div>
         <div className="text-[13.5px] font-semibold text-red-600">Remaining Payment Due</div>
         <div className="text-[11px] text-slate-500">
-          Grand Total ({money(finalGrandTotal)}) minus Advance Paid ({money(totalPaid)})
+          Grand Total ({money(finalGrandTotal)}) minus Advance Paid ({money(totalPaidFinal)})
         </div>
       </div>
     </div>
-    <span className="font-bold text-red-600 text-lg">{money(remaining)}</span>
+    <span className="font-bold text-red-600 text-lg">{money(remainingFinal)}</span>
   </div>      
   </div>        
 </div>          
-        
+    
   );
 }
