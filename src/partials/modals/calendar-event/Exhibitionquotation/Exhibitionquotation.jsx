@@ -28,6 +28,7 @@ import Swal from "sweetalert2";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import ExtraQuotationModal from "./ExtraQuotationModal.jsx";
+import SetupModal from "./SetupModal.jsx";
 // TODO: adjust this import path to match where apiServices actually lives
 // relative to this file (e.g. "../../../services/apiServices").
 import {
@@ -582,6 +583,7 @@ export default function ExhibitionQuotation() {
   // eventId comes from the route, e.g. /exhibition-quotation/:eventId
   const { eventId } = useParams();
   const [isExtraQuotationOpen, setIsExtraQuotationOpen] = useState(false);
+  const [isSetupOpen, setIsSetupOpen] = useState(false);
 const userId = localStorage.getItem("userId");
    const [estimates, setEstimates] = useState([]);
   const [days, setDays] = useState(initialDays);
@@ -986,6 +988,12 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
         sectionLabel={eventNameDisplay}
         onSave={setExtraGroup}
       />
+      <SetupModal
+        open={isSetupOpen}
+        onClose={() => setIsSetupOpen(false)}
+        eventId={eventId}
+        userId={userId}
+      />
       <style>{`
         .scroll-visible {
           scrollbar-width: thin;
@@ -1029,7 +1037,10 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
     Extra Quotation
   </button>
 
-  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+  <button
+    onClick={() => setIsSetupOpen(true)}
+    className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5 hover:bg-slate-50 transition-colors"
+  >
     <Settings size={14} />
     Setup
   </button>

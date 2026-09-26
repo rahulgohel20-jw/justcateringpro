@@ -3932,3 +3932,19 @@ export const getbyexhibitionevenybuuser  = (eventId , userId) => {
 export const updateehibition = (quotationId , data) => {
   return PUT(`/exhibition/quotations/update?quotationId=${quotationId}`,data);
 };
+
+export const getExhibitionSetupByEventUser = (eventId, userId) => {
+  return GET(`/exhibition/setup/by-event-user?eventId=${eventId}&userId=${userId}`);
+};
+
+export const saveExhibitionSetup = (data) => {
+  return POST(`/exhibition/setup/add`, data);
+};
+
+export const deleteExhibitionSetupDetail = (id) => {
+  return DELETE(`/exhibition/setup/delete?id=${id}`);
+};
+
+export const deleteExhibitionSetupItemDetail = (id) => {
+  return DELETE(`/exhibition/setup/item/delete?id=${id}`);
+};
