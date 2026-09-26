@@ -6,7 +6,7 @@ import Swal from "sweetalert2";
 import { TimePicker } from "antd";
 import dayjs from "dayjs";
 import { FormattedMessage, useIntl } from "react-intl";
-
+// import SetupModal from "./SetupModal.jsx";
 // Translateapi(text) → GET /transliterate?text=... — expected to return
 // both Hindi and Gujarati transliterations for the given English text in
 // one call. If your response shape differs from what's parsed in
@@ -193,7 +193,7 @@ const ExtraCharge = ({
   const [selectedFunctionId, setSelectedFunctionId] = useState(selectedFunction || -1);
   const [headings, setHeadings] = useState([]);
   const [isLocalLoading, setIsLocalLoading] = useState(false);
-
+const [isSetupOpen, setIsSetupOpen] = useState(false);
   const initialHeadingsRef = useRef([]);
 
   // Heading rename state
@@ -1541,10 +1541,10 @@ const ExtraCharge = ({
                       <button
                         onClick={() => openSubHeadingInput(heading.id)}
                         className="flex items-center gap-1 text-xs text-primary border border-primary px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-colors font-medium"
-                        title="Add Sub Heading"
+                        title="Add Remark"
                       >
                         <Plus size={13} />
-                        <FormattedMessage id="USER.EXTRA_CHARGES.ADD_SUB_HEADING_BTN" defaultMessage="Add Sub Heading" />
+                        <FormattedMessage id="USER.EXTRA_CHARGES.ADD_SUB_HEADING_BTN" defaultMessage="Add Remarks" />
                       </button>
                     <button
                       onClick={() => {
@@ -1611,12 +1611,12 @@ const ExtraCharge = ({
                   {showSubHeadingInputFor === heading.id && (
                     <div className="px-4 py-2.5 bg-indigo-50 border-b border-indigo-100">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-indigo-400 font-semibold shrink-0">Sub Heading:</span>
+                        <span className="text-xs text-indigo-400 font-semibold shrink-0">Remarks:</span>
                         <input
                           type="text"
                           autoFocus
                           className="flex-1 text-xs border border-indigo-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
-                          placeholder="Enter sub heading name..."
+                          placeholder="Enter remark name..."
                           value={subHeadingDraft}
                           onChange={(e) => {
                             setSubHeadingDraft(e.target.value);
@@ -1686,7 +1686,7 @@ const ExtraCharge = ({
                   {heading.subHeadingName && showSubHeadingInputFor !== heading.id && (
                     <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-indigo-400 font-semibold shrink-0">Sub Heading:</span>
+                        <span className="text-xs text-indigo-400 font-semibold shrink-0">Remarks:</span>
                         {editingSubHeadingFor === heading.id ? (
                           <>
                             <input
@@ -1754,14 +1754,14 @@ const ExtraCharge = ({
                                 )
                               }
                               className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-indigo-600 hover:bg-indigo-100 rounded transition-colors"
-                              title="Edit sub heading"
+                              title="Edit Remarks"
                             >
                               <Pencil size={12} />
                             </button>
                             <button
                               onClick={() => deleteSubHeading(heading.id)}
                               className="w-6 h-6 flex items-center justify-center text-red-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
-                              title="Remove sub heading"
+                              title="Remove Remarks"
                             >
                               <Trash2 size={12} />
                             </button>

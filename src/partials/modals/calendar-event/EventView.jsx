@@ -119,6 +119,7 @@ useEffect(() => {
     const canAccessAssignManger = hasModuleAccess("Assign Manager");
     const canAccessMenuExtraFeature = hasModuleAccess("Menu Extra Features");
     const canAccessfollowup = hasModuleAccess("followup");
+    const canAccessExhibitionquotation = hasModuleAccess("Exhibition Quotation");
 
     const [prepStatus, setPrepStatus] = useState(null);
 
@@ -541,7 +542,8 @@ const handleSaveRemarks = async (data) => {
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 space-y-2">
-               {/* <button
+              {canAccessExhibitionquotation &&(
+               <button
    onClick={() => navigate(`/exhibition-quotation/${safeEventId}`)}
   className="w-full flex items-center justify-between bg-green-50 hover:bg-green-50 transition-all rounded-2xl px-2 py-1 group"
 >
@@ -561,7 +563,9 @@ Exhibition quotation "
     </div>
   </div>
   <i className="ki-filled ki-right text-amber-600 text-sm group-hover:translate-x-1 transition-transform"></i>
-</button>  */}
+</button> 
+              )}
+
   <button
   onClick={() => setIsRemarksModal(true)}
   className="w-full flex items-center justify-between bg-amber-50 hover:bg-amber-100 transition-all rounded-2xl px-2 py-1 group"
