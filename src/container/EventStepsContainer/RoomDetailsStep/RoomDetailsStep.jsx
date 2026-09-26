@@ -8,24 +8,27 @@ import customParseFormat from "dayjs/plugin/customParseFormat";
 
 dayjs.extend(customParseFormat);
 
-const parseTimeValue = (val) => {
-  if (!val) return null;
+const formatToTimeInput = (val) => {
+  if (!val) return "";
   if (typeof val === "string") {
     const trimmed = val.trim();
-    if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(trimmed)) {
-      const parsed = dayjs(trimmed, ["HH:mm", "HH:mm:ss"]);
-      return parsed.isValid() ? parsed : null;
+    if (/^\d{1,2}:\d{2}/.test(trimmed)) {
+      const parts = trimmed.split(":");
+      return `${parts[0].padStart(2, "0")}:${parts[1].slice(0, 2)}`;
     }
-    const parsed = dayjs(trimmed, [
+    const d = dayjs(trimmed, [
       "DD/MM/YYYY hh:mm A",
       "DD/MM/YYYY HH:mm",
       "DD/MM/YYYY hh:mm a",
       "YYYY-MM-DD HH:mm:ss",
       "YYYY-MM-DDTHH:mm:ss",
     ]);
-    return parsed.isValid() ? parsed : null;
+    if (d.isValid()) return d.format("HH:mm");
   }
-  return dayjs.isDayjs(val) && val.isValid() ? val : null;
+  if (dayjs.isDayjs(val) && val.isValid()) {
+    return val.format("HH:mm");
+  }
+  return "";
 };
 
 const parseDateValue = (val) => {
@@ -55,8 +58,14 @@ const createEmptyRoom = (startDate) => {
   const checkOutDate = base.isValid()
     ? base.add(1, "day").format("DD/MM/YYYY")
     : dayjs().add(1, "day").format("DD/MM/YYYY");
-  const checkInTime = base.isValid() ? base.format("HH:mm") : dayjs().format("HH:mm");
-  const checkOutTime = base.isValid() ? base.format("HH:mm") : dayjs().format("HH:mm");
+  const checkInTime =
+    base.isValid() && base.format("HH:mm") !== "00:00"
+      ? base.format("HH:mm")
+      : "12:00";
+  const checkOutTime =
+    base.isValid() && base.format("HH:mm") !== "00:00"
+      ? base.format("HH:mm")
+      : "11:00";
 
   return {
     id: Date.now() + Math.random(),
@@ -212,18 +221,17 @@ const RoomDetailsStep = ({ formData, setFormData, eventStartDateTime }) => {
                       </td>
                       {/* Check-In Time (24h) */}
                       <td className="p-2">
-                        <TimePicker
-                          format="HH:mm"
-                          value={parseTimeValue(row.bookingDateCheckInTime)}
-                          onChange={(time) =>
+                        <input
+                          type="time"
+                          className="input w-full"
+                          value={formatToTimeInput(row.bookingDateCheckInTime) || "12:00"}
+                          onChange={(e) =>
                             handleRoomFieldChange(
                               idx,
                               "bookingDateCheckInTime",
-                              time ? time.format("HH:mm") : "",
+                              e.target.value,
                             )
                           }
-                          className="w-full"
-                          placeholder="HH:mm"
                         />
                       </td>
                       {/* Check-Out Date */}
@@ -249,18 +257,17 @@ const RoomDetailsStep = ({ formData, setFormData, eventStartDateTime }) => {
                       </td>
                       {/* Check-Out Time (24h) */}
                       <td className="p-2">
-                        <TimePicker
-                          format="HH:mm"
-                          value={parseTimeValue(row.bookingCheckOutTime)}
-                          onChange={(time) =>
+                        <input
+                          type="time"
+                          className="input w-full"
+                          value={formatToTimeInput(row.bookingCheckOutTime) || "11:00"}
+                          onChange={(e) =>
                             handleRoomFieldChange(
                               idx,
                               "bookingCheckOutTime",
-                              time ? time.format("HH:mm") : "",
+                              e.target.value,
                             )
                           }
-                          className="w-full"
-                          placeholder="HH:mm"
                         />
                       </td>
                       <td className="p-2">
