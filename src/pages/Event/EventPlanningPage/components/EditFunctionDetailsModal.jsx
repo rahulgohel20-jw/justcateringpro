@@ -5,7 +5,7 @@ import ReactSelect from "react-select";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import dayjs from "dayjs";
-import { Plus, Trash2, MapPin, X } from "lucide-react";
+import { Plus, Trash2, MapPin, X, GripVertical } from "lucide-react";
 import { createPortal } from "react-dom";
 import Swal from "sweetalert2";
 import FunctionTypeDropdown from "@/components/dropdowns/FunctionTypeDropdown";
@@ -296,6 +296,44 @@ const [notesModalIndex, setNotesModalIndex] = useState(null);
 const [banquetNotesModal, setBanquetNotesModal] = useState({ open: false, index: null });
 const currentUserId = localStorage.getItem("userId");
 const CAN_EDIT_RATE_WITH_PACKAGE = ["356", "757"].includes(String(currentUserId));
+
+
+
+const [draggedIndex, setDraggedIndex] = useState(null);
+const [dragOverIndex, setDragOverIndex] = useState(null);
+
+const handleDragStart = (e, index) => {
+  setDraggedIndex(index);
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", String(index)); // needed for Firefox
+};
+
+const handleRowDragOver = (e, index) => {
+  e.preventDefault(); // required to allow dropping
+  if (index !== dragOverIndex) setDragOverIndex(index);
+};
+
+const handleRowDrop = (e, index) => {
+  e.preventDefault();
+  if (draggedIndex === null || draggedIndex === index) {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    return;
+  }
+  setRows((prev) => {
+    const updated = [...prev];
+    const [movedRow] = updated.splice(draggedIndex, 1);
+    updated.splice(index, 0, movedRow);
+    return updated;
+  });
+  setDraggedIndex(null);
+  setDragOverIndex(null);
+};
+
+const handleDragEnd = () => {
+  setDraggedIndex(null);
+  setDragOverIndex(null);
+};
   // ── Load dropdown reference data whenever the modal opens ──
   useEffect(() => {
     if (!isOpen) return;
@@ -708,10 +746,31 @@ const handleBanquetNotesSave = (val) => {
             </thead>
             <tbody>
               {rows.map((row, index) => {
-                const isODCRow = !row.banquetHallId || row.banquetHallId.length === 0;
-                return (
-                  <tr key={row._rowId} className="border-b border-gray-200">
-                    <td className="p-2">{index + 1}</td>
+  const isODCRow = !row.banquetHallId || row.banquetHallId.length === 0;
+  return (
+    <tr
+      key={row._rowId}
+      onDragOver={(e) => handleRowDragOver(e, index)}
+      onDrop={(e) => handleRowDrop(e, index)}
+      onDragEnd={handleDragEnd}
+      className={`border-b border-gray-200 transition-colors ${
+        draggedIndex === index ? "opacity-40" : ""
+      } ${
+        dragOverIndex === index && draggedIndex !== index
+          ? "bg-blue-50 border-t-2 border-t-primary"
+          : ""
+      }`}
+    >
+                    <td className="p-2">
+  <div
+    className="flex items-center gap-1.5 cursor-grab active:cursor-grabbing"
+    draggable
+    onDragStart={(e) => handleDragStart(e, index)}
+  >
+    <GripVertical size={14} className="text-gray-400 flex-shrink-0" />
+    <span>{index + 1}</span>
+  </div>
+</td>
                     <td className="p-2">
                       <FunctionTypeDropdown
                         value={row.functionId || undefined}

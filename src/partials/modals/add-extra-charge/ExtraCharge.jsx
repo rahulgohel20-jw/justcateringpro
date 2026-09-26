@@ -143,7 +143,7 @@ const RegionalLanguageFields = ({
         onChange={(e) => onGujaratiChange(e.target.value)}
       />
     </div>
-    <button
+    {/* <button
       type="button"
       onClick={onTranslate}
       disabled={isTranslating}
@@ -162,7 +162,7 @@ const RegionalLanguageFields = ({
         <Languages size={12} />
       )}
       {isTranslating ? "Translating..." : isTranslated ? "Translated" : "Translate"}
-    </button>
+    </button> */}
   </div>
 );
 
@@ -1541,10 +1541,10 @@ const ExtraCharge = ({
                       <button
                         onClick={() => openSubHeadingInput(heading.id)}
                         className="flex items-center gap-1 text-xs text-primary border border-primary px-2.5 py-1 rounded-lg hover:bg-blue-50 transition-colors font-medium"
-                        title="Add Sub Heading"
+                        title="Add Remarks"
                       >
                         <Plus size={13} />
-                        <FormattedMessage id="USER.EXTRA_CHARGES.ADD_SUB_HEADING_BTN" defaultMessage="Add Sub Heading" />
+                        <FormattedMessage id="USER.EXTRA_CHARGES.ADD_SUB_HEADING_BTN" defaultMessage="Add Remarks" />
                       </button>
                     <button
                       onClick={() => {
@@ -1611,7 +1611,7 @@ const ExtraCharge = ({
                   {showSubHeadingInputFor === heading.id && (
                     <div className="px-4 py-2.5 bg-indigo-50 border-b border-indigo-100">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-indigo-400 font-semibold shrink-0">Sub Heading:</span>
+                        <span className="text-xs text-indigo-400 font-semibold shrink-0">Remarks:</span>
                         <input
                           type="text"
                           autoFocus
@@ -1686,7 +1686,7 @@ const ExtraCharge = ({
                   {heading.subHeadingName && showSubHeadingInputFor !== heading.id && (
                     <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-indigo-400 font-semibold shrink-0">Sub Heading:</span>
+                        <span className="text-xs text-indigo-400 font-semibold shrink-0">Remarks:</span>
                         {editingSubHeadingFor === heading.id ? (
                           <>
                             <input

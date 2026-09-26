@@ -422,6 +422,7 @@ const ItemRow = ({
    onQtyChange = () => {}, 
     itemStatus = "NORMAL",
      onVendorSave = () => {},
+     isOverLimit = false, 
 }) => {
 
   const isDeleted = itemStatus === "CANCELLED"; // ← locked state
@@ -534,8 +535,9 @@ useEffect(() => {
               if (rowRef) rowRef(el);
             }}
             {...provItem.draggableProps}
-            className={`relative p-2 rounded-lg transition-shadow ${getStatusClasses(itemStatus, "item")} ${snap.isDragging ? "shadow-lg ring-2 ring-blue-400" : ""}`}
-          >
+className={`relative p-2 rounded-lg transition-shadow ${
+  isOverLimit ? "bg-yellow-100 border-2 border-yellow-200" : getStatusClasses(itemStatus, "item")
+} ${snap.isDragging ? "shadow-lg ring-2 ring-blue-400" : ""}`}          >
             {/* TOP: drag handle + image + name + badges — full width, nothing competing for space */}
             <div
               {...(isDeleted ? {} : provItem.dragHandleProps)}
@@ -1041,6 +1043,7 @@ const SelectedItems = ({
    onMenuItemImageUpload = () => {},
    onCategoryInstructionsChange = () => {}, 
     onVendorSave = () => {},
+    overLimitItemIds = new Set(), 
 }) => {
 
   const { categoriesOrder = [], categories = {} } = data;
@@ -1876,6 +1879,7 @@ return (
                                             itemStatus={item.itemStatus} 
                                             onOpenItemImage={(catName, item) => setItemImageModal({ catName, item })}
                                              onVendorSave={onVendorSave}
+                                             isOverLimit={overLimitItemIds.has(Number(item.id))} 
                                         />
                                       ))
                                     )}
