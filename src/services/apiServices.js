@@ -3924,3 +3924,11 @@ export const adduploadsignature = (file, userId) => {
 
   return POST(`/user/upload-signature`, formData);
 };
+
+export const getbyexhibitionevenybuuser  = (eventId , userId) => {
+  return GET(`/exhibition/quotations/by-event-user?eventId=${eventId}&userId=${userId}`);
+};
+
+export const updateehibition = (quotationId , data) => {
+  return PUT(`/exhibition/quotations/update?quotationId=${quotationId}`,data);
+};
