@@ -49,11 +49,13 @@ import SecurityDepositModal from "./SecurityDepositModal";
      const OFFER_RATE_USER_IDS = ["501"];
      const TAX_USER = ["501"];
 const VAT_USER = ["501", "334"];
-const HIDE_TAX_COLUMNS_USER_IDS = ["356"]; //for tgb client not show tax ans amount 
+const HIDE_TAX_COLUMNS_USER_IDS = ["356"];  
 const hideTaxColumns = HIDE_TAX_COLUMNS_USER_IDS.includes(String(userId));
      const isVatUser = VAT_USER.includes(String(userId));
      const isTaxUser = TAX_USER.includes(String(userId));
   const isOfferRateUser = OFFER_RATE_USER_IDS.includes(String(userId));
+  const DECOR_GST_USER_IDS = ["233"];
+const isDecorGstUser = DECOR_GST_USER_IDS.includes(String(userId));
     const [quotationId, setQuotationId] = useState(null);
     const { eventId } = useParams();
     const [billingName, setBillingName] = useState("");
@@ -107,7 +109,12 @@ const [isDiscountPercentage, setIsDiscountPercentage] = useState(false);
 const [securityDeposits, setSecurityDeposits] = useState([]);
 const [savingDepositIdx, setSavingDepositIdx] = useState(null);
 const [isSecurityDepositOpen, setIsSecurityDepositOpen] = useState(false);
-
+const [chequePaymentDecor, setChequePaymentDecor] = useState("0");
+const [decorTax, setDecorTax] = useState({
+  CGST: { percentage: "9", amount: "0" },
+  SGST: { percentage: "9", amount: "0" },
+  IGST: { percentage: "0", amount: "0" },
+});
     const [quotationData, setQuotationData] = useState({
       eventName: "",
       partyName: "",
@@ -818,6 +825,38 @@ const handleChequeChange = (value) => {
   setIsEdited(true);
 };
 
+const calcPctAmount = (base, pct) => {
+  const v = (base * (parseFloat(pct) || 0)) / 100;
+  return v % 1 === 0 ? v.toString() : v.toFixed(2);
+};
+
+// decor cheque changed -> recalc all decor GST amounts from their %
+const handleChequeDecorChange = (value) => {
+  setIsEdited(true);
+  setChequePaymentDecor(value);
+  const base = parseFloat(value) || 0;
+  setDecorTax((prev) => ({
+    CGST: { ...prev.CGST, amount: calcPctAmount(base, prev.CGST.percentage) },
+    SGST: { ...prev.SGST, amount: calcPctAmount(base, prev.SGST.percentage) },
+    IGST: { ...prev.IGST, amount: calcPctAmount(base, prev.IGST.percentage) },
+  }));
+};
+
+// % changed -> amount auto-calculates, amount changed -> % auto-calculates
+const handleDecorTaxChange = (label, field, value) => {
+  setIsEdited(true);
+  const base = parseFloat(chequePaymentDecor) || 0;
+  setDecorTax((prev) => {
+    const cur = { ...prev[label], [field]: value };
+    if (field === "percentage") {
+      cur.amount = calcPctAmount(base, value);
+    } else {
+      cur.percentage =
+        base > 0 ? (((parseFloat(value) || 0) / base) * 100).toFixed(2) : "0";
+    }
+    return { ...prev, [label]: cur };
+  });
+};
 
    const handleTransportationChange = (value) => {
   const amount = parseFloat(value) || 0;
@@ -1082,7 +1121,18 @@ eventRoomId: item.eventRoomId ?? item.eventRoonId ?? null,
             setCashPayment(parseFloat(quotationInfo.cashPayment) || 0);
             setChequePayment(parseFloat(quotationInfo.chequePayment) || 0);
             setTransportationCharge(parseFloat(quotationInfo.transportation) || 0);
-   
+   const decorBase = parseFloat(quotationInfo.chequePaymentDecor) || 0;
+const pick = (val, def) =>
+  val === null || val === undefined || val === "" ? def : String(val);
+const dCgst = pick(quotationInfo.cgstDecor, "9");
+const dSgst = pick(quotationInfo.sgstDecor, "9");
+const dIgst = pick(quotationInfo.igstDecor, "0");
+
+setDecorTax({
+  CGST: { percentage: dCgst, amount: pick(quotationInfo.cgstAmntDecor, calcPctAmount(decorBase, dCgst)) },
+  SGST: { percentage: dSgst, amount: pick(quotationInfo.sgstAmntDecor, calcPctAmount(decorBase, dSgst)) },
+  IGST: { percentage: dIgst, amount: pick(quotationInfo.igstAmntDecor, calcPctAmount(decorBase, dIgst)) },
+});
            const rawIsDiscountPercent = quotationInfo.isDiscountPercent;
 const inferredIsPercent =
   rawIsDiscountPercent === true
@@ -1190,15 +1240,21 @@ const igstAmount = (gstBase * igstPercentage) / 100;
   );
 
   const totalTaxAmount = cgstAmount + sgstAmount + igstAmount;
+const decorChequeAmt = isDecorGstUser ? parseFloat(chequePaymentDecor) || 0 : 0;
+const decorTaxAmt = isDecorGstUser
+  ? (parseFloat(decorTax.CGST.amount) || 0) +
+    (parseFloat(decorTax.SGST.amount) || 0) +
+    (parseFloat(decorTax.IGST.amount) || 0)
+  : 0;
+const decorExtra = decorChequeAmt + decorTaxAmt;
 
-  const grandTotal =
+const grandTotal =
   amountAfterDiscount +
-  totalTaxAmount +
+  cgstAmount + sgstAmount + igstAmount +
+  foodTaxTotalAmt + serviceTaxTotalAmt + vatTaxTotalAmt +
   roundOffAmount +
-  foodTaxTotalAmt +
-  serviceTaxTotalAmt +
-  vatTaxTotalAmt;
-
+  decorExtra;
+ 
   const totalPaid = (quotationData.advancePayments || []).reduce((sum, p) => {
     const val = parseFloat(p.amount) || 0;
     return sum + val;
@@ -1226,6 +1282,10 @@ vatTaxTotalAmount: formatAmount(vatTaxTotalAmt),
     grandTotal: formatAmount(grandTotal),
     totalPaid: formatAmount(totalPaid),
     remainingPayment: formatAmount(remaining),
+    decorChequeAmount: formatAmount(decorChequeAmt),
+decorTaxAmount: formatAmount(decorTaxAmt),
+decorExtra: formatAmount(decorExtra),
+chequePaymentTotal: formatAmount((parseFloat(chequePayment) || 0) + decorChequeAmt),
   };
 };
 
@@ -1492,12 +1552,21 @@ const igstAmnt = (gstBase * igstPercentage) / 100;
 const serviceTaxTotalAmnt = (serviceTaxAmnt * serviceTaxPercentage) / 100;
 const vatTaxTotalAmnt = (vatTaxAmnt * vatTaxPercentage) / 100;
 
+
+const decorChequeAmt = isDecorGstUser ? parseFloat(chequePaymentDecor) || 0 : 0;
+const decorTaxAmt = isDecorGstUser
+  ? (parseFloat(decorTax.CGST.amount) || 0) +
+    (parseFloat(decorTax.SGST.amount) || 0) +
+    (parseFloat(decorTax.IGST.amount) || 0)
+  : 0;
+const decorExtra = decorChequeAmt + decorTaxAmt;
+
 const grandTotal =
   amountAfterDiscount +
   cgstAmnt + sgstAmnt + igstAmnt +
   foodTaxTotalAmnt + serviceTaxTotalAmnt + vatTaxTotalAmnt +
-  roundOff ;
-
+  roundOff +
+  decorExtra;
 
       const payments = (quotationData.advancePayments || [])
         .filter((p) => parseFloat(p.amount) > 0)
@@ -1659,8 +1728,17 @@ serviceTaxTotalAmount: (serviceTaxAmnt * serviceTaxPercentage) / 100,
 vatTax: `${vatTaxPercentage}`,
 vatTaxAmount: vatTaxAmnt,
 vatTaxTotalAmount: (vatTaxAmnt * vatTaxPercentage) / 100,
-      };
-
+...(isDecorGstUser && {
+  chequePaymentDecor: decorChequeAmt,
+  chequePaymentTotal: (parseFloat(chequePayment) || 0) + decorChequeAmt,
+  cgstDecor: `${parseFloat(decorTax.CGST.percentage) || 0}`,
+  cgstAmntDecor: parseFloat(decorTax.CGST.amount) || 0,
+  sgstDecor: `${parseFloat(decorTax.SGST.percentage) || 0}`,
+  sgstAmntDecor: parseFloat(decorTax.SGST.amount) || 0,
+  igstDecor: `${parseFloat(decorTax.IGST.percentage) || 0}`,
+  igstAmntDecor: parseFloat(decorTax.IGST.amount) || 0,
+}),
+};
       return payload;
     };
 
@@ -3459,6 +3537,7 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
                           onChange={(e) => handleChequeChange(e.target.value)}
                         />
                       </div>
+                  
                     </div>
 
                     
@@ -3531,6 +3610,78 @@ const isValidTwoDecimal = (value) => /^\d*\.?\d{0,2}$/.test(value);
                         );
                       })}
                   </div>
+              {isDecorGstUser && (
+  <div className="flex flex-col border-y border-purple-200 border-dashed bg-purple-50 p-4 gap-1">
+    {/* Tag */}
+    <div className="flex items-center justify-end mb-2">
+      <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-wide border border-purple-200">
+        <i className="ki-filled ki-brush text-xs"></i> Decor
+      </span>
+    </div>
+
+    {/* 1. Decor Cheque input */}
+    <div className="flex items-center justify-end gap-6 py-1">
+      <div className="text-base font-semibold text-purple-700 w-[180px] text-right">
+         Cheque Amount
+      </div>
+      <div className="flex items-center input text-base text-gray-900 w-[250px] border-purple-200">
+        <span className="text-gray-500 ml-1">&#8377;</span>
+        <input
+          className="h-full text-gray-900 w-full ml-1"
+          value={chequePaymentDecor}
+          type="tel"
+          min="0"
+          placeholder="0"
+          onChange={(e) => handleChequeDecorChange(e.target.value)}
+        />
+      </div>
+    </div>
+
+    {/* 2. Decor CGST / SGST / IGST */}
+    {["CGST", "SGST", "IGST"].map((label) => (
+      <div key={`decor-${label}`} className="flex items-center justify-end gap-6 py-1">
+        <div className="text-base font-normal text-purple-700 w-[180px] text-right">
+           {label}
+        </div>
+        <div className="flex items-center input text-base text-gray-900 w-[250px] border-purple-200">
+          <div>
+            <input
+              className="h-full text-gray-900 w-[60px]"
+              value={decorTax[label].percentage}
+              type="tel"
+              min="0"
+              placeholder="0"
+              onChange={(e) => handleDecorTaxChange(label, "percentage", e.target.value)}
+            />
+            <span className="text-gray-500">%</span>
+          </div>
+          <div className="flex items-center ml-3">
+            <span className="text-gray-500 mr-1">&#8377;</span>
+            <input
+              className="h-full text-gray-900 w-[90px]"
+              value={decorTax[label].amount}
+              type="tel"
+              min="0"
+              placeholder="0"
+              onChange={(e) => handleDecorTaxChange(label, "amount", e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+    ))}
+
+    {/* 3. Totals */}
+   
+    <div className="flex items-center justify-end gap-6 py-1">
+      <div className="text-base font-semibold text-purple-700 w-[180px] text-right">
+        Cheque Total
+      </div>
+      <div className="w-[250px] text-base font-bold text-purple-700 px-2">
+        &#8377; {totals.chequePaymentTotal}
+      </div>
+    </div>
+  </div>
+)}
 
                     {/* Food / Service / VAT Tax — independent of GST */}
 {/* Food / Service / VAT Tax — independent of GST */}

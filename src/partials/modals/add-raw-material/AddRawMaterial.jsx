@@ -123,12 +123,10 @@ const AddRawMaterial = ({ isOpen, onClose, refreshData, rawmaterial }) => {
   leadTime : "",
   unitid: "",
   supplierRate: "",
-  priority: "",
+  priority: "1100", 
   generalFixAccess: false,
   weight: "",
-
- 
-  openingBalance: "",
+openingBalance: "",
   closingQty: "",
   expiryDate: null,
   isCalculate: false,
@@ -148,7 +146,7 @@ const AddRawMaterial = ({ isOpen, onClose, refreshData, rawmaterial }) => {
       formData.append("nameGujarati", values.nameGujarati.trim() || "");
       formData.append("nameHindi", values.nameHindi.trim() || "");
       formData.append("rawMaterialCatId", parseInt(values.rawCategoryId));
-      formData.append("sequence", parseInt(values.priority) || 0);
+      formData.append("sequence", parseInt(values.priority) || 1100);
       formData.append("supplierRate", parseFloat(values.supplierRate) || 0);
       formData.append("unitId", parseInt(values.unitid));
       formData.append("userId", parseInt(id));
@@ -328,7 +326,7 @@ formData.append("cess", parseFloat(values.cess) || 0);
           rawCategoryId: rawmaterial.raw_material_cat_id || "",
           unitid: rawmaterial.unitId || "",
           supplierRate: rawmaterial.rate || "",
-          priority: rawmaterial.priority || "",
+          priority: rawmaterial.priority || "1100",
           generalFixAccess: rawmaterial.isGeneralFix || false,
           weight: rawmaterial.weightPer100Pax || "",
           openingBalance: rawmaterial.opbStock ?? "",

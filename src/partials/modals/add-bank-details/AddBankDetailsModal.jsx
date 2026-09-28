@@ -20,7 +20,8 @@ const AddBankDetailsModal = ({
   const userId = JSON.parse(localStorage.getItem("userId"));
   const [qrImage, setQrImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
-
+const DECOR_USER_IDS = ["757"];
+const canSetDecor = DECOR_USER_IDS.includes(String(userId));
   useEffect(() => {
     if (bankDetails?.qrCodeImage) {
       setPreviewUrl(bankDetails.qrCodeImage);
@@ -34,7 +35,9 @@ const AddBankDetailsModal = ({
         branchName: bankDetails.branchName || "",
         ifscCode: bankDetails.ifscCode || "",
         upiId: bankDetails.upiId || "",
+        gstNo :bankDetails.gstNo || "",
         isPrimary: bankDetails.isPrimary || false,
+        isDecor: bankDetails.isDecor || false,
         openingBalance: bankDetails.openingBalance || 0,
 
         // ✅ convert string "DD/MM/YYYY" → dayjs so DatePicker shows the value
@@ -46,6 +49,7 @@ const AddBankDetailsModal = ({
       form.resetFields();
       form.setFieldsValue({
         openingDate: dayjs(),
+        isDecor: false,
       });
     }
   }, [bankDetails, isOpen, form]);
@@ -134,7 +138,9 @@ const AddBankDetailsModal = ({
       formData.append("branchName", values.branchName);
       formData.append("ifscCode", values.ifscCode);
       formData.append("upiId", values.upiId || "");
+      formData.append("gstNo" , values.gstNo || 0);
       formData.append("isPrimary", values.isPrimary || false);
+      formData.append("isDecor", canSetDecor ? !!values.isDecor : false);
       formData.append("userId", userId);
       formData.append("id", bankDetails?.id || -1);
       formData.append(
@@ -413,6 +419,24 @@ const AddBankDetailsModal = ({
               size="large"
             />
           </Form.Item>
+<Form.Item
+            label={
+              <FormattedMessage
+                id="BANK.UPI_ID"
+                defaultMessage="GST"
+              />
+            }
+            name="gstNo"
+            className="mb-4"
+          >
+            <Input
+              placeholder={intl.formatMessage({
+      id: "BANK.UPI_ID_PLACEHOLDER",
+     defaultMessage: "Enter Gst",
+     })}
+              size="large"
+            />
+          </Form.Item>
 
           <Form.Item
             label={
@@ -491,6 +515,18 @@ const AddBankDetailsModal = ({
           >
             <Switch className="accent-primary" />
           </Form.Item>
+          {canSetDecor && (
+  <Form.Item
+    label={
+      <FormattedMessage id="BANK.IS_DECOR" defaultMessage="Is Decor?" />
+    }
+    name="isDecor"
+    valuePropName="checked"
+    className="mb-4"
+  >
+    <Switch className="accent-primary" />
+  </Form.Item>
+)}
         </div>
 
         <Form.Item className="mb-0">
