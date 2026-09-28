@@ -1662,7 +1662,7 @@ export const superAdminMenuItems = [
     ),
     icon: "ki-filled ki-setting-4 text-primary",
     path: "/exhibition-setup",
-    pageName: "Exhibition Setup",
+    pageName: "Exhibition Quotation",
   },
   // {
   //   title: (
