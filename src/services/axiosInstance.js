@@ -2,7 +2,14 @@ import axios from "axios";
 
 // === Create Axios instance ===
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL:
+    import.meta.env.DEV &&
+    typeof window !== "undefined" &&
+    import.meta.env.VITE_API_BASE_URL &&
+    (import.meta.env.VITE_API_BASE_URL.includes("103.1.101.244") ||
+      import.meta.env.VITE_API_BASE_URL.includes("5101"))
+      ? "/v1/api"
+      : import.meta.env.VITE_API_BASE_URL,
   headers: {
     "x-am-response-case": "noChange",
     "x-am-response-object-type": "no_action",

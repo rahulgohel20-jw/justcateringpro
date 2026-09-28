@@ -58,6 +58,7 @@
           UploadDecorImagePlanning ,
           UploadMenuItemImage,
           Getmenusubcategory,
+          
           } from "@/services/apiServices";
           import { useMenuPrepStore } from "@/store/useMenuPrepStore";
           import AddMenuItem from "@/partials/modals/add-menu-item/AddMenuItem";
@@ -2117,15 +2118,38 @@ setPrimaryItemsByFunction((prev) => ({ ...prev, [selectedFunction]: loadedPrimar
           const pkgId = prepMeta?.packageId || 0;
           // const hasPackageCats = rawSelectedCats.some((c) => Number(c.anyItem || 0) > 0);
 
-          if (isPkg && pkgId > 0 ) {
-            const pkgName = prepMeta?.packageName || "";
-            const pkgPrice = prepMeta?.packagePrice || 0;
+         if (isPkg && pkgId > 0 ) {
+  const pkgName = prepMeta?.packageName || "";
+  const pkgPrice = prepMeta?.packagePrice || 0;
 
-            // Rebuild per-category limits from anyItem field
-            const limits = {};
-            rawSelectedCats.forEach((c) => {
-              if (c.menuCategoryName) limits[c.menuCategoryName] = Number(c.anyItem || 0);
-            });
+  // Fallback: limits from the saved response
+  const limits = {};
+  rawSelectedCats.forEach((c) => {
+    if (c.menuCategoryName) limits[c.menuCategoryName] = Number(c.anyItem || 0);
+  });
+
+  // Source of truth: the package's own limits, so the highlight survives save/reload
+  if (currentUserId === 757) {
+    try {
+      if (mode === "decor") {
+        const pkgResp = await GetDecorPackageById(pkgId);
+        const pkgDef = pkgResp?.data?.data?.["Decore Package Details"]?.[0];
+        (pkgDef?.decorePackageDetails || []).forEach((d) => {
+          const name = d.categoryName || `Category ${d.decoreMainCategoryId}`;
+          limits[name] = Number(d.anyItem || 0);
+        });
+      } else {
+        const pkgResp = await GetCustomPackageapibyID(pkgId);
+        const pkgDef = pkgResp?.data?.data?.["Package Details"]?.[0];
+        (pkgDef?.customPackageDetails || []).forEach((m) => {
+          const name = m.menuName || `Menu ${m.menuId || ""}`;
+          limits[name] = Number(m.anyItem || 0);
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load package limits:", e);
+    }
+  }
 
             setPackageInfoByFunction((prev) => ({
               ...prev,

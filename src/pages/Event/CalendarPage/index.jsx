@@ -1,10 +1,10 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useMemo } from "react";
 import { Container } from "@/components/container";
 import CalendarComponent from "@/components/CalendarComponent";
 import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
 import EventViewModal from "@/partials/modals/calendar-event/EventView";
 import { useNavigate } from "react-router-dom";
-import { GetEventMaster } from "@/services/apiServices";
+import { GetEventMaster, GetVenueType, GetAllBanquet } from "@/services/apiServices";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLanguage } from "@/i18n";
 import { usePermission } from "../../../hooks/usePermission";
@@ -34,13 +34,43 @@ const [selectedDay, setSelectedDay] = useState(null);
 const [statusFilter, setStatusFilter] = useState(-1);
 const [statusCounts, setStatusCounts] = useState({});
 const [rMenuCount, setRMenuCount] = useState(0);
-  const [currentMonth, setCurrentMonth] = useState(() => {
+const [venueList, setVenueList] = useState([]);
+const [banquetList, setBanquetList] = useState([]);
+const [selectedVenue, setSelectedVenue] = useState(-1);
+const [selectedBanquet, setSelectedBanquet] = useState(-1);
+  const getSavedMonth = () => {
+    try {
+      const saved =
+        sessionStorage.getItem("calendar_selected_month") ||
+        localStorage.getItem("calendar_selected_month");
+      if (saved && !isNaN(Number(saved)) && Number(saved) >= 1 && Number(saved) <= 12) {
+        return String(saved).padStart(2, "0");
+      }
+    } catch (e) {}
     const now = new Date();
-    return String(now.getMonth() + 1).padStart(2, "0"); // "06"
-  });
-  const [currentYear, setCurrentYear] = useState(() => {
-    return String(new Date().getFullYear()); // "2026"
-  });
+    return String(now.getMonth() + 1).padStart(2, "0");
+  };
+
+  const getSavedYear = () => {
+    try {
+      const saved =
+        sessionStorage.getItem("calendar_selected_year") ||
+        localStorage.getItem("calendar_selected_year");
+      if (saved && !isNaN(Number(saved)) && Number(saved) >= 2000) {
+        return String(saved);
+      }
+    } catch (e) {}
+    return String(new Date().getFullYear());
+  };
+
+  const [currentMonth, setCurrentMonth] = useState(getSavedMonth);
+  const [currentYear, setCurrentYear] = useState(getSavedYear);
+
+  const initialCalendarDate = useMemo(() => {
+    const m = Number(getSavedMonth()) - 1;
+    const y = Number(getSavedYear());
+    return new Date(y, m, 1);
+  }, []);
 const [loadingEvents, setLoadingEvents] = useState(false);
 
   const openEvent = (data) => {
@@ -66,6 +96,26 @@ const isInquiryVisible = authStorage?.state?.user?.isInquiryVisible ?? false;
   const { isRTL, locale } = useLanguage();
 
 const { isHallAllowed } = useBanquetPermission()
+
+  useEffect(() => {
+    if (Id) {
+      GetVenueType(true, Id)
+        .then((res) => {
+          const list = res?.data?.data?.["Venue Details"] || [];
+          setVenueList(list);
+        })
+        .catch((err) => console.error("Error fetching venues:", err));
+
+      if (canAccessBanquet) {
+        GetAllBanquet(Id)
+          .then((res) => {
+            const list = res?.data?.data || [];
+            setBanquetList(list);
+          })
+          .catch((err) => console.error("Error fetching banquets:", err));
+      }
+    }
+  }, [Id, canAccessBanquet]);
 
   const [lang, setLang] = useState(localStorage.getItem("lang") || "en");
 
@@ -223,23 +273,42 @@ const { isHallAllowed } = useBanquetPermission()
   };
 
  useEffect(() => {
-    FetchEventdetails(currentMonth, currentYear, statusFilter);
-  }, [lang, currentMonth, currentYear, statusFilter]);
+    FetchEventdetails(currentMonth, currentYear, statusFilter, selectedVenue, selectedBanquet);
+  }, [lang, currentMonth, currentYear, statusFilter, selectedVenue, selectedBanquet]);
 
 
   const handleMonthChange = (info) => {
-    const date = new Date(info.start);
     const mid = new Date((info.start.getTime() + info.end.getTime()) / 2);
     const month = String(mid.getMonth() + 1).padStart(2, "0");
     const year = String(mid.getFullYear());
     setCurrentMonth(month);
     setCurrentYear(year);
+    try {
+      sessionStorage.setItem("calendar_selected_month", month);
+      sessionStorage.setItem("calendar_selected_year", year);
+      localStorage.setItem("calendar_selected_month", month);
+      localStorage.setItem("calendar_selected_year", year);
+    } catch (e) {}
   };
 
-const FetchEventdetails = (month = currentMonth, year = currentYear, status = statusFilter) => {
+const FetchEventdetails = (
+  month = currentMonth,
+  year = currentYear,
+  status = statusFilter,
+  venue = selectedVenue,
+  banquet = selectedBanquet
+) => {
   setLoadingEvents(true);
 
-  GetEventMaster(Id, isChildUser, month, year, status === -1 ? null : status)
+  GetEventMaster(
+    Id,
+    isChildUser,
+    month,
+    year,
+    status === -1 ? null : status,
+    venue,
+    banquet
+  )
     .then((res) => {
       const eventdata = res?.data?.data?.["Event Details"] || [];
 
@@ -453,19 +522,19 @@ setRMenuCount(rMenuTotal);
     </span>
   </div>
 
-            <div className="flex items-center gap-2">
-                          {/* Status Filter Dropdown */}
-<select
-  value={statusFilter}
-  onChange={(e) => setStatusFilter(Number(e.target.value))}
-  className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary"
->
-  <option value={-1}>All</option>
-  <option value={0}>Inquiry</option>
-  <option value={1}>Confirm</option>
-  <option value={2}>Cancel</option>
-  <option value={3}>Tentative</option>
-</select>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Status Filter Dropdown */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(Number(e.target.value))}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value={-1}>All Statuses</option>
+                <option value={0}>Inquiry</option>
+                <option value={1}>Confirm</option>
+                <option value={2}>Cancel</option>
+                <option value={3}>Tentative</option>
+              </select>
 
 
                 {canAccessBanquet && (
@@ -524,16 +593,16 @@ setRMenuCount(rMenuTotal);
         {/* Create Event Button - Mobile Full Width */}
         <div className="md:hidden mb-4">
           <select
-    value={statusFilter}
-    onChange={(e) => setStatusFilter(Number(e.target.value))}
-    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white mb-3 focus:outline-none focus:ring-2 focus:ring-primary"
-  >
-    <option value={-1}>All</option>
-    <option value={0}>Inquiry</option>
-    <option value={1}>Confirm</option>
-    <option value={2}>Cancel</option>
-    <option value={3}>Tentative</option>
-  </select>
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(Number(e.target.value))}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white mb-3 focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value={-1}>All Statuses</option>
+            <option value={0}>Inquiry</option>
+            <option value={1}>Confirm</option>
+            <option value={2}>Cancel</option>
+            <option value={3}>Tentative</option>
+          </select>
           <button
             className="btn btn-primary w-full py-3 px-4 flex items-center justify-center gap-2 rounded-lg text-base font-semibold"
             onClick={() => navigate("/add-event")}
@@ -564,6 +633,54 @@ setRMenuCount(rMenuTotal);
             handleMonthChange={handleMonthChange}
             lang={lang}
             loading={loadingEvents}
+            initialDate={initialCalendarDate}
+            extraFilters={
+              <Fragment>
+                {/* Venue Filter Dropdown */}
+                <select
+                  value={selectedVenue}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setSelectedVenue(val);
+                    if (val !== -1) {
+                      setSelectedBanquet(-1);
+                    }
+                  }}
+                  disabled={loadingEvents}
+                  className="border border-gray-300 rounded-lg px-2.5 py-2 text-xs md:text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value={-1}>All Venues</option>
+                  {venueList.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {getLocalizedText(v, "name") || v.nameEnglish || v.name}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Banquet Filter Dropdown - shown only when canAccessBanquet is true */}
+                {canAccessBanquet && (
+                  <select
+                    value={selectedBanquet}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      setSelectedBanquet(val);
+                      if (val !== -1) {
+                        setSelectedVenue(-1);
+                      }
+                    }}
+                    disabled={loadingEvents}
+                    className="border border-gray-300 rounded-lg px-2.5 py-2 text-xs md:text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value={-1}>All Banquets</option>
+                    {banquetList.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.hallName}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </Fragment>
+            }
           />
         </div>
       </Container>
