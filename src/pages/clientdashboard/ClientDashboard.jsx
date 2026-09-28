@@ -572,14 +572,18 @@ useEffect(() => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {/* Total Events Card */}
-          <div className="flex items-center justify-between bg-[#FFF5E6] p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-  <h2 className="text-base font-semibold text-gray-800">
-    Events
-  </h2>
-
-  
-</div>
+          <div className="flex items-center justify-between bg-[#FFF5E6] p-6 rounded-2xl shadow-sm">
+            <div>
+              <p className="text-sm text-gray-600 font-medium mb-1">
+                <FormattedMessage
+                  id="DASHBOARD.EVENTS"
+                  defaultMessage="Events"
+                />
+              </p>
+              <h2 className="text-3xl font-bold text-gray-900">
+                {dashboarddata?.totalEvent ?? 0}
+              </h2>
+            </div>
             <div className="w-16 h-16 flex items-center justify-center bg-[#FF947A] rounded-full shadow-md">
               <img
                 src={toAbsoluteUrl(`/media/brand-logos/total_events.svg`)}

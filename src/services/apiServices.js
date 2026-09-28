@@ -471,14 +471,28 @@ const getIsVisible = () => {
   }
 };
 
-export const GetEventMaster = (Id, isChildUser, month, year, status) => {
+export const GetEventMaster = (
+  Id,
+  isChildUser,
+  month,
+  year,
+  status,
+  venueId = -1,
+  banqId = -1,
+  partyName = ""
+) => {
   const isVisible = getIsVisible();   
   if (isVisible === false) {
     month = -1;
     year = -1;
   }
   const statusParam = status === null || status === undefined || status === -1 ? "" : `&status=${status}`;
-  return GET(`/eventmaster/getallbyuserid?userId=${Id}&isChildUser=${isChildUser}&month=${month || -1}&year=${year || -1}&isVisible=${isVisible}${statusParam}`);
+  const venueParam = `&venueId=${venueId !== undefined && venueId !== null && venueId !== "" ? venueId : -1}`;
+  const banqParam = `&banqId=${banqId !== undefined && banqId !== null && banqId !== "" ? banqId : -1}`;
+  const partyParam = partyName ? `&partyName=${encodeURIComponent(partyName)}` : "";
+  return GET(
+    `/eventmaster/getallbyuserid?userId=${Id}&isChildUser=${isChildUser}&month=${month || -1}&year=${year || -1}&isVisible=${isVisible}${statusParam}${venueParam}${banqParam}${partyParam}`
+  );
 };
 
 export const UpdateEventMaster = (Id, data) => {
@@ -3933,21 +3947,39 @@ export const updateehibition = (quotationId , data) => {
   return PUT(`/exhibition/quotations/update?quotationId=${quotationId}`,data);
 };
 
+// User Exhibition Setup Controller APIs
+export const addOrUpdateExhibitionSetup = (data) => {
+  return POST(`/user/exhibition/setup/add-update`, data);
+};
+
+export const deleteExhibitionSetup = (id) => {
+  return DELETE(`/user/exhibition/setup/delete?id=${id}`);
+};
+
+export const deleteExhibitionSetupFeature = (id) => {
+  return DELETE(`/user/exhibition/setup/feature/delete?id=${id}`);
+};
+
+export const getAllExhibitionSetups = ({ userId, isActive, search = "", moduleName = "" } = {}) => {
+  let url = `/user/exhibition/setup/getall?userId=${userId || 0}`;
+  if (isActive !== undefined && isActive !== null) url += `&isActive=${isActive}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+  if (moduleName) url += `&moduleName=${encodeURIComponent(moduleName)}`;
+  return GET(url);
+};
+
+export const updateExhibitionSetupStatus = (id, isActive) => {
+  return PUT(`/user/exhibition/setup/isActive?id=${id}&isActive=${isActive}`);
+};
+
+// Aliases for compatibility
 export const getExhibitionSetupByEventUser = (eventId, userId) => {
-  return GET(`/exhibition/setup/by-event-user?eventId=${eventId}&userId=${userId}`);
+  return getAllExhibitionSetups({ userId });
 };
-
-export const saveExhibitionSetup = (data) => {
-  return POST(`/exhibition/setup/add`, data);
-};
-
-export const deleteExhibitionSetupDetail = (id) => {
-  return DELETE(`/exhibition/setup/delete?id=${id}`);
-};
-
-export const deleteExhibitionSetupItemDetail = (id) => {
-  return DELETE(`/exhibition/setup/item/delete?id=${id}`);
-};
+export const saveExhibitionSetup = addOrUpdateExhibitionSetup;
+export const deleteExhibitionSetupDetail = deleteExhibitionSetup;
+export const deleteExhibitionSetupItemDetail = deleteExhibitionSetupFeature;
+export const updateExhibitionSetupIsActive = updateExhibitionSetupStatus;
 export const updatelock = (quotationId) => {
   return PUT(`/exhibition/quotations/lock?quotationId=${quotationId}`);
 };

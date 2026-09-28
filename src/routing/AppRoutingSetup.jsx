@@ -292,6 +292,7 @@ import BankReceipts from "../pages/master/bank-receipt";
 import Transfers from "../pages/master/Transfer-Amount-cashbank";
 import Payable from "../pages/master/payable.jsx";
 import UserTerms from "../components/usertermscondition/UserTerms";
+import ExhibitionSetup from "../pages/master/exhibition-setup/ExhibitionSetup";
 import MasterExpenseType from "../pages/master/masterExpenseType/index.jsx";
 import ReceiptManagement from "../pages/master/Cash-Details/Bank-cashReceipt/index.jsx";
 import BookPage from "../pages/master/Cash-Details/AccountBook/index.jsx";
@@ -643,6 +644,7 @@ const AppRoutingSetup = () => {
           <Route path="/super/payable" element={<SuperPayable />} />
           <Route path="/transfer" element={<Transfers />} />
           <Route path="/terms" element={<UserTerms />} />
+          <Route path="/exhibition-setup" element={<ExhibitionSetup />} />
           <Route path="/payable" element={<Payable />} />
           <Route path="/accoutbook" element={<BookPage />} />
           <Route path="/master/expensetype" element={<MasterExpenseType />} />
