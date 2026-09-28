@@ -90,7 +90,8 @@
           import { FormattedMessage, useIntl } from "react-intl";
           import PermissableNonPermissableModal from "../../../partials/modals/permissable-nonpermissable/PermissableNonPermissableModal";
           import EditFunctionDetailsModal from "./components/EditFunctionDetailsModal";
-import { QRCodeCanvas } from "qrcode.react";  
+import { QRCodeCanvas } from "qrcode.react"; 
+import useSpeechRecognition from "@/hooks/useSpeechRecognition"; 
 
 
           const SearchWithSuggestions = ({
@@ -107,6 +108,14 @@ import { QRCodeCanvas } from "qrcode.react";
           const itemRefs = useRef([]);
           const [showDropdown, setShowDropdown] = useState(false);
           const [activeIdx, setActiveIdx] = useState(-1);
+
+          const { isListening, toggle: toggleMic, stop: stopMic } = useSpeechRecognition({
+  onResult: (text) => {
+    onChange(text);          // updates itemSearchTerm in the parent
+    setShowDropdown(true);   // open suggestions as words come in
+    setActiveIdx(-1);
+  },
+});
 
           const suggestions = useMemo(() => {
           if (!value.trim()) return [];
@@ -166,6 +175,7 @@ import { QRCodeCanvas } from "qrcode.react";
           selectedIdsSet.has(String(numericId(item)));
 
           const handleSelect = (item) => {
+             stopMic();
           const catName =
             category !== "All"
               ? category
@@ -205,8 +215,8 @@ import { QRCodeCanvas } from "qrcode.react";
             <div className="relative flex-1">
               <input
                 type="text"
-                className="input input-md w-full pr-7"
-                placeholder="Search items"
+  className="input input-md w-full pr-14"  
+  placeholder={isListening ? "Listening…" : "Search items"}
                 value={value}
                 autoComplete="off"
                 onChange={(e) => {
@@ -220,6 +230,22 @@ import { QRCodeCanvas } from "qrcode.react";
                 onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
                 onKeyDown={handleKeyDown}
               />
+
+             <button
+  type="button"
+  title={isListening ? "Stop listening" : "Search by voice"}
+  onMouseDown={(e) => e.preventDefault()}
+  onClick={toggleMic}
+  className={`absolute top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full transition-colors ${
+    value ? "right-8" : "right-2"
+  } ${
+    isListening
+      ? "bg-red-500 text-white animate-pulse"
+      : "bg-primary/10 text-primary hover:bg-primary hover:text-white"
+  }`}
+>
+  <Mic size={18} />
+</button>
               {value && (
                 <button
                   type="button"
@@ -4728,14 +4754,7 @@ const handleSubCategoryChange = (subCatName, subCatId, subCatInfo) => {
                     </button>
                   )}
 
-                  <Tooltip title={intl.formatMessage({ id: "USER.EVENT_PLANNING.SPEECH_TO_TEXT_TOOLTIP", defaultMessage: "Start speech to text" })}>
-                    <button
-                      type="button"
-                      className="btn btn-primary flex items-center justify-center rounded-full p-0 w-8 h-8"
-                    >
-                      <Mic size={18} />
-                    </button>
-                  </Tooltip>
+               
                 </div>
               </div>
             </div>
