@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Input, Tooltip } from "antd";
-import ReactSelect from "react-select";
+import ReactSelect, { components } from "react-select";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import dayjs from "dayjs";
@@ -42,7 +42,7 @@ import { useModuleAccess } from "../../../hooks/useModuleAccess";
 import { useLocation } from "react-router-dom";
 import { useBanquetPermission } from "../../../hooks/useBanquetPermission";
 import { usePermission } from "../../../hooks/usePermission";
-
+import { resolveOptionValue } from "@/utils/resolveOptionValue";
 
 
 const VenueNamesModal = ({ isOpen, onClose, venueEnglish, venueHindi, venueGujarati, onSave, onTranslatingChange = () => {} }) => {
@@ -229,6 +229,79 @@ const getLangConfig = () => {
 };
 
 
+const summaryStyle = {
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  minWidth: 0,
+  fontSize: "12px",
+};
+
+const BanquetValueContainer = ({ children, ...props }) => {
+  const selected = props.getValue();
+  const childArray = Array.isArray(children) ? children : [children];
+  const input = childArray[childArray.length - 1];
+
+  return (
+    <components.ValueContainer {...props}>
+      {selected.length === 0 ? (
+        <span style={{ ...summaryStyle, color: "#9ca3af" }}>Select Hall(s)</span>
+      ) : (
+        <span
+          style={{ ...summaryStyle, color: "#005BA8", fontWeight: 600 }}
+          title={selected.map((s) => s.label).join(", ")}
+        >
+          {selected.length === 1 ? selected[0].label : `${selected.length} halls`}
+        </span>
+      )}
+      {input}
+    </components.ValueContainer>
+  );
+};
+
+
+const banquetSelectStyles = {
+  control: (base) => ({
+    ...base,
+    minHeight: "34px",
+    fontSize: "12px",
+    borderColor: "#d1d5db",
+    borderRadius: "6px",
+    cursor: "pointer",
+    boxShadow: "none",
+    "&:hover": { borderColor: "#005BA8" },
+  }),
+  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+  menu: (base) => ({ ...base, fontSize: "12px" }),
+  option: (base, state) => ({
+    ...base,
+    fontSize: "12px",
+    backgroundColor: state.isSelected ? "#e0edff" : state.isFocused ? "#f0f7ff" : "white",
+    color: state.isSelected ? "#005BA8" : "#111827",
+    fontWeight: state.isSelected ? 600 : 400,
+    padding: "6px 10px",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    "::before": {
+      content: state.isSelected ? '"✓"' : '""',
+      color: "#005BA8",
+      fontWeight: 700,
+      width: "12px",
+      display: "inline-block",
+    },
+  }),
+  valueContainer: (base) => ({
+  ...base,
+  flexWrap: "nowrap",
+  overflow: "hidden",
+  padding: "2px 8px",
+}),
+  indicatorSeparator: () => ({ display: "none" }),
+  dropdownIndicator: (base) => ({ ...base, padding: "0 6px", color: "#9ca3af" }),
+};
+
+const banquetSelectComponents = { ValueContainer: BanquetValueContainer };
 
 const BanquetSelect = ({ value, options, onChange, menuPortalTarget }) => {
   const selectedValues = (Array.isArray(value) ? value : value ? [value] : [])
@@ -246,65 +319,13 @@ const BanquetSelect = ({ value, options, onChange, menuPortalTarget }) => {
       onChange={(selected) => onChange((selected || []).map((s) => s.value))}
       placeholder="Select Hall(s)"
       menuPortalTarget={menuPortalTarget || document.body}
+      menuPosition="fixed"
+      isClearable={false}
       closeMenuOnSelect={false}
       hideSelectedOptions={false}
-      controlShouldRenderValue={false}  // ← hides all tags from control
-      styles={{
-        control: (base) => ({
-          ...base,
-          minHeight: "34px",
-          fontSize: "12px",
-          borderColor: "#d1d5db",
-          borderRadius: "6px",
-          cursor: "pointer",
-          boxShadow: "none",
-          "&:hover": { borderColor: "#005BA8" },
-        }),
-        menuPortal: (base) => ({ ...base, zIndex: 9999 }),
-        menu: (base) => ({ ...base, fontSize: "12px" }),
-        option: (base, state) => ({
-          ...base,
-          fontSize: "12px",
-          backgroundColor: state.isSelected ? "#e0edff" : state.isFocused ? "#f0f7ff" : "white",
-          color: state.isSelected ? "#005BA8" : "#111827",
-          fontWeight: state.isSelected ? 600 : 400,
-          padding: "6px 10px",
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          "::before": {
-            content: state.isSelected ? '"✓"' : '""',
-            color: "#005BA8",
-            fontWeight: 700,
-            width: "12px",
-            display: "inline-block",
-          },
-        }),
-        placeholder: (base) => ({ ...base, fontSize: "12px", color: "#9ca3af" }),
-        indicatorSeparator: () => ({ display: "none" }),
-        dropdownIndicator: (base) => ({ ...base, padding: "0 6px", color: "#9ca3af" }),
-      }}
-      // Show summary text in control instead of tags
-      components={{
-        ValueContainer: ({ children, getValue }) => {
-          const selected = getValue();
-          return (
-            <div style={{ display: "flex", alignItems: "center", padding: "2px 8px", flex: 1 }}>
-              {selected.length === 0 ? (
-                <span style={{ color: "#9ca3af", fontSize: "12px" }}>Select Hall(s)</span>
-              ) : (
-                <span style={{ color: "#005BA8", fontSize: "12px", fontWeight: 600 }}>
-                  {selected.length === 1
-                    ? selected[0].label
-                    : `${selected.length} halls selected`}
-                </span>
-              )}
-              {/* keep the hidden input react-select needs internally */}
-              {children[children.length - 1]}
-            </div>
-          );
-        },
-      }}
+      controlShouldRenderValue={false}
+      styles={banquetSelectStyles}
+      components={banquetSelectComponents}
     />
   );
 };
@@ -1870,12 +1891,12 @@ const isODCRow =
             <FormattedMessage id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_DETAILS_FUNCTION_DETAILS_FUNCTION_TYPE" defaultMessage="Functions" />
             <span className="text-red-500 ml-0.5">*</span>
           </label>
-          <FunctionTypeDropdown
-            value={func.functionId || undefined}
-            onChange={(value) => handleFunctionSelect(index, value)}
-            onFocus={() => setActiveRowIndex(index)}
-            options={options}
-            placeholder="Select Function"
+         <FunctionTypeDropdown
+  value={resolveOptionValue(func.functionId, options)}
+  onChange={(value) => handleFunctionSelect(index, value)}
+  onFocus={() => setActiveRowIndex(index)}
+  options={options}
+  placeholder="Select Function"
             className="w-full"
             style={{ borderColor: isDuplicate || getFunctionFieldError(index, "functionId") ? "#ef4444" : undefined }}
           />
@@ -2136,7 +2157,7 @@ const isODCRow =
                 </th>
            
                 {canAccessBanquet && (
-   <th className="text-sm font-semibold text-gray-900 p-2 sm:p-3 min-w-[120px] max-w-[130px]">
+   <th className="text-sm font-semibold text-gray-900 p-2 sm:p-3 min-w-[150px] max-w-[170px]">
     Banquet Hall
   </th>
 )}
@@ -2168,12 +2189,12 @@ const isODCRow =
                       <SortableRow key={func.id || index} id={func.id || index}>
                         {/* Function dropdown */}
                         <td className={cellClass}>
-                          <FunctionTypeDropdown
-                            value={func.functionId || undefined}
-                            onChange={(value) => handleFunctionSelect(index, value)}
-                            onFocus={() => setActiveRowIndex(index)}
-                            options={options}
-                            placeholder="Select Function"
+                         <FunctionTypeDropdown
+  value={resolveOptionValue(func.functionId, options)}
+  onChange={(value) => handleFunctionSelect(index, value)}
+  onFocus={() => setActiveRowIndex(index)}
+  options={options}
+  placeholder="Select Function"
                             style={{ borderColor: isDuplicate || getFunctionFieldError(index, "functionId") ? "#ef4444" : undefined, width: "100%" }}
                           />
                           {getFunctionFieldError(index, "functionId") && (

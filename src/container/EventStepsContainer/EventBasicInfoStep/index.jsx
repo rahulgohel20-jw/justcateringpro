@@ -22,6 +22,9 @@ import { useLocation } from "react-router-dom";
 import AddBanquetModal from "../../../partials/modals/add-banquet/AddBanquetModal";
 import { useBanquetPermission } from "../../../hooks/useBanquetPermission";
 import { usePermission } from "../../../hooks/usePermission";
+import { resolveOptionValue } from "@/utils/resolveOptionValue";
+
+
 const ODC_OPTION = { value: "ODC", label: "ODC" };
 
 const EventBasicInfoStep = ({
@@ -48,6 +51,8 @@ const EventBasicInfoStep = ({
   const location = useLocation();
   const prefill = location.state || {};
   const { filterHalls } = useBanquetPermission();
+  const [eventTypesLoading, setEventTypesLoading] = useState(true);
+const [venuesLoading, setVenuesLoading] = useState(true);
 
   const backDatePermission = usePermission("Lock Back Date Entry");
   const isBackDateLocked = backDatePermission.add || backDatePermission.edit;
@@ -161,6 +166,7 @@ const EventBasicInfoStep = ({
   };
 
   const Fetcheventtype = async (autoSelectLatest = false) => {
+     setEventTypesLoading(true)
     try {
       const res = await GetEventType(Id);
       const items = res.data.data["EventTypes Details"] || [];
@@ -181,10 +187,14 @@ const EventBasicInfoStep = ({
       }
     } catch (error) {
       console.log("Error fetching Event Types:", error);
-    }
+    }  finally {
+    setEventTypesLoading(false);
+  }
   };
 
+  
   const fetchVenueTypes = async (autoSelectLatest = false) => {
+     setVenuesLoading(true);
     try {
       const isActive = true;
       const res = await GetVenueType(isActive, Id);
@@ -202,7 +212,9 @@ const EventBasicInfoStep = ({
       }
     } catch (error) {
       console.error("Error fetching Venues:", error);
-    }
+    }  finally {
+    setVenuesLoading(false);
+  }
   };
 
   const handleFormDataChange = (field, value) => {
@@ -265,6 +277,11 @@ const EventBasicInfoStep = ({
       return "";
     }
   };
+
+ 
+
+const eventTypeValue = resolveOptionValue(formData.eventTypeId, eventTypes);
+const venueValue = resolveOptionValue(formData.venueId, venueList);
 
   return (
     <Form>
@@ -342,6 +359,7 @@ const EventBasicInfoStep = ({
                 onChange={onInputChange}
                 options={eventTypes}
                 name="eventTypeId"
+                 loading={eventTypesLoading}
               />
               <button
                 type="button"
@@ -509,6 +527,7 @@ const EventBasicInfoStep = ({
                   value={formData.venueId}
                   onChange={(e) => onInputChange(e)}
                   options={venueList}
+                   loading={venuesLoading} 
                 />
                 <button
                   type="button"
