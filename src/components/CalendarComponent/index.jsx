@@ -10,7 +10,7 @@ import { useIntl } from "react-intl";
 import { useLanguage } from "@/i18n";
 import { useEffect, useState, useRef, useMemo } from "react";
 
-const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange, loading, initialDate }) => {
+const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange, loading, initialDate, extraFilters }) => {
   const classes = useStyles();
   const intl = useIntl();
   const { isRTL } = useLanguage();
@@ -181,6 +181,7 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
             </option>
           ))}
         </select>
+        {extraFilters}
       </div>
 
       {/* Center: title */}

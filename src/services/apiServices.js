@@ -471,14 +471,28 @@ const getIsVisible = () => {
   }
 };
 
-export const GetEventMaster = (Id, isChildUser, month, year, status) => {
+export const GetEventMaster = (
+  Id,
+  isChildUser,
+  month,
+  year,
+  status,
+  venueId = -1,
+  banqId = -1,
+  partyName = ""
+) => {
   const isVisible = getIsVisible();   
   if (isVisible === false) {
     month = -1;
     year = -1;
   }
   const statusParam = status === null || status === undefined || status === -1 ? "" : `&status=${status}`;
-  return GET(`/eventmaster/getallbyuserid?userId=${Id}&isChildUser=${isChildUser}&month=${month || -1}&year=${year || -1}&isVisible=${isVisible}${statusParam}`);
+  const venueParam = `&venueId=${venueId !== undefined && venueId !== null && venueId !== "" ? venueId : -1}`;
+  const banqParam = `&banqId=${banqId !== undefined && banqId !== null && banqId !== "" ? banqId : -1}`;
+  const partyParam = partyName ? `&partyName=${encodeURIComponent(partyName)}` : "";
+  return GET(
+    `/eventmaster/getallbyuserid?userId=${Id}&isChildUser=${isChildUser}&month=${month || -1}&year=${year || -1}&isVisible=${isVisible}${statusParam}${venueParam}${banqParam}${partyParam}`
+  );
 };
 
 export const UpdateEventMaster = (Id, data) => {
