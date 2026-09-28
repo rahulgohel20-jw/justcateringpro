@@ -7,7 +7,7 @@ import AddMember from "@/partials/modals/add-member/AddMember";
 import AddMeal from "@/partials/modals/add-meal/AddMeal";
 import AddRoomModal from "../../../partials/modals/add-room/AddRoomModal";
 import { getLangConfig, extractTranslations } from "@/utils/langConfig";
-
+import { resolveOptionValue } from "@/utils/resolveOptionValue";
 import useStyles from "./style";
 import {
   GetMealType,
@@ -373,7 +373,8 @@ const handleCelbBirthDateChange = (date) => {
                 <div className="select__grp flex flex-col">
                   <div className="sg__inner flex items-center gap-1 relative">
                     <MealTypeDropdown
-                      value={formData.mealTypeId || ""}
+                       value={resolveOptionValue(formData.mealTypeId, options, "")}
+
                       name="mealTypeId"
                       
                       onChange={handleMealTypeChange}
@@ -466,7 +467,7 @@ const handleCelbBirthDateChange = (date) => {
               <div className="flex items-center gap-2">
                 <div className="w-[330px]">
                   <ManagerDropdown
-                    value={formData.managerId || ""}
+                     value={resolveOptionValue(formData.managerId, manager, "")}
                     name="managerId"
                     onChange={onInputChange}
                     options={manager}
