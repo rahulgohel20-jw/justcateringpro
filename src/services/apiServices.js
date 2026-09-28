@@ -3947,4 +3947,18 @@ export const deleteExhibitionSetupDetail = (id) => {
 
 export const deleteExhibitionSetupItemDetail = (id) => {
   return DELETE(`/exhibition/setup/item/delete?id=${id}`);
-};
+};
+export const updatelock = (quotationId) => {
+  return PUT(`/exhibition/quotations/lock?quotationId=${quotationId}`);
+};
+export const updtaeunlock = (quotationId) => {
+  return PUT (`/exhibition/quotations/unlock?quotationId=${quotationId}`);
+};
+
+export const deletebyitemis = ( itemId , moduleId) => {
+  return DELETE(`/exhibition/modules/items/delete?itemId=${itemId}&moduleId=${moduleId}`,);
+};
+
+export const deletebymoduleid = ( groupId , moduleId) => {
+return DELETE(`/exhibition/groups/modules/delete?groupId=${groupId}&moduleId=${moduleId}`);
+};
