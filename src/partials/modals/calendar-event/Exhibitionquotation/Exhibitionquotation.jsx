@@ -200,6 +200,7 @@ function EstimateTable({
   onIgstPercentChange,
   roundOff,
   onRoundOffChange,
+  onDeleteRow,
   EstimateTable
 }) {
   const { subtotal, discount, amountAfterDiscount, tds, cgst, sgst, igst, grandTotal } = calcTotals(rows, {
@@ -322,9 +323,9 @@ function EstimateTable({
                 {money(Number(row.qty || 0) * Number(row.rate || 0))}
               </td>
               <td className="py-2 px-1.5 border-b border-slate-200 text-center">
-                <button onClick={() => deleteRow(row.id)} className="text-slate-400 hover:text-red-600">
-                  <Trash2 size={14} />
-                </button>
+              <button onClick={() => onDeleteRow(day.id, r.id)} className="text-slate-400 hover:text-red-600">
+  <Trash2 size={14} />
+</button>
               </td>
             </tr>
           ))}
