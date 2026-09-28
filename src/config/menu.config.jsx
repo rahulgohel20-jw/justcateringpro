@@ -138,6 +138,17 @@ export const allMenuItems = (navigate) => {
       pageName: "Vendor",
   
     },
+    {
+      title: (
+        <FormattedMessage
+          id="COMMON.EXHIBITION_SETUP"
+          defaultMessage="Exhibition Setup"
+        />
+      ),
+      icon: "  text-lg ki-filled ki-setting-4 text-primary",
+      path: "/exhibition-setup",
+      pageName: "Exhibition Setup",
+    },
 
     {
       title: <FormattedMessage id="COMMON.MASTER" defaultMessage="Master" />,
@@ -1641,6 +1652,17 @@ export const superAdminMenuItems = [
     icon: "ki-filled ki-users text-primary",
     path: "/vendors",
     pageName: "Vendors",
+  },
+  {
+    title: (
+      <FormattedMessage
+        id="COMMON.EXHIBITION_SETUP"
+        defaultMessage="Exhibition Setup"
+      />
+    ),
+    icon: "ki-filled ki-setting-4 text-primary",
+    path: "/exhibition-setup",
+    pageName: "Exhibition Setup",
   },
   // {
   //   title: (
