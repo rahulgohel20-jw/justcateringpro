@@ -4,7 +4,7 @@ import AddCustomer from "@/partials/modals/add-customer/AddCustomer";
 import CustomerDropdown from "@/components/dropdowns/customerDropdown";
 import { GetAllCustomer, Translateapi } from "@/services/apiServices";
 import useStyles from "./style";
-
+import { resolveOptionValue } from "@/utils/resolveOptionValue";
 import { FormattedMessage } from "react-intl";
 import { useLanguage } from "@/i18n";
 import MultiLangInputBox from "../../../components/form-inputs/MultiLangInputbox";
@@ -302,10 +302,10 @@ useEffect(() => {
                   <i className="ki-filled ki-user ms-2.5"></i>
 
                   <CustomerDropdown
-                    value={formData.partyId}
-                    onChange={handleCustomerChange}
-                    options={customer}
-                  />
+  value={resolveOptionValue(formData.partyId, customer, "")}
+  onChange={handleCustomerChange}
+  options={customer}
+/>
                   <button
                     type="button"
                     onClick={() => setIsMemberModalOpen(true)}

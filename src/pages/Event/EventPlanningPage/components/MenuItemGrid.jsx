@@ -3,6 +3,7 @@ import { getbymenucategorywithtype } from "@/services/apiServices";
 import { toAbsoluteUrl } from "@/utils";
 import ShowMenuItems from "./ShowMenuItems";
 import { Eye } from "lucide-react";
+import { resolveImagePath } from "../PlanningConfig";
 
 const PAGE_SIZE = 200;
 
@@ -55,6 +56,7 @@ const MenuItemGrid = ({
   const adaptItem = useCallback(
     (it) => ({
       ...it,
+       imagePath: resolveImagePath(it.imagePath) || resolveImagePath(it.images),
       id: it[f.itemId] ?? it.id,
       menuItemId: it[f.itemId] ?? it.id,
       menuItemName: it[f.itemName] ?? it.menuItemName ?? "",
