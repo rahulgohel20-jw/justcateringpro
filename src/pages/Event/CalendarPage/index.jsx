@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useMemo } from "react";
 import { Container } from "@/components/container";
 import CalendarComponent from "@/components/CalendarComponent";
 import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
@@ -34,13 +34,39 @@ const [selectedDay, setSelectedDay] = useState(null);
 const [statusFilter, setStatusFilter] = useState(-1);
 const [statusCounts, setStatusCounts] = useState({});
 const [rMenuCount, setRMenuCount] = useState(0);
-  const [currentMonth, setCurrentMonth] = useState(() => {
+  const getSavedMonth = () => {
+    try {
+      const saved =
+        sessionStorage.getItem("calendar_selected_month") ||
+        localStorage.getItem("calendar_selected_month");
+      if (saved && !isNaN(Number(saved)) && Number(saved) >= 1 && Number(saved) <= 12) {
+        return String(saved).padStart(2, "0");
+      }
+    } catch (e) {}
     const now = new Date();
-    return String(now.getMonth() + 1).padStart(2, "0"); // "06"
-  });
-  const [currentYear, setCurrentYear] = useState(() => {
-    return String(new Date().getFullYear()); // "2026"
-  });
+    return String(now.getMonth() + 1).padStart(2, "0");
+  };
+
+  const getSavedYear = () => {
+    try {
+      const saved =
+        sessionStorage.getItem("calendar_selected_year") ||
+        localStorage.getItem("calendar_selected_year");
+      if (saved && !isNaN(Number(saved)) && Number(saved) >= 2000) {
+        return String(saved);
+      }
+    } catch (e) {}
+    return String(new Date().getFullYear());
+  };
+
+  const [currentMonth, setCurrentMonth] = useState(getSavedMonth);
+  const [currentYear, setCurrentYear] = useState(getSavedYear);
+
+  const initialCalendarDate = useMemo(() => {
+    const m = Number(getSavedMonth()) - 1;
+    const y = Number(getSavedYear());
+    return new Date(y, m, 1);
+  }, []);
 const [loadingEvents, setLoadingEvents] = useState(false);
 
   const openEvent = (data) => {
@@ -228,12 +254,17 @@ const { isHallAllowed } = useBanquetPermission()
 
 
   const handleMonthChange = (info) => {
-    const date = new Date(info.start);
     const mid = new Date((info.start.getTime() + info.end.getTime()) / 2);
     const month = String(mid.getMonth() + 1).padStart(2, "0");
     const year = String(mid.getFullYear());
     setCurrentMonth(month);
     setCurrentYear(year);
+    try {
+      sessionStorage.setItem("calendar_selected_month", month);
+      sessionStorage.setItem("calendar_selected_year", year);
+      localStorage.setItem("calendar_selected_month", month);
+      localStorage.setItem("calendar_selected_year", year);
+    } catch (e) {}
   };
 
 const FetchEventdetails = (month = currentMonth, year = currentYear, status = statusFilter) => {
@@ -564,6 +595,7 @@ setRMenuCount(rMenuTotal);
             handleMonthChange={handleMonthChange}
             lang={lang}
             loading={loadingEvents}
+            initialDate={initialCalendarDate}
           />
         </div>
       </Container>

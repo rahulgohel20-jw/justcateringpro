@@ -10,7 +10,7 @@ import { useIntl } from "react-intl";
 import { useLanguage } from "@/i18n";
 import { useEffect, useState, useRef, useMemo } from "react";
 
-const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange, loading }) => {
+const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange, loading, initialDate }) => {
   const classes = useStyles();
   const intl = useIntl();
   const { isRTL } = useLanguage();
@@ -20,8 +20,24 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
   const prevDateRef = useRef(null);
 
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+
+  const getEffectiveInitialDate = () => {
+    if (initialDate instanceof Date && !isNaN(initialDate.getTime())) {
+      return initialDate;
+    }
+    try {
+      const sm = sessionStorage.getItem("calendar_selected_month") || localStorage.getItem("calendar_selected_month");
+      const sy = sessionStorage.getItem("calendar_selected_year") || localStorage.getItem("calendar_selected_year");
+      if (sm && sy) {
+        return new Date(Number(sy), Number(sm) - 1, 1);
+      }
+    } catch (e) {}
+    return new Date();
+  };
+
+  const initDate = useMemo(getEffectiveInitialDate, [initialDate]);
+  const [selectedMonth, setSelectedMonth] = useState(initDate.getMonth());
+  const [selectedYear, setSelectedYear] = useState(initDate.getFullYear());
   const [toolbarTitle, setToolbarTitle] = useState("");
 
   const monthNames = useMemo(
@@ -227,6 +243,7 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
         eventClick={(e) => openEvent(e)}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView="dayGridMonth"
+        initialDate={initDate}
         headerToolbar={false}
         contentHeight={getContentHeight()}
         aspectRatio={windowWidth < 768 ? 1.2 : 1.8}
