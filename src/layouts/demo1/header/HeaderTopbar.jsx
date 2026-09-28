@@ -29,6 +29,7 @@ const PATH_TO_RIGHTS_KEY = {
   "/master/contact-categories":       "Categories",
   "/master/customers":                "Customers",
   "/master/vendor-master":            "Vendors",
+  "/exhibition-setup":                "Exhibition Setup",
   "/master/venue-type":               "Venue",
   "/master/godown":                   "Godown",
   "/master/labour-shift":             "Labour Shift",
