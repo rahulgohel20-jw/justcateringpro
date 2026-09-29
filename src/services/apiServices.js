@@ -693,9 +693,10 @@ export const Getmenuprep = (
   pageNo,
   TotalRecord,
   UserId,
+  subCategoryId = 0,
 ) => {
   return GET(
-    `/menupreparation/getmenupreparationitems?eventFunctionId=${eventFunId}&itemName=${encodeURIComponent(itemname)}&menuCategoryId=${menuCatId}&pageNo=${pageNo}&totalRecord=${TotalRecord}&userId=${UserId}`,
+    `/menupreparation/getmenupreparationitems?eventFunctionId=${eventFunId}&itemName=${encodeURIComponent(itemname)}&menuCategoryId=${menuCatId}&pageNo=${pageNo}&totalRecord=${TotalRecord}&userId=${UserId}&menuSubCategoryId=${subCategoryId}`,
   );
 };
 

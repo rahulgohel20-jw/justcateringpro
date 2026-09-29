@@ -3,8 +3,7 @@ import { createPortal } from "react-dom";
 import { FormattedMessage } from "react-intl";
 import { MoreVertical, Info, Printer, Trash2, FilePlus2, MessageCircle  , Pencil } from "lucide-react";
 
-const ActionCell = ({ row, onInfo, onPrint, onDelete, onGenerateInvoice, onEdit,onWhatsApp, permissions = {} }) => {
-  const [open, setOpen] = useState(false);
+const ActionCell = ({ row, onInfo, onPrint, onDelete, onGenerateInvoice, onEdit, onWhatsApp, onWebWhatsApp, permissions = {} }) => {  const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
@@ -84,6 +83,12 @@ const ActionCell = ({ row, onInfo, onPrint, onDelete, onGenerateInvoice, onEdit,
       icon: <MessageCircle size={15} className="text-green-500" />,
       onClick: () => runAction(onWhatsApp, row.original),
     },
+    {
+      key: "webwhatsapp",
+      label: "Web WhatsApp",
+      icon: <MessageCircle size={15} className="text-emerald-600" />,
+      onClick: () => runAction(onWebWhatsApp, row.original),
+    },
     ...(status !== "INVOICE_GENERATED" && permissions.delete
       ? [{
           key: "delete",
@@ -160,8 +165,7 @@ const StatusBadge = ({ status }) => {
 };
 
 // ── Columns ────────────────────────────────────────────────────────────────────
-export const columns = (onInfo, onPrint, onDelete, onGenerateInvoice, onWhatsApp, onEdit ,permissions = {}) => [
-    {
+export const columns = (onInfo, onPrint, onDelete, onGenerateInvoice, onWhatsApp, onEdit, onWebWhatsApp, permissions = {}) => [    {
     accessorKey: "sr_no",
     header: <FormattedMessage id="COMMON.SR_NO" defaultMessage="Sr No." />,
     meta: { headerClassName: "w-[5%]", cellClassName: "w-[5%] text-gray-500 font-medium" },
@@ -217,7 +221,7 @@ export const columns = (onInfo, onPrint, onDelete, onGenerateInvoice, onWhatsApp
  {
     accessorKey: "action",
     header: <FormattedMessage id="COMMON.ACTIONS" defaultMessage="Action" />,
-    cell: ({ row }) => (
+       cell: ({ row }) => (
       <ActionCell
         row={row}
         onInfo={onInfo}
@@ -226,6 +230,7 @@ export const columns = (onInfo, onPrint, onDelete, onGenerateInvoice, onWhatsApp
         onGenerateInvoice={onGenerateInvoice}
         onWhatsApp={onWhatsApp}
         onEdit={onEdit}
+        onWebWhatsApp={onWebWhatsApp}
         permissions={permissions}
       />
     ),
