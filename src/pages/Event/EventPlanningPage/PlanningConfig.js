@@ -663,8 +663,8 @@ const DECOR_LABELS = {
 };
 
 
-async function menuGetItems(fnId, search, catId, page, size, userId) {
-  const resp = await Getmenuprep(fnId, search, catId, page, size, userId);
+async function menuGetItems(fnId, search, catId, page, size, userId, subCategoryId = 0) {
+  const resp = await Getmenuprep(fnId, search, catId, page, size, userId, subCategoryId);
   const data = resp?.data?.data || {};
   return {
     rawItems:        data[MENU_FIELDS.responseItemsKey]   || [],
@@ -722,8 +722,8 @@ const recentGetItemsResults = new Map();
 const RESULT_CACHE_MS = 1000; // covers debounce delays like MenuItemGrid's 300ms
 
 function dedupedGetItems(rawFn) {
-  return async (fnId, search, catId, page, size, userId) => {
-    const key = [fnId, search, catId, page, size, userId].join("|");
+  return async (fnId, search, catId, page, size, userId, subCategoryId = 0) => {
+    const key = [fnId, search, catId, page, size, userId, subCategoryId].join("|");
 
     if (inFlightGetItemsRequests.has(key)) {
       console.log("⏭️ Sharing in-flight getItems request:", key);
@@ -736,7 +736,7 @@ function dedupedGetItems(rawFn) {
       return cached.data;
     }
 
-    const promise = rawFn(fnId, search, catId, page, size, userId)
+    const promise = rawFn(fnId, search, catId, page, size, userId, subCategoryId)
       .then((data) => {
         recentGetItemsResults.set(key, { data, time: Date.now() });
         return data;
