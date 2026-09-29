@@ -147,7 +147,8 @@ export const allMenuItems = (navigate) => {
       ),
       icon: "  text-lg ki-filled ki-setting-4 text-primary",
       path: "/exhibition-setup",
-      pageName: "Exhibition Setup",
+      pageName: "Exhibition Quotation",
+      moduleName: "Exhibition Quotation"
     },
 
     {
@@ -1663,6 +1664,7 @@ export const superAdminMenuItems = [
     icon: "ki-filled ki-setting-4 text-primary",
     path: "/exhibition-setup",
     pageName: "Exhibition Quotation",
+    moduleName:"Exhibition Quotation"
   },
   // {
   //   title: (

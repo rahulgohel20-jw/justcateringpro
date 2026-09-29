@@ -4,6 +4,7 @@ import {
   AddCategory,
   Translateapi,
   uploadFile,
+  Aislogsfirmenuitemandcategory,
 } from "@/services/apiServices";
 import { errorMsgPopup, successMsgPopup } from "../../../underConstruction";
 import { CustomModal } from "../../../components/custom-modal/CustomModal";
@@ -12,6 +13,9 @@ import { formValidation } from "../../../lib/utils";
 import Swal from "sweetalert2";
 import { FormattedMessage, useIntl } from "react-intl";
 import { getLangConfig, extractTranslations } from "@/utils/langConfig";
+import { Modal, Button, Skeleton, message } from "antd";
+import { ThunderboltOutlined, CheckCircleFilled, ReloadOutlined } from "@ant-design/icons";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
 
 const AddMenuCategory = ({
   isModalOpen,
@@ -36,11 +40,14 @@ const initialFormState = {
   file: null,
 };
   const requiredFields = ["nameEnglish"];
-
+const { hasModuleAccess } = useModuleAccess();
+const canAccessgenratewithaislogan = hasModuleAccess("Generate with Ai Solgan");
   const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
   const [debounceTimer, setDebounceTimer] = useState(null);
-
+const [isSloganModalOpen, setIsSloganModalOpen] = useState(false);
+const [sloganOptions, setSloganOptions] = useState([]);
+const [sloganLoading, setSloganLoading] = useState(false);
 const [reportDebounceTimer, setReportDebounceTimer] = useState(null);
   /* -------------------- INPUT CHANGE -------------------- */
   const handleChange = (e) => {
@@ -120,7 +127,41 @@ useEffect(() => {
     fd.append("userId", userId);
     return fd;
   };
+const handleGenerateSlogan = async () => {
+  const categoryName = (formData.nameEnglish || "").trim();
+  if (!categoryName) {
+    message.warning("Please enter the category name first");
+    return;
+  }
 
+  try {
+    setSloganLoading(true);
+    setIsSloganModalOpen(true);
+    setSloganOptions([]);
+
+    const res = await Aislogsfirmenuitemandcategory({
+      name: categoryName,
+      type: "CATEGORY",
+    });
+
+    if (!res?.data?.success) {
+      throw new Error(res?.data?.msg || "Failed to generate slogans");
+    }
+    setSloganOptions(res?.data?.data?.slogans || []);
+  } catch (err) {
+    console.error("AI slogan error:", err);
+    message.error(err?.response?.data?.msg || err.message || "Failed to generate slogans");
+    setIsSloganModalOpen(false);
+  } finally {
+    setSloganLoading(false);
+  }
+};
+
+const handleSelectSlogan = (slogan) => {
+  setFormData((prev) => ({ ...prev, menuSlogan: slogan }));
+  setIsSloganModalOpen(false);
+  message.success("Slogan selected");
+};
   /* -------------------- SUBMIT -------------------- */
   const handleSubmit = () => {
     if (!checkErrors()) return;
@@ -315,20 +356,100 @@ useEffect(() => {
     </div>
   </div>
 
-  {/* Slogan — full width */}
-  <div className="md:col-span-2">
-    <label className="block mb-1">
+{/* Slogan — full width */}
+<div className="md:col-span-2">
+  <div className="mb-1 flex items-center justify-between">
+    <label className="block">
       <FormattedMessage id="COMMON.SLOGAN" defaultMessage="Slogan" />
     </label>
-    <textarea
-      name="menuSlogan"
-      value={formData.menuSlogan}
-      onChange={handleChange}
-      className="border p-2 w-full rounded"
-    />
+    {canAccessgenratewithaislogan && (
+    <button
+      type="button"
+      onClick={handleGenerateSlogan}
+      disabled={sloganLoading}
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium text-white
+        bg-gradient-to-r from-violet-600 to-indigo-500 shadow-sm
+        hover:shadow-md hover:from-violet-700 hover:to-indigo-600 transition disabled:opacity-60"
+    >
+      <ThunderboltOutlined />
+      {sloganLoading ? "Generating..." : "Generate with AI"}
+    </button>
+    )}
   </div>
+  <textarea
+    name="menuSlogan"
+    value={formData.menuSlogan}
+    onChange={handleChange}
+    placeholder="Write a slogan or generate one with AI"
+    className="border p-2 w-full rounded"
+  />
+</div>
 
 </div>
+<Modal
+  open={isSloganModalOpen}
+  onCancel={() => setIsSloganModalOpen(false)}
+  width={680}
+  centered
+  zIndex={2000}
+  title={
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-500 flex items-center justify-center text-white">
+        <ThunderboltOutlined />
+      </div>
+      <div className="flex flex-col leading-tight">
+        <span className="text-base font-semibold text-gray-900">AI Slogan Suggestions</span>
+        <span className="text-xs font-normal text-gray-500">
+          For "{formData.nameEnglish}" · click one to use it
+        </span>
+      </div>
+    </div>
+  }
+  footer={
+    <div className="flex items-center justify-between">
+      <Button icon={<ReloadOutlined />} onClick={handleGenerateSlogan} loading={sloganLoading}>
+        Regenerate
+      </Button>
+      <Button onClick={() => setIsSloganModalOpen(false)}>Close</Button>
+    </div>
+  }
+>
+  <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1 mt-4">
+    {sloganLoading
+      ? [1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="rounded-xl border border-gray-100 p-4">
+            <Skeleton active title={false} paragraph={{ rows: 2 }} />
+          </div>
+        ))
+      : sloganOptions.map((s, idx) => {
+          const selected = formData.menuSlogan === s;
+          return (
+            <div
+              key={idx}
+              onClick={() => handleSelectSlogan(s)}
+              className={`group cursor-pointer flex items-start gap-3 rounded-xl border p-4 transition-all
+                hover:shadow-md hover:-translate-y-0.5 ${
+                  selected
+                    ? "border-violet-500 bg-violet-50 shadow-sm"
+                    : "border-gray-200 bg-white hover:border-violet-300"
+                }`}
+            >
+              <span
+                className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
+                  selected
+                    ? "bg-violet-600 text-white"
+                    : "bg-gray-100 text-gray-600 group-hover:bg-violet-100 group-hover:text-violet-700"
+                }`}
+              >
+                {idx + 1}
+              </span>
+              <p className="flex-1 text-sm leading-relaxed text-gray-700">{s}</p>
+              {selected && <CheckCircleFilled className="text-violet-600 text-lg mt-0.5" />}
+            </div>
+          );
+        })}
+  </div>
+</Modal>
     </CustomModal>
   );
 };
