@@ -562,7 +562,7 @@ Exhibition quotation "
 
     </div>
   </div>
-  <i className="ki-filled ki-right text-amber-600 text-sm group-hover:translate-x-1 transition-transform"></i>
+  <i className="ki-filled ki-right text-green-600 text-sm group-hover:translate-x-1 transition-transform"></i>
 </button> 
               )}
 

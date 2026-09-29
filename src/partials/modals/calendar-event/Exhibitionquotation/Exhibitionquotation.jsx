@@ -38,7 +38,7 @@ import {
    updatelock,
   updtaeunlock,
   deletebyitemis,
-  deletebymoduleid,
+  deletegroupbyquotation,
 } from "@/services/apiServices";
 
 dayjs.extend(customParseFormat);
@@ -323,8 +323,7 @@ function EstimateTable({
                 {money(Number(row.qty || 0) * Number(row.rate || 0))}
               </td>
               <td className="py-2 px-1.5 border-b border-slate-200 text-center">
-              <button onClick={() => onDeleteRow(day.id, r.id)} className="text-slate-400 hover:text-red-600">
-  <Trash2 size={14} />
+<button onClick={() => onDeleteRow(row.id)} className="text-slate-400 hover:text-red-600">  <Trash2 size={14} />
 </button>
               </td>
             </tr>
@@ -545,8 +544,7 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
                     {money(r.qty * r.rate)}
                   </td>
                   <td className="py-2 px-1.5 border-b border-slate-200 text-center">
-                   <button onClick={() => onDeleteRow(row.id)} className="text-slate-400 hover:text-red-600">
-  <Trash2 size={14} />
+<button onClick={() => onDeleteRow(day.id, r.id)} className="text-slate-400 hover:text-red-600">  <Trash2 size={14} />
 </button>
                   </td>
                 </tr>
@@ -824,29 +822,40 @@ setNotes(quotation.notes ?? "");
   };
 
   // Runs a delete API call; returns true only if the server accepted it.
-  const runServerDelete = async (apiCall) => {
-    try {
-      const response = await apiCall();
-      const success = response?.data?.success ?? response?.success ?? true;
-      if (!success) {
-        Swal.fire({
-          icon: "error",
-          title: "Failed",
-          text: response?.data?.msg ?? response?.msg ?? "Could not delete.",
-        });
-        return false;
-      }
-      return true;
-    } catch (err) {
-      console.error("Delete failed:", err);
+  // Runs a delete API call; returns true only if the server accepted it.
+const runServerDelete = async (apiCall) => {
+  try {
+    const response = await apiCall();
+    const success = response?.data?.success ?? response?.success ?? true;
+    const message = response?.data?.msg ?? response?.msg;
+
+    if (!success) {
       Swal.fire({
         icon: "error",
-        title: "Error",
-        text: err?.response?.data?.msg || err?.message || "Could not delete.",
+        title: "Failed",
+        text: message ?? "Could not delete.",
       });
       return false;
     }
-  };
+
+    Swal.fire({
+      icon: "success",
+      title: "Deleted",
+      text: message ?? "Deleted successfully.",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+    return true;
+  } catch (err) {
+    console.error("Delete failed:", err);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: err?.response?.data?.msg || err?.message || "Could not delete.",
+    });
+    return false;
+  }
+};
 
   // Section 01: delete one item row from an estimate
   const deleteEstimateRow = async (estimate, rowId) => {
@@ -863,7 +872,7 @@ setNotes(quotation.notes ?? "");
   const deleteEstimate = async (estimate) => {
     if (estimate.moduleId && estimateGroupId) {
       if (!(await confirmServerDelete(`"${estimate.title}" and all its items will be permanently deleted.`))) return;
-      const ok = await runServerDelete(() => deletebymoduleid(estimateGroupId, estimate.moduleId));
+      const ok = await runServerDelete(() => deletegroupbyquotation(estimateGroupId, estimate.moduleId));
       if (!ok) return;
     }
     setEstimates((prev) => prev.filter((e) => e.id !== estimate.id));
@@ -1333,8 +1342,7 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
       setRows={(newRows) => updateEstimateRows(estimate.id, newRows)}
       canDelete={estimates.length > 1}
   onDeleteRow={(rowId) => deleteEstimateRow(estimate, rowId)}
-      onDeleteEstimate={() => deleteEstimate(estimate.id)}
-      tdsPercent={tdsPercent}
+onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
       onTdsPercentChange={setTdsPercent}
       discountPercent={estimate.discountPercent ?? 0.0}
       onDiscountPercentChange={(val) => updateEstimateField(estimate.id, "discountPercent", val)}

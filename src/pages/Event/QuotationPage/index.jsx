@@ -54,7 +54,7 @@
       const isVatUser = VAT_USER.includes(String(userId));
       const isTaxUser = TAX_USER.includes(String(userId));
     const isOfferRateUser = OFFER_RATE_USER_IDS.includes(String(userId));
-    const DECOR_GST_USER_IDS = ["233"];
+    const DECOR_GST_USER_IDS = ["757"];
   const isDecorGstUser = DECOR_GST_USER_IDS.includes(String(userId));
       const [quotationId, setQuotationId] = useState(null);
       const { eventId } = useParams();
@@ -719,7 +719,7 @@ const cateringBaseRef = useRef(0);
         const num = Number(value) || 0;
         return num % 1 === 0 ? num.toString() : num.toFixed(2);
       };
-// GST base: catering cheque for user 233, normal cheque for everyone else
+// GST base: catering cheque for user 757, normal cheque for everyone else
 const cateringBase = isDecorGstUser
   ? parseFloat(chequePaymentCatering) || 0
   : parseFloat(chequePayment) || 0;

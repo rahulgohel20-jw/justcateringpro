@@ -3987,10 +3987,13 @@ export const updtaeunlock = (quotationId) => {
   return PUT (`/exhibition/quotations/unlock?quotationId=${quotationId}`);
 };
 
-export const deletebyitemis = ( itemId , moduleId) => {
-  return DELETE(`/exhibition/modules/items/delete?itemId=${itemId}&moduleId=${moduleId}`,);
-};
+  export const deletebyitemis = ( itemId , moduleId) => {
+    return DELETE(`/exhibition/modules/items/delete?itemId=${itemId}&moduleId=${moduleId}`,);
+  };
 
-export const deletebymoduleid = ( groupId , moduleId) => {
-return DELETE(`/exhibition/groups/modules/delete?groupId=${groupId}&moduleId=${moduleId}`);
+ export const deletegroupbyquotation = (groupId, quotationId) =>
+  DELETE(`/exhibition/quotations/groups/delete?groupId=${groupId}&quotationId=${quotationId}`);
+
+export const Aislogsfirmenuitemandcategory = ( data) => {
+  return POST(`/ai-menu/generate`,data);
 };
