@@ -10,6 +10,7 @@ import {
   SearchItemDailyStockManage,
   ViewDailyStock,
   GetStockTypeByUserId,
+  SearchRawMaterial,
 } from "@/services/apiServices";
 import { Save } from "lucide-react";
 import { useStockTypePermission } from "../../../hooks/useStockTypePermission";
@@ -205,53 +206,64 @@ if (viewData.storeTypeId != null) {
     }
   };
 
-  // ── Search (add mode only) ──
-  const fetchSearchItems = async (catId, searchText, pageNum = 0) => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setItemsLoading(true);
-    try {
-      const res = await SearchItemDailyStockManage(
-        userId,
-        searchText,
-        catId,
-        storeTypeId,
-        pageNum,
-        PAGE_SIZE
-      );
-      const catBlock = res?.data?.data?.[0];
-      const items = catBlock?.items || [];
-      const totalPages = res?.data?.totalPages ?? 1;
+const fetchSearchItems = async (catId, searchText, pageNum = 0) => {
+  if (loadingRef.current) return;
+  loadingRef.current = true;
+  setItemsLoading(true);
+  try {
+    // SearchRawMaterial is 1-based; this component's `page` is 0-based
+    const res = await SearchRawMaterial(
+      true,                      // isAsc
+      userId,
+      pageNum + 1,               // page
+      PAGE_SIZE,
+      encodeURIComponent(searchText),
+      undefined,                 // signal
+      false,                     // isPurchaseApproved
+      "",                        // purchaseApproveId
+      catId,                     // categoryId
+    );
 
-      const newRows = items.map((item) => ({
-        _id: `${item.rawMaterialId}`,
-        rawMaterialId: item.rawMaterialId,
-        rawMaterialName: item.rawMaterialName,
-        catId: item.catId,
-        catName: item.catName,
-        unitId: item.unitId ?? 0,
-        unitName: item.unitName,
-        storeQty: item.storeQty ?? 0,
-        increaseQty: item.increaseQty ?? 0,
-        wastageQty: item.wastageQty ?? 0,
-        closingStock: item.closingStock ?? 0,
-        remarks: item.remarks ?? "",
-      }));
+    const data = res?.data?.data || {};
+    const items = data["Raw Material Details"] || [];
+    const totalItems = Number(data.totalItems) || 0;
 
-      if (pageNum === 0) {
-        setRows(newRows);
-      } else {
-        setRows((prev) => [...prev, ...newRows]);
-      }
-      setPage(pageNum);
-      setHasMore(pageNum < totalPages);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      loadingRef.current = false;
-      setItemsLoading(false);
-    }
-  };
+    // Rows already loaded for this category (keeps closingStock + unsaved edits)
+    const masterById = new Map(
+      (rowsMap[catId]?.rows || []).map((r) => [String(r._id), r]),
+    );
+
+    const newRows = items.map((item) => {
+      const rmId = item.id ?? item.rawMaterialId;
+      const existing = masterById.get(String(rmId));
+      if (existing) return existing;
+
+      return {
+        _id: `${rmId}`,
+        rawMaterialId: rmId,
+        rawMaterialName: item.nameEnglish ?? item.rawMaterialName ?? "",
+        catId: item.rawMaterialCategoryId ?? item.rawMateriaCatlId ?? catId,
+        catName: item.categoryName ?? "",
+        unitId: item.unitId ?? item.unit?.id ?? 0,
+        unitName: item.unitName ?? item.unit?.nameEnglish ?? "",
+        storeQty: 0,
+        increaseQty: 0,
+        wastageQty: 0,
+        closingStock: 0, // not returned by this API
+        remarks: "",
+      };
+    });
+
+    setRows((prev) => (pageNum === 0 ? newRows : [...prev, ...newRows]));
+    setPage(pageNum);
+    setHasMore((pageNum + 1) * PAGE_SIZE < totalItems);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    loadingRef.current = false;
+    setItemsLoading(false);
+  }
+};
 
   // NOTE: This effect previously re-ran (and force-refetched fresh data from
   // the server) every time `activeTab` changed, even when the search box was
@@ -274,34 +286,33 @@ if (viewData.storeTypeId != null) {
   fetchItems(activeTab, 0, []);
 }, [storeTypeId]);
 
-  useEffect(() => {
-    if (isViewMode) return; // no search in view mode
-    const timer = setTimeout(() => {
-      if (!activeTab || !storeTypeId) return;
-      const searchText = search.trim();
-      if (searchText.length >= 2) {
+useEffect(() => {
+  if (isViewMode) return;
+  const timer = setTimeout(() => {
+    if (!activeTab) return;                
+    const searchText = search.trim();
+
+    if (searchText.length >= 2) {
+      setRows([]);
+      setPage(0);
+      setHasMore(true);
+      fetchSearchItems(activeTab, searchText, 0);
+    } else if (searchText.length === 0) {
+      if (rowsMap[activeTab]) {
+        setRows(rowsMap[activeTab].rows);
+        setPage(rowsMap[activeTab].page);
+        setHasMore(rowsMap[activeTab].hasMore);
+      } else {
         setRows([]);
         setPage(0);
         setHasMore(true);
-        fetchSearchItems(activeTab, searchText, 0);
-      } else if (searchText.length === 0) {
-        if (rowsMap[activeTab]) {
-          // Already have (possibly edited) data cached for this tab — restore it
-          setRows(rowsMap[activeTab].rows);
-          setPage(rowsMap[activeTab].page);
-          setHasMore(rowsMap[activeTab].hasMore);
-        } else {
-          // Never loaded this tab before — fetch fresh
-          setRows([]);
-          setPage(0);
-          setHasMore(true);
-          fetchItems(activeTab, 0, []);
-        }
+        fetchItems(activeTab, 0, []);
       }
-    }, 500);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, activeTab]);
+    }
+  }, 500);
+  return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [search, activeTab]);
 
   const fetchItems = async (catId, pageNum, existingRows) => {
     if (loadingRef.current) return;

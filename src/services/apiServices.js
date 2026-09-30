@@ -693,9 +693,10 @@ export const Getmenuprep = (
   pageNo,
   TotalRecord,
   UserId,
+  subCategoryId = 0,
 ) => {
   return GET(
-    `/menupreparation/getmenupreparationitems?eventFunctionId=${eventFunId}&itemName=${encodeURIComponent(itemname)}&menuCategoryId=${menuCatId}&pageNo=${pageNo}&totalRecord=${TotalRecord}&userId=${UserId}`,
+    `/menupreparation/getmenupreparationitems?eventFunctionId=${eventFunId}&itemName=${encodeURIComponent(itemname)}&menuCategoryId=${menuCatId}&pageNo=${pageNo}&totalRecord=${TotalRecord}&userId=${UserId}&menuSubCategoryId=${subCategoryId}`,
   );
 };
 
@@ -3758,8 +3759,10 @@ export const isActiveUserNotification = (data) => {
 };
 
 
-export const GetSloganByMenuId = (menuId, userId) =>{
-  return GET (`/menupreparation/sync-slogan?menuItemId=${menuId}&userId=${userId}`);
+export const GetSloganByMenuId = (menuId, userId, isJainSlogan = false) => {
+  return GET(
+    `/menupreparation/sync-slogan?menuItemId=${menuId}&userId=${userId}&isJainSlogan=${isJainSlogan}`
+  );
 };
 
 export const WhatsAppPdf = (data) => {
@@ -3991,4 +3994,25 @@ export const deleteExhibitionSetupDetail = (id) => {
 export const deleteExhibitionSetupItemDetail = (id) => {
   return DELETE(`/exhibition/setup/item/delete?id=${id}`);
 };
-export const updateExhibitionSetupIsActive = updateExhibitionSetupStatus;
+export const updateExhibitionSetupIsActive = updateExhibitionSetupStatus;
+export const saveExhibitionSetup = addOrUpdateExhibitionSetup;
+export const deleteExhibitionSetupDetail = deleteExhibitionSetup;
+export const deleteExhibitionSetupItemDetail = deleteExhibitionSetupFeature;
+export const updateExhibitionSetupIsActive = updateExhibitionSetupStatus;
+export const updatelock = (quotationId) => {
+  return PUT(`/exhibition/quotations/lock?quotationId=${quotationId}`);
+};
+export const updtaeunlock = (quotationId) => {
+  return PUT (`/exhibition/quotations/unlock?quotationId=${quotationId}`);
+};
+
+  export const deletebyitemis = ( itemId , moduleId) => {
+    return DELETE(`/exhibition/modules/items/delete?itemId=${itemId}&moduleId=${moduleId}`,);
+  };
+
+ export const deletegroupbyquotation = (groupId, quotationId) =>
+  DELETE(`/exhibition/quotations/groups/delete?groupId=${groupId}&quotationId=${quotationId}`);
+
+export const Aislogsfirmenuitemandcategory = ( data) => {
+  return POST(`/ai-menu/generate`,data);
+};

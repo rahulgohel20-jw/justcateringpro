@@ -115,17 +115,7 @@ const DECOR_FIELDS = {
   responsePrepKey:         "decorePreparation",
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// NORMALISATION HELPERS
-// Convert raw API items into the flat shape the shared components expect.
-// ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Normalise a single raw item from the getItems API into the generic shape:
- * { id, nameEnglish, nameHindi, nameGujarati, imagePath, rate,
- *   menuCategoryName, menuCategoryNameHindi, menuCategoryNameGujarati,
- *   catId, itemSlogan, itemNotes, itemInstruction, itemSpace, isPackageItem, ... }
- */
 
 function resolveName(nickname, original) {
   const trimmed = (nickname ?? "").toString().trim();
@@ -145,7 +135,7 @@ nicknames: {
   hindi:    rawItem[fields.itemNicknameHindi]    || "",
   gujarati: rawItem[fields.itemNicknameGujarati] || "",
 },
-    imagePath:            rawItem.imagePath                || "",
+   imagePath: resolveImagePath(rawItem.imagePath) || resolveImagePath(rawItem.images),
      images:               Array.isArray(rawItem.images) ? rawItem.images : [], 
 rate: (() => {
   const p = Number(rawItem[fields.itemPrice] ?? rawItem.itemPrice ?? rawItem.rate ?? 0);
@@ -183,10 +173,7 @@ categoryPrice:        Number(rawItem.categoryPrice ?? 0),
   };
 }
 
-/**
- * Normalise a category group from the selectedItems API response
- * into the generic { catName, items, notes, slogan, images, space } shape.
- */
+
 function normaliseCategory(rawCat, fields, flatItems = [], prepMeta = {}) {
   const categoryStatus = rawCat.categoryStatus || "NORMAL"; 
 
@@ -326,7 +313,8 @@ const items = dedupedSourceItems.map((it) => {
     hindi:    it[fields.itemNicknameHindi]    || flat[fields.itemNicknameHindi]    || "",
     gujarati: it[fields.itemNicknameGujarati] || flat[fields.itemNicknameGujarati] || "",
   },
-      imagePath:            it.imagePath                 || flat.imagePath                 || "",
+     imagePath: resolveImagePath(it.imagePath) || resolveImagePath(flat.imagePath)
+        || resolveImagePath(it.images) || resolveImagePath(flat.images),
 rate: (() => {
   const toNum = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
@@ -648,10 +636,7 @@ function buildDecorPayload(state) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// LABEL / UI TEXT
-// All user-visible strings that differ between modes.
-// ─────────────────────────────────────────────────────────────────────────────
+
 
 const MENU_LABELS = {
   pageTitle:      "2. Menu Planning",
@@ -677,19 +662,9 @@ const DECOR_LABELS = {
   searchCategoryPlaceholder: "Search decor categories",
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// API WRAPPERS
-// Uniform calling convention regardless of mode.
-// All return the same generic data shape after normalisation.
-// ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Wraps getItems API call.
- * Returns { rawItems, rawSelectedCats, prepMeta, fields }
- * so the caller can choose to normalise via helpers above or do it inline.
- */
-async function menuGetItems(fnId, search, catId, page, size, userId) {
-  const resp = await Getmenuprep(fnId, search, catId, page, size, userId);
+async function menuGetItems(fnId, search, catId, page, size, userId, subCategoryId = 0) {
+  const resp = await Getmenuprep(fnId, search, catId, page, size, userId, subCategoryId);
   const data = resp?.data?.data || {};
   return {
     rawItems:        data[MENU_FIELDS.responseItemsKey]   || [],
@@ -747,8 +722,8 @@ const recentGetItemsResults = new Map();
 const RESULT_CACHE_MS = 1000; // covers debounce delays like MenuItemGrid's 300ms
 
 function dedupedGetItems(rawFn) {
-  return async (fnId, search, catId, page, size, userId) => {
-    const key = [fnId, search, catId, page, size, userId].join("|");
+  return async (fnId, search, catId, page, size, userId, subCategoryId = 0) => {
+    const key = [fnId, search, catId, page, size, userId, subCategoryId].join("|");
 
     if (inFlightGetItemsRequests.has(key)) {
       console.log("⏭️ Sharing in-flight getItems request:", key);
@@ -761,7 +736,7 @@ function dedupedGetItems(rawFn) {
       return cached.data;
     }
 
-    const promise = rawFn(fnId, search, catId, page, size, userId)
+    const promise = rawFn(fnId, search, catId, page, size, userId, subCategoryId)
       .then((data) => {
         recentGetItemsResults.set(key, { data, time: Date.now() });
         return data;
@@ -826,6 +801,16 @@ const DECOR_CONFIG = {
     normaliseCategory(rawCat, DECOR_FIELDS, flatItems, prepMeta),
 
   buildPayload: buildDecorPayload,
+};
+
+export const resolveImagePath = (val) => {
+  if (!val) return "";
+  const first = Array.isArray(val) ? val[0] : val;
+  if (!first) return "";
+  if (typeof first === "object") {
+    return first.imagePath || first.url || first.path || first.image || "";
+  }
+  return typeof first === "string" ? first : "";
 };
 
 /**

@@ -13,6 +13,7 @@ export const buildPayload = (details, allocation = {}) => {
   formData.append("nameGujarati", details.nameGujarati || "");
   formData.append("nameHindi", details.nameHindi || "");
   formData.append("slogan", details.slogan || "");
+  formData.append("jainSlogan", details.jainSlogan ?? ""); 
   formData.append("price", details.price || 0);
   formData.append("remarks", details.remarks || "");
   formData.append("sequence", details.sequence || 0);

@@ -1,19 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  Upload,
-  Button,
-  message,
+  Form, Input, InputNumber, Select, Upload, Button, message, Modal, Skeleton,
 } from "antd";
 import {
-  InboxOutlined,
-  ReloadOutlined,
-  DeleteOutlined,
-  PlusOutlined,
-  SyncOutlined,
+  InboxOutlined, ReloadOutlined, DeleteOutlined, PlusOutlined, SyncOutlined,
+  ThunderboltOutlined, CheckCircleFilled,
 } from "@ant-design/icons";
 import { defaultData } from "../constant";
 import useMenuApi from "../hooks/useMenuApi";
@@ -33,6 +24,7 @@ import {
   Getunit,
   getMenuItemCaptainReceipeByMenuId,
   SearchRawMaterial,
+  Aislogsfirmenuitemandcategory
 } from "@/services/apiServices";
 import AddMenuCategory from "@/partials/modals/add-menu-category/AddMenuCategory";
 import AddMenuSubCategory from "@/partials/modals/add-menu-sub-category/AddMenuSubCategory";
@@ -59,6 +51,7 @@ const MenuDetailsForm = ({
   const translateTimerRef = useRef(null);
   const [godownsLoaded, setGodownsLoaded] = useState(false);
   const [rawSearchText, setRawSearchText] = useState("");
+  const currentSlogan = Form.useWatch("slogan", form);
   const getLangConfig = () => {
     try {
       const auth = JSON.parse(localStorage.getItem("auth-storage"));
@@ -78,6 +71,7 @@ const MenuDetailsForm = ({
 
   const langConfig = getLangConfig();
 const { hasModuleAccess } = useModuleAccess();
+const canAccessgenratewithaislogan = hasModuleAccess("Generate with Ai Solgan");
   const canAccesscaptainRecipe = hasModuleAccess("Captain Recipe");
 const { getCategories, getSubCategories } = useMenuApi(userId);
 
@@ -101,7 +95,9 @@ const { getCategories, getSubCategories } = useMenuApi(userId);
  const RAW_MATERIAL_PAGE_SIZE = 100;
  const rawSearchDebounceRef = useRef(null);
 const skipNextRawFetchRef = useRef(false);
-
+const [isSloganModalOpen, setIsSloganModalOpen] = useState(false);
+const [sloganOptions, setSloganOptions] = useState([]);
+const [sloganLoading, setSloganLoading] = useState(false);
   const {
     captainTableData,
     setCaptainTableData,
@@ -312,7 +308,42 @@ if (!userId) return;
 
     loadSubCategories();
   }, [editData?.menuCategory?.id, getSubCategories]);
+const handleGenerateSlogan = async () => {
+  const itemName = (englishName || form.getFieldValue("nameEnglish") || "").trim();
+  if (!itemName) {
+    message.warning("Please enter the menu item name first");
+    return;
+  }
 
+  try {
+    setSloganLoading(true);
+    setIsSloganModalOpen(true);
+    setSloganOptions([]);
+
+    const res = await Aislogsfirmenuitemandcategory({
+      name: itemName,
+      type: "ITEM",
+    });
+
+    if (!res?.data?.success) {
+      throw new Error(res?.data?.msg || "Failed to generate slogans");
+    }
+
+    setSloganOptions(res?.data?.data?.slogans || []);
+  } catch (err) {
+    console.error("AI slogan error:", err);
+    message.error(err?.response?.data?.msg || err.message || "Failed to generate slogans");
+    setIsSloganModalOpen(false);
+  } finally {
+    setSloganLoading(false);
+  }
+};
+
+const handleSelectSlogan = (slogan) => {
+  form.setFieldsValue({ slogan });
+  setIsSloganModalOpen(false);
+  message.success("Slogan selected");
+};
   useEffect(() => {
     if (!editData) return;
     // if (!godownsLoaded) return;
@@ -330,6 +361,7 @@ setInstructionHindi(editData.instructionHindi || "");
       nameGujarati: editData.nameGujarati,
       nameHindi: editData.nameHindi,
       slogan: editData.slogan,
+      jainSlogan: editData.jainSlogan, 
       price: editData.price,
       sequence: editData.sequence,
       category: Number(editData.menuCategory?.id),
@@ -1015,19 +1047,42 @@ setInstructionHindi(editData.instructionHindi || "");
   />
 </div>
         {/* Slogan */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Form.Item
-            label={
-              <span className="text-[#6A7C94] text-base font-medium">
-                Slogan
-              </span>
-            }
-            name="slogan"
-            className="md:col-span-3"
-          >
-            <Input className="bg-[#F8FAFC] h-10 hover:border-[#d9d9d9] focus:border-[#d9d9d9]" />
-          </Form.Item>
-        </div>
+ {/* Slogan */}
+<div className="mb-1 flex items-center justify-between">
+  <span className="text-[#6A7C94] text-base font-medium">Slogan</span>
+  {canAccessgenratewithaislogan  && (
+  <button
+    type="button"
+    onClick={handleGenerateSlogan}
+    disabled={sloganLoading}
+    className="inline-flex items-center gap-1.5 rounded-full px-6  py-2 text-xs font-medium text-white
+      bg-gradient-to-r from-violet-600 to-indigo-500 shadow-sm
+      hover:shadow-md hover:from-violet-700 hover:to-indigo-600 transition disabled:opacity-60"
+  >
+    <ThunderboltOutlined />
+    {sloganLoading ? "Generating..." : "Generate with AI"}
+  </button>
+  )}
+</div>
+<Form.Item name="slogan">
+
+
+  <Input
+    placeholder="Write a slogan or generate one with AI"
+    className="bg-[#F8FAFC] h-10 hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
+  />
+</Form.Item>
+<Form.Item
+  label={
+    <span className="text-[#6A7C94] text-base font-medium">Jain Slogan</span>
+  }
+  name="jainSlogan"
+>
+  <Input
+    placeholder="Write a Jain slogan"
+    className="bg-[#F8FAFC] h-10 hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
+  />
+</Form.Item>
         {/* Price & Priority */}
         <div className="grid gap-4 md:grid-cols-2">
           <Form.Item
@@ -1764,6 +1819,67 @@ setInstructionHindi(editData.instructionHindi || "");
   onCopy={(data) => handleCopyCaptainRecipe(data)}
   isCaptainRecipe
 />
+<Modal
+  open={isSloganModalOpen}
+  onCancel={() => setIsSloganModalOpen(false)}
+  width={680}
+  centered
+  title={
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-500 flex items-center justify-center text-white">
+        <ThunderboltOutlined />
+      </div>
+      <div className="flex flex-col leading-tight">
+        <span className="text-base font-semibold text-gray-900">AI Slogan Suggestions</span>
+        <span className="text-xs font-normal text-gray-500">
+          For "{englishName || form.getFieldValue("nameEnglish")}" · click one to use it
+        </span>
+      </div>
+    </div>
+  }
+  footer={
+    <div className="flex items-center justify-between">
+      <Button icon={<ReloadOutlined />} onClick={handleGenerateSlogan} loading={sloganLoading}>
+        Regenerate
+      </Button>
+      <Button onClick={() => setIsSloganModalOpen(false)}>Close</Button>
+    </div>
+  }
+>
+  <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1 mt-4">
+    {sloganLoading
+      ? [1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="rounded-xl border border-gray-100 p-4">
+            <Skeleton active title={false} paragraph={{ rows: 2 }} />
+          </div>
+        ))
+      : sloganOptions.map((s, idx) => {
+          const selected = currentSlogan === s;
+          return (
+            <div
+              key={idx}
+              onClick={() => handleSelectSlogan(s)}
+              className={`group cursor-pointer flex items-start gap-3 rounded-xl border p-4 transition-all
+                hover:shadow-md hover:-translate-y-0.5 ${
+                  selected
+                    ? "border-violet-500 bg-violet-50 shadow-sm"
+                    : "border-gray-200 bg-white hover:border-violet-300"
+                }`}
+            >
+              <span
+                className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
+                  selected ? "bg-violet-600 text-white" : "bg-gray-100 text-gray-600 group-hover:bg-violet-100 group-hover:text-violet-700"
+                }`}
+              >
+                {idx + 1}
+              </span>
+              <p className="flex-1 text-sm leading-relaxed text-gray-700">{s}</p>
+              {selected && <CheckCircleFilled className="text-violet-600 text-lg mt-0.5" />}
+            </div>
+          );
+        })}
+  </div>
+</Modal>
     </>
   );
 };

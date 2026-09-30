@@ -3,6 +3,7 @@ import { getbymenucategorywithtype } from "@/services/apiServices";
 import { toAbsoluteUrl } from "@/utils";
 import ShowMenuItems from "./ShowMenuItems";
 import { Eye } from "lucide-react";
+import { resolveImagePath } from "../PlanningConfig";
 
 const PAGE_SIZE = 200;
 
@@ -12,6 +13,7 @@ const MenuItemGrid = ({
   refreshKey,
   category = "All",
   categoryId = 0,
+  subCategoryId = 0,
   searchTerm = "",
   selectedIdsSet = new Set(),
   onToggleSelect = () => {},
@@ -55,6 +57,7 @@ const MenuItemGrid = ({
   const adaptItem = useCallback(
     (it) => ({
       ...it,
+       imagePath: resolveImagePath(it.imagePath) || resolveImagePath(it.images),
       id: it[f.itemId] ?? it.id,
       menuItemId: it[f.itemId] ?? it.id,
       menuItemName: it[f.itemName] ?? it.menuItemName ?? "",
@@ -130,9 +133,9 @@ const fetchPage = useCallback(
     }
     setError(null);
 
-    try {
+       try {
       const { rawItems, prepMeta } = await fetchItemsFn(
-        selectedFunctionId, searchTerm, categoryId, pageNo, PAGE_SIZE, userId,
+        selectedFunctionId, searchTerm, categoryId, pageNo, PAGE_SIZE, userId, subCategoryId,
       );
 
       // ── ADD: bail if a newer request has since started ──
@@ -172,7 +175,7 @@ const fetchPage = useCallback(
       }
     }
   },
-  [selectedFunctionId, userId, searchTerm, categoryId, fetchItemsFn, adaptItem, onLoadingChange, onItemsLoaded],
+ [selectedFunctionId, userId, searchTerm, categoryId, subCategoryId, fetchItemsFn, adaptItem, onLoadingChange, onItemsLoaded],
 );
 
   // ── Reset + fetch page 1 whenever filters change ──────────────────────
@@ -187,8 +190,8 @@ const fetchPage = useCallback(
     fetchPage(1, true);
   }, 300); // wait for the user to pause typing
 
-  return () => clearTimeout(timer);
-}, [searchTerm, categoryId, refreshKey, selectedFunctionId, fetchItemsFn]);
+    return () => clearTimeout(timer);
+}, [searchTerm, categoryId, subCategoryId, refreshKey, selectedFunctionId, fetchItemsFn]);
 
   // ── IntersectionObserver: fetch NEXT PAGE from API when sentinel hits ──
   useEffect(() => {

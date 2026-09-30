@@ -35,6 +35,10 @@ import {
   GetEventMasterById,
   getbyexhibitionevenybuuser,
   updateehibition,
+   updatelock,
+  updtaeunlock,
+  deletebyitemis,
+  deletegroupbyquotation,
 } from "@/services/apiServices";
 
 dayjs.extend(customParseFormat);
@@ -196,6 +200,8 @@ function EstimateTable({
   onIgstPercentChange,
   roundOff,
   onRoundOffChange,
+  onDeleteRow,
+  EstimateTable
 }) {
   const { subtotal, discount, amountAfterDiscount, tds, cgst, sgst, igst, grandTotal } = calcTotals(rows, {
     tdsPercent,
@@ -216,9 +222,9 @@ function EstimateTable({
     );
   };
 
-  const deleteRow = (id) => {
-    setRows(rows.filter((row) => row.id !== id));
-  };
+ const deleteRow = (id) => {
+  setRows(rows.filter((row) => row.id !== id));
+};
 
   const addRow = () => {
     setRows([...rows, { id: Date.now(), name: "", qty: 1, rate: 0 }]);
@@ -317,9 +323,8 @@ function EstimateTable({
                 {money(Number(row.qty || 0) * Number(row.rate || 0))}
               </td>
               <td className="py-2 px-1.5 border-b border-slate-200 text-center">
-                <button onClick={() => deleteRow(row.id)} className="text-slate-400 hover:text-red-600">
-                  <Trash2 size={14} />
-                </button>
+<button onClick={() => onDeleteRow(row.id)} className="text-slate-400 hover:text-red-600">  <Trash2 size={14} />
+</button>
               </td>
             </tr>
           ))}
@@ -539,9 +544,8 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
                     {money(r.qty * r.rate)}
                   </td>
                   <td className="py-2 px-1.5 border-b border-slate-200 text-center">
-                    <button onClick={() => onDeleteRow(day.id, r.id)} className="text-slate-400 hover:text-red-600">
-                      <Trash2 size={14} />
-                    </button>
+<button onClick={() => onDeleteRow(day.id, r.id)} className="text-slate-400 hover:text-red-600">  <Trash2 size={14} />
+</button>
                   </td>
                 </tr>
               ))}
@@ -630,11 +634,12 @@ const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !pre
   // ---- Event header info (party / venue / date / mobile / event name) ----
   const [eventInfo, setEventInfo] = useState(null);
   const [eventInfoLoading, setEventInfoLoading] = useState(false);
-
+  const [saving, setSaving] = useState(false); 
   // Existing saved quotation, if any — lets us tell "create" from "update".
   const [quotationId, setQuotationId] = useState(null);
-  const [saving, setSaving] = useState(false);
 
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockToggling, setLockToggling] = useState(false);
   // Pulled out to component scope (not just inside the effect) so
   // handleSaveQuotation can also call it, to refresh state with the
   // backend's ids/computed totals after a successful save.
@@ -713,6 +718,7 @@ setNotes(quotation.notes ?? "");
         setDueDate(quotation.duedate ?? "");
         setQuotationCode(quotation.quotationCode ?? "");
         setQuotationDate(quotation.quotationdate ?? "");
+         setIsLocked(!!quotation.isLocked);
       }
     } catch (err) {
       // No saved quotation yet for this event is an expected case, not an error.
@@ -802,8 +808,88 @@ setNotes(quotation.notes ?? "");
     );
   };
 
-  const deleteEstimate = (estimateId) => {
-    setEstimates((prev) => prev.filter((estimate) => estimate.id !== estimateId));
+    // ---- Server-side deletes ----
+  const confirmServerDelete = async (text) => {
+    const r = await Swal.fire({
+      icon: "warning",
+      title: "Delete?",
+      text,
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete",
+      confirmButtonColor: "#dc2626",
+    });
+    return r.isConfirmed;
+  };
+
+  // Runs a delete API call; returns true only if the server accepted it.
+  // Runs a delete API call; returns true only if the server accepted it.
+const runServerDelete = async (apiCall) => {
+  try {
+    const response = await apiCall();
+    const success = response?.data?.success ?? response?.success ?? true;
+    const message = response?.data?.msg ?? response?.msg;
+
+    if (!success) {
+      Swal.fire({
+        icon: "error",
+        title: "Failed",
+        text: message ?? "Could not delete.",
+      });
+      return false;
+    }
+
+    Swal.fire({
+      icon: "success",
+      title: "Deleted",
+      text: message ?? "Deleted successfully.",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+    return true;
+  } catch (err) {
+    console.error("Delete failed:", err);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: err?.response?.data?.msg || err?.message || "Could not delete.",
+    });
+    return false;
+  }
+};
+
+  // Section 01: delete one item row from an estimate
+  const deleteEstimateRow = async (estimate, rowId) => {
+    const itemId = toBackendId(rowId);
+    if (itemId && estimate.moduleId) {
+      if (!(await confirmServerDelete("This item will be permanently deleted."))) return;
+      const ok = await runServerDelete(() => deletebyitemis(itemId, estimate.moduleId));
+      if (!ok) return;
+    }
+    updateEstimateRows(estimate.id, estimate.rows.filter((r) => r.id !== rowId));
+  };
+
+  // Section 01: delete a whole estimate (module)
+  const deleteEstimate = async (estimate) => {
+    if (estimate.moduleId && estimateGroupId) {
+      if (!(await confirmServerDelete(`"${estimate.title}" and all its items will be permanently deleted.`))) return;
+      const ok = await runServerDelete(() => deletegroupbyquotation(estimateGroupId, estimate.moduleId));
+      if (!ok) return;
+    }
+    setEstimates((prev) => prev.filter((e) => e.id !== estimate.id));
+  };
+
+  // Section 03: delete one item row from a date scope
+  const deleteDayRow = async (dayId, rowId) => {
+    const day = days.find((d) => d.id === dayId);
+    const itemId = toBackendId(rowId);
+    if (day && itemId && day.moduleId) {
+      if (!(await confirmServerDelete("This item will be permanently deleted."))) return;
+      const ok = await runServerDelete(() => deletebyitemis(itemId, day.moduleId));
+      if (!ok) return;
+    }
+    setDays((prev) =>
+      prev.map((d) => (d.id === dayId ? { ...d, rows: d.rows.filter((r) => r.id !== rowId) } : d))
+    );
   };
 
   // Combined totals across every estimate currently on the page.
@@ -844,8 +930,7 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
           : d
       )
     );
-  const deleteDayRow = (dayId, rowId) =>
-    setDays(days.map((d) => (d.id === dayId ? { ...d, rows: d.rows.filter((r) => r.id !== rowId) } : d)));
+
   const addDayRow = (dayId) =>
     setDays(
       days.map((d) =>
@@ -994,6 +1079,51 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
     }
   };
 
+  // ---- Lock / Unlock the quotation ----
+  const handleToggleLock = async () => {
+    if (!quotationId) {
+      Swal.fire({
+        icon: "warning",
+        title: "Nothing to lock yet",
+        text: "Save the quotation first before locking it.",
+      });
+      return;
+    }
+
+    setLockToggling(true);
+    try {
+      const apiCall = isLocked ? updtaeunlock : updatelock;
+      const response = await apiCall(quotationId);
+      const success = response?.data?.success ?? response?.success;
+      const message = response?.data?.msg ?? response?.msg ?? "Something went wrong.";
+
+      if (success) {
+        Swal.fire({
+          icon: "success",
+          title: isLocked ? "Unlocked" : "Locked",
+          text: message,
+        });
+        // Refresh from the backend so isLocked (and anything else) reflects
+        // the server's actual state, rather than trusting our own optimistic toggle.
+        await fetchExistingQuotation();
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Failed",
+          text: message,
+        });
+      }
+    } catch (err) {
+      console.error(`Error ${isLocked ? "unlocking" : "locking"} quotation:`, err);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err?.response?.data?.msg || err?.message || "Something went wrong.",
+      });
+    } finally {
+      setLockToggling(false);
+    }
+  };
   return (
     <div className="min-h-screen font-sans text-slate-800">
       <ExtraQuotationModal
@@ -1096,9 +1226,17 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
     Edit Event
   </button>
 
-  <button className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium flex items-center gap-1.5">
+   <button
+    onClick={handleToggleLock}
+    disabled={lockToggling}
+    className={`border rounded-lg px-2.5 py-1.5 text-xs font-medium flex items-center gap-1.5 disabled:opacity-60 ${
+      isLocked
+        ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+        : "border-slate-200 hover:bg-slate-50"
+    }`}
+  >
     <Lock size={13} />
-    Lock
+    {lockToggling ? "..." : isLocked ? "Unlock" : "Lock"}
   </button>
 
 </div>
@@ -1203,8 +1341,8 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
       rows={estimate.rows}
       setRows={(newRows) => updateEstimateRows(estimate.id, newRows)}
       canDelete={estimates.length > 1}
-      onDeleteEstimate={() => deleteEstimate(estimate.id)}
-      tdsPercent={tdsPercent}
+  onDeleteRow={(rowId) => deleteEstimateRow(estimate, rowId)}
+onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
       onTdsPercentChange={setTdsPercent}
       discountPercent={estimate.discountPercent ?? 0.0}
       onDiscountPercentChange={(val) => updateEstimateField(estimate.id, "discountPercent", val)}

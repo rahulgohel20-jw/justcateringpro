@@ -58,6 +58,7 @@
           UploadDecorImagePlanning ,
           UploadMenuItemImage,
           Getmenusubcategory,
+          
           } from "@/services/apiServices";
           import { useMenuPrepStore } from "@/store/useMenuPrepStore";
           import AddMenuItem from "@/partials/modals/add-menu-item/AddMenuItem";
@@ -89,7 +90,8 @@
           import { FormattedMessage, useIntl } from "react-intl";
           import PermissableNonPermissableModal from "../../../partials/modals/permissable-nonpermissable/PermissableNonPermissableModal";
           import EditFunctionDetailsModal from "./components/EditFunctionDetailsModal";
-import { QRCodeCanvas } from "qrcode.react";  
+import { QRCodeCanvas } from "qrcode.react"; 
+import useSpeechRecognition from "@/hooks/useSpeechRecognition"; 
 
 
           const SearchWithSuggestions = ({
@@ -106,6 +108,14 @@ import { QRCodeCanvas } from "qrcode.react";
           const itemRefs = useRef([]);
           const [showDropdown, setShowDropdown] = useState(false);
           const [activeIdx, setActiveIdx] = useState(-1);
+
+          const { isListening, toggle: toggleMic, stop: stopMic } = useSpeechRecognition({
+  onResult: (text) => {
+    onChange(text);          // updates itemSearchTerm in the parent
+    setShowDropdown(true);   // open suggestions as words come in
+    setActiveIdx(-1);
+  },
+});
 
           const suggestions = useMemo(() => {
           if (!value.trim()) return [];
@@ -165,6 +175,7 @@ import { QRCodeCanvas } from "qrcode.react";
           selectedIdsSet.has(String(numericId(item)));
 
           const handleSelect = (item) => {
+             stopMic();
           const catName =
             category !== "All"
               ? category
@@ -204,8 +215,8 @@ import { QRCodeCanvas } from "qrcode.react";
             <div className="relative flex-1">
               <input
                 type="text"
-                className="input input-md w-full pr-7"
-                placeholder="Search items"
+  className="input input-md w-full pr-14"  
+  placeholder={isListening ? "Listening…" : "Search items"}
                 value={value}
                 autoComplete="off"
                 onChange={(e) => {
@@ -219,6 +230,22 @@ import { QRCodeCanvas } from "qrcode.react";
                 onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
                 onKeyDown={handleKeyDown}
               />
+
+             <button
+  type="button"
+  title={isListening ? "Stop listening" : "Search by voice"}
+  onMouseDown={(e) => e.preventDefault()}
+  onClick={toggleMic}
+  className={`absolute top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full transition-colors ${
+    value ? "right-8" : "right-2"
+  } ${
+    isListening
+      ? "bg-red-500 text-white animate-pulse"
+      : "bg-primary/10 text-primary hover:bg-primary hover:text-white"
+  }`}
+>
+  <Mic size={18} />
+</button>
               {value && (
                 <button
                   type="button"
@@ -440,7 +467,7 @@ import { QRCodeCanvas } from "qrcode.react";
                 <input
                   type="text"
                   className="input input-md w-full pr-7"
-                  placeholder="Search categories"
+                  placeholder="Search items by categories"
                   value={value}
                   autoComplete="off"
                   disabled={isDisabled}
@@ -733,7 +760,7 @@ import { QRCodeCanvas } from "qrcode.react";
             type="text"
             className="input input-md w-full pr-7"
             placeholder={
-              noParentSelected ? "Select a category first" : "Search sub categories"
+              noParentSelected ? "Select a category first" : "Search items by sub categories"
             }
             value={value}
             autoComplete="off"
@@ -989,6 +1016,7 @@ const getItemRate = (m) => {
           const [selectedSubCategory, setSelectedSubCategory] = useState("All");
 const [selectedSubCategoryId, setSelectedSubCategoryId] = useState(0);
 const [subCategorySearchTerm, setSubCategorySearchTerm] = useState("");
+const [categoryHasSubCategories, setCategoryHasSubCategories] = useState(false);
 const [selectedSubCategoryInfo, setSelectedSubCategoryInfo] = useState({
   id: 0,
   nameEnglish: "All",
@@ -1641,6 +1669,24 @@ const overLimitItemIds = useMemo(() => {
           }
           }, [userId]);
 
+          useEffect(() => {
+  const checkSubCategories = async () => {
+    if (!selectedCategoryId || selectedCategoryId === 0 || !userId) {
+      setCategoryHasSubCategories(false);
+      return;
+    }
+    try {
+      const res = await Getmenusubcategory(selectedCategoryId, userId);
+      const list = res?.data?.data?.["Menu Sub Category Details"] || [];
+      setCategoryHasSubCategories(list.length > 0);
+    } catch (err) {
+      console.error("Failed to check sub categories:", err);
+      setCategoryHasSubCategories(false);
+    }
+  };
+  checkSubCategories();
+}, [selectedCategoryId, userId]);
+
 
 
           useEffect(() => {
@@ -2091,15 +2137,38 @@ setPrimaryItemsByFunction((prev) => ({ ...prev, [selectedFunction]: loadedPrimar
           const pkgId = prepMeta?.packageId || 0;
           // const hasPackageCats = rawSelectedCats.some((c) => Number(c.anyItem || 0) > 0);
 
-          if (isPkg && pkgId > 0 ) {
-            const pkgName = prepMeta?.packageName || "";
-            const pkgPrice = prepMeta?.packagePrice || 0;
+         if (isPkg && pkgId > 0 ) {
+  const pkgName = prepMeta?.packageName || "";
+  const pkgPrice = prepMeta?.packagePrice || 0;
 
-            // Rebuild per-category limits from anyItem field
-            const limits = {};
-            rawSelectedCats.forEach((c) => {
-              if (c.menuCategoryName) limits[c.menuCategoryName] = Number(c.anyItem || 0);
-            });
+  // Fallback: limits from the saved response
+  const limits = {};
+  rawSelectedCats.forEach((c) => {
+    if (c.menuCategoryName) limits[c.menuCategoryName] = Number(c.anyItem || 0);
+  });
+
+  // Source of truth: the package's own limits, so the highlight survives save/reload
+  if (currentUserId === 757) {
+    try {
+      if (mode === "decor") {
+        const pkgResp = await GetDecorPackageById(pkgId);
+        const pkgDef = pkgResp?.data?.data?.["Decore Package Details"]?.[0];
+        (pkgDef?.decorePackageDetails || []).forEach((d) => {
+          const name = d.categoryName || `Category ${d.decoreMainCategoryId}`;
+          limits[name] = Number(d.anyItem || 0);
+        });
+      } else {
+        const pkgResp = await GetCustomPackageapibyID(pkgId);
+        const pkgDef = pkgResp?.data?.data?.["Package Details"]?.[0];
+        (pkgDef?.customPackageDetails || []).forEach((m) => {
+          const name = m.menuName || `Menu ${m.menuId || ""}`;
+          limits[name] = Number(m.anyItem || 0);
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load package limits:", e);
+    }
+  }
 
             setPackageInfoByFunction((prev) => ({
               ...prev,
@@ -4648,15 +4717,17 @@ const handleSubCategoryChange = (subCatName, subCatId, subCatInfo) => {
   userId={userId}
 />
 
-{/* <SearchWithSubCategorySuggestions
-  value={subCategorySearchTerm}
-  onChange={(v) => setSubCategorySearchTerm(v)}
-  selectedCategoryId={selectedCategoryId}
-  selectedSubCategoryId={selectedSubCategoryId}
-  onSubCategoryChange={handleSubCategoryChange}
-  isDisabled={isMenuItemLoading}
-  userId={userId}
-/> */}
+{categoryHasSubCategories && (
+  <SearchWithSubCategorySuggestions
+    value={subCategorySearchTerm}
+    onChange={(v) => setSubCategorySearchTerm(v)}
+    selectedCategoryId={selectedCategoryId}
+    selectedSubCategoryId={selectedSubCategoryId}
+    onSubCategoryChange={handleSubCategoryChange}
+    isDisabled={isMenuItemLoading}
+    userId={userId}
+  />
+)}
 
             <div className="overflow-x-auto no-scrollbar p-2 flex-shrink-0
                             lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:custom-scrollbar lg:p-3">
@@ -4704,26 +4775,20 @@ const handleSubCategoryChange = (subCatName, subCatId, subCatInfo) => {
                     </button>
                   )}
 
-                  <Tooltip title={intl.formatMessage({ id: "USER.EVENT_PLANNING.SPEECH_TO_TEXT_TOOLTIP", defaultMessage: "Start speech to text" })}>
-                    <button
-                      type="button"
-                      className="btn btn-primary flex items-center justify-center rounded-full p-0 w-8 h-8"
-                    >
-                      <Mic size={18} />
-                    </button>
-                  </Tooltip>
+               
                 </div>
               </div>
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
-              <MenuItemGrid
-          fetchItemsFn={cfg.api.getItems}    
-          fields={cfg.fields}
-          refreshKey={refreshList}
-          category={selectedCategory}
-          categoryId={itemSearchTerm.trim() ? 0 : selectedCategoryId}
-          searchTerm={itemSearchTerm}
+             <MenuItemGrid
+fetchItemsFn={cfg.api.getItems}    
+fields={cfg.fields}
+refreshKey={refreshList}
+category={selectedCategory}
+categoryId={itemSearchTerm.trim() ? 0 : selectedCategoryId}
+subCategoryId={itemSearchTerm.trim() ? 0 : selectedSubCategoryId}
+searchTerm={itemSearchTerm}
           selectedIdsSet={getSelectedIdsForFunction(selectedFunction)}
           onToggleSelect={onToggleSelectItem}
           selectedFunctionId={selectedFunction}

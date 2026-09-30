@@ -24,6 +24,7 @@ const AddMeal = ({ isOpen, onClose, refreshData, selectedMeal }) => {
     nameEnglish: "",
     nameGujarati: "",
     nameHindi: "",
+    isJainSlogan: false,
   };
 
   const triggerTranslate = (text) => {
@@ -117,6 +118,7 @@ const AddMeal = ({ isOpen, onClose, refreshData, selectedMeal }) => {
         nameEnglish: selectedMeal.meal_type || "",
         nameGujarati: selectedMeal.nameGujarati || "",
         nameHindi: selectedMeal.nameHindi || "",
+         isJainSlogan: !!selectedMeal.isJainSlogan,
       });
     } else {
       formik.resetForm();
@@ -166,7 +168,26 @@ const AddMeal = ({ isOpen, onClose, refreshData, selectedMeal }) => {
               hindi: "nameHindi",
             }}
           />
-
+<div className="mt-4 flex items-center gap-3">
+  <button
+    type="button"
+    role="switch"
+    aria-checked={formik.values.isJainSlogan}
+    onClick={() =>
+      formik.setFieldValue("isJainSlogan", !formik.values.isJainSlogan)
+    }
+    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+      formik.values.isJainSlogan ? "bg-primary" : "bg-gray-300"
+    }`}
+  >
+    <span
+      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+        formik.values.isJainSlogan ? "translate-x-5" : "translate-x-0.5"
+      }`}
+    />
+  </button>
+  <span className="text-sm font-medium text-gray-700">Jain</span>
+</div>
           {/* Buttons */}
           <div className="flex w-full justify-end mt-6 gap-3">
             <button

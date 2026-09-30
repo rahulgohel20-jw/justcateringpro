@@ -46,6 +46,11 @@ const AutoManualPO = () => {
   const [printModalOpen, setPrintModalOpen] = useState(false);
 const [printItem, setPrintItem] = useState(null);
 const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default off
+const [webWhatsAppModalOpen, setWebWhatsAppModalOpen] = useState(false);
+const [webWhatsAppItem, setWebWhatsAppItem] = useState(null);
+const [webWhatsAppName, setWebWhatsAppName] = useState("");
+const [webWhatsAppMobile, setWebWhatsAppMobile] = useState("");
+const [webWhatsAppSending, setWebWhatsAppSending] = useState(false);
   const permissions = usePermission("Auto Manual PO");
   console.log(permissions);
   
@@ -215,6 +220,69 @@ const handleWhatsApp = (item) => {
   });
 };
 
+const handleWebWhatsApp = (item) => {
+  setWebWhatsAppItem(item);
+  setWebWhatsAppName(item?.partyName || "");
+  setWebWhatsAppMobile((item?.mobile || item?.partyMobile || "").replace(/\D/g, ""));
+  setWebWhatsAppModalOpen(true);
+};
+
+const handleConfirmWebWhatsApp = async () => {
+  if (!webWhatsAppItem) return;
+
+  if (!webWhatsAppMobile.trim()) {
+    Swal.fire({
+      icon: "warning",
+      title: "Mobile number required",
+      text: "Please enter a mobile number to continue.",
+      confirmButtonColor: "#005BA8",
+    });
+    return;
+  }
+
+  const sotPoId = webWhatsAppItem?.id || webWhatsAppItem?.sotPoId;
+
+  try {
+    setWebWhatsAppSending(true);
+
+    const res = await PrintAutoManualPO(sotPoId, userId, 0); // 0 = without company details
+    const fileUrl = res?.data?.fileUrl || res?.data?.data?.fileUrl;
+
+    if (!fileUrl) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to generate PDF link.",
+        confirmButtonColor: "#dc2626",
+      });
+      return;
+    }
+
+    const mobile = webWhatsAppMobile.replace(/\D/g, "");
+    const name = webWhatsAppName.trim() || "there";
+    const message = `Hi ${name},\n\nPlease find the Purchase Order PDF below:\n${fileUrl}\n\nThanks!`;
+
+    const url = `https://web.whatsapp.com/send?phone=${mobile}&text=${encodeURIComponent(message)}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+
+    setWebWhatsAppModalOpen(false);
+    setWebWhatsAppItem(null);
+    setWebWhatsAppName("");
+    setWebWhatsAppMobile("");
+  } catch (err) {
+    console.error("Web WhatsApp share failed:", err?.response?.data || err?.message);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: err?.response?.data?.message || "Failed to generate PDF for sharing.",
+      confirmButtonColor: "#dc2626",
+    });
+  } finally {
+    setWebWhatsAppSending(false);
+  }
+};
+
 
   const handleGenerateInvoice = async (item) => {
  
@@ -330,7 +398,7 @@ const handleWhatsApp = (item) => {
 
         {/* Table */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <TableComponent
+         <TableComponent
   columns={columns(
     handleInfo,
     handlePrint,
@@ -338,6 +406,7 @@ const handleWhatsApp = (item) => {
     handleGenerateInvoice,
     handleWhatsApp,
       handleEdit,
+    handleWebWhatsApp,
     {
       delete: permissions.delete,
       add: permissions.add,
@@ -349,7 +418,7 @@ const handleWhatsApp = (item) => {
   loading={loading}
 />
         </div>
-        <Modal
+       <Modal
   title="Print Purchase Order"
   centered
   open={printModalOpen}
@@ -377,6 +446,60 @@ const handleWhatsApp = (item) => {
       checked={showCompanyDetails}
       onChange={(checked) => setShowCompanyDetails(checked)}
     />
+  </div>
+</Modal>
+
+<Modal
+  title="Send via WhatsApp Web"
+  centered
+  open={webWhatsAppModalOpen}
+  onCancel={() => {
+    setWebWhatsAppModalOpen(false);
+    setWebWhatsAppItem(null);
+  }}
+  footer={[
+    <button
+      key="cancel"
+      className="btn btn-light"
+      onClick={() => {
+        setWebWhatsAppModalOpen(false);
+        setWebWhatsAppItem(null);
+      }}
+      disabled={webWhatsAppSending}
+    >
+      Cancel
+    </button>,
+    <button
+      key="send"
+      className="btn btn-primary ms-2"
+      onClick={handleConfirmWebWhatsApp}
+      disabled={webWhatsAppSending}
+    >
+      {webWhatsAppSending ? "Generating..." : "Send"}
+    </button>,
+  ]}
+>
+  <div className="flex flex-col gap-4 py-2">
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium text-gray-700">Name</label>
+      <input
+        type="text"
+        className="input w-full"
+        placeholder="Enter name"
+        value={webWhatsAppName}
+        onChange={(e) => setWebWhatsAppName(e.target.value)}
+      />
+    </div>
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium text-gray-700">Mobile Number</label>
+      <input
+        type="tel"
+        className="input w-full"
+        placeholder="Enter mobile number"
+        value={webWhatsAppMobile}
+        onChange={(e) => setWebWhatsAppMobile(e.target.value)}
+      />
+    </div>
   </div>
 </Modal>
 
