@@ -243,6 +243,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
             withOutBg: config.withOutBg,
             isAllItemTogether: config.isAllItemTogether ,
             isShowRoomDetails: canShowRoomDetails && config.isShowRoomDetails,
+            isShowFunctionDetails: config.isShowFunctionDetails,
             isShowFunctionImg: config.isShowFunctionImg,
             withVendor: config.withVendor,
             isNotes : config.isNotes,
@@ -294,6 +295,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
               withOutBg: config.withOutBg === 0,
               isAllItemTogether: config.isAllItemTogether === 0,
 isShowRoomDetails: canShowRoomDetails && config.isShowRoomDetails === 0,  
+isShowFunctionDetails: config.isShowFunctionDetails === 0,
             isShowFunctionImg: config.isShowFunctionImg == 0,
               withVendor: config.withVendor === 0,
               isNotes: config.isNotes === 0,
@@ -1007,6 +1009,7 @@ isAdvancedPay:opts.isAdvancedPay ?? false,
           withOutBg: opts.withOutBg === 0,
           isAllItemTogether: opts.isAllItemTogether ?? false,
           isShowRoomDetails: opts.isShowRoomDetails ?? false,
+          isShowFunctionDetails: opts.isShowFunctionDetails ?? false,
           isShowFunctionImg: opts.isShowFunctionImg ?? false,
           withVendor: opts.withVendor === 0,
           isNotes:opts.isNotes ?? false,
@@ -1098,6 +1101,7 @@ const handleConfigGenerate = async (configData) => {
     const withVendor = nonExclusiveConfig?.withVendor === 0 ? 0 : 1;
     const isAllItemTogether = nonExclusiveConfig?.isAllItemTogether ? 1 : 0;
     const isShowRoomDetails = nonExclusiveConfig?.isShowRoomDetails ? 1 :0;
+    const isShowFunctionDetails = nonExclusiveConfig?.isShowFunctionDetails ? 1 :0;
    const isSignature = nonExclusiveConfig?.isSignature ? 1 : 0;
    const isShowFunctionImg =  nonExclusiveConfig?.isShowFunctionImg ? 1 : 0;
     
