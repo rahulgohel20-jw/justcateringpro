@@ -361,6 +361,7 @@ setInstructionHindi(editData.instructionHindi || "");
       nameGujarati: editData.nameGujarati,
       nameHindi: editData.nameHindi,
       slogan: editData.slogan,
+      jainSlogan: editData.jainSlogan, 
       price: editData.price,
       sequence: editData.sequence,
       category: Number(editData.menuCategory?.id),
@@ -1064,8 +1065,21 @@ setInstructionHindi(editData.instructionHindi || "");
   )}
 </div>
 <Form.Item name="slogan">
+
+
   <Input
     placeholder="Write a slogan or generate one with AI"
+    className="bg-[#F8FAFC] h-10 hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
+  />
+</Form.Item>
+<Form.Item
+  label={
+    <span className="text-[#6A7C94] text-base font-medium">Jain Slogan</span>
+  }
+  name="jainSlogan"
+>
+  <Input
+    placeholder="Write a Jain slogan"
     className="bg-[#F8FAFC] h-10 hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
   />
 </Form.Item>
