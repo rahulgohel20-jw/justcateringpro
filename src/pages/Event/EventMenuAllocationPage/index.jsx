@@ -3632,7 +3632,7 @@ rows.forEach((r, i) => {
       />
     </button>
 
-    {canAccessAccounting && (
+    {/* {canAccessAccounting && (
       <button
         className="btn btn-sm btn-success"
         onClick={() => setAllVendor(true)}
@@ -3647,7 +3647,7 @@ rows.forEach((r, i) => {
           defaultMessage="Pay Vendor"
         />
       </button>
-    )}
+    )} */}
   </div>
 {canAccessGuestSignature && (
  <button

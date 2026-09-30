@@ -127,12 +127,25 @@ export default function ChefLabourTable({
   };
 
 const handleContactChange = (menuIndex, allocationIndex, vendorId) => {
+  const menuItem = menuItems[menuIndex];
+  const updatedAllocations = [...menuItem.eventFunctionMenuAllocations];
+  const existing = updatedAllocations[allocationIndex];
+
+  if (!vendorId) {
+    const updatedAllocation = {
+      ...existing,
+      partyId: "",
+      partyName: "",
+      number: "",
+    };
+    updatedAllocation.totalPrice = calcTotal(updatedAllocation);
+    updatedAllocations[allocationIndex] = updatedAllocation;
+    onUpdate(menuIndex, { ...menuItem, eventFunctionMenuAllocations: updatedAllocations });
+    return;
+  }
+
   const selectedVendor = vendors.find((v) => String(v.id) === String(vendorId));
   if (selectedVendor) {
-    const menuItem = menuItems[menuIndex];
-    const updatedAllocations = [...menuItem.eventFunctionMenuAllocations];
-    const existing = updatedAllocations[allocationIndex];
-
     const updatedAllocation = {
       ...existing,
       partyId: selectedVendor.id || "",
