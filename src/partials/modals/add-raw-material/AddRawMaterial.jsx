@@ -25,6 +25,7 @@ import { useIntl } from "react-intl";
 import DatePicker from "react-datepicker";
 
 const validationSchema = Yup.object().shape({
+  itemCode: Yup.string().nullable(),
   dailyConsumption: Yup.string().nullable(),
   nameEnglish: Yup.string().required(" Name is required"),
   rawCategoryId: Yup.string().required("Raw Material Category is required"),
@@ -117,6 +118,7 @@ const AddRawMaterial = ({ isOpen, onClose, refreshData, rawmaterial }) => {
   nameEnglish: "",
   nameGujarati: "",
   nameHindi: "",
+  itemCode: "",
   rawCategoryId: "",
   dailyConsumption : "",
   maxStock : "",
@@ -141,6 +143,7 @@ openingBalance: "",
       const formData = new FormData();
 
       // Append basic fields
+      formData.append("itemCode", values.itemCode ? values.itemCode.trim() : "");
       formData.append("isGeneralFix", values.generalFixAccess);
       formData.append("nameEnglish", values.nameEnglish.trim());
       formData.append("nameGujarati", values.nameGujarati.trim() || "");
@@ -323,6 +326,7 @@ formData.append("cess", parseFloat(values.cess) || 0);
           nameEnglish: rawmaterial.raw_material_name || "",
           nameGujarati: rawmaterial.nameGujarati || "",
           nameHindi: rawmaterial.nameHindi || "",
+          itemCode: rawmaterial.itemCode || "",
           rawCategoryId: rawmaterial.raw_material_cat_id || "",
           unitid: rawmaterial.unitId || "",
           supplierRate: rawmaterial.rate || "",
@@ -621,102 +625,120 @@ formData.append("cess", parseFloat(values.cess) || 0);
   }}
   error={formik.touched.nameEnglish && formik.errors.nameEnglish}
 />
-          {/* Raw Category */}
-          <div className="flex flex-col">
-            <label className="form-label">
-              <FormattedMessage
-                id="USER.RAWMATERIAL.CATEGORY"
-                defaultMessage="Raw Material Category"
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Item Code */}
+            <div className="flex flex-col">
+              <label className="form-label">
+                <FormattedMessage id="COMMON.ITEM_CODE" defaultMessage="Item Code" />
+              </label>
+              <input
+                type="text"
+                name="itemCode"
+                value={formik.values.itemCode}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                placeholder="Enter Item Code"
+                className="input"
               />
-              <span className="text-red-500">*</span>
-            </label>
-
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <Select
-                  options={rawCategory}
-                  value={
-                    rawCategory.find(
-                      (c) => c.value === formik.values.rawCategoryId,
-                    ) || null
-                  }
-                  onChange={(selected) =>
-                    formik.setFieldValue("rawCategoryId", selected?.value || "")
-                  }
-                  placeholder={intl.formatMessage({
-                    id: "USER.RAWMATERIAL.SELECT_CATEGORY",
-                    defaultMessage: "Select Raw Material Category",
-                  })}
-                  isClearable
-                  styles={{
-                    control: (base) => ({ ...base, minHeight: "38px" }),
-                    menu: (base) => ({ ...base, zIndex: 9999 }),
-                  }}
-                />
-              </div>
-
-              <button
-                type="button"
-                className="w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full shadow hover:scale-105 transition"
-                onClick={() => {
-                  setSelectedRawMaterialCategory(null);
-                  setIsRawCategoryModalOpen(true);
-                }}
-              >
-                <i className="ki-filled ki-plus"></i>
-              </button>
             </div>
 
-            {formik.touched.rawCategoryId && formik.errors.rawCategoryId && (
-              <span className="text-red-500 text-sm">
-                {formik.errors.rawCategoryId}
-              </span>
-            )}
-          </div>
-
-          {/* Unit */}
-          <div className="flex flex-col">
-            <label className="form-label flex items-center gap-2">
-              <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />
-              <span className="text-red-500">*</span>
-            </label>
-
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <Select
-                  options={unitList.map((u) => ({
-                    value: u.id,
-                    label: `${u.nameEnglish} (${u.symbolEnglish})`,
-                  }))}
-                  value={
-                    unitList
-                      .map((u) => ({
-                        value: u.id,
-                        label: `${u.nameEnglish} (${u.symbolEnglish})`,
-                      }))
-                      .find((u) => u.value === formik.values.unitid) || null
-                  }
-                  onChange={(selected) =>
-                    formik.setFieldValue("unitid", selected?.value || "")
-                  }
-                  placeholder={intl.formatMessage({
-                    id: "COMMON.SELECT_UNIT",
-                    defaultMessage: "Select Unit",
-                  })}
-                  isClearable
-                  styles={{
-                    control: (base) => ({ ...base, minHeight: "38px" }),
-                    menu: (base) => ({ ...base, zIndex: 9999 }),
-                  }}
+            {/* Raw Category */}
+            <div className="flex flex-col">
+              <label className="form-label">
+                <FormattedMessage
+                  id="USER.RAWMATERIAL.CATEGORY"
+                  defaultMessage="Raw Material Category"
                 />
+                <span className="text-red-500">*</span>
+              </label>
+
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Select
+                    options={rawCategory}
+                    value={
+                      rawCategory.find(
+                        (c) => c.value === formik.values.rawCategoryId,
+                      ) || null
+                    }
+                    onChange={(selected) =>
+                      formik.setFieldValue("rawCategoryId", selected?.value || "")
+                    }
+                    placeholder={intl.formatMessage({
+                      id: "USER.RAWMATERIAL.SELECT_CATEGORY",
+                      defaultMessage: "Select Raw Material Category",
+                    })}
+                    isClearable
+                    styles={{
+                      control: (base) => ({ ...base, minHeight: "38px" }),
+                      menu: (base) => ({ ...base, zIndex: 9999 }),
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  className="w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full shadow hover:scale-105 transition"
+                  onClick={() => {
+                    setSelectedRawMaterialCategory(null);
+                    setIsRawCategoryModalOpen(true);
+                  }}
+                >
+                  <i className="ki-filled ki-plus"></i>
+                </button>
               </div>
+
+              {formik.touched.rawCategoryId && formik.errors.rawCategoryId && (
+                <span className="text-red-500 text-sm">
+                  {formik.errors.rawCategoryId}
+                </span>
+              )}
             </div>
 
-            {formik.touched.unitid && formik.errors.unitid && (
-              <span className="text-red-500 text-sm">
-                {formik.errors.unitid}
-              </span>
-            )}
+            {/* Unit */}
+            <div className="flex flex-col">
+              <label className="form-label flex items-center gap-2">
+                <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />
+                <span className="text-red-500">*</span>
+              </label>
+
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <Select
+                    options={unitList.map((u) => ({
+                      value: u.id,
+                      label: `${u.nameEnglish} (${u.symbolEnglish})`,
+                    }))}
+                    value={
+                      unitList
+                        .map((u) => ({
+                          value: u.id,
+                          label: `${u.nameEnglish} (${u.symbolEnglish})`,
+                        }))
+                        .find((u) => u.value === formik.values.unitid) || null
+                    }
+                    onChange={(selected) =>
+                      formik.setFieldValue("unitid", selected?.value || "")
+                    }
+                    placeholder={intl.formatMessage({
+                      id: "COMMON.SELECT_UNIT",
+                      defaultMessage: "Select Unit",
+                    })}
+                    isClearable
+                    styles={{
+                      control: (base) => ({ ...base, minHeight: "38px" }),
+                      menu: (base) => ({ ...base, zIndex: 9999 }),
+                    }}
+                  />
+                </div>
+              </div>
+
+              {formik.touched.unitid && formik.errors.unitid && (
+                <span className="text-red-500 text-sm">
+                  {formik.errors.unitid}
+                </span>
+              )}
+            </div>
           </div>
 
 <div className="grid grid-cols-5 gap-x-4">

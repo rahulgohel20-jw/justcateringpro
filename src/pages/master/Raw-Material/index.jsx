@@ -228,6 +228,7 @@ useEffect(() => {
   sgst: raw.sgst ?? "",
   igst: raw.igst ?? "",
   cess: raw.cess ?? "",
+  itemCode: raw.itemCode || "",
   }));
 
   setAllTableData(mapped);

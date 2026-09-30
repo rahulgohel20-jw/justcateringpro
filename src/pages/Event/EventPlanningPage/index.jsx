@@ -58,7 +58,7 @@
           UploadDecorImagePlanning ,
           UploadMenuItemImage,
           Getmenusubcategory,
-          
+          checkRMenu,
           } from "@/services/apiServices";
           import { useMenuPrepStore } from "@/store/useMenuPrepStore";
           import AddMenuItem from "@/partials/modals/add-menu-item/AddMenuItem";
@@ -3649,6 +3649,15 @@ const buildFullChangeSummary = (prev, next) => {
               const newId = resp?.data?.data?.id || payload.id;
               setSelectedByFunction((prev) => ({ ...prev, _menuPrepId: newId }));
               setHasExistingData(true);
+
+              const currentEventId = Number(eventId) || Number(selectedEventId) || Number(eventData?.id);
+              if (currentEventId && (mode === "menu" || !mode)) {
+                try {
+                  await checkRMenu(currentEventId);
+                } catch (err) {
+                  console.error("Failed to check-rmenu:", err);
+                }
+              }
 
               await loadSavedMenuPrep();
               fetchPermissableData();

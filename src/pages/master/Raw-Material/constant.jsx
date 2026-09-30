@@ -43,6 +43,20 @@ export const columns = (onEdit, onDelete, onStatus, permissions = {}) => [
     },
   },
   {
+    accessorKey: "itemCode",
+    header: (
+      <FormattedMessage
+        id="COMMON.ITEM_CODE"
+        defaultMessage="Item Code"
+      />
+    ),
+    cell: ({ row }) => row.original.itemCode || "-",
+    meta: {
+      headerClassName: "w-[6%]",
+      cellClassName: "w-[6%]",
+    },
+  },
+  {
     accessorKey: "raw_material_name",
     header: (
       <FormattedMessage
