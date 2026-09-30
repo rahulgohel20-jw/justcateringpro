@@ -29,8 +29,7 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import ExtraQuotationModal from "./ExtraQuotationModal.jsx";
 import SetupModal from "./SetupModal.jsx";
-// TODO: adjust this import path to match where apiServices actually lives
-// relative to this file (e.g. "../../../services/apiServices").
+import SelectMenureport from "../../../modals/menu-report/SelectMenureport.jsx";
 import {
   GetEventMasterById,
   getbyexhibitionevenybuuser,
@@ -48,28 +47,6 @@ const DATE_TIME_FORMAT = "DD/MM/YYYY hh:mm A";
 
 const initialDays = [];
 
-/* =============================================================================
-   API PAYLOAD MAPPING
-   -----------------------------------------------------------------------------
-   These constants/helpers turn the on-screen state (estimates / days / payments)
-   into the backend payload shape you shared. Confirmed against a real GET
-   response: groupType has three values — ESTIMATE (Section 01), OTHER
-   (Section 03 date-wise), and EXTRA (the "Extra Quotation" button, which has
-   no UI here yet — its group is round-tripped unchanged so saving from this
-   screen doesn't wipe it out). Still worth double-checking:
-
-   1. PAYMENT_MODE_TO_API — only "BANK_TRANSFER" was confirmed; CASH, CHEQUE,
-      UPI, CARD are guesses. Confirm these match your backend enum exactly.
-   2. Section 01 (estimates) modules now carry their own discountPercent,
-      cgstPercent, sgstPercent and roundOff (each estimate is editable
-      independently instead of a single hardcoded 2.5%/2.5%/0).
-   3. Advance payments are now two separate lists on screen — Section 02's
-      list is sent under the ESTIMATE group, Section 04's list is sent under
-      the OTHER group. Previously all payments were pooled under ESTIMATE and
-      OTHER's payments were always sent as [].
-   4. quotationCode/quotationdate have no editable UI — whatever the backend
-      returned on fetch is echoed back unchanged on save.
-============================================================================= */
 
 const PAYMENT_MODE_TO_API = {
   "Bank Transfer (RTGS/NEFT)": "BANK_TRANSFER",
@@ -85,13 +62,11 @@ const PAYMENT_MODE_FROM_API = Object.fromEntries(
 
 const GROUP_TYPE_ESTIMATE = "ESTIMATE";
 const GROUP_TYPE_OTHER = "OTHER";
-const GROUP_TYPE_EXTRA = "EXTRA"; // "Extra Quotation" button — no UI yet, round-tripped as-is
+const GROUP_TYPE_EXTRA = "EXTRA"; 
 const MODULE_TYPE_ESTIMATE = "ESTIMATE";
 const MODULE_TYPE_OTHER = "OTHER";
 
-// New rows/estimates/days are keyed with Date.now(), which is always far
-// bigger than any real DB id — used to tell "not yet saved" apart from
-// "already has a backend id" without changing the existing id scheme.
+
 const CLIENT_ID_THRESHOLD = 1_000_000;
 const toBackendId = (id) =>
   typeof id === "number" && id > 0 && id < CLIENT_ID_THRESHOLD ? id : null;
@@ -139,8 +114,7 @@ function money(n) {
   return "₹" + Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Pulls "DD/MM/YYYY hh:mm A" (or plain "DD/MM/YYYY") down to just the date
-// part for display in the header card.
+
 function formatEventDate(raw) {
   if (!raw) return "-";
   const datePart = String(raw).split(" ")[0];
@@ -148,9 +122,7 @@ function formatEventDate(raw) {
   return parsed.isValid() ? parsed.format("DD MMMM YYYY") : datePart;
 }
 
-// Shared totals calc so the per-estimate card and the combined summary
-// never drift apart. discountPercent/cgstPercent/sgstPercent/roundOff are
-// now editable per estimate instead of fixed values.
+
 function calcTotals(
   rows,
   { tdsPercent = 0.0, discountPercent = 0.0, cgstPercent = 2.5, sgstPercent = 2.5, igstPercent = 0, roundOff = 0 } = {}
@@ -595,11 +567,10 @@ const userId = localStorage.getItem("userId");
 const [openSections, setOpenSections] = useState({ s1: false, s2: false, s3: false, s4: false });
 const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  // Section 02 and Section 04 now track their own, independent advance
-  // payment lists rather than sharing one array.
-  const [paymentsMain, setPaymentsMain] = useState([]); // Section 02 — advance against Section 01 estimates
-  const [paymentsFinal, setPaymentsFinal] = useState([]); // Section 04 — advance against the combined final total
 
+  const [paymentsMain, setPaymentsMain] = useState([]); 
+  const [paymentsFinal, setPaymentsFinal] = useState([]); 
+const [isSelectMenureport, setIsSelectMenuReport] = useState(false);
   // ---- Fields the update payload needs that were previously uncontrolled
   // (defaultValue) inputs. Wiring these to state doesn't change how they
   // look — it just lets their edited values actually get saved. ----
@@ -1139,6 +1110,13 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
         eventId={eventId}
         userId={userId}
       />
+     <SelectMenureport
+  eventId={eventId}
+  isSelectMenureport={isSelectMenureport}
+  setIsSelectMenuReport={setIsSelectMenuReport}
+  mode="exhibition"
+  mobileNumber={eventInfo?.mobileno}
+/>
       <style>{`
         .scroll-visible {
           scrollbar-width: thin;
@@ -1190,10 +1168,13 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
     Setup
   </button>
 
-  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
-    <Printer size={14} />
-    Print
-  </button>
+ <button
+  onClick={() => setIsSelectMenuReport(true)}
+  className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5"
+>
+  <Printer size={14} />
+  Print
+</button>
 
   <button
     onClick={handleSaveQuotation}

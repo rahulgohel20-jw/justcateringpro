@@ -189,6 +189,11 @@ else if (mode === "allocation" && !ischef && !isOutside) {
               (module) => module.nameEnglish === "Outside Agency Theme",
             );
           }
+          else if (mode === "exhibition") {
+  modules = modules.filter(
+    (module) => module.nameEnglish === "Exhibition Setup Theme", // must match the backend theme name exactly
+  );
+}
 
           const formattedModules = modules.map((module) => ({
             key: module.id,
@@ -438,7 +443,7 @@ else if (selectedTab?.nameEnglish === "Raw Material Theme") {
       >
         <div className="p-6">
           {/* Event Info Card */}
-          {!isOutside && !ischef &&  mode !== "package" &&(
+          {!isOutside && !ischef &&  mode !== "package" && (
             <div className="bg-gray-200 rounded-2xl p-6 mb-6 border border-gray-400">
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <InfoItem
@@ -505,8 +510,8 @@ else if (selectedTab?.nameEnglish === "Raw Material Theme") {
             </div>
           )}
 
-          {mode !== "package" && (() => {
-            const activeTabName = tabs.find(
+{mode !== "package" && mode !== "exhibition" && (() => {
+              const activeTabName = tabs.find(
               (t) => t.key === activeTab,
             )?.nameEnglish;
             const isRawMaterial = activeTabName === "Raw Material Theme";
@@ -748,7 +753,7 @@ if (mode === "package" && String(userId) === "359") {
     return false;
   }
 }
-
+ 
                   if (allowedTemplateIds === null) return true;
 
                   if (allowedTemplateIds.size > 0)
