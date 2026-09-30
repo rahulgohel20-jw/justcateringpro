@@ -47,10 +47,22 @@ export default function InHouseCookTable({
   };
 
   const handleContactChange = (menuIndex, allocationIndex, vendorId) => {
+    const menuItem = menuItems[menuIndex];
+    const updatedAllocations = [...menuItem.eventFunctionMenuAllocations];
+
+    if (!vendorId) {
+      updatedAllocations[allocationIndex] = {
+        ...updatedAllocations[allocationIndex],
+        partyId: "",
+        partyName: "",
+        number: "",
+      };
+      onUpdate(menuIndex, { ...menuItem, eventFunctionMenuAllocations: updatedAllocations });
+      return;
+    }
+
     const selectedVendor = vendors.find((v) => String(v.id) === String(vendorId));
     if (selectedVendor) {
-      const menuItem = menuItems[menuIndex];
-      const updatedAllocations = [...menuItem.eventFunctionMenuAllocations];
       updatedAllocations[allocationIndex] = {
         ...updatedAllocations[allocationIndex],
         partyId: selectedVendor.id || "",
