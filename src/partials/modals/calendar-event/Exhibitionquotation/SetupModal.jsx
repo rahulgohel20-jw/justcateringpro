@@ -553,9 +553,9 @@ export default function SetupModal({
         if (validDetails.length > 0) {
           const mapped = validDetails.map((d, dIdx) => ({
             id: d.id || null,
-            headingNameEnglish: d.headingNameEnglish || "",
-            headingNameGujarati: sanitizeOnlyBTag(d.headingNameGujarati || ""),
-            headingNameHindi: sanitizeOnlyBTag(d.headingNameHindi || ""),
+            headingNameEnglish: stripAllTags(d.headingNameEnglish || ""),
+            headingNameGujarati: stripAllTags(d.headingNameGujarati || ""),
+            headingNameHindi: stripAllTags(d.headingNameHindi || ""),
             sortorder: d.sortorder || dIdx + 1,
             items:
               Array.isArray(d.exhibitionSetupItemDetails) &&
@@ -647,15 +647,16 @@ export default function SetupModal({
 
   // ── Update Heading in a Row ──────────────────────────────────────────────────
   const updateRowHeading = (rowIdx, field, value) => {
+    const cleanVal = stripAllTags(value || "");
     setRows((prev) =>
       prev.map((r, i) => {
         if (i !== rowIdx) return r;
-        return { ...r, [field]: value };
+        return { ...r, [field]: cleanVal };
       })
     );
 
     if (field === "headingNameEnglish") {
-      triggerAutoTranslate(`heading_${rowIdx}`, value, (gujarati, hindi, boldPhrases) => {
+      triggerAutoTranslate(`heading_${rowIdx}`, cleanVal, (gujarati, hindi) => {
         setRows((prev) =>
           prev.map((r, i) => {
             if (i !== rowIdx) return r;
@@ -663,25 +664,13 @@ export default function SetupModal({
             let updatedGu = r.headingNameGujarati || gujarati;
             let updatedHi = r.headingNameHindi || hindi;
 
-            // Automatically bold matching phrases in Gujarati and Hindi
-            if (boldPhrases && boldPhrases.length > 0) {
-              for (const bp of boldPhrases) {
-                if (bp.gujarati) updatedGu = applyBoldToText(updatedGu, bp.gujarati);
-                if (bp.hindi) updatedHi = applyBoldToText(updatedHi, bp.hindi);
-              }
-            } else if (!value.includes("<b>")) {
-              // If English has no bold tags, strip bold from Gujarati and Hindi
-              updatedGu = updatedGu.replace(/<\/?b>/gi, "");
-              updatedHi = updatedHi.replace(/<\/?b>/gi, "");
-            }
-
             if (!r.headingNameGujarati) updatedGu = gujarati;
             if (!r.headingNameHindi) updatedHi = hindi;
 
             return {
               ...r,
-              headingNameGujarati: sanitizeOnlyBTag(updatedGu),
-              headingNameHindi: sanitizeOnlyBTag(updatedHi),
+              headingNameGujarati: stripAllTags(updatedGu || ""),
+              headingNameHindi: stripAllTags(updatedHi || ""),
             };
           })
         );
@@ -922,9 +911,9 @@ export default function SetupModal({
         details: validRows.map((r, rIdx) => ({
           id: r.id && Number(r.id) > 0 ? Number(r.id) : null,
           sortorder: r.sortorder ? Number(r.sortorder) : rIdx + 1,
-          headingNameEnglish: sanitizeOnlyBTag(r.headingNameEnglish || ""),
-          headingNameGujarati: sanitizeOnlyBTag(r.headingNameGujarati || ""),
-          headingNameHindi: sanitizeOnlyBTag(r.headingNameHindi || ""),
+          headingNameEnglish: stripAllTags(r.headingNameEnglish || "").trim(),
+          headingNameGujarati: stripAllTags(r.headingNameGujarati || "").trim(),
+          headingNameHindi: stripAllTags(r.headingNameHindi || "").trim(),
           exhibitionSetupItemDetails: (r.items || [])
             .filter(
               (it) =>
@@ -1113,18 +1102,19 @@ export default function SetupModal({
                     {/* Heading Inputs */}
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        <label className="block text-xs font-medium text-slate-700 mb-1">
                           Heading (English) <span className="text-red-500">*</span>
                         </label>
-                        <RichTextEditor
+                        <input
                           id={`heading_input_${rowIdx}_english`}
-                          singleLine={true}
-                          minHeight="38px"
-                          value={row.headingNameEnglish || ""}
-                          onChange={(val) =>
-                            updateRowHeading(rowIdx, "headingNameEnglish", val)
+                          type="text"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-normal text-slate-800 transition-all focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 leading-relaxed placeholder:text-slate-300"
+                          value={stripAllTags(row.headingNameEnglish || "")}
+                          onChange={(e) =>
+                            updateRowHeading(rowIdx, "headingNameEnglish", e.target.value)
                           }
-                          onBlur={(val) => {
+                          onBlur={(e) => {
+                            const val = e.target.value?.trim();
                             if (val && (!row.headingNameGujarati || !row.headingNameHindi)) {
                               executeTranslation(val).then(({ gujarati, hindi }) => {
                                 setRows((prev) =>
@@ -1132,8 +1122,8 @@ export default function SetupModal({
                                     i === rowIdx
                                       ? {
                                           ...r,
-                                          headingNameGujarati: gujarati || r.headingNameGujarati,
-                                          headingNameHindi: hindi || r.headingNameHindi,
+                                          headingNameGujarati: stripAllTags(gujarati || r.headingNameGujarati || ""),
+                                          headingNameHindi: stripAllTags(hindi || r.headingNameHindi || ""),
                                         }
                                       : r
                                   )
@@ -1141,43 +1131,41 @@ export default function SetupModal({
                               });
                             }
                           }}
-                          placeholder="Heading (Select text and press Ctrl+B to bold)"
+                          placeholder="Enter Heading"
                         />
                       </div>
 
                       {showRegional && (
                         <>
                           <div>
-                            <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
                               Heading (Name (ગુજરાતી))
                             </label>
-                            <RichTextEditor
+                            <input
                               id={`heading_input_${rowIdx}_gujarati`}
-                              singleLine={true}
-                              allowBold={true}
-                              minHeight="38px"
-                              value={row.headingNameGujarati || ""}
-                              onChange={(val) =>
-                                updateRowHeading(rowIdx, "headingNameGujarati", val)
+                              type="text"
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-normal text-slate-800 transition-all focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 leading-relaxed placeholder:text-slate-300"
+                              value={stripAllTags(row.headingNameGujarati || "")}
+                              onChange={(e) =>
+                                updateRowHeading(rowIdx, "headingNameGujarati", e.target.value)
                               }
-                              placeholder="Heading (Select text and press Ctrl+B to bold)"
+                              placeholder="Enter Heading (Gujarati)"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            <label className="block text-xs font-medium text-slate-700 mb-1">
                               Heading (Hindi)
                             </label>
-                            <RichTextEditor
+                            <input
                               id={`heading_input_${rowIdx}_hindi`}
-                              singleLine={true}
-                              allowBold={true}
-                              minHeight="38px"
-                              value={row.headingNameHindi || ""}
-                              onChange={(val) =>
-                                updateRowHeading(rowIdx, "headingNameHindi", val)
+                              type="text"
+                              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-normal text-slate-800 transition-all focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/20 leading-relaxed placeholder:text-slate-300"
+                              value={stripAllTags(row.headingNameHindi || "")}
+                              onChange={(e) =>
+                                updateRowHeading(rowIdx, "headingNameHindi", e.target.value)
                               }
-                              placeholder="Heading (Select text and press Ctrl+B to bold)"
+                              placeholder="Enter Heading (Hindi)"
                             />
                           </div>
                         </>
@@ -1332,8 +1320,8 @@ export default function SetupModal({
                       <span className="flex items-center justify-center p-1 rounded-lg bg-blue-50">
                         {renderSectionIcon(rowIdx)}
                       </span>
-                      <span className="text-[13px] font-semibold text-slate-800 tracking-tight">
-                        {renderFormattedText(row.headingNameEnglish) || `Specification ${rowIdx + 1}`}
+                      <span className="text-[13px] font-normal text-slate-800 tracking-tight">
+                        {stripAllTags(row.headingNameEnglish) || `Specification ${rowIdx + 1}`}
                       </span>
 
                       {/* Pencil Icon Button -> Opens inputs */}
