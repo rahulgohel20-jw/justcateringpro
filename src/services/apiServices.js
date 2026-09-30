@@ -3963,11 +3963,14 @@ export const deleteExhibitionSetupFeature = (id) => {
   return DELETE(`/user/exhibition/setup/feature/delete?id=${id}`);
 };
 
-export const getAllExhibitionSetups = ({ userId, isActive, search = "", moduleName = "" } = {}) => {
+export const getAllExhibitionSetups = (params = {}) => {
+  const userId = typeof params === "object" && params !== null ? params?.userId : params;
   let url = `/user/exhibition/setup/getall?userId=${userId || 0}`;
-  if (isActive !== undefined && isActive !== null) url += `&isActive=${isActive}`;
-  if (search) url += `&search=${encodeURIComponent(search)}`;
-  if (moduleName) url += `&moduleName=${encodeURIComponent(moduleName)}`;
+  if (typeof params === "object" && params !== null) {
+    if (params.isActive !== undefined && params.isActive !== null) url += `&isActive=${params.isActive}`;
+    if (params.search) url += `&search=${encodeURIComponent(params.search)}`;
+    if (params.moduleName) url += `&moduleName=${encodeURIComponent(params.moduleName)}`;
+  }
   return GET(url);
 };
 
@@ -3975,14 +3978,23 @@ export const updateExhibitionSetupStatus = (id, isActive) => {
   return PUT(`/user/exhibition/setup/isActive?id=${id}&isActive=${isActive}`);
 };
 
-export const exhibitionsetup  = (eventId  , userId) => {
+// Exhibition Setup (Event Specific) Controller APIs
+export const getExhibitionSetupByEventUser = (eventId, userId) => {
   return GET(`/exhibition/setup/by-event-user?eventId=${eventId}&userId=${userId}`);
 };
 
-// Aliases for compatibility
-export const getExhibitionSetupByEventUser = (eventId, userId) => {
-  return getAllExhibitionSetups({ userId });
+export const saveExhibitionSetup = (data) => {
+  return POST(`/exhibition/setup/add`, data);
 };
+
+export const deleteExhibitionSetupDetail = (id) => {
+  return DELETE(`/exhibition/setup/delete?id=${id}`);
+};
+
+export const deleteExhibitionSetupItemDetail = (id) => {
+  return DELETE(`/exhibition/setup/item/delete?id=${id}`);
+};
+export const updateExhibitionSetupIsActive = updateExhibitionSetupStatus;
 export const saveExhibitionSetup = addOrUpdateExhibitionSetup;
 export const deleteExhibitionSetupDetail = deleteExhibitionSetup;
 export const deleteExhibitionSetupItemDetail = deleteExhibitionSetupFeature;
