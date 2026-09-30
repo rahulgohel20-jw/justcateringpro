@@ -696,7 +696,7 @@ export const Getmenuprep = (
   subCategoryId = 0,
 ) => {
   return GET(
-    `/menupreparation/getmenupreparationitems?eventFunctionId=${eventFunId}&itemName=${encodeURIComponent(itemname)}&menuCategoryId=${menuCatId}&pageNo=${pageNo}&totalRecord=${TotalRecord}&userId=${UserId}&menuSubCategoryId=${subCategoryId}`,
+    `/menupreparation/getmenupreparationitems?eventFunctionId=${eventFunId}&itemName=${encodeURIComponent(itemname)}&menuCategoryId=${menuCatId}&pageNo=${pageNo}&totalRecord=${TotalRecord}&userId=${UserId}&subCategoryId=${subCategoryId}`,
   );
 };
 
