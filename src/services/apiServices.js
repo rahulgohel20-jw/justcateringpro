@@ -3759,8 +3759,10 @@ export const isActiveUserNotification = (data) => {
 };
 
 
-export const GetSloganByMenuId = (menuId, userId) =>{
-  return GET (`/menupreparation/sync-slogan?menuItemId=${menuId}&userId=${userId}`);
+export const GetSloganByMenuId = (menuId, userId, isJainSlogan = false) => {
+  return GET(
+    `/menupreparation/sync-slogan?menuItemId=${menuId}&userId=${userId}&isJainSlogan=${isJainSlogan}`
+  );
 };
 
 export const WhatsAppPdf = (data) => {
@@ -3971,6 +3973,10 @@ export const getAllExhibitionSetups = ({ userId, isActive, search = "", moduleNa
 
 export const updateExhibitionSetupStatus = (id, isActive) => {
   return PUT(`/user/exhibition/setup/isActive?id=${id}&isActive=${isActive}`);
+};
+
+export const exhibitionsetup  = (eventId  , userId) => {
+  return GET(`/exhibition/setup/by-event-user?eventId=${eventId}&userId=${userId}`);
 };
 
 // Aliases for compatibility

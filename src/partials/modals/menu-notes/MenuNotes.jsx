@@ -8,7 +8,7 @@ const MenuNotes = ({ isOpen, onClose, itemId, notes = "", onSave }) => {
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    if (isOpen && notes !== undefined) {
+    if (isOpen) {
       setItemSlogan(notes || "");
     }
   }, [isOpen, notes]);
@@ -19,31 +19,57 @@ const MenuNotes = ({ isOpen, onClose, itemId, notes = "", onSave }) => {
     onSave(itemSlogan);
   };
 
-  const handleSyncSlogan = async () => {
-    if (!itemId) return;
-    const userId = localStorage.getItem("userId");
-    setSyncing(true);
-    try {
-      const resp = await GetSloganByMenuId(itemId, userId);
-      const slogan = resp?.data?.data ?? resp?.data?.slogan ?? "";
-      if (resp?.data?.success === false) {
-        Swal.fire({
-          icon: "error",
-          title: resp?.data?.msg || "Failed to sync slogan",
-        });
-        return;
-      }
-      setItemSlogan(slogan || "");
-    } catch (err) {
+const handleSyncSlogan = async () => {
+  if (!itemId) return;
+
+  // Ask the user first
+  const result = await Swal.fire({
+    title: "Jain Slogan?",
+    text: "Do you want the Jain version of this slogan?",
+    icon: "question",
+    input: "radio",
+    inputOptions: {
+      false: "Non Jain (Regular)",
+      true: "Jain",
+    },
+    inputValue: "false", // default Off
+    showCancelButton: true,
+    confirmButtonText: "OK",
+    cancelButtonText: "Cancel",
+  });
+
+  if (!result.isConfirmed) return; // user cancelled
+
+  const isJain = result.value === "true";
+  const userId = localStorage.getItem("userId");
+
+  setSyncing(true);
+  try {
+    const resp = await GetSloganByMenuId(itemId, userId, isJain);
+    if (resp?.data?.success === false) {
       Swal.fire({
         icon: "error",
-        title: "Failed to sync slogan",
-        text: err?.response?.data?.msg || "Something went wrong.",
+        title: resp?.data?.msg || "Failed to sync slogan",
       });
-    } finally {
-      setSyncing(false);
+      return;
     }
-  };
+    const slogan = resp?.data?.data ?? resp?.data?.slogan ?? "";
+    setItemSlogan(slogan || "");
+  } catch (err) {
+    Swal.fire({
+      icon: "error",
+      title: "Failed to sync slogan",
+      text: err?.response?.data?.msg || "Something went wrong.",
+    });
+  } finally {
+    setSyncing(false);
+  }
+};
+
+const handleJainChange = (value) => {
+  setIsJainSlogan(value);
+  handleSyncSlogan(value); // call API immediately with the new value
+};
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -58,14 +84,13 @@ const MenuNotes = ({ isOpen, onClose, itemId, notes = "", onSave }) => {
 
         {/* Form */}
         <div className="grid grid-cols-1 gap-4">
-          <InputWithIcon
-            label="Item Slogan"
-            value={itemSlogan}
-            onChange={(e) => setItemSlogan(e.target.value)}
-            onSync={handleSyncSlogan}
-            syncing={syncing}
-          />
-        </div>
+<InputWithIcon
+  label="Item Slogan"
+  value={itemSlogan}
+  onChange={(e) => setItemSlogan(e.target.value)}
+  onSync={handleSyncSlogan}
+  syncing={syncing}
+/>        </div>
 
         {/* Footer Buttons */}
         <div className="flex w-full justify-end mt-6 gap-3">
@@ -76,7 +101,6 @@ const MenuNotes = ({ isOpen, onClose, itemId, notes = "", onSave }) => {
           >
             Cancel
           </button>
-
           <button
             type="button"
             className="bg-primary text-white px-5 py-2 rounded-lg hover:bg-primary/90 transition"
@@ -90,10 +114,32 @@ const MenuNotes = ({ isOpen, onClose, itemId, notes = "", onSave }) => {
   );
 };
 
+const JainToggle = ({ checked, onChange, disabled }) => (
+  <label className="flex items-center gap-2 cursor-pointer select-none">
+    <span className="text-sm text-gray-600">Jain</span>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-50 ${
+        checked ? "bg-primary" : "bg-gray-300"
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+          checked ? "translate-x-4" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  </label>
+);
 const InputWithIcon = ({ label, value, onChange, onSync, syncing }) => (
   <div className="relative w-full">
     <div className="flex items-center justify-between mb-1">
       <label className="block text-gray-600">{label}</label>
+
       <button
         type="button"
         onClick={onSync}
@@ -106,7 +152,6 @@ const InputWithIcon = ({ label, value, onChange, onSync, syncing }) => (
       </button>
     </div>
 
-    {/* Textarea */}
     <textarea
       rows={5}
       className="border border-gray-300 rounded-lg p-3 pr-12 w-full resize-none"
@@ -115,7 +160,6 @@ const InputWithIcon = ({ label, value, onChange, onSync, syncing }) => (
       onChange={onChange}
     />
 
-    {/* Mic Button */}
     <button
       type="button"
       onClick={() => console.log("Mic clicked")}
@@ -126,5 +170,4 @@ const InputWithIcon = ({ label, value, onChange, onSync, syncing }) => (
     </button>
   </div>
 );
-
 export default MenuNotes;

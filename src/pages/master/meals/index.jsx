@@ -46,6 +46,7 @@ const MealMaster = () => {
           sr_no: index + 1,
           meal_type: getTranslatedName(item),
           mealid: item.id,
+          isJainSlogan: item.isJainSlogan, 
         }));
 
         setTableData(formatted);
