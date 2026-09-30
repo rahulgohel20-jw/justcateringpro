@@ -423,6 +423,16 @@ const EventViewModal = ({
         const currentStatus =
           statusMap[String(eventDataAll?.statusCode ?? statusId)] || "Unknown";
 
+        Swal.fire({
+          title: "Deleting...",
+          text: "Please wait",
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+
         DeleteEventMaster(eventId)
           .then((response) => {
             if (
@@ -454,6 +464,7 @@ const EventViewModal = ({
             }
           })
           .catch((error) => {
+            Swal.close();
             error?.data?.msg && errorMsgPopup(error.data.msg);
             console.error("Error deleting event:", error);
           });

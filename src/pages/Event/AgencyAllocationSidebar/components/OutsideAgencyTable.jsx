@@ -98,6 +98,19 @@ export default function OutsideAgencyTable({
         [field]: value,
       };
 
+      if (field === "partyId") {
+        if (!value) {
+          updatedAllocations[allocationIndex].partyName = "";
+          updatedAllocations[allocationIndex].number = "";
+        } else {
+          const v = vendors.find((vend) => String(vend.id) === String(value));
+          if (v) {
+            updatedAllocations[allocationIndex].partyName = v.nameEnglish || "";
+            updatedAllocations[allocationIndex].number = v.mobileno || "";
+          }
+        }
+      }
+
       if (field === "pax") {
         updatedMenuItems[menuIndex] = {
           ...updatedMenuItems[menuIndex],
