@@ -20,85 +20,6 @@ import {
   Translateapi,
 } from "@/services/apiServices";
 
-const DEFAULT_ROWS = [
-  {
-    id: null,
-    headingNameEnglish: "Setups and Other Requirements",
-    headingNameGujarati: "સેટઅપ અને અન્ય આવશ્યકતાઓ",
-    headingNameHindi: "सेटअप और अन्य आवश्यकताएं",
-    sortorder: 1,
-    items: [
-      {
-        id: null,
-        descriptionEnglish:
-          "<b>Octanorm modular stall setup</b> with 8 units (3m x 3m). 3-phase 32A power supply required for main distribution board. Fascia lettering with high-bond vinyl lettering for all stall fronts. Ground leveling and protective underlay before stall erection on 08 September 2026.",
-        descriptionGujarati:
-          "<b>ઓક્ટનોર્મ મોડ્યુલર સ્ટોલ સેટઅપ</b> 8 એકમો (3m x 3m) સાથે. મુખ્ય વિતરણ બોર્ડ માટે 3-ફેઝ 32A પાવર સપ્લાય જરૂરી છે. બધા સ્ટોલ મોરચા માટે હાઇ-બોન્ડ વિનાઇલ લેટરિંગ સાથે ફાસિયા લેટરિંગ. 08 સપ્ટેમ્બર 2026 ના રોજ સ્ટોલ ઊભો કરતા પહેલા ગ્રાઉન્ડ લેવલિંગ અને રક્ષણાત્મક અંડરલે.",
-        descriptionHindi:
-          "<b>ऑक्टानॉर्म मॉड्यूलर स्टॉल सेटअप</b> 8 इकाइयों (3m x 3m) के साथ। मुख्य वितरण बोर्ड के लिए 3-फेज 32A बिजली आपूर्ति आवश्यक है। सभी स्टॉल मोर्चों के लिए हाई-बॉन्ड विनाइल लेटरिंग के साथ प्रावरणी लेटरिंग। 08 सितंबर 2026 को स्टॉल लगाने से पहले ग्राउंड लेवलिंग और सुरक्षात्मक अंडरले।",
-        sortorder: 1,
-      },
-    ],
-  },
-  {
-    id: null,
-    headingNameEnglish: "Electrical & Lighting Specifications",
-    headingNameGujarati: "ઇલેક્ટ્રિકલ અને લાઇટિંગ વિશિષ્ટતાઓ",
-    headingNameHindi: "વિદ્યુત અને પ્રકાશ વિશિષ્ટતાઓ",
-    sortorder: 2,
-    items: [
-      {
-        id: null,
-        descriptionEnglish:
-          "12 units 50W warm-white LED spotlights positioned on front cross-truss. Dedicated 16A multi-plug sockets per counter block. Backup generator line connected for continuous illumination during exhibition hours (10:00 AM - 08:00 PM).",
-        descriptionGujarati:
-          "આગળના ક્રોસ-ટ્રસ પર 12 એકમો 50W વોર્મ-વ્હાઇટ LED સ્પોટલાઇટ્સ ગોઠવેલ છે. કાઉન્ટર બ્લોક દીઠ સમર્પિત 16A મલ્ટી-પ્લગ સોકેટ્સ. પ્રદર્શનના કલાકો (10:00 AM - 08:00 PM) દરમિયાન સતત રોશની માટે બેકઅપ જનરેટર લાઇન જોડાયેલ છે.",
-        descriptionHindi:
-          "सामने के क्रॉस-ट्रस पर 12 इकाइयां 50W वार्म-व्हाइट एलईडी स्पॉटलाइट्स स्थित हैं। प्रति काउंटर ब्लॉक समर्पित 16A मल्टी-प्लग सॉकेट। प्रदर्शनी के घंटों (10:00 AM - 08:00 PM) के दौरान निरंतर रोशनी के लिए बैकअप जनरेटर लाइन जुड़ी हुई है।",
-        sortorder: 2,
-      },
-    ],
-  },
-  {
-    id: null,
-    headingNameEnglish: "Display & Furniture Fabrication",
-    headingNameGujarati: "ડિસ્પ્લે અને ફર્નિચર ફેબ્રિકેશન",
-    headingNameHindi: "प्रदर्शन और फर्नीचर निर्माण",
-    sortorder: 3,
-    items: [
-      {
-        id: null,
-        descriptionEnglish:
-          "6 tiers modular display shelving (powder-coated matte white finish). 2 executive discussion tables with 8 cushioned visitor chairs. 1 lockable reception counter with custom brand graphics laminated fascia.",
-        descriptionGujarati:
-          "6 સ્તરો મોડ્યુલર ડિસ્પ્લે શેલ્વિંગ (પાઉડર-કોટેડ મેટ વ્હાઇટ ફિનિશ). 8 કુશનવાળી મુલાકાતી ખુરશીઓ સાથે 2 એક્ઝિક્યુટિવ ચર્ચા ટેબલ. કસ્ટમ બ્રાન્ડ ગ્રાફિક્સ લેમિનેટેડ ફાસિયા સાથે 1 લૉકેબલ રિસેપ્શન કાઉન્ટર.",
-        descriptionHindi:
-          "6 स्तरों का मॉड्यूलर डिस्प्ले शेल्विंग (पाउडर-कोटेड मैट व्हाइट फिनिश)। 8 कुशन वाली आगंतुक कुर्सियों के साथ 2 कार्यकारी चर्चा टेबल। कस्टम ब्रांड ग्राफिक्स लैमिनेटेड प्रावरणी के साथ 1 लॉक करने योग्य स्वागत काउंटर।",
-        sortorder: 3,
-      },
-    ],
-  },
-  {
-    id: null,
-    headingNameEnglish: "Dismantling & Logistics Guidelines",
-    headingNameGujarati: "ડિસમેન્ટલિંગ અને લોજિસ્ટિક્સ માર્ગદર્શિકા",
-    headingNameHindi: "विघटन और रसद दिशानिर्देश",
-    sortorder: 4,
-    items: [
-      {
-        id: null,
-        descriptionEnglish:
-          "Handover inspection scheduled for 10 September 2026 at 09:30 PM post event closure. De-rigging and transport clearance to be completed within 6 hours. Gate passes and security clearance to be pre-authorized.",
-        descriptionGujarati:
-          "ઇવેન્ટ બંધ થયા પછી 10 સપ્ટેમ્બર 2026 ના રોજ રાત્રે 09:30 વાગ્યે હેન્ડઓવર નિરીક્ષણ સુનિશ્ચિત થયેલ છે. ડી-રિગિંગ અને પરિવહન મંજૂરી 6 કલાકની અંદર પૂર્ણ કરવાની રહેશે. ગેટ પાસ અને સુરક્ષા મંજૂરી પૂર્વ-અધિકૃત હોવી આવશ્યક છે.",
-        descriptionHindi:
-          "कार्यक्रम समाप्त होने के बाद 10 सितंबर 2026 को रात 09:30 बजे हैंडओवर निरीक्षण निर्धारित है। डी-रिगिंग और परिवहन निकासी 6 घंटे के भीतर पूरी की जानी चाहिए। गेट पास और सुरक्षा मंजूरी पूर्व-अधिकृत होनी चाहिए।",
-        sortorder: 4,
-      },
-    ],
-  },
-];
-
 const renderSectionIcon = (index) => {
   switch (index % 4) {
     case 0:
@@ -583,7 +504,7 @@ export default function SetupModal({
   userId: propUserId,
   onSave,
 }) {
-  const [showRegional, setShowRegional] = useState(true);
+  const [showRegional, setShowRegional] = useState(false);
   const [rows, setRows] = useState([]);
   const [editingRows, setEditingRows] = useState({}); // { [rowIdx]: boolean }
   const [loading, setLoading] = useState(false);
@@ -592,12 +513,16 @@ export default function SetupModal({
   const debounceTimersRef = useRef({});
 
   const resolveUserId = () => {
-    if (propUserId) return Number(propUserId);
+    if (propUserId && !isNaN(Number(propUserId)) && Number(propUserId) > 0) {
+      return Number(propUserId);
+    }
     try {
       const raw = localStorage.getItem("userId");
       if (raw && !isNaN(Number(raw))) return Number(raw);
       const userObj = JSON.parse(localStorage.getItem("user") || "{}");
       if (userObj?.id) return Number(userObj.id);
+      const authStorage = JSON.parse(localStorage.getItem("auth-storage") || "{}");
+      if (authStorage?.state?.user?.id) return Number(authStorage.state.user.id);
     } catch (e) {
       console.warn("Could not read userId:", e);
     }
@@ -613,8 +538,20 @@ export default function SetupModal({
       if (eventId) {
         const res = await getExhibitionSetupByEventUser(eventId, activeUserId);
         const data = res?.data?.data || res?.data;
-        if (data && Array.isArray(data.details) && data.details.length > 0) {
-          const mapped = data.details.map((d, dIdx) => ({
+        const details = Array.isArray(data?.details) ? data.details : [];
+
+        // Filter out completely blank rows
+        const validDetails = details.filter(
+          (d) =>
+            (d.headingNameEnglish && d.headingNameEnglish.trim()) ||
+            (d.headingNameGujarati && d.headingNameGujarati.trim()) ||
+            (d.headingNameHindi && d.headingNameHindi.trim()) ||
+            (Array.isArray(d.exhibitionSetupItemDetails) &&
+              d.exhibitionSetupItemDetails.length > 0)
+        );
+
+        if (validDetails.length > 0) {
+          const mapped = validDetails.map((d, dIdx) => ({
             id: d.id || null,
             headingNameEnglish: d.headingNameEnglish || "",
             headingNameGujarati: sanitizeOnlyBTag(d.headingNameGujarati || ""),
@@ -626,8 +563,12 @@ export default function SetupModal({
                 ? d.exhibitionSetupItemDetails.map((it, itIdx) => ({
                     id: it.id || null,
                     descriptionEnglish: it.descriptionEnglish || "",
-                    descriptionGujarati: sanitizeOnlyBTag(it.descriptionGujarati || ""),
-                    descriptionHindi: sanitizeOnlyBTag(it.descriptionHindi || ""),
+                    descriptionGujarati: sanitizeOnlyBTag(
+                      it.descriptionGujarati || ""
+                    ),
+                    descriptionHindi: sanitizeOnlyBTag(
+                      it.descriptionHindi || ""
+                    ),
                     sortorder: it.sortorder || itIdx + 1,
                   }))
                 : [
@@ -641,18 +582,19 @@ export default function SetupModal({
                   ],
           }));
           setRows(mapped);
-          setEditingRows({});
-          setLoading(false);
-          return;
+        } else {
+          setRows([]);
         }
+      } else {
+        setRows([]);
       }
     } catch (err) {
-      console.info("No saved setup found from backend, loading defaults:", err);
+      console.error("Error loading exhibition setup from backend:", err);
+      setRows([]);
+    } finally {
+      setEditingRows({});
+      setLoading(false);
     }
-
-    setRows(JSON.parse(JSON.stringify(DEFAULT_ROWS)));
-    setEditingRows({});
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -836,8 +778,8 @@ export default function SetupModal({
     const row = rows[rowIdx];
     if (row.id) {
       const result = await Swal.fire({
-        title: "Delete Row?",
-        text: `ROW ${rowIdx + 1} will be permanently removed.`,
+        title: "Delete Specification?",
+        text: `Specification will be permanently removed.`,
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#d33",
@@ -849,7 +791,7 @@ export default function SetupModal({
 
       try {
         const res = await deleteExhibitionSetupDetail(row.id);
-        const msg = res?.data?.msg || "Detail deleted successfully.";
+        const msg = res?.data?.msg || "Specification deleted successfully.";
         Swal.fire({
           toast: true,
           position: "top-end",
@@ -859,11 +801,11 @@ export default function SetupModal({
           timer: 1500,
         });
       } catch (err) {
-        console.error("Backend detail delete error:", err);
+        console.error("Backend setup delete error:", err);
         Swal.fire({
           icon: "error",
           title: "Delete Failed",
-          text: err?.response?.data?.msg || err?.message || "Failed to delete detail.",
+          text: err?.response?.data?.msg || err?.message || "Failed to delete specification.",
         });
         return;
       }
@@ -892,7 +834,7 @@ export default function SetupModal({
 
       try {
         const res = await deleteExhibitionSetupItemDetail(item.id);
-        const msg = res?.data?.msg || "Item detail deleted successfully.";
+        const msg = res?.data?.msg || "Detail item deleted successfully.";
         Swal.fire({
           toast: true,
           position: "top-end",
@@ -902,11 +844,11 @@ export default function SetupModal({
           timer: 1500,
         });
       } catch (err) {
-        console.error("Backend item delete error:", err);
+        console.error("Backend feature delete error:", err);
         Swal.fire({
           icon: "error",
           title: "Delete Failed",
-          text: err?.response?.data?.msg || err?.message || "Failed to delete item detail.",
+          text: err?.response?.data?.msg || err?.message || "Failed to delete detail item.",
         });
         return;
       }
@@ -949,30 +891,61 @@ export default function SetupModal({
   const handleSave = async () => {
     setSaving(true);
 
-    const payload = {
-      eventId: Number(eventId) || 0,
-      userId: Number(activeUserId) || 0,
-      details: rows.map((r, rIdx) => ({
-        id: r.id && Number(r.id) > 0 ? Number(r.id) : null,
-        sortorder: r.sortorder ? Number(r.sortorder) : rIdx + 1,
-        headingNameEnglish: sanitizeOnlyBTag(r.headingNameEnglish),
-        headingNameGujarati: sanitizeOnlyBTag(r.headingNameGujarati),
-        headingNameHindi: sanitizeOnlyBTag(r.headingNameHindi),
-        exhibitionSetupItemDetails: (r.items || []).map((it, itIdx) => ({
-          id: it.id && Number(it.id) > 0 ? Number(it.id) : null,
-          sortorder: it.sortorder ? Number(it.sortorder) : itIdx + 1,
-          descriptionEnglish: sanitizeOnlyBTag(it.descriptionEnglish),
-          descriptionGujarati: sanitizeOnlyBTag(it.descriptionGujarati),
-          descriptionHindi: sanitizeOnlyBTag(it.descriptionHindi),
-        })),
-      })),
-    };
-
     try {
+      const validRows = rows.filter((r) => {
+        const hasHeading =
+          (r.headingNameEnglish || "").trim() ||
+          (r.headingNameGujarati || "").trim() ||
+          (r.headingNameHindi || "").trim();
+        const hasItems = (r.items || []).some(
+          (it) =>
+            (it.descriptionEnglish || "").trim() ||
+            (it.descriptionGujarati || "").trim() ||
+            (it.descriptionHindi || "").trim()
+        );
+        return hasHeading || hasItems;
+      });
+
+      if (validRows.length === 0) {
+        Swal.fire({
+          icon: "warning",
+          title: "Nothing to save",
+          text: "Please add at least one specification before saving.",
+        });
+        setSaving(false);
+        return;
+      }
+
+      const payload = {
+        eventId: Number(eventId) || 0,
+        userId: Number(activeUserId) || 0,
+        details: validRows.map((r, rIdx) => ({
+          id: r.id && Number(r.id) > 0 ? Number(r.id) : null,
+          sortorder: r.sortorder ? Number(r.sortorder) : rIdx + 1,
+          headingNameEnglish: sanitizeOnlyBTag(r.headingNameEnglish || ""),
+          headingNameGujarati: sanitizeOnlyBTag(r.headingNameGujarati || ""),
+          headingNameHindi: sanitizeOnlyBTag(r.headingNameHindi || ""),
+          exhibitionSetupItemDetails: (r.items || [])
+            .filter(
+              (it) =>
+                (it.descriptionEnglish || "").trim() ||
+                (it.descriptionGujarati || "").trim() ||
+                (it.descriptionHindi || "").trim()
+            )
+            .map((it, itIdx) => ({
+              id: it.id && Number(it.id) > 0 ? Number(it.id) : null,
+              sortorder: it.sortorder ? Number(it.sortorder) : itIdx + 1,
+              descriptionEnglish: sanitizeOnlyBTag(it.descriptionEnglish || ""),
+              descriptionGujarati: sanitizeOnlyBTag(it.descriptionGujarati || ""),
+              descriptionHindi: sanitizeOnlyBTag(it.descriptionHindi || ""),
+            })),
+        })),
+      };
+
       const res = await saveExhibitionSetup(payload);
       const success = res?.data?.success ?? res?.success;
       const msg =
-        res?.data?.msg || res?.msg || "Exhibition setup saved successfully.";
+        res?.data?.msg || res?.msg || "Exhibition setup specifications saved successfully.";
 
       if (success) {
         Swal.fire({
@@ -984,6 +957,7 @@ export default function SetupModal({
         });
 
         if (onSave) onSave(payload);
+        await loadSetupData();
         onClose();
       } else {
         Swal.fire({
@@ -1125,16 +1099,14 @@ export default function SetupModal({
                           Done
                         </button>
 
-                        {rows.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteRow(rowIdx)}
-                            title="Delete this row"
-                            className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors ml-1"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRow(rowIdx)}
+                          title="Delete this row"
+                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors ml-1"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
 
@@ -1375,16 +1347,14 @@ export default function SetupModal({
                       </button>
                     </div>
 
-                    {rows.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteRow(rowIdx)}
-                        title="Delete specification"
-                        className="p-1 rounded text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors opacity-60 group-hover:opacity-100"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRow(rowIdx)}
+                      title="Delete specification"
+                      className="p-1 rounded text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors opacity-60 group-hover:opacity-100"
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   </div>
 
                   {/* Clean Description Box with <b> rendered as bold */}
