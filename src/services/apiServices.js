@@ -4017,6 +4017,11 @@ export const Aislogsfirmenuitemandcategory = ( data) => {
   return POST(`/ai-menu/generate`,data);
 };
 
+export const checkRMenu = (eventId) => {
+  return POST(`/eventmaster/check-rmenu?eventId=${eventId}`);
+};
+export const CheckRMenu = checkRMenu;
+
 export const deletepaymemtbyqxhibition = (groupId , paymentId) => {
   return DELETE(`/exhibition/groups/payments/delete?groupId=${groupId}&paymentId=${paymentId}`);
 };
