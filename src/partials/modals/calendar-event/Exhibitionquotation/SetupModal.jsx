@@ -1392,9 +1392,7 @@ export default function SetupModal({
               size={12}
               className={`stroke-[2] ${saving || loading ? "animate-spin" : ""}`}
             />
-            <span className="text-[11.5px] text-slate-400 font-normal">
-              Data synced from backend specifications
-            </span>
+           
           </div>
 
           <div className="flex items-center gap-2.5">

@@ -44,6 +44,7 @@ const AssignManagertask = () => {
   const intl = useIntl();
 
   const Id = localStorage.getItem("userId");
+  const mainId = localStorage.getItem("mainId");
 
   // "" = All, "true" = Active, "false" = Inactive
   const [isTrue, setIsActive] = useState("");
@@ -59,7 +60,7 @@ const AssignManagertask = () => {
     // pass "" so the API returns all statuses.
     const activeParam = isTrue === "" ? "" : isTrue === "true";
 
-    GETALLAssignaskmanager(activeParam, resourceType, Id)
+    GETALLAssignaskmanager(activeParam, resourceType, mainId)
       .then((res) => {
         const tasks = res?.data?.data?.TaskDetails;
         if (tasks && Array.isArray(tasks)) {

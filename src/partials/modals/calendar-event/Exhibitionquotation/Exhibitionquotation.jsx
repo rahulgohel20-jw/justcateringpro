@@ -38,6 +38,7 @@ import {
   updtaeunlock,
   deletebyitemis,
   deletegroupbyquotation,
+  deletepaymemtbyqxhibition,
 } from "@/services/apiServices";
 
 dayjs.extend(customParseFormat);
@@ -154,7 +155,7 @@ function calcTotals(
 }
 
 function EstimateTable({
-  title,
+  
   tag,
   rows,
   setRows,
@@ -206,15 +207,12 @@ function EstimateTable({
     <div className="bg-white border border-slate-200 rounded-xl p-3 mt-2.5">
       {/* Estimate Header */}
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <div
+     <div
   className="text-[15px] font-bold flex items-center gap-2 cursor-pointer select-none"
   onClick={() => setOpen(!open)}
 >
   <ChevronDown size={16} className={`text-slate-500 transition-transform ${open ? "" : "-rotate-90"}`} />
-  {title}
-  <span className="bg-indigo-50 text-indigo-700 text-[11px] px-2 py-0.5 rounded-full font-semibold">
-    {tag}
-  </span>
+  {tag}
 </div>
 
         <div className="flex items-center gap-2">
@@ -349,7 +347,7 @@ function EstimateTable({
           </div>
 
           <div className="flex justify-between items-center py-1.5">
-            <span>TDS u/s 194C</span>
+            <span>TDS </span>
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -436,7 +434,7 @@ function EstimateTable({
 
 
 
-function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateField }) {
+function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateField  , onDeleteDay }) {
   const total = day.rows.reduce((s, r) => s + r.qty * r.rate, 0);
   const totalQty = day.rows.reduce((s, r) => s + r.qty, 0);
   const totalRate = day.rows.reduce((s, r) => s + r.rate, 0);
@@ -465,12 +463,21 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
           />
         </div>
 
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => onToggle(day.id)}>
-          <div className="text-right">
-            <div className="text-[15px] font-bold text-blue-700">{money(total)}</div>
-          </div>
-          <ChevronDown size={16} className={`text-slate-500 transition-transform ${day.open ? "" : "-rotate-90"}`} />
-        </div>
+        <div className="flex items-center gap-2">
+  <div className="flex items-center gap-2 cursor-pointer" onClick={() => onToggle(day.id)}>
+    <div className="text-right">
+      <div className="text-[15px] font-bold text-blue-700">{money(total)}</div>
+    </div>
+    <ChevronDown size={16} className={`text-slate-500 transition-transform ${day.open ? "" : "-rotate-90"}`} />
+  </div>
+  <button
+    onClick={() => onDeleteDay(day)}
+    className="text-slate-400 hover:text-red-600 p-1"
+    title="Delete Date Scope"
+  >
+    <Trash2 size={15} />
+  </button>
+</div>
       </div>
 
       {day.open && (
@@ -539,9 +546,33 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
     </div>
   );
 }
+function MainSection({ title, badge, open, onToggle, right, children }) {
+  return (
+    <div className="mt-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
+      >
+        <span className="flex items-center gap-2">
+          <ChevronDown size={18} className={`text-slate-600 transition-transform ${open ? "" : "-rotate-90"}`} />
+          <span className="text-[14px] font-extrabold text-slate-800">{title}</span>
+          {badge && (
+            <span className="bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-medium px-2.5 py-0.5 rounded-full">
+              {badge}
+            </span>
+          )}
+        </span>
+        {right}
+      </button>
+      <div className={open ? "px-3 pb-3" : "hidden"}>{children}</div>
+    </div>
+  );
+}
+
 function SectionHeader({ no, title, open, onToggle, right }) {
   return (
-    <div className="flex justify-between items-center text-[12px] font-bold text-primary tracking-wide mt-5 mb-2">
+    <div className="flex justify-between items-center text-[12px] font-bold text-primary tracking-wide p-3 mt-5 mb-2">
       <button type="button" onClick={onToggle} className="flex items-center gap-2 text-left">
         <ChevronDown size={16} className={`text-slate-500 transition-transform ${open ? "" : "-rotate-90"}`} />
         <span className="text-[13px] font-extrabold text-blue-800 tracking-tight">
@@ -556,6 +587,8 @@ function SectionHeader({ no, title, open, onToggle, right }) {
 }
 
 export default function ExhibitionQuotation() {
+  const [baseline, setBaseline] = useState(null);
+const [justLoaded, setJustLoaded] = useState(false);
   // eventId comes from the route, e.g. /exhibition-quotation/:eventId
   const { eventId } = useParams();
   const [isExtraQuotationOpen, setIsExtraQuotationOpen] = useState(false);
@@ -564,8 +597,8 @@ const userId = localStorage.getItem("userId");
    const [estimates, setEstimates] = useState([]);
   const [days, setDays] = useState(initialDays);
   const [notes, setNotes] = useState("");
-const [openSections, setOpenSections] = useState({ s1: false, s2: false, s3: false, s4: false });
-const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+const [openSections, setOpenSections] = useState({ m1: false, m2: false, s1: false, s2: false, s3: false, s4: false });const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+
 
 
   const [paymentsMain, setPaymentsMain] = useState([]); 
@@ -644,7 +677,8 @@ const [isSelectMenureport, setIsSelectMenuReport] = useState(false);
               id: `estimate-${idx}`,
               moduleId: m.id || null,
               title: `Estimate ${String.fromCharCode(65 + idx)}`,
-             tag: m.scopeLabel || `Estimate ${String.fromCharCode(65 + idx)}`,
+// fetchExistingQuotation
+tag: m.scopeLabel || "",
              discountPercent: typeof m.discountPercent === "number" ? m.discountPercent : 0.0,
              cgstPercent: typeof m.cgstPercent === "number" ? m.cgstPercent : 2.5,
              sgstPercent: typeof m.sgstPercent === "number" ? m.sgstPercent : 2.5,
@@ -690,10 +724,12 @@ setNotes(quotation.notes ?? "");
         setQuotationCode(quotation.quotationCode ?? "");
         setQuotationDate(quotation.quotationdate ?? "");
          setIsLocked(!!quotation.isLocked);
+         setJustLoaded(true);     
       }
     } catch (err) {
       // No saved quotation yet for this event is an expected case, not an error.
       console.info("No existing exhibition quotation found for this event yet.");
+       setJustLoaded(true); 
     }
   };
 
@@ -727,21 +763,22 @@ setNotes(quotation.notes ?? "");
   const mobileNumber = eventInfo?.mobileno || "-";
   const eventNameDisplay = eventInfo?.eventType?.nameEnglish || "-";
 
- const createPaymentHandlers = (setter) => ({
-    add: () =>
-      setter((prev) => [
-        ...prev,
-        { id: Date.now(), amount: 0, mode: "Bank Transfer (RTGS/NEFT)", dateTime: "", description: "" },
-      ]),
-    update: (id, field, value) => {
-      console.log("[payment update]", { id, field, value }); // ← ADD THIS
-      setter((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
-    },
-    remove: (id) => setter((prev) => prev.filter((p) => p.id !== id)),
-  });
+const createPaymentHandlers = (setter, getGroupId) => ({
+  add: () =>
+    setter((prev) => [
+      ...prev,
+      { id: Date.now(), amount: 0, mode: "Bank Transfer", dateTime: "", description: "" },
+    ]),
+  update: (id, field, value) => {
+    setter((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+  },
+  remove: (id) => deletePayment(getGroupId(), setter, id),
+});
 
-  const mainPayments = createPaymentHandlers(setPaymentsMain);
-  const finalPayments = createPaymentHandlers(setPaymentsFinal);
+const mainPayments = createPaymentHandlers(setPaymentsMain, () => estimateGroupId);
+const finalPayments = createPaymentHandlers(setPaymentsFinal, () => otherGroupId);
+
+
 
   const addEstimate = () => {
     setEstimates((prev) => {
@@ -753,7 +790,7 @@ setNotes(quotation.notes ?? "");
           id: `estimate-${letter.toLowerCase()}-${Date.now()}`,
           moduleId: null,
           title: `Estimate ${letter}`,
-          tag: "Additional Scope",
+          tag: "",
           discountPercent: 0.0,
           cgstPercent: 2.5,
           sgstPercent: 2.5,
@@ -778,6 +815,13 @@ setNotes(quotation.notes ?? "");
       prev.map((estimate) => (estimate.id === estimateId ? { ...estimate, [field]: value } : estimate))
     );
   };
+  const handleExtraServerDelete = ({ type, id, moduleId }) => {
+  setExtraGroup((g) =>
+    type === "item"
+      ? { ...g, modules: g.modules.map((m) => m.id === moduleId ? { ...m, items: (m.items || []).filter((i) => i.id !== id) } : m) }
+      : { ...g, payments: (g.payments || []).filter((p) => p.id !== id) }
+  );
+};
 
     // ---- Server-side deletes ----
   const confirmServerDelete = async (text) => {
@@ -845,10 +889,21 @@ const runServerDelete = async (apiCall) => {
       if (!(await confirmServerDelete(`"${estimate.title}" and all its items will be permanently deleted.`))) return;
       const ok = await runServerDelete(() => deletegroupbyquotation(estimateGroupId, estimate.moduleId));
       if (!ok) return;
+      await fetchExistingQuotation();
+      return
     }
     setEstimates((prev) => prev.filter((e) => e.id !== estimate.id));
   };
-
+// Section 03: delete a whole date scope (module)
+const deleteDay = async (day) => {
+  if (day.moduleId && otherGroupId) {
+    if (!(await confirmServerDelete(`"${day.label || day.date || "This date scope"}" and all its items will be permanently deleted.`))) return;
+    const ok = await runServerDelete(() => deletegroupbyquotation(otherGroupId, day.moduleId));
+    if (!ok) return;
+  }
+  // unsaved scopes (no moduleId) are just removed locally
+  setDays((prev) => prev.filter((d) => d.id !== day.id));
+};
   // Section 03: delete one item row from a date scope
   const deleteDayRow = async (dayId, rowId) => {
     const day = days.find((d) => d.id === dayId);
@@ -862,7 +917,22 @@ const runServerDelete = async (apiCall) => {
       prev.map((d) => (d.id === dayId ? { ...d, rows: d.rows.filter((r) => r.id !== rowId) } : d))
     );
   };
+// Payments (Section 02 / Section 04): delete one advance payment
+const deletePayment = async (groupId, setter, paymentId) => {
+  const backendId = toBackendId(paymentId);
 
+  // Already saved on the server -> delete there, then reload from the API
+  if (backendId && groupId) {
+    if (!(await confirmServerDelete("This payment will be permanently deleted."))) return;
+    const ok = await runServerDelete(() => deletepaymemtbyqxhibition(groupId, backendId));
+    if (!ok) return;
+    await fetchExistingQuotation();
+    return;
+  }
+
+  // Not saved yet -> just remove it from the screen
+  setter((prev) => prev.filter((p) => p.id !== paymentId));
+};
   // Combined totals across every estimate currently on the page.
   const allRows = estimates.flatMap((e) => e.rows);
   const combinedSubtotal = allRows.reduce(
@@ -917,51 +987,62 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
         id: `day-${Date.now()}`,
         moduleId: null,
         date: "",
-        label: "New Scope",
+        label: "",
         open: true,
         rows: [{ id: Date.now(), name: "", qty: 1, rate: 0 }],
       },
     ]);
-  };
+  };// A row counts as "empty" until the user types a name or a rate
+const isBlankRow = (row) =>
+  !String(row.name || "").trim() && !(Number(row.rate) > 0);
 
-  // ---- Build the update-API payload from current state ----
+// Saved modules always go through; new ones only if something was entered
+const shouldSendEstimate = (estimate) =>
+  !!estimate.moduleId || estimate.rows.some((r) => !isBlankRow(r));
+
+const shouldSendDay = (day) =>
+  !!day.moduleId ||
+  !!day.date ||
+  !!String(day.label || "").trim() ||
+  day.rows.some((r) => !isBlankRow(r));
+
+// For new modules, also drop the empty default rows
+const rowsForApi = (module) =>
+  module.moduleId ? module.rows : module.rows.filter((r) => !isBlankRow(r));
+
   const buildEstimateModules = () =>
-    estimates.map((estimate, idx) => ({
-      id: estimate.moduleId || null,
-      moduleType: MODULE_TYPE_ESTIMATE,
-      displayOrder: idx + 1,
-      discountPercent: Number(estimate.discountPercent || 0.0),
-      cgstPercent: Number(estimate.cgstPercent ?? 2.5),
-      sgstPercent: Number(estimate.sgstPercent ?? 2.5),
-      igstPercent: Number(estimate.igstPercent ?? 0.0),
-      tdsPercent: Number(tdsPercent || 0.0),
-      roundOff: Number(estimate.roundOff || 0),
-      scopeDate: "",
-      scopeLabel: estimate.tag || estimate.title,
-      items: rowsToItems(estimate.rows),
-    }));
+  estimates.filter(shouldSendEstimate).map((estimate, idx) => ({
+    id: estimate.moduleId || null,
+    moduleType: MODULE_TYPE_ESTIMATE,
+    displayOrder: idx + 1,
+    discountPercent: Number(estimate.discountPercent || 0.0),
+    cgstPercent: Number(estimate.cgstPercent ?? 2.5),
+    sgstPercent: Number(estimate.sgstPercent ?? 2.5),
+    igstPercent: Number(estimate.igstPercent ?? 0.0),
+    tdsPercent: Number(tdsPercent || 0.0),
+    roundOff: Number(estimate.roundOff || 0),
+    scopeDate: "",
+    // scopeLabel: estimate.tag || estimate.title,
+    items: rowsToItems(rowsForApi(estimate)),
+  }));
 
-  const buildOtherModules = () =>
-    days.map((day, idx) => ({
-      id: day.moduleId || null,
-      moduleType: MODULE_TYPE_OTHER,
-      displayOrder: idx + 1,
-      discountPercent: 0.0,
-      cgstPercent: 0.0,
-      sgstPercent: 0.0,
-      igstPercent: 0.0,
-      tdsPercent: 0.0,
-      roundOff: 0.0,
-      scopeDate: day.date || "",
-      scopeLabel: day.label || "",
-      items: rowsToItems(day.rows),
-    }));
+const buildOtherModules = () =>
+  days.filter(shouldSendDay).map((day, idx) => ({
+    id: day.moduleId || null,
+    moduleType: MODULE_TYPE_OTHER,
+    displayOrder: idx + 1,
+    discountPercent: 0.0,
+    cgstPercent: 0.0,
+    sgstPercent: 0.0,
+    igstPercent: 0.0,
+    tdsPercent: 0.0,
+    roundOff: 0.0,
+    scopeDate: day.date || "",
+    scopeLabel: day.label || "",
+    items: rowsToItems(rowsForApi(day)),
+  }));
 
   const buildPayload = () => {
-    console.log("[buildPayload] paymentsMain:", paymentsMain); // ← ADD THIS
-    console.log("[buildPayload] paymentsFinal:", paymentsFinal); // ← ADD THIS
-    console.log("[buildPayload] mapped ESTIMATE payments:", paymentsMain.map(toApiPayment)); // ← ADD THIS
-    console.log("[buildPayload] mapped OTHER payments:", paymentsFinal.map(toApiPayment)); // ← ADD THIS
 
     return {
       billingname: billingName,
@@ -1004,6 +1085,16 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
     };
   };
 
+  const currentSig = JSON.stringify(buildPayload());
+  const isDirty = baseline !== null && baseline !== currentSig;
+
+  useEffect(() => {
+    if (justLoaded) {
+      setBaseline(currentSig);
+      setJustLoaded(false);
+    }
+  }, [justLoaded, currentSig]);
+
   // ---- Save / Update the quotation itself ----
  const handleSaveQuotation = async () => {
     if (!eventId) {
@@ -1030,6 +1121,7 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
 
          if (savedId) setQuotationId(savedId);
          await fetchExistingQuotation();
+          return true; 
        } else {
         console.error(message);
         Swal.fire({
@@ -1037,6 +1129,7 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
           title: "Failed",
           text: message,
         });
+          return false;
       }
     } catch (err) {
       console.error("Error saving exhibition quotation:", err);
@@ -1045,21 +1138,45 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
         title: "Error",
         text: err?.response?.data?.msg || err?.message || "Something went wrong while saving.",
       });
+       return false; 
     } finally {
       setSaving(false);
     }
   };
 
   // ---- Lock / Unlock the quotation ----
-  const handleToggleLock = async () => {
-    if (!quotationId) {
-      Swal.fire({
-        icon: "warning",
-        title: "Nothing to lock yet",
-        text: "Save the quotation first before locking it.",
-      });
-      return;
-    }
+const handleToggleLock = async () => {
+  if (!quotationId) {
+    Swal.fire({ icon: "warning", title: "Nothing to lock yet", text: "Save the quotation first before locking it." });
+    return;
+  }
+
+  const action = isLocked ? "unlock" : "lock";
+
+  if (isDirty) {
+    const r = await Swal.fire({
+      icon: "warning",
+      title: "Unsaved changes",
+      text: `You have unsaved changes. Save them before you ${action}?`,
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: "Save first",
+      denyButtonText: `${isLocked ? "Unlock" : "Lock"} without saving`,
+      cancelButtonText: "Cancel",
+    });
+    if (r.isDismissed) return;
+    if (r.isConfirmed && !(await handleSaveQuotation())) return;
+  }
+
+  const confirm = await Swal.fire({
+    icon: "question",
+    title: `Are you sure you want to ${action} this quotation?`,
+    showCancelButton: true,
+    confirmButtonText: `Yes, ${action}`,
+    cancelButtonText: "Cancel",
+  });
+  if (!confirm.isConfirmed) return;
+
 
     setLockToggling(true);
     try {
@@ -1103,6 +1220,7 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
         group={extraGroup}
         sectionLabel={eventNameDisplay}
         onSave={setExtraGroup}
+  onServerDelete={handleExtraServerDelete}
       />
       <SetupModal
         open={isSetupOpen}
@@ -1298,6 +1416,13 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
         </div>
 
         {/* Section 01 */}
+        <MainSection
+  title="Estimates & Payment Settlement"
+  badge="Section 01 • 02"
+  open={openSections.m1}
+  onToggle={() => toggleSection("m1")}
+    right={<span className="text-[13px] font-bold text-blue-700">{money(combinedGrandTotal)}</span>}
+>
 <SectionHeader
   no="01"
   title="Estimates Breakdown"
@@ -1365,8 +1490,7 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
   open={openSections.s2}
   onToggle={() => toggleSection("s2")}
 />
-<div className={`border border-blue-100 rounded-lg p-3 ${openSections.s2 ? "" : "hidden"}`}>
-  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+<div className={openSections.s2 ? "" : "hidden"}>  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
     <div className="flex justify-between py-1.5 text-[13.5px]">
       <span>Combined Subtotal</span>
       <span>{money(combinedSubtotal)}</span>
@@ -1382,7 +1506,7 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
     <div className="flex justify-between py-2 mt-0.5 border-t border-slate-200 font-bold text-lg text-blue-700">
       <span>Combined Grand Total</span>
       <span>{money(combinedGrandTotal)}</span>
-    </div>
+    
   </div>
 </div>
 
@@ -1432,7 +1556,7 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
                     value={p.mode}
                     onChange={(e) => mainPayments.update(p.id, "mode", e.target.value)}
                   >
-                    <option>Bank Transfer (RTGS/NEFT)</option>
+                    <option>Bank Transfer</option>
                     <option>UPI</option>
                     <option>Cash</option>
                     <option>Cheque</option>
@@ -1499,7 +1623,15 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
           <span className="font-bold text-red-600 text-[15px]">{money(remainingMain)}</span>
         </div>
 </div>
+</MainSection>
 
+<MainSection
+  title="Other Estimates & Final Settlement"
+  badge="Section 03 • 04"
+  open={openSections.m2}
+  onToggle={() => toggleSection("m2")}
+    right={<span className="text-[13px] font-bold text-blue-700">{money(finalGrandTotal)}</span>}
+>
        {/* Section 03 */}
 <SectionHeader
   no="03"
@@ -1521,15 +1653,16 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
     </div>
   )}
   {days.map((day) => (
-    <DayCard
-      key={day.id}
-      day={day}
-      onToggle={toggleDay}
-      onUpdateRow={updateDayRow}
-      onDeleteRow={deleteDayRow}
-      onAddRow={addDayRow}
-      onUpdateField={updateDayField}
-    />
+   <DayCard
+  key={day.id}
+  day={day}
+  onToggle={toggleDay}
+  onUpdateRow={updateDayRow}
+  onDeleteRow={deleteDayRow}
+  onDeleteDay={deleteDay}
+  onAddRow={addDayRow}
+  onUpdateField={updateDayField}
+/>
   ))}
   <button onClick={addDate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-primary font-semibold mt-2.5 flex items-center justify-center gap-2">
     <Calendar size={15} /> Add Date Particulars Scope
@@ -1537,19 +1670,12 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
 </div>
       {/* Section 04 */}
 
-  <div className="flex justify-between items-center flex-wrap gap-2 pb-3 mb-3 border-b border-slate-100">
-    <button type="button" onClick={() => toggleSection("s4")} className="flex items-center gap-2 text-left">
-      <ChevronDown size={16} className={`text-slate-500 transition-transform ${openSections.s4 ? "" : "-rotate-90"}`} />
-      <span className="text-[13px] font-extrabold text-blue-800 tracking-tight">
-        SECTION 04
-        <span className="mx-2 text-slate-300">•</span>
-        <span className="text-[13px] font-bold text-black">Estimate Amount (Other) — Grand Total</span>
-      </span>
-    </button>
-    <span className="bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-medium px-2.5 py-1 rounded-full">
-      {estimates.length === 1 ? "Estimate A" : `All ${estimates.length} Estimates`} + Date-wise Scope Aggregated
-    </span>
-  </div>
+ <SectionHeader
+  no="04"
+  title="Estimate Amount (Other) — Grand Total"
+  open={openSections.s4}
+  onToggle={() => toggleSection("s4")}
+/>
  <div className={openSections.s4 ? "" : "hidden"}>  
   {/* Combined Grand Total */}
   <div className="flex m-3 justify-between items-center bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3">
@@ -1603,7 +1729,7 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
               value={p.mode}
               onChange={(e) => finalPayments.update(p.id, "mode", e.target.value)}
             >
-              <option>Bank Transfer (RTGS/NEFT)</option>
+              <option>Bank Transfer</option>
               <option>UPI</option>
               <option>Cash</option>
               <option>Cheque</option>
@@ -1670,9 +1796,10 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
       </div>
     </div>
     <span className="font-bold text-red-600 text-lg">{money(remainingFinal)}</span>
-  </div>      
   </div>        
+  </div>        
+</MainSection>
 </div>          
-    
+</div>          
   );
 }

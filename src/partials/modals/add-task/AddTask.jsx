@@ -109,6 +109,7 @@ useEffect(() => {
   if (!formData?.titleEnglish || !formData?.type) return;
 
   const userId = localStorage.getItem("userId");
+  const mainId = localStorage.getItem("mainId");
 
   const payload = {
     id: formData.id || 0,
@@ -116,7 +117,7 @@ useEffect(() => {
     nameGujarati: formData.titleRegional || "",
     nameHindi: formData.titleHindi || "",
     resourceType: formData.type || "",
-    userId: Number(userId) || 0,
+    userId: Number(mainId) || 0,
   };
 
   setSaving(true);

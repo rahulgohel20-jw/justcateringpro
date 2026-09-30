@@ -3995,6 +3995,10 @@ export const deleteExhibitionSetupItemDetail = (id) => {
   return DELETE(`/exhibition/setup/item/delete?id=${id}`);
 };
 export const updateExhibitionSetupIsActive = updateExhibitionSetupStatus;
+// export const saveExhibitionSetup = addOrUpdateExhibitionSetup;
+// export const deleteExhibitionSetupDetail = deleteExhibitionSetup;
+// export const deleteExhibitionSetupItemDetail = deleteExhibitionSetupFeature;
+// export const updateExhibitionSetupIsActive = updateExhibitionSetupStatus;
 export const updatelock = (quotationId) => {
   return PUT(`/exhibition/quotations/lock?quotationId=${quotationId}`);
 };
@@ -4006,8 +4010,8 @@ export const updtaeunlock = (quotationId) => {
     return DELETE(`/exhibition/modules/items/delete?itemId=${itemId}&moduleId=${moduleId}`,);
   };
 
- export const deletegroupbyquotation = (groupId, quotationId) =>
-  DELETE(`/exhibition/quotations/groups/delete?groupId=${groupId}&quotationId=${quotationId}`);
+ export const deletegroupbyquotation = (groupId, moduleId) =>
+  DELETE(`/exhibition/groups/modules/delete?groupId=${groupId}&moduleId=${moduleId}`);
 
 export const Aislogsfirmenuitemandcategory = ( data) => {
   return POST(`/ai-menu/generate`,data);
@@ -4017,3 +4021,7 @@ export const checkRMenu = (eventId) => {
   return POST(`/eventmaster/check-rmenu?eventId=${eventId}`);
 };
 export const CheckRMenu = checkRMenu;
+
+export const deletepaymemtbyqxhibition = (groupId , paymentId) => {
+  return DELETE(`/exhibition/groups/payments/delete?groupId=${groupId}&paymentId=${paymentId}`);
+};
