@@ -503,14 +503,7 @@ const AddExhibitionSetup = ({
       (item) => item.descriptionEnglish?.trim() !== ""
     );
 
-    if (validItems.length === 0) {
-      Swal.fire({
-        title: intl.formatMessage({ id: "COMMON.REQUIRED", defaultMessage: "Required" }),
-        text: "Please add at least one description item",
-        icon: "warning",
-      });
-      return;
-    }
+   
 
     const categoryData = {
       id: selectedItem?.id || null,

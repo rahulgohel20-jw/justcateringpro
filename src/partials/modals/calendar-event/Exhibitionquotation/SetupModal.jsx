@@ -553,9 +553,9 @@ export default function SetupModal({
         if (validDetails.length > 0) {
           const mapped = validDetails.map((d, dIdx) => ({
             id: d.id || null,
-            headingNameEnglish: d.headingNameEnglish || "",
-            headingNameGujarati: sanitizeOnlyBTag(d.headingNameGujarati || ""),
-            headingNameHindi: sanitizeOnlyBTag(d.headingNameHindi || ""),
+           headingNameEnglish: stripAllTags(d.headingNameEnglish || ""),
+headingNameGujarati: stripAllTags(d.headingNameGujarati || ""),
+headingNameHindi: stripAllTags(d.headingNameHindi || ""),
             sortorder: d.sortorder || dIdx + 1,
             items:
               Array.isArray(d.exhibitionSetupItemDetails) &&
@@ -922,9 +922,9 @@ export default function SetupModal({
         details: validRows.map((r, rIdx) => ({
           id: r.id && Number(r.id) > 0 ? Number(r.id) : null,
           sortorder: r.sortorder ? Number(r.sortorder) : rIdx + 1,
-          headingNameEnglish: sanitizeOnlyBTag(r.headingNameEnglish || ""),
-          headingNameGujarati: sanitizeOnlyBTag(r.headingNameGujarati || ""),
-          headingNameHindi: sanitizeOnlyBTag(r.headingNameHindi || ""),
+headingNameEnglish: stripAllTags(r.headingNameEnglish || ""),
+headingNameGujarati: stripAllTags(r.headingNameGujarati || ""),
+headingNameHindi: stripAllTags(r.headingNameHindi || ""),
           exhibitionSetupItemDetails: (r.items || [])
             .filter(
               (it) =>
@@ -1333,8 +1333,7 @@ export default function SetupModal({
                         {renderSectionIcon(rowIdx)}
                       </span>
                       <span className="text-[13px] font-semibold text-slate-800 tracking-tight">
-                        {renderFormattedText(row.headingNameEnglish) || `Specification ${rowIdx + 1}`}
-                      </span>
+{stripAllTags(row.headingNameEnglish) || `Specification ${rowIdx + 1}`}                      </span>
 
                       {/* Pencil Icon Button -> Opens inputs */}
                       <button
@@ -1404,9 +1403,7 @@ export default function SetupModal({
               size={12}
               className={`stroke-[2] ${saving || loading ? "animate-spin" : ""}`}
             />
-            <span className="text-[11.5px] text-slate-400 font-normal">
-              Data synced from backend specifications
-            </span>
+           
           </div>
 
           <div className="flex items-center gap-2.5">

@@ -15,9 +15,10 @@ const TYPE_OPTIONS = [
 ];
 
 const ManagerTaskMaster = () => {
-  const permissions = usePermission("Manager Task");
+  const permissions = usePermission("Manager Task Master");
   const intl = useIntl();
   const userId = localStorage.getItem("userId");
+  const mainId = localStorage.getItem("mainId");
 
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -28,7 +29,7 @@ const ManagerTaskMaster = () => {
 
   const fetchTasks = () => {
     setLoading(true);
-    GetAllManagerTask(userId)
+    GetAllManagerTask(mainId)
       .then((res) => {
         
         const list = res?.data?.data["ManagerTasks"] ?? res?.data ?? [];

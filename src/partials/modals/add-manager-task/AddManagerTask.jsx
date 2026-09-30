@@ -24,6 +24,7 @@ const AddManagerTaskModal = ({
 }) => {
   const isEditMode = !!editData;
   const userId = Number(localStorage.getItem("userId"));
+  const mainId = Number(localStorage.getItem("mainId"));
 
   const [rows, setRows] = useState([emptyRow()]);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,7 +89,7 @@ const AddManagerTaskModal = ({
         type: row.type,
         priority: row.priority,
         sequence: Number(row.sequence) || 0,
-        userId,
+        userId:mainId,
       }));
 
       // AddManagerTask accepts an array — single or multiple in one call

@@ -667,7 +667,6 @@ export const allMenuItems = (navigate) => {
       icon: "ki-filled ki-book-open text-primary",
       moduleName: "Assign Manager",
       children: [
-        
         {
       title: (
         <FormattedMessage
