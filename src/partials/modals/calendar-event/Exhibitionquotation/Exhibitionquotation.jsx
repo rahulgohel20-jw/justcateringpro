@@ -123,7 +123,32 @@ function formatEventDate(raw) {
   return parsed.isValid() ? parsed.format("DD MMMM YYYY") : datePart;
 }
 
+// Fingerprint of everything that affects an estimate's totals
+const estimateSig = (e) =>
+  JSON.stringify({
+    rows: (e.rows || []).map((r) => [String(r.name || ""), Number(r.qty || 0), Number(r.rate || 0)]),
+    d: Number(e.discountPercent || 0),
+    t: Number(e.tdsPercent || 0),
+    c: Number(e.cgstPercent || 0),
+    s: Number(e.sgstPercent || 0),
+    i: Number(e.igstPercent || 0),
+    r: Number(e.roundOff || 0),
+  });
 
+// API totals if untouched, otherwise calculate locally
+const getEstimateTotals = (estimate) => {
+  if (estimate.apiTotals && estimateSig(estimate) === estimate.savedSig) {
+    return estimate.apiTotals;
+  }
+  return calcTotals(estimate.rows, {
+    tdsPercent: estimate.tdsPercent,
+    discountPercent: estimate.discountPercent,
+    cgstPercent: estimate.cgstPercent,
+    sgstPercent: estimate.sgstPercent,
+    igstPercent: estimate.igstPercent,
+    roundOff: estimate.roundOff,
+  });
+};
 function calcTotals(
   rows,
   { tdsPercent = 0.0, discountPercent = 0.0, cgstPercent = 2.5, sgstPercent = 2.5, igstPercent = 0, roundOff = 0 } = {}
@@ -139,8 +164,7 @@ function calcTotals(
   const sgst = amountAfterDiscount * (Number(sgstPercent || 0) / 100);
   const igst = amountAfterDiscount * (Number(igstPercent || 0) / 100);
   const roundOffValue = Number(roundOff || 0);
-  const grandTotal = amountAfterDiscount + cgst + sgst + igst - tds + roundOffValue;
-
+const grandTotal = amountAfterDiscount + cgst + sgst + igst - tds + roundOffValue;
   return {
     subtotal,
     discount,
@@ -155,7 +179,7 @@ function calcTotals(
 }
 
 function EstimateTable({
-  
+  title,
   tag,
   rows,
   setRows,
@@ -174,9 +198,10 @@ function EstimateTable({
   roundOff,
   onRoundOffChange,
   onDeleteRow,
-  EstimateTable
+  EstimateTable,
+  totals
 }) {
-  const { subtotal, discount, amountAfterDiscount, tds, cgst, sgst, igst, grandTotal } = calcTotals(rows, {
+  const {  subtotal, discount, amountAfterDiscount, tds, cgst, sgst, igst, grandTotal} = totals;(rows, {
     tdsPercent,
     discountPercent,
     cgstPercent,
@@ -211,14 +236,15 @@ function EstimateTable({
   className="text-[15px] font-bold flex items-center gap-2 cursor-pointer select-none"
   onClick={() => setOpen(!open)}
 >
+{title}
   <ChevronDown size={16} className={`text-slate-500 transition-transform ${open ? "" : "-rotate-90"}`} />
   {tag}
 </div>
 
         <div className="flex items-center gap-2">
           <div className="text-right mr-2">
-            <div className="text-[10.5px] text-slate-500">Grand Total</div>
-            <div className="text-base font-bold text-blue-700">{money(grandTotal)}</div>
+            {/* <div className="text-[10.5px] text-slate-500">Grand Total</div>
+            <div className="text-base font-bold text-blue-700">{money(grandTotal)}</div> */}
           </div>
 
           {canDelete && (
@@ -242,69 +268,78 @@ function EstimateTable({
          
         </div>
       </div>
+<div className="overflow-x-auto scroll-visible">
+  <table className="w-full border-collapse text-[12px] table-fixed min-w-[600px]">
+    <colgroup>
+      <col className="w-[60px]" />
+      <col />
+      <col className="w-[110px]" />
+      <col className="w-[130px]" />
+      <col className="w-[140px]" />
+      <col className="w-[36px]" />
+    </colgroup>
+    <thead>
+      <tr>
+        {["SR.NO.", "NAME", "QUANTITY", "RATE (₹)", "TOTAL AMOUNT (₹)", ""].map((header) => (
+          <th
+            key={header}
+            className={`text-slate-500 font-semibold text-[10.5px] py-1.5 px-1.5 border-b border-slate-200 ${
+              header.includes("RATE") || header.includes("TOTAL") ? "text-right" : "text-left"
+            }`}
+          >
+            {header}
+          </th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row, index) => (
+        <tr key={row.id} className="h-8">
+          <td className="py-1 px-1.5 border-b border-slate-100 text-slate-600 leading-none">
+            {String(index + 1).padStart(2, "0")}
+          </td>
+          <td className="py-1 px-1.5 border-b border-slate-100">
+            <input
+              className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none"
+              value={row.name}
+              onChange={(e) => updateRow(row.id, "name", e.target.value)}
+            />
+          </td>
+          <td className="py-1 px-1.5 border-b border-slate-100">
+            <input
+              type="text"
+              inputMode="decimal"
+              className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none text-center"
+              value={row.qty}
+              onChange={(e) => updateRow(row.id, "qty", e.target.value)}
+            />
+          </td>
+          <td className="py-1 px-1.5 border-b border-slate-100">
+            <input
+              type="text"
+              inputMode="decimal"
+              className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none text-right"
+              value={row.rate}
+              onChange={(e) => updateRow(row.id, "rate", e.target.value)}
+            />
+          </td>
+          <td className="py-1 px-1.5 border-b border-slate-100 text-right font-medium leading-none">
+            {money(Number(row.qty || 0) * Number(row.rate || 0))}
+          </td>
+          <td className="py-1 px-1.5 border-b border-slate-100 text-center">
+            <button onClick={() => onDeleteRow(row.id)} className="text-slate-400 hover:text-red-600 align-middle">
+              <Trash2 size={13} />
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
 
-      {/* Estimate Rows */}
-      <div className="overflow-x-auto scroll-visible">
-      <table className="w-full border-collapse text-[13px]">
-        <thead>
-          <tr>
-            {["SR.NO.", "NAME", "QUANTITY", "RATE (₹)", "TOTAL AMOUNT (₹)", ""].map((header) => (
-              <th
-                key={header}
-                className={`text-left text-slate-500 font-semibold text-[11px] py-2 px-1.5 border-b border-slate-200 ${
-                  header.includes("RATE") || header.includes("TOTAL") ? "text-right" : ""
-                }`}
-              >
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={row.id}>
-              <td className="py-2 px-1.5 border-b border-slate-200">{String(index + 1).padStart(2, "0")}</td>
-              <td className="py-2 px-1.5 border-b border-slate-200">
-                <input
-                  className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px]"
-                  value={row.name}
-                  onChange={(e) => updateRow(row.id, "name", e.target.value)}
-                />
-              </td>
-              <td className="py-2 px-1.5 border-b border-slate-200">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px] text-center"
-                  value={row.qty}
-                  onChange={(e) => updateRow(row.id, "qty", e.target.value)}
-                />
-              </td>
-              <td className="py-2 px-1.5 border-b border-slate-200">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px] text-right"
-                  value={row.rate}
-                  onChange={(e) => updateRow(row.id, "rate", e.target.value)}
-                />
-              </td>
-              <td className="py-2 px-1.5 border-b border-slate-200 text-right font-medium">
-                {money(Number(row.qty || 0) * Number(row.rate || 0))}
-              </td>
-              <td className="py-2 px-1.5 border-b border-slate-200 text-center">
-<button onClick={() => onDeleteRow(row.id)} className="text-slate-400 hover:text-red-600">  <Trash2 size={14} />
+<button onClick={addRow} className="text-primary text-[12px] font-semibold py-1.5 px-1">
+  + Add Row
 </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </div>
-
-      <button onClick={addRow} className="text-primary text-[13px] font-semibold py-2 px-1">
-        + Add Row
-      </button>
 
       {/* SUMMARY */}
       <div className="mt-3 border border-slate-200 rounded-xl p-3.5">
@@ -347,7 +382,7 @@ function EstimateTable({
           </div>
 
           <div className="flex justify-between items-center py-1.5">
-            <span>TDS </span>
+            <span>TDS</span>
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -546,39 +581,14 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
     </div>
   );
 }
-function MainSection({ title, badge, open, onToggle, right, children }) {
-  return (
-    <div className="mt-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left"
-      >
-        <span className="flex items-center gap-2">
-          <ChevronDown size={18} className={`text-slate-600 transition-transform ${open ? "" : "-rotate-90"}`} />
-          <span className="text-[14px] font-extrabold text-slate-800">{title}</span>
-          {badge && (
-            <span className="bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-medium px-2.5 py-0.5 rounded-full">
-              {badge}
-            </span>
-          )}
-        </span>
-        {right}
-      </button>
-      <div className={open ? "px-3 pb-3" : "hidden"}>{children}</div>
-    </div>
-  );
-}
-
 function SectionHeader({ no, title, open, onToggle, right }) {
   return (
-    <div className="flex justify-between items-center text-[12px] font-bold text-primary tracking-wide p-3 mt-5 mb-2">
-      <button type="button" onClick={onToggle} className="flex items-center gap-2 text-left">
+<div className="flex justify-between items-center text-[12px] font-bold text-primary tracking-wide px-1 py-2">      <button type="button" onClick={onToggle} className="flex items-center gap-2 text-left">
         <ChevronDown size={16} className={`text-slate-500 transition-transform ${open ? "" : "-rotate-90"}`} />
         <span className="text-[13px] font-extrabold text-blue-800 tracking-tight">
-          SECTION {no}
-          <span className="mx-2 text-slate-300">•</span>
-          <span className="text-[13px] font-bold text-black">{title}</span>
+          {/* {/* SECTION {no} */}
+          <span className="mx-2 text-slate-300">•</span> 
+          <span className="text-[14px] font-bold text-black">{title}</span>
         </span>
       </button>
       {right}
@@ -597,7 +607,8 @@ const userId = localStorage.getItem("userId");
    const [estimates, setEstimates] = useState([]);
   const [days, setDays] = useState(initialDays);
   const [notes, setNotes] = useState("");
-const [openSections, setOpenSections] = useState({ m1: false, m2: false, s1: false, s2: false, s3: false, s4: false });const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+const [openSections, setOpenSections] = useState({ s1: false, s2: false, s3: false, s4: false });
+const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
 
 
@@ -625,6 +636,7 @@ const [isSelectMenureport, setIsSelectMenuReport] = useState(false);
   // null means "not created on the backend yet"; a real id is only ever set
   // from a GET response.
   const [estimateGroupId, setEstimateGroupId] = useState(null);
+  const [apiSummary, setApiSummary] = useState(null);
   const [otherGroupId, setOtherGroupId] = useState(null);
   const [extraGroup, setExtraGroup] = useState({
     id: null,
@@ -670,24 +682,57 @@ const [isSelectMenureport, setIsSelectMenuReport] = useState(false);
             });
           }
 
-          if (estimateGroup) {
-                  setEstimateGroupId(estimateGroup.id || null);
-            setTdsPercent(typeof estimateGroup.tdsPercent === "number" ? estimateGroup.tdsPercent : 0);
-            const mappedEstimates = (estimateGroup.modules || []).map((m, idx) => ({
-              id: `estimate-${idx}`,
-              moduleId: m.id || null,
-              title: `Estimate ${String.fromCharCode(65 + idx)}`,
-// fetchExistingQuotation
-tag: m.scopeLabel || "",
-             discountPercent: typeof m.discountPercent === "number" ? m.discountPercent : 0.0,
-             cgstPercent: typeof m.cgstPercent === "number" ? m.cgstPercent : 2.5,
-             sgstPercent: typeof m.sgstPercent === "number" ? m.sgstPercent : 2.5,
-             igstPercent: typeof m.igstPercent === "number" ? m.igstPercent : 0.0,
-             roundOff: typeof m.roundOff === "number" ? m.roundOff : 0,
-             rows: itemsToRows(m.items),
-           }));     
-                 setEstimates(mappedEstimates);
-         }
+         if (estimateGroup) {
+            setEstimateGroupId(estimateGroup.id || null);
+            const mappedEstimates = (estimateGroup.modules || []).map((m, idx) => {
+              const est = {
+                id: `estimate-${idx}`,
+                moduleId: m.id || null,
+                title: `Estimate ${String.fromCharCode(65 + idx)}`,
+                tag: m.scopeLabel || "",
+                discountPercent: typeof m.discountPercent === "number" ? m.discountPercent : 0.0,
+                tdsPercent:
+                  typeof m.tdsPercent === "number"
+                    ? m.tdsPercent
+                    : typeof estimateGroup.tdsPercent === "number"
+                    ? estimateGroup.tdsPercent
+                    : 0,
+                cgstPercent: typeof m.cgstPercent === "number" ? m.cgstPercent : 2.5,
+                sgstPercent: typeof m.sgstPercent === "number" ? m.sgstPercent : 2.5,
+                igstPercent: typeof m.igstPercent === "number" ? m.igstPercent : 0.0,
+                roundOff: typeof m.roundOff === "number" ? m.roundOff : 0,
+                rows: itemsToRows(m.items),
+              };
+              return {
+                ...est,
+                savedSig: estimateSig(est),
+                apiTotals: {
+                  subtotal: m.subTotal,
+                  discount: m.discountAmount,
+                  amountAfterDiscount: m.subTotal - m.discountAmount,
+                  tds: m.tdsAmount,
+                  cgst: m.cgstAmount,
+                  sgst: m.sgstAmount,
+                  igst: m.igstAmount,
+                  roundOff: m.roundOff,
+                  grandTotal: m.grandTotal,
+                },
+              };
+            });
+            setEstimates(mappedEstimates);
+          }
+
+          // must stay inside the `if (Array.isArray(quotation.groups))` branch
+        setApiSummary({
+  quotationTotal: quotation.quotationTotal,
+  estimatePaid: estimateGroup?.totalPaid,
+  estimateRemaining: estimateGroup?.remainingAmount,
+  otherSub: otherGroup?.subTotal,
+  otherGst: otherGroup?.gstAmount,
+  otherGrand: otherGroup?.grandTotal,
+  otherPaid: otherGroup?.totalPaid,
+  otherRemaining: otherGroup?.remainingAmount,
+});
 
           if (otherGroup) {
             setOtherGroupId(otherGroup.id || null);
@@ -792,8 +837,9 @@ const finalPayments = createPaymentHandlers(setPaymentsFinal, () => otherGroupId
           title: `Estimate ${letter}`,
           tag: "",
           discountPercent: 0.0,
-          cgstPercent: 2.5,
-          sgstPercent: 2.5,
+          cgstPercent: 9,
+           tdsPercent: 0.0,  
+          sgstPercent: 9,
           igstPercent: 0.0,
           roundOff: 0,
           rows: [{ id: Date.now(), name: "", qty: 1, rate: 0 }],
@@ -934,34 +980,7 @@ const deletePayment = async (groupId, setter, paymentId) => {
   setter((prev) => prev.filter((p) => p.id !== paymentId));
 };
   // Combined totals across every estimate currently on the page.
-  const allRows = estimates.flatMap((e) => e.rows);
-  const combinedSubtotal = allRows.reduce(
-    (sum, r) => sum + Number(r.qty || 0) * Number(r.rate || 0),
-    0
-  );
-  const estimateTotals = estimates.map((estimate) => calcTotals(estimate.rows, {
-    tdsPercent,
-    discountPercent: estimate.discountPercent,
-    cgstPercent: estimate.cgstPercent,
-    sgstPercent: estimate.sgstPercent,
-    igstPercent: estimate.igstPercent,
-    roundOff: estimate.roundOff,
-  }));
-  const combinedGST = estimateTotals.reduce((sum, totals) => sum + totals.cgst + totals.sgst + totals.igst, 0);
-  const combinedTDS = estimateTotals.reduce((sum, totals) => sum + totals.tds, 0);
-  const combinedGrandTotal = estimateTotals.reduce((sum, totals) => sum + totals.grandTotal, 0);
-  const totalPaidMain = paymentsMain.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-// Section 03 (date-wise) total
-const otherTotal = days.reduce(
-  (sum, d) => sum + d.rows.reduce((s, r) => s + Number(r.qty || 0) * Number(r.rate || 0), 0),
-  0
-);
 
-// Section 04 final totals
-const finalGrandTotal = combinedGrandTotal + otherTotal;
-const totalPaidFinal = paymentsFinal.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-const remainingMain = combinedGrandTotal - totalPaidMain;
-const remainingFinal = finalGrandTotal - totalPaidFinal;
   const toggleDay = (id) => setDays(days.map((d) => (d.id === id ? { ...d, open: !d.open } : d)));
   const updateDayRow = (dayId, rowId, field, value) =>
     setDays(
@@ -1019,7 +1038,7 @@ const rowsForApi = (module) =>
     cgstPercent: Number(estimate.cgstPercent ?? 2.5),
     sgstPercent: Number(estimate.sgstPercent ?? 2.5),
     igstPercent: Number(estimate.igstPercent ?? 0.0),
-    tdsPercent: Number(tdsPercent || 0.0),
+    tdsPercent: Number(estimate.tdsPercent || 0.0), 
     roundOff: Number(estimate.roundOff || 0),
     scopeDate: "",
     // scopeLabel: estimate.tag || estimate.title,
@@ -1067,7 +1086,7 @@ const buildOtherModules = () =>
           id: otherGroupId || null,
           groupType: GROUP_TYPE_OTHER,
           discountPercent: 0.0,
-          gstPercent: 18,
+          gstPercent: 0,
           tdsPercent: 0.0,
           modules: buildOtherModules(),
           payments: paymentsFinal.map(toApiPayment),
@@ -1094,6 +1113,37 @@ const buildOtherModules = () =>
       setJustLoaded(false);
     }
   }, [justLoaded, currentSig]);
+
+const useApi = !!apiSummary && baseline !== null && !isDirty;
+
+// ---- Estimates ----
+const estimateTotals = estimates.map(getEstimateTotals);
+const combinedSubtotal = estimateTotals.reduce((s, t) => s + t.subtotal, 0);
+const combinedGST = estimateTotals.reduce((s, t) => s + t.cgst + t.sgst + t.igst, 0);
+const combinedDiscount = estimateTotals.reduce((s, t) => s + t.discount, 0);
+const combinedAfterDiscount = estimateTotals.reduce((s, t) => s + t.amountAfterDiscount, 0);
+const combinedTDS = estimateTotals.reduce((s, t) => s + t.tds, 0);
+const combinedGrandTotal = estimateTotals.reduce((s, t) => s + t.grandTotal, 0);
+const combinedTotalWithGST = combinedAfterDiscount + combinedGST;
+const totalPaidMain = useApi
+  ? Number(apiSummary.estimatePaid || 0)
+  : paymentsMain.reduce((s, p) => s + Number(p.amount || 0), 0);
+const remainingMain = useApi
+  ? Number(apiSummary.estimateRemaining || 0)
+  : combinedGrandTotal - totalPaidMain;
+
+// ---- Other only (no GST) ----
+const localOtherSub = days.reduce(
+  (sum, d) => sum + d.rows.reduce((s, r) => s + Number(r.qty || 0) * Number(r.rate || 0), 0),
+  0
+);
+const otherSub = useApi ? Number(apiSummary.otherSub || 0) : localOtherSub;
+const otherGrand = otherSub; // no GST, so grand total = subtotal
+
+const totalPaidFinal = useApi
+  ? Number(apiSummary.otherPaid || 0)
+  : paymentsFinal.reduce((s, p) => s + Number(p.amount || 0), 0);
+const remainingFinal = otherGrand - totalPaidFinal;
 
   // ---- Save / Update the quotation itself ----
  const handleSaveQuotation = async () => {
@@ -1416,40 +1466,38 @@ const handleToggleLock = async () => {
         </div>
 
         {/* Section 01 */}
-        <MainSection
-  title="Estimates & Payment Settlement"
-  badge="Section 01 • 02"
-  open={openSections.m1}
-  onToggle={() => toggleSection("m1")}
-    right={<span className="text-[13px] font-bold text-blue-700">{money(combinedGrandTotal)}</span>}
->
 <SectionHeader
-  no="01"
-  title="Estimates Breakdown"
+  // no="01"
+  title="Estimates"
   open={openSections.s1}
   onToggle={() => toggleSection("s1")}
-  right={
-    <div className="flex items-center gap-2 text-[12px]">
-      <span className="text-slate-500 font-medium">
-        {estimates.length} {estimates.length === 1 ? "Estimate" : "Estimates"} Active
-      </span>
-    
-    </div>
-  }
+ right={
+  <div className="flex items-center gap-3 text-[12px]">
+    <span className="text-slate-500 font-medium">
+      {estimates.length} {estimates.length === 1 ? "Estimate" : "Estimates"} Active
+    </span>
+    <button
+      onClick={addEstimate}
+      className="border border-dashed border-slate-300 bg-white rounded-lg px-3 py-1.5 text-[12px] text-primary font-semibold flex items-center gap-1.5 hover:bg-slate-50"
+    >
+      <Plus size={13} /> Add Estimate
+    </button>
+  </div>
+}
 />
 
 <div className={openSections.s1 ? "" : "hidden"}>
-  {estimates.map((estimate) => (
-    <EstimateTable
-      key={estimate.id}
+{estimates.map((estimate, i) => (
+     <EstimateTable key={estimate.id} totals={estimateTotals[i]}
       title={estimate.title}
       tag={estimate.tag}
       rows={estimate.rows}
       setRows={(newRows) => updateEstimateRows(estimate.id, newRows)}
       canDelete={estimates.length > 1}
   onDeleteRow={(rowId) => deleteEstimateRow(estimate, rowId)}
-onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
-      onTdsPercentChange={setTdsPercent}
+onDeleteEstimate={() => deleteEstimate(estimate)}
+tdsPercent={estimate.tdsPercent ?? 0}
+onTdsPercentChange={(val) => updateEstimateField(estimate.id, "tdsPercent", val)}
       discountPercent={estimate.discountPercent ?? 0.0}
       onDiscountPercentChange={(val) => updateEstimateField(estimate.id, "discountPercent", val)}
       cgstPercent={estimate.cgstPercent ?? 2.5}
@@ -1464,50 +1512,48 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
   ))}
 
   {/* Shared notes for Section 01 as a whole, instead of repeating per estimate */}
-  <div className="border border-slate-200 rounded-lg p-3 text-[11.5px] leading-relaxed text-slate-500 mt-2.5">
-    <div className="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">
-      TAX &amp; STATUTORY NOTES
-    </div>
-    <textarea
-      value={notes}
-      onChange={(e) => setNotes(e.target.value)}
-      rows={3}
-      placeholder="Add tax & statutory notes..."
-      className="w-full resize-y border border-slate-200 rounded-lg px-2.5 py-2 text-[11.5px] leading-relaxed text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-    />
-  </div>
+  
 
     <button onClick={addEstimate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-primary font-semibold mt-2.5 flex items-center justify-center gap-2">
     <Calendar size={15} /> Add Estimate
   </button>
-</div>
 
-        {/* Section 02 */}
+
+        
        {/* Section 02 */}
-<SectionHeader
-  no="02"
-  title="Overall Estimate Summary & Payment Settlement"
-  open={openSections.s2}
-  onToggle={() => toggleSection("s2")}
-/>
-<div className={openSections.s2 ? "" : "hidden"}>  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
-    <div className="flex justify-between py-1.5 text-[13.5px]">
-      <span>Combined Subtotal</span>
-      <span>{money(combinedSubtotal)}</span>
-    </div>
-    <div className="flex justify-between py-1.5 text-[13.5px]">
-      <span>Total GST (CGST + SGST + IGST)</span>
-      <span>{money(combinedGST)}</span>
-    </div>
-    <div className="flex justify-between py-1.5 text-[13.5px] text-red-600">
-      <span>Total Statutory TDS Deduction</span>
-      <span>-{money(combinedTDS)}</span>
-    </div>
-    <div className="flex justify-between py-2 mt-0.5 border-t border-slate-200 font-bold text-lg text-blue-700">
-      <span>Combined Grand Total</span>
-      <span>{money(combinedGrandTotal)}</span>
-    
+
+<div className="border border-blue-100 rounded-lg p-3 mt-4">
+    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+  <div className="flex justify-between py-1.5 text-[13.5px]">
+    <span>Combined Subtotal</span>
+    <span>{money(combinedSubtotal)}</span>
   </div>
+  <div className="flex justify-between py-1.5 text-[13.5px] text-red-500">
+    <span>Discount Total</span>
+    <span>-{money(combinedDiscount)}</span>
+  </div>
+  <div className="flex justify-between py-1.5 text-[13.5px] font-semibold bg-blue-50 rounded-lg px-2">
+    <span>After Discount</span>
+    <span>{money(combinedAfterDiscount)}</span>
+  </div>
+  <div className="flex justify-between py-1.5 text-[13.5px]">
+    <span>Total GST (CGST + SGST + IGST)</span>
+    <span>{money(combinedGST)}</span>
+  </div>
+    <div className="flex justify-between py-1.5 text-[13.5px] font-semibold bg-blue-50 rounded-lg px-2">
+    <span>Grand Total with GST</span>
+    <span>{money(combinedTotalWithGST)}</span>
+  </div>
+
+  <div className="flex justify-between py-1.5 text-[13.5px] text-red-600">
+    <span>Total Statutory TDS Deduction</span>
+    <span>{money(combinedTDS)}</span>
+  </div>
+  <div className="flex justify-between py-2 mt-0.5 border-t border-slate-200 font-bold text-lg text-blue-700">
+    <span>Combined Grand Total</span>
+    <span>{money(combinedGrandTotal)}</span>
+  </div>
+</div>
 </div>
 
         {/* Payment Details — Section 02's own advance payments, against the
@@ -1622,20 +1668,25 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
           </div>
           <span className="font-bold text-red-600 text-[15px]">{money(remainingMain)}</span>
         </div>
+        <div className="border border-slate-200 rounded-lg p-3 text-[11.5px] leading-relaxed text-slate-500 mt-2.5">
+    <div className="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">
+      NOTES
+    </div>
+    <textarea
+      value={notes}
+      onChange={(e) => setNotes(e.target.value)}
+      rows={3}
+      placeholder="Addnotes..."
+      className="w-full resize-y border border-slate-200 rounded-lg px-2.5 py-2 text-[11.5px] leading-relaxed text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+    />
+  </div>
 </div>
-</MainSection>
 
-<MainSection
-  title="Other Estimates & Final Settlement"
-  badge="Section 03 • 04"
-  open={openSections.m2}
-  onToggle={() => toggleSection("m2")}
-    right={<span className="text-[13px] font-bold text-blue-700">{money(finalGrandTotal)}</span>}
->
+
        {/* Section 03 */}
 <SectionHeader
   no="03"
-  title="Estimate Amount (Other)"
+  title="Other"
   open={openSections.s3}
   onToggle={() => toggleSection("s3")}
   right={
@@ -1646,8 +1697,8 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
   }
 />
 
-<div className={`border m-3 border-blue-100 rounded-lg p-3 ${openSections.s3 ? "" : "hidden"}`}>
-  {days.length === 0 && (
+<div className={`border mt-1 border-blue-100 rounded-lg p-3 ${openSections.s3 ? "" : "hidden"}`}>
+    {days.length === 0 && (
     <div className="text-center text-slate-400 text-[12.5px] py-4">
       No dates added yet — use the button below to add one.
     </div>
@@ -1667,24 +1718,30 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
   <button onClick={addDate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-primary font-semibold mt-2.5 flex items-center justify-center gap-2">
     <Calendar size={15} /> Add Date Particulars Scope
   </button>
-</div>
+
+
       {/* Section 04 */}
 
- <SectionHeader
-  no="04"
-  title="Estimate Amount (Other) — Grand Total"
-  open={openSections.s4}
-  onToggle={() => toggleSection("s4")}
-/>
- <div className={openSections.s4 ? "" : "hidden"}>  
-  {/* Combined Grand Total */}
-  <div className="flex m-3 justify-between items-center bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3">
-    <span className="text-[13px] font-semibold text-blue-800">Combined Grand Total</span>
-    <span className="text-lg font-bold text-blue-700">{money(finalGrandTotal)}</span>
+  <div className="flex justify-between items-center flex-wrap gap-2 p-3 pb-3 mb-3 border-b border-slate-100">
+    <button type="button" onClick={() => toggleSection("s4")} className="flex items-center gap-2 text-left">
+      <ChevronDown size={16} className={`text-slate-500 transition-transform ${openSections.s4 ? "" : "-rotate-90"}`} />
+      <span className="text-[13px] font-extrabold text-blue-800 tracking-tight">
+        <span className="mx-2 text-slate-300">•</span>
+        <span className="text-[14px] font-bold text-black">Grand Total</span>
+      </span>
+    </button>
+    
   </div>
 
-  {/* Payment Details — Section 04's own advance payments, against the
-      final combined grand total (Section 01 + Section 03) */}
+<div className={openSections.s4 ? "mt-4" : "hidden"}>
+  {/* Section 3 summary */}
+ {/* Other total */}
+<div className="flex m-3 justify-between items-center bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3">
+  <span className="text-[13px] font-semibold text-blue-800">Other Grand Total</span>
+  <span className="text-lg font-bold text-blue-700">{money(otherGrand)}</span>
+</div>
+
+  {/* Payment Details */}
   <div className="bg-white border border-slate-200 rounded-xl m-2 p-3.5 mt-3">
     <div className="flex justify-between items-center mb-3">
       <div>
@@ -1692,7 +1749,7 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
           <Wallet size={15} />
           Payment Details
         </div>
-        <div className="text-[10.5px] text-slate-400 mt-0.5 ml-5">Advance against the final combined grand total</div>
+        <div className="text-[10.5px] text-slate-400 mt-0.5 ml-5">Advance against the Section 3 grand total</div>
       </div>
       <button
         onClick={finalPayments.add}
@@ -1729,7 +1786,7 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
               value={p.mode}
               onChange={(e) => finalPayments.update(p.id, "mode", e.target.value)}
             >
-              <option>Bank Transfer</option>
+              <option>Bank Transfer (RTGS/NEFT)</option>
               <option>UPI</option>
               <option>Cash</option>
               <option>Cheque</option>
@@ -1791,15 +1848,16 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
       <div>
         <div className="text-[13.5px] font-semibold text-red-600">Remaining Payment Due</div>
         <div className="text-[11px] text-slate-500">
-          Grand Total ({money(finalGrandTotal)}) minus Advance Paid ({money(totalPaidFinal)})
+          Grand Total ({money(otherGrand)}) minus Advance Paid ({money(totalPaidFinal)})
         </div>
       </div>
     </div>
     <span className="font-bold text-red-600 text-lg">{money(remainingFinal)}</span>
-  </div>        
-  </div>        
-</MainSection>
-</div>          
-</div>          
+  </div>
+ </div>  
+
+      </div> 
+    </div>     
+    </div>
   );
 }

@@ -159,6 +159,7 @@ const CrockeryCutleryReportModal = ({
           withVendor : config.withVendor === 0,
           isAllItemTogether : config.isAllItemTogether === 0,
           isShowRoomDetails : config.isShowRoomDetails === 0,
+          isShowFunctionDetails : config.isShowFunctionDetails === 0,
           isShowFunctionImg: config.isShowFunctionImg === 0,
         });
 
@@ -189,6 +190,7 @@ const CrockeryCutleryReportModal = ({
             withVendor: config.withVendor,
             isAllItemTogether:config.isAllItemTogether,
             isShowRoomDetails:config.isShowRoomDetails,
+            isShowFunctionDetails:config.isShowFunctionDetails,
             isShowFunctionImg:config.isShowFunctionImg,
           })
             .filter(([_, value]) => value === 1)
@@ -405,6 +407,7 @@ const CrockeryCutleryReportModal = ({
        withVendor: options.withVendor,
        isAllItemTogether:options.isAllItemTogether,
        isShowRoomDetails:options.isShowRoomDetails,
+       isShowFunctionDetails:options.isShowFunctionDetails,
        isShowFunctionImg:options.isShowFunctionImg,
        isNotes : options.isNotes,
        showLastPage : option.showLastPage,

@@ -270,6 +270,7 @@ const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock , c
   withVendor: config.withVendor === 0,
   isAllItemTogether: config.isAllItemTogether === 0,
  isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails === 0 : false,
+ isShowFunctionDetails: config.isShowFunctionDetails === 0 ,
   isShowFunctionImg:config.isShowFunctionImg === 0,
   isNotes: config.isNotes === 0,
   showLastPage: false,
@@ -317,6 +318,7 @@ const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock  , ca
     withVendor: config.withVendor,
     isAllItemTogether: config.isAllItemTogether,
  isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails : false,
+ isShowFunctionDetails: config.isShowFunctionDetails,
      isShowFunctionImg: config.isShowFunctionImg,
     isAddShortMenu: isFlagOn(config.isAddShortMenu),  
   })
@@ -461,6 +463,7 @@ const languageOptions = [
     withVendor : "With Vendor",
     isAllItemTogether :"All Item Together",
     isShowRoomDetails : "Show Room Details",
+    isShowFunctionDetails: "show Function Details",
     isShowFunctionImg: "Show Function Img",
      isAddShortMenu: "Add Short Menu", 
   };
@@ -666,6 +669,7 @@ if (!config) {
           withVendor: false,
           isAllItemTogether: false,
           isShowRoomDetails: false,
+          isShowFunctionDetails: false,
           isShowFunctionImg: false,
         });
         setVisibleOptions([]);
@@ -762,6 +766,7 @@ if (config.isDate === 1 || config.isStartDate === 1 || config.isEndDate === 1) {
           isAllItemTogether: config.isAllItemTogether === 0,
             isShowFunctionImg: config.isShowFunctionImg === 0,
            isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails === 0 : false,
+           isShowFunctionDetails: config.isShowFunctionDetails === 0 , 
           isNotes : config.isNotes === 0,
           isAddShortMenu: false,        
   showLastPage:  false,
@@ -810,6 +815,7 @@ withVendor : config.withVendor,
 isAllItemTogether: config.isAllItemTogether,
 isShowFunctionImg: config.isShowFunctionImg,
   isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails : false, 
+  isShowFunctionDetails: config.isShowFunctionDetails,
 isAddShortMenu: isFlagOn(config.isAddShortMenu),
  })
             .filter(([_, value]) => value)
@@ -1192,6 +1198,7 @@ const isShortMenuCheckAll =
     isAllItemTogether: opts.isAllItemTogether,
     isShowFunctionImg: opts.isShowFunctionImg,
      isShowRoomDetails: opts.isShowRoomDetails,
+     isShowFunctionDetails: opts.isShowFunctionDetails,
     isNotes: opts.isNotes,
     showAddOnLabel: opts.showAddOnLabel,
     showLastPage: 1,

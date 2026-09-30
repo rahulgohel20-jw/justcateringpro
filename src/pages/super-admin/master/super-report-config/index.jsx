@@ -69,6 +69,7 @@ const SuperReportConfig = () => {
         showLastPage:item.showLastPage,
         isAllItemTogether:item.isAllItemTogether,
         isShowRoomDetails:item.isShowRoomDetails,
+        isShowFunctionDetails:item.isShowFunctionDetails,
         isShowFunctionImg:item.isShowFunctionImg,
         isStartDate:item.isStartDate,
         isEndDate:item.isEndDate,
