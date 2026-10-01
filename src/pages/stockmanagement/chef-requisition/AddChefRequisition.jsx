@@ -21,6 +21,7 @@ import {
   AddLogs,
   GetRawMaterialcategory,
   GetAllRawMaterials,
+  getpartywitheventforstock,
 } from "@/services/apiServices";
 import { useLocation, useNavigate } from "react-router";
 import Swal from "sweetalert2";
@@ -161,6 +162,7 @@ const [loadingSupplier, setLoadingSupplier] = useState(true);
     date: TODAY,
     party_id: null,
     party_name: "",
+    event_id: "", 
     stock_type_id: "",
     invoice_type: "",
     remark: "",
@@ -224,6 +226,10 @@ const [loadingSupplier, setLoadingSupplier] = useState(true);
         const match = supplier.find((s) => s.id === editData.partyId);
         return match ? getLocalizedName(match.party) : editData.partyName || "";
       })(),
+      event_id:
+  editData.eventId ||
+  supplier.find((s) => s.partyId === editData.partyId)?.eventId ||
+  "",
       stock_type_id: editData.stockTypeId || "",
       invoice_type: editData.invoicetype || "",
       remark: editData.remarks || "",
@@ -273,17 +279,17 @@ const [loadingSupplier, setLoadingSupplier] = useState(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, selectedCategoryId]);
 
-  const fetchSupplier = async () => {
-    try {
-       setLoadingSupplier(true);
-      const data = await GetEventMaster(userId, isChildUser);
-      setSupplier(data?.data?.data["Event Details"] || []);
-    } catch (error) {
+ const fetchSupplier = async () => {
+  try {
+    setLoadingSupplier(true);
+    const res = await getpartywitheventforstock(userId);
+    setSupplier(res?.data?.data || []);
+  } catch (error) {
     console.log(error);
-  } finally {                                                        // ADD
-    setLoadingSupplier(false);                                       // ADD
-  }   
-  };
+  } finally {
+    setLoadingSupplier(false);
+  }
+};
 
   const handleSelectItem = (rawItem) => {
     const id = rawItem.id || rawItem.rawMaterialId || 0;
@@ -427,7 +433,7 @@ const typeOptions = allowedStockTypes.map((t) => ({
         userId: parseInt(userId),
         voucher: form.voucher,
         crdate: formatDateForApi(form.date),
-        partyId: form.party_id,
+        partyId: form.party_id || null,
         stockTypeId: form.stock_type_id,
         invoicetype: form.invoice_type,
         remarks: form.remark,
@@ -540,39 +546,30 @@ const typeOptions = allowedStockTypes.map((t) => ({
                 />
               </label>
               <Select
-                showSearch
-                allowClear
-                placeholder="Search party…"
-                loading={loadingSupplier}                                          // ADD
-  notFoundContent={loadingSupplier ? "Loading..." : "No party found"} 
-                style={{ width: "100%", height: "38px" }}
-                value={form.party_id }
-                onChange={(val, option) => setForm((prev) => ({ ...prev, party_id: val, party_name: option?.label || "" }))}
-                filterOption={(input, option) => option?.searchText?.toLowerCase().includes(input.toLowerCase())}
-                options={supplier.map((s) => ({
-                  value: s.party.id,
-                  label: getLocalizedName(s.party),
-                  searchText: `${s.party.nameEnglish || ""} ${s.party.nameGujarati || ""} ${s.party.nameHindi || ""} ${s.venue?.nameEnglish || ""}`,
-                  raw: s,
-                }))}
-                optionRender={(option) => {
-                  const s = option.data.raw;
-                  return (
-                    <div className="flex flex-col py-0.5">
-                      <span className="font-semibold text-slate-800 text-sm">{getLocalizedName(s.party)}</span>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {s.eventStartDateTime && (
-                          <span className="text-xs text-slate-400 flex items-center gap-1">
-                            <Calendar size={11} />
-                            {s.eventStartDateTime.split(" ")[0]}
-                          </span>
-                        )}
-                        {s.venue?.nameEnglish && <span className="text-xs text-blue-500 font-medium">· {getLocalizedName(s.venue)}</span>}
-                      </div>
-                    </div>
-                  );
-                }}
-              />
+  showSearch
+  allowClear
+  placeholder="Search party…"
+  loading={loadingSupplier}
+  notFoundContent={loadingSupplier ? "Loading..." : "No party found"}
+  style={{ width: "100%", height: "38px" }}
+  value={form.event_id || undefined}
+  onChange={(val, option) =>
+    setForm((prev) => ({
+      ...prev,
+      party_id: option?.raw?.partyId || "",
+      party_name: option?.raw?.partyName || "",
+      event_id: val || "",
+    }))
+  }
+  filterOption={(input, option) =>
+    option?.label?.toLowerCase().includes(input.toLowerCase())
+  }
+  options={supplier.map((s) => ({
+    value: s.eventId,
+    label: `${s.partyName} (${s.eventName}) (${s.eventDate})`,
+    raw: s,
+  }))}
+/>
             </div>
 
             <div>

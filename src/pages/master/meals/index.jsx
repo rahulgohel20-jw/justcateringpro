@@ -42,14 +42,17 @@ const MealMaster = () => {
       .then((res) => {
         const mealData = res.data?.data?.["MealType Details"] || [];
 
-        const formatted = mealData.map((item, index) => ({
-          sr_no: index + 1,
-          meal_type: getTranslatedName(item),
-          mealid: item.id,
-          isJainSlogan: item.isJainSlogan, 
-        }));
+       const formatMeal = (item, index) => ({
+  sr_no: index + 1,
+  meal_type: getTranslatedName(item),
+  mealid: item.id,
+  nameEnglish: item.nameEnglish || "",
+  nameGujarati: item.nameGujarati || "",
+  nameHindi: item.nameHindi || "",
+  isJainSlogan: item.isJainSlogan,
+});
 
-        setTableData(formatted);
+        setTableData(mealData.map(formatMeal));
       })
       .catch((error) => {
         console.error("Error fetching meal types:", error);
@@ -71,13 +74,16 @@ const MealMaster = () => {
         .then(({ data: { data } }) => {
           const mealData = data?.["MealType Details"] || [];
 
-          const formatted = mealData.map((item, index) => ({
-            sr_no: index + 1,
-            meal_type: getTranslatedName(item),
-            mealid: item.id,
-          }));
-
-          setTableData(formatted);
+          const formatMeal = (item, index) => ({
+  sr_no: index + 1,
+  meal_type: getTranslatedName(item),
+  mealid: item.id,
+  nameEnglish: item.nameEnglish || "",
+  nameGujarati: item.nameGujarati || "",
+  nameHindi: item.nameHindi || "",
+  isJainSlogan: item.isJainSlogan,
+});
+setTableData(mealData.map(formatMeal));
         })
         .catch((error) => {
           console.error("Error searching meal:", error);
@@ -137,7 +143,7 @@ const MealMaster = () => {
           <h1 className="text-xl text-gray-900">
             <FormattedMessage
               id="COMMON.MEALSIDEBAR_TYPE"
-              defaultMessage="Food Prefrence"
+              defaultMessage="Food Prefrences"
             />
           </h1>
         </div>

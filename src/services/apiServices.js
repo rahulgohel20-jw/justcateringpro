@@ -784,7 +784,7 @@ export const GetAllSubCategory = (data) => {
 };
 //for menu item
 export const GetAllSubCategorymenuitem = (userId) => {
-  return GET(`/menusubcategory/getallbyuserid?userid=${userId}`); // 👈 'userid' (all lowercase)
+  return GET(`/menusubcategory/getallbyuserid?userid=${userId}`);
 };
 
 //Add category Type
@@ -1643,18 +1643,25 @@ export const Getmenuitemsusingcatidconfig = (
   menu_cat_ids = [],
   userId,
   type,
+  menu_subcat_ids = [],
 ) => {
-  if (!menu_cat_ids || menu_cat_ids.length === 0) {
+  const noCats = !menu_cat_ids || menu_cat_ids.length === 0;
+  const noSubs = !menu_subcat_ids || menu_subcat_ids.length === 0;
+  if (noCats && noSubs) {
     return Promise.resolve({ data: { data: [] } });
   }
 
-  const catIdParams = menu_cat_ids.map((id) => `menu_cat_ids=${id}`).join("&");
-  const typeParam = type ? `&type=${encodeURIComponent(type)}` : "";
-  return GET(
-    `/menuitems/getmenubycatorsubcat?${catIdParams}&userId=${userId}${typeParam}`,
-  );
-};
+  const query = [
+    ...menu_cat_ids.map((id) => `menu_cat_ids=${id}`),
+    ...menu_subcat_ids.map((id) => `menu_subcat_ids=${id}`),
+    `userId=${userId}`,
+    type ? `type=${encodeURIComponent(type)}` : "",
+  ]
+    .filter(Boolean)
+    .join("&");
 
+  return GET(`/menuitems/getmenubycatorsubcat?${query}`);
+};
 export const UpdtaemenuItemcatergoryconfig = (queryString) => {
   return PUT(`/menuitems/updatemenuitemcategory?${queryString}`);
 };
@@ -3619,8 +3626,16 @@ export const  getpartywitheventforstock = (userId) =>{
 };
 
 
-export const GeneratePaymentReceipt = (isCompanyDetails, userId, vendorPayId ) => {
-  return POST(`/vendorpayment/generate-payment-receipt?isCompanyDetails=${isCompanyDetails}&userId=${userId}&vendorPayId=${vendorPayId}`);
+export const GeneratePaymentReceipt = (
+  isCompanyDetails,
+   isPayable = 0,
+  userId,
+  vendorPayId,
+ 
+) => {
+  return POST(
+    `/vendorpayment/generate-payment-receipt?isCompanyDetails=${isCompanyDetails}&isPayable=${isPayable}&userId=${userId}&vendorPayId=${vendorPayId}`
+  );
 };
 
 
@@ -4025,6 +4040,16 @@ export const CheckRMenu = checkRMenu;
 
 export const deletepaymemtbyqxhibition = (groupId , paymentId) => {
   return DELETE(`/exhibition/groups/payments/delete?groupId=${groupId}&paymentId=${paymentId}`);
+};
+
+
+export const UpdtaemenuItemsubcatergoryconfig = (queryString) => {
+  return PUT(`/menuitems/updatemenusubcategory?${queryString}`);
+};
+
+
+export const MenuItemCheckUsuable = ( functionId , menuItemId , userId ) => {
+  return POST(`/menupreparation/checkitemexist?functionId=${functionId}&menuItemId=${menuItemId}&userId=${userId}`);
 };
 
 export const deleteinvoicebyid = (invoiceId) => {

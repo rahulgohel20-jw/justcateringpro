@@ -8,6 +8,8 @@ import {
   GetMenuCategoryByUserId,
   Getmenuitemsusingcatidconfig,
   UpdtaemenuItemcatergoryconfig,
+  Getmenusubcategory,
+  UpdtaemenuItemsubcatergoryconfig,
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 
@@ -15,15 +17,37 @@ const ChangeMenuItemCategoryPage = () => {
   const intl = useIntl();
 
   const [isSaving, setIsSaving] = useState(false);
-  const [fromCategory, setFromCategory] = useState([]); // ✅ array
+  const [fromCategory, setFromCategory] = useState([]); // array
   const [toCategory, setToCategory] = useState("");
-  const [activeCategory, setActiveCategory] = useState([]); // ✅ array
+  const [activeCategory, setActiveCategory] = useState([]); // array or "all"
   const [categoryList, setCategoryList] = useState([]);
   const [tableData, setTableData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  // Sub-category state
+  const [fromSubCategory, setFromSubCategory] = useState([]); // multi
+  const [fromSubList, setFromSubList] = useState([]);
+  const [toSubCategory, setToSubCategory] = useState(""); // single
+  const [toSubList, setToSubList] = useState([]);
+  const [subLoading, setSubLoading] = useState(false);
+
+  // Fetch sub-categories for one or more category ids
+  const fetchSubs = async (catIds) => {
+    const userId = localStorage.getItem("userId");
+    const results = await Promise.all(
+      catIds.map((id) =>
+        Getmenusubcategory(id, userId)
+          .then((r) => r?.data?.data?.["Menu Sub Category Details"] || [])
+          .catch(() => []),
+      ),
+    );
+    return results
+      .flat()
+      .map((s) => ({ id: s.id, name: s.nameEnglish?.trim() }));
+  };
 
   // Fetch categories on mount
   useEffect(() => {
@@ -52,10 +76,34 @@ const ChangeMenuItemCategoryPage = () => {
     fetchCategories();
   }, []);
 
-  // Fetch menu items when activeCategory changes
+  // From side: load sub-categories when From category changes
+  // (hidden for "All Categories")
+  useEffect(() => {
+    const ids = Array.isArray(activeCategory) ? activeCategory : [];
+    if (ids.length === 0) {
+      setFromSubList([]);
+      setFromSubCategory([]);
+      return;
+    }
+    setSubLoading(true);
+    fetchSubs(ids)
+      .then(setFromSubList)
+      .finally(() => setSubLoading(false));
+  }, [activeCategory]);
+
+  // To side: load sub-categories when To category changes
+  useEffect(() => {
+    setToSubCategory("");
+    if (!toCategory) {
+      setToSubList([]);
+      return;
+    }
+    fetchSubs([toCategory]).then(setToSubList);
+  }, [toCategory]);
+
+  // Fetch menu items when category / sub-category selection changes
   useEffect(() => {
     const fetchMenuitem = async () => {
-      // activeCategory is an array; empty = nothing selected
       if (!activeCategory || activeCategory.length === 0) {
         setTableData([]);
         return;
@@ -67,16 +115,22 @@ const ChangeMenuItemCategoryPage = () => {
       try {
         const userId = localStorage.getItem("userId");
 
-        // ✅ "all" → send all real IDs; otherwise send selected IDs array
         const menu_cat_ids =
           activeCategory === "all"
             ? categoryList.map((cat) => cat.id)
-            : activeCategory; // already a clean array of numeric IDs
+            : activeCategory;
 
+        // "all" is a UI-only value from the dropdown, so swap it for real sub-category ids
+        const subIds = fromSubCategory.includes("all")
+          ? fromSubList.map((s) => s.id)
+          : fromSubCategory.filter((id) => id !== "all");
+
+        // Send category ids together with sub-category ids
         const response = await Getmenuitemsusingcatidconfig(
           menu_cat_ids,
           userId,
-          null, // ✅ null, not { type: null }
+          null,
+          subIds,
         );
 
         const menuItemsData =
@@ -98,7 +152,7 @@ const ChangeMenuItemCategoryPage = () => {
     };
 
     fetchMenuitem();
-  }, [activeCategory, categoryList]);
+  }, [activeCategory, categoryList, fromSubCategory, fromSubList]);
 
   const staticCategories = [{ id: "all", name: "All Categories" }];
   const combinedCategories = [...staticCategories, ...categoryList];
@@ -106,14 +160,14 @@ const ChangeMenuItemCategoryPage = () => {
   const handleFromCategoryChange = (val) => {
     // val is always an array from FromCategoryDropdown
     setFromCategory(val);
+    setFromSubCategory([]);
+    setSelectedRows([]);
 
     if (val.length === 0) {
       setActiveCategory([]);
     } else if (val.includes("all")) {
-      // ✅ "all" selected → trigger fetch of all categories
       setActiveCategory("all");
     } else {
-      // ✅ specific categories → pass array of real IDs only
       setActiveCategory(val);
     }
   };
@@ -124,34 +178,38 @@ const ChangeMenuItemCategoryPage = () => {
     setIsSaving(true);
     try {
       const userId = localStorage.getItem("userId");
-
       const params = new URLSearchParams();
-      params.append("new_cat_id", toCategory);
-      params.append("user_id", userId);
-      // ✅ don't append type at all, or append empty string if API requires it
-      // params.append("type", "");
+      let response;
 
-      selectedRows.forEach((id) => {
-        params.append("menu_item_ids", id);
-      });
-
-      const response = await UpdtaemenuItemcatergoryconfig(params.toString());
-
-      const successMsg =
-        response?.data?.msg || "Menu item category updated successfully";
+      if (toSubCategory) {
+        // Transfer to a sub-category
+        params.append("new_menu_subcat_ids", toSubCategory);
+        params.append("userId", userId);
+        selectedRows.forEach((id) => params.append("menu_item_ids", id));
+        response = await UpdtaemenuItemsubcatergoryconfig(params.toString());
+      } else {
+        // Transfer to a category
+        params.append("new_cat_id", toCategory);
+        params.append("user_id", userId);
+        selectedRows.forEach((id) => params.append("menu_item_ids", id));
+        response = await UpdtaemenuItemcatergoryconfig(params.toString());
+      }
 
       await Swal.fire({
         icon: "success",
         title: "Success",
-        text: successMsg,
+        text:
+          response?.data?.msg || "Menu item category updated successfully",
         confirmButtonColor: "#2563eb",
       });
 
       // Reload table with new category and reset state
       setActiveCategory([toCategory]);
       setSelectedRows([]);
-      setFromCategory([]); // ✅ reset to array
+      setFromCategory([]);
+      setFromSubCategory([]);
       setToCategory("");
+      setToSubCategory("");
     } catch (error) {
       Swal.fire({
         icon: "error",
@@ -168,8 +226,10 @@ const ChangeMenuItemCategoryPage = () => {
 
   const handleCancel = () => {
     setSelectedRows([]);
-    setFromCategory([]); // ✅ reset to array
+    setFromCategory([]);
+    setFromSubCategory([]);
     setToCategory("");
+    setToSubCategory("");
     setActiveCategory([]);
     setTableData([]);
   };
@@ -209,11 +269,31 @@ const ChangeMenuItemCategoryPage = () => {
               </label>
 
               <FromCategoryDropdown
-                value={fromCategory} // ✅ always an array
+                value={fromCategory}
                 onChange={handleFromCategoryChange}
                 options={combinedCategories}
                 disabled={categoriesLoading}
               />
+
+              {Array.isArray(activeCategory) && activeCategory.length > 0 && (
+                <div className="mt-4">
+                  <label className="form-label">From Sub Category</label>
+                  <FromCategoryDropdown
+                    value={fromSubCategory}
+                    onChange={(val) => {
+                      setFromSubCategory(val);
+                      setSelectedRows([]);
+                    }}
+                    options={fromSubList}
+                    disabled={subLoading || fromSubList.length === 0}
+                  />
+                  {!subLoading && fromSubList.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      No sub categories for the selected category.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* To Category */}
@@ -243,6 +323,33 @@ const ChangeMenuItemCategoryPage = () => {
                 </select>
                 <i className="ki-filled ki-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"></i>
               </div>
+
+              {toCategory && (
+                <div className="mt-4">
+                  <label className="form-label">To Sub Category</label>
+                  <div className="relative">
+                    <select
+                      className="input appearance-none pr-10"
+                      value={toSubCategory}
+                      onChange={(e) => setToSubCategory(e.target.value)}
+                      disabled={toSubList.length === 0}
+                    >
+                      <option value="">None (move to category only)</option>
+                      {toSubList.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <i className="ki-filled ki-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"></i>
+                  </div>
+                  {toSubList.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      No sub categories for the selected category.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

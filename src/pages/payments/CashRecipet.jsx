@@ -7,13 +7,13 @@ import {
   Getpaymentvendordata,
   DeletePayments,
   pdffordebitpaymentinaccount,
-  GeneratePaymentReceipt,
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { Tooltip } from "antd";
 import { Link } from "react-router-dom";
 import { usePermission } from "../../hooks/usePermission";
 import { FormattedMessage } from "react-intl";
+import GenerateReceiptModal from "../../components/generatereciepe/GenerateReceiptModal";
 
 const Toggle = ({ checked, onChange, label }) => (
   <div className="flex items-center justify-between py-3">
@@ -126,12 +126,10 @@ const CashRecipet = () => {
   const [tableData, setTableData] = useState([]);
   const permissions = usePermission("Credit");
   const [searchTerm, setSearchTerm] = useState("");
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false); // ← add
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  // Tracks which row's receipt PDF is currently being generated, so we can
-  // disable just that row's button and show a spinner instead of blocking
-  // the whole table.
-  const [generatingReportId, setGeneratingReportId] = useState(null);
+  // Payment id of the row whose report modal is open (null = closed)
+  const [reportPaymentId, setReportPaymentId] = useState(null);
 
   const handleModalOpen = (rowData = null) => {
     setEditData(rowData);
@@ -189,45 +187,6 @@ const CashRecipet = () => {
     }
   }, []);
 
-  // ── Generate the payment receipt PDF for a single row ──
-  const handleGenerateReport = useCallback(async (paymentId) => {
-    if (!paymentId) return;
-
-    setGeneratingReportId(paymentId);
-    try {
-      const userId = localStorage.getItem("userId");
-      const res = await GeneratePaymentReceipt(1, userId, paymentId);
-
-      const fileUrl =
-        res?.data?.url ||
-        res?.data?.report_path ||
-        res?.data?.data?.url ||
-        res?.data?.data?.report_path;
-
-      if (fileUrl) {
-        window.open(fileUrl, "_blank", "noopener,noreferrer");
-      } else {
-        Swal.fire({
-          title: "No file returned",
-          text: "The report didn't return a downloadable file.",
-          icon: "warning",
-        });
-      }
-    } catch (err) {
-      console.error("Generate report failed:", err);
-      Swal.fire({
-        title: "Error!",
-        text:
-          err?.response?.data?.msg ||
-          "Failed to generate the report. Please try again.",
-        icon: "error",
-        confirmButtonColor: "#d33",
-      });
-    } finally {
-      setGeneratingReportId(null);
-    }
-  }, []);
-
   const tableColumns = [
     ...columns,
     {
@@ -247,18 +206,13 @@ const CashRecipet = () => {
               </button>
             </Tooltip>
           )}
-           <Tooltip title="Generate Report">
+          <Tooltip title="Generate Report">
             <button
               className="btn btn-sm btn-icon btn-clear"
               title="Generate Report"
-              onClick={() => handleGenerateReport(row.original.paymentId)}
-              disabled={generatingReportId === row.original.paymentId}
+              onClick={() => setReportPaymentId(row.original.paymentId)}
             >
-              {generatingReportId === row.original.paymentId ? (
-                <i className="ki-filled ki-loading animate-spin text-success"></i>
-              ) : (
-                <i className="ki-filled ki-document text-success"></i>
-              )}
+              <i className="ki-filled ki-document text-success"></i>
             </button>
           </Tooltip>
           {permissions.delete && (
@@ -383,6 +337,12 @@ data={filteredData}
        <ExportPdfModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
+      />
+      <GenerateReceiptModal
+        isOpen={!!reportPaymentId}
+        onClose={() => setReportPaymentId(null)}
+        paymentId={reportPaymentId}
+        isPayable={false}
       />
     </Fragment>
   );

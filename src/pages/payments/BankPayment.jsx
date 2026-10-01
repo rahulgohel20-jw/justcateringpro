@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { DataGridColumnHeader } from "@/components";
 import { usePermission } from "../../hooks/usePermission";
 import { FormattedMessage, useIntl } from "react-intl";
+import GenerateReceiptModal from "../../components/generatereciepe/GenerateReceiptModal";
 
 const Toggle = ({ checked, onChange, label }) => (
   <div className="flex items-center justify-between py-3">
@@ -124,6 +125,10 @@ const BankPayment = () => {
   const permissions = usePermission("Debit"); 
     const [searchTerm, setSearchTerm] = useState("");
 const [isExportModalOpen, setIsExportModalOpen] = useState(false);   
+
+  // Payment id of the row whose report modal is open (null = closed)
+  const [reportPaymentId, setReportPaymentId] = useState(null);
+
   const filteredData = tableData.filter((row) =>
     (row.accountname || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -187,6 +192,15 @@ const [isExportModalOpen, setIsExportModalOpen] = useState(false);
               </button>
             </Tooltip>
           )}
+          <Tooltip title="Generate Report">
+            <button
+              className="btn btn-sm btn-icon btn-clear"
+              title="Generate Report"
+              onClick={() => setReportPaymentId(row.original.paymentId)}
+            >
+              <i className="ki-filled ki-document text-success"></i>
+            </button>
+          </Tooltip>
           {permissions.delete && (
             <Tooltip title="Delete">
               <button
@@ -307,6 +321,12 @@ setTableData(data);
        <ExportPdfModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
+      />
+      <GenerateReceiptModal
+        isOpen={!!reportPaymentId}
+        onClose={() => setReportPaymentId(null)}
+        paymentId={reportPaymentId}
+        isPayable={true}
       />
     </Fragment>
   );

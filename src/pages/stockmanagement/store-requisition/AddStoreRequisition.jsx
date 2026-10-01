@@ -23,6 +23,7 @@ import {
   GetEventMaster,
   GetRawMaterialcategory,
   GetStockTypeByUserId,
+  getpartywitheventforstock,
   AddStoreReq,
 } from "@/services/apiServices";
 import { usePermission } from "@/hooks/usePermission";
@@ -53,8 +54,7 @@ const AddStoreRequisition = () => {
   const editData = location.state?.editData;
   const isEdit = Boolean(editData);
   const userId = localStorage.getItem("userId");
-  const auth = JSON.parse(localStorage.getItem("auth-storage") || "{}");
-  const isChildUser = auth?.state?.user?.ischilduser ?? false;
+ 
   const { filterStockTypes } = useStockTypePermission();
   const backDatePermission = usePermission("Lock Back Date Entry");
   const [language, setLanguage] = useState(
@@ -74,14 +74,15 @@ const AddStoreRequisition = () => {
   const [pageNo, setPageNo] = useState(1);
   const [addRawMaterial, setAddRawMaterial] = useState(false);
   const [form, setForm] = useState({
-    voucher: "",
-    date: new Date(),
-    party_id: null,
-    party_name: "",
-    stock_type_id: "",
-    invoice_type: "",
-    remark: "",
-  });
+  voucher: "",
+  date: new Date(),
+  party_id: null,
+  party_name: "",
+  event_id: "",
+  stock_type_id: "",
+  invoice_type: "",
+  remark: "",
+});
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
 
   useEffect(() => {
@@ -90,42 +91,53 @@ const AddStoreRequisition = () => {
     return () => window.removeEventListener("languageChange", handler);
   }, []);
 
-  useEffect(() => {
-    GetStockTypeByUserId(Number(userId), "")
-      .then((response) =>
-        setStockTypes(
-          Array.isArray(response?.data?.data) ? response.data.data : [],
-        ),
-      )
-      .catch(console.error);
-    GetEventMaster(userId, isChildUser)
-      .then((response) =>
-        setSuppliers(response?.data?.data?.["Event Details"] || []),
-      )
-      .catch(console.error)
-      .finally(() => setLoadingSuppliers(false));
-    GetRawMaterialcategory(userId)
-      .then((response) =>
-        setCategories(
-          response?.data?.data?.["Raw Material Category Details"] || [],
-        ),
-      )
-      .catch(console.error);
-  }, []);
+const fetchSupplier = async () => {
+  try {
+    setLoadingSuppliers(true);
+    const res = await getpartywitheventforstock(userId);
+    setSuppliers(res?.data?.data || []);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setLoadingSuppliers(false);
+  }
+};
+
+ useEffect(() => {
+  GetStockTypeByUserId(Number(userId), "")
+    .then((response) =>
+      setStockTypes(
+        Array.isArray(response?.data?.data) ? response.data.data : [],
+      ),
+    )
+    .catch(console.error);
+  fetchSupplier();
+  GetRawMaterialcategory(userId)
+    .then((response) =>
+      setCategories(
+        response?.data?.data?.["Raw Material Category Details"] || [],
+      ),
+    )
+    .catch(console.error);
+}, []);
 
   useEffect(() => {
     if (!editData || !suppliers.length) return;
     setForm({
-      voucher: editData.crcode || "",
-      date: editData.crdate
-        ? new Date(editData.crdate.split("/").reverse().join("-"))
-        : new Date(),
-      party_id: editData.partyId || null,
-      party_name: editData.partyName || "",
-      stock_type_id: editData.stockTypeId || "",
-      invoice_type: editData.invoicetype || "",
-      remark: editData.remarks || "",
-    });
+  voucher: editData.crcode || "",
+  date: editData.crdate
+    ? new Date(editData.crdate.split("/").reverse().join("-"))
+    : new Date(),
+  party_id: editData.partyId || null,
+  party_name: editData.partyName || "",
+  event_id:
+    editData.eventId ||
+    suppliers.find((s) => s.partyId === editData.partyId)?.eventId ||
+    "",
+  stock_type_id: editData.stockTypeId || "",
+  invoice_type: editData.invoicetype || "",
+  remark: editData.remarks || "",
+});
     setItems(
       (editData.details || []).map((item) => ({
         rawMaterialId: item.rawMaterialId,
@@ -374,55 +386,30 @@ const AddStoreRequisition = () => {
                 <User size={16} /> Party Name
               </label>
               <Select
-                showSearch
-                allowClear
-                placeholder="Search party..."
-                  loading={loadingSuppliers}                                              
-  notFoundContent={loadingSuppliers ? "Loading..." : "No party found"} 
-                style={{ width: "100%", height: "38px" }}
-                value={form.party_id}
-                onChange={(value, option) =>
-                  setForm({
-                    ...form,
-                    party_id: value,
-                    party_name: option?.label || "",
-                  })
-                }
-                filterOption={(input, option) =>
-                  option?.searchText
-                    ?.toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-                options={suppliers.map((entry) => ({
-                  value: entry.party.id,
-                  label: nameFor(entry.party, language),
-                  searchText: `${entry.party.nameEnglish || ""} ${entry.party.nameGujarati || ""} ${entry.party.nameHindi || ""} ${entry.venue?.nameEnglish || ""}`,
-                  raw: entry,
-                }))}
-                optionRender={(option) => {
-                  const entry = option.data.raw;
-                  return (
-                    <div className="flex flex-col py-0.5">
-                      <span className="font-semibold text-slate-800 text-sm">
-                        {nameFor(entry.party, language)}
-                      </span>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {entry.eventStartDateTime && (
-                          <span className="text-xs text-slate-400 flex items-center gap-1">
-                            <Calendar size={11} />
-                            {entry.eventStartDateTime.split(" ")[0]}
-                          </span>
-                        )}
-                        {entry.venue?.nameEnglish && (
-                          <span className="text-xs text-blue-500 font-medium">
-                            · {nameFor(entry.venue, language)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }}
-              />
+  showSearch
+  allowClear
+  placeholder="Search party..."
+  loading={loadingSuppliers}
+  notFoundContent={loadingSuppliers ? "Loading..." : "No party found"}
+  style={{ width: "100%", height: "38px" }}
+  value={form.event_id || undefined}
+  onChange={(val, option) =>
+    setForm((prev) => ({
+      ...prev,
+      party_id: option?.raw?.partyId || null,
+      party_name: option?.raw?.partyName || "",
+      event_id: val || "",
+    }))
+  }
+  filterOption={(input, option) =>
+    option?.label?.toLowerCase().includes(input.toLowerCase())
+  }
+  options={suppliers.map((s) => ({
+    value: s.eventId,
+    label: `${s.partyName} (${s.eventName}) (${s.eventDate})`,
+    raw: s,
+  }))}
+/>
             </div>
             <div>
               <label className={label}>
