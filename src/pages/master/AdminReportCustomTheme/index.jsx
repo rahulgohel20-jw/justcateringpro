@@ -434,7 +434,7 @@ const AdminReportCustomThem = () => {
                   </div>
 
                   {/* PDF View Button - Only show for themes with PDF - Highest z-index to be above everything */}
-                  {theme.dummyPdf && (
+                  {/* {theme.dummyPdf && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -463,7 +463,7 @@ const AdminReportCustomThem = () => {
                         />
                       </svg>
                     </button>
-                  )}
+                  )} */}
 
                   {/* Pay Button Overlay - Only show for locked themes on hover - Center positioned */}
                   {!theme.isDefault && !theme.ispayment && (
