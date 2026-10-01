@@ -281,10 +281,11 @@ export const GetQuotationReport = (
   exclusiveThemeId,
   backOfficeId,
   showLastPage,
-  isSignature
+  isSignature,
+    invoiceId = 0,    
 ) => {
   return POST(
-    `/quotationreport/generatequotation?adminTemplateModuleId=${adminTemplateModuleId}&eventId=${eventId}&lang=${language}&userId=${userId}&isInvoice=${isInvoice}&isQrCode=${isQrCode}&isTermsCond=${isTermsCond}&isAdvance=${isAdvance}&isWithPrice=${isWithPrice}&isCompanyDetails=${isCompanyDetails}&isDecore=${isDecor}&isOnePage=${isOnePage}&isCombo=${isCombo}&isNotes=${isNotes}&exclusiveThemeId=${exclusiveThemeId}&backOfficeId=${backOfficeId}&showLastPage=${showLastPage}&isSignature=${isSignature}`,
+    `/quotationreport/generatequotation?adminTemplateModuleId=${adminTemplateModuleId}&eventId=${eventId}&lang=${language}&userId=${userId}&isInvoice=${isInvoice}&isQrCode=${isQrCode}&isTermsCond=${isTermsCond}&isAdvance=${isAdvance}&isWithPrice=${isWithPrice}&isCompanyDetails=${isCompanyDetails}&isDecore=${isDecor}&isOnePage=${isOnePage}&isCombo=${isCombo}&isNotes=${isNotes}&exclusiveThemeId=${exclusiveThemeId}&backOfficeId=${backOfficeId}&showLastPage=${showLastPage}&isSignature=${isSignature}&invoiceId=${invoiceId}`,
   );
 };
 
@@ -4049,4 +4050,12 @@ export const UpdtaemenuItemsubcatergoryconfig = (queryString) => {
 
 export const MenuItemCheckUsuable = ( functionId , menuItemId , userId ) => {
   return POST(`/menupreparation/checkitemexist?functionId=${functionId}&menuItemId=${menuItemId}&userId=${userId}`);
+};
+
+export const deleteinvoicebyid = (invoiceId) => {
+  return DELETE(`/invoice/deletebyid?invoiceId=${invoiceId}`);
+};
+
+export const deleteinvoiceitemid = (invoiceItemId) => {
+  return DELETE(`/invoice/deletebyinvoiceitemid?invoiceItemId=${invoiceItemId}`);
 };
