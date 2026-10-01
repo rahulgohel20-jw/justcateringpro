@@ -59,6 +59,7 @@
           UploadMenuItemImage,
           Getmenusubcategory,
           checkRMenu,
+          MenuItemCheckUsuable
           } from "@/services/apiServices";
           import { useMenuPrepStore } from "@/store/useMenuPrepStore";
           import AddMenuItem from "@/partials/modals/add-menu-item/AddMenuItem";
@@ -2008,6 +2009,47 @@ const overLimitItemIds = useMemo(() => {
           }
           }, [selectedFunction, eventData]);
 
+
+          const getDraftKey = (fnId) => `menuPlanningDraft:${mode}:${eventId}:${fnId}`;
+
+const clearDraft = (fnId = selectedFunction) => {
+  try { sessionStorage.removeItem(getDraftKey(fnId)); } catch {}
+};
+
+const applyDraft = (fnId) => {
+  try {
+    const raw = sessionStorage.getItem(getDraftKey(fnId));
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+
+    setSelectedByFunction((prev) => ({ ...prev, [fnId]: d.bucket })); // keeps _menuPrepId
+    setAddonState((p) => ({ ...p, [fnId]: d.addon }));
+    setPrimaryItemsByFunction((p) => ({ ...p, [fnId]: d.primary }));
+    setCategoryImagesByFunction((p) => ({ ...p, [fnId]: d.images }));
+    setCategorySpacesByFunction((p) => ({ ...p, [fnId]: d.spaces }));
+    setPackageAppliedForFunction((p) => ({ ...p, [fnId]: d.packageApplied }));
+    setPackageInfoByFunction((p) => ({ ...p, [fnId]: d.packageInfo }));
+    setPackageCategoriesByFunction((p) => ({ ...p, [fnId]: d.packageCategories }));
+    setPackageCategoryLimitsByFunction((p) => ({ ...p, [fnId]: d.packageLimits }));
+    setPackageItemsByFunction((p) => ({ ...p, [fnId]: d.packageItems }));
+    if (d.permissionRawMaterials) setPermissionRawMaterials(d.permissionRawMaterials);
+
+    setHasExistingData(true);
+    setIsDirty(true);
+    Swal.fire({
+      toast: true, position: "top-end", icon: "info",
+      title: "Restored your unsaved changes",
+      showConfirmButton: false, timer: 2000,
+    });
+    return true;
+  } catch (e) {
+    console.warn("Draft restore failed", e);
+    return false;
+  }
+};
+
+
+
          const loadSavedMenuPrep = useCallback(async () => {
 if (!selectedFunction) return;
 
@@ -2198,13 +2240,14 @@ setPrimaryItemsByFunction((prev) => ({ ...prev, [selectedFunction]: loadedPrimar
           }
 
           if (order.length > 0) setHasExistingData(true);
+          applyDraft(selectedFunction);
           } catch (err) {
 console.error("❌ Error loading menu prep:", err);
 } finally {
 setIsPrepLoading(false);
 loadSavedMenuPrepInFlightRef.current = null;
 }
-}, [selectedFunction, cfg]);
+}, [selectedFunction, cfg, eventId, mode]);
 
 useEffect(() => {
  
@@ -2689,6 +2732,94 @@ categoryPrice: Number(menuItem.categoryPrice ?? 0),
             packageCategoriesByFunction,
           ],
           );
+
+
+          const checkingItemsRef = useRef(new Set());
+
+const parseItemCheck = (res) => {
+  // Works whether the service returns the axios response or response.data
+  const body = res?.data && typeof res.data === "object" && "msg" in res.data
+    ? res.data
+    : res;
+  const msg = typeof body?.msg === "string" ? body.msg : "";
+  const used = /already\s+been\s+used/i.test(msg);
+  return { used, msg };
+};
+
+const onSelectItemWithCheck = useCallback(
+  async (menuItem, overrideCategoryName) => {
+    const itemId = Number(menuItem.id ?? menuItem.menuItemId);
+    const alreadySelected = getSelectedIdsForFunction(selectedFunction).has(itemId);
+
+    if (mode !== "menu" || !selectedFunction || alreadySelected) {
+      onToggleSelectItem(menuItem, overrideCategoryName);
+      return;
+    }
+
+    if (checkingItemsRef.current.has(itemId)) return;
+    checkingItemsRef.current.add(itemId);
+
+    try {
+      const currentEventFn = eventData?.eventFunctions?.find(
+        (f) => Number(f.id) === Number(selectedFunction),
+      );
+      const masterFunctionId = Number(
+        currentEventFn?.function?.id ?? currentEventFn?.functionId ?? 0,
+      );
+      console.log("[item-check] ids", { selectedFunction, masterFunctionId, itemId });
+
+      let result = { used: false, msg: "" };
+      try {
+        if (masterFunctionId) {
+          const res = await MenuItemCheckUsuable(masterFunctionId, itemId, userId);
+          console.log("[item-check] raw response", res);
+          result = parseItemCheck(res);
+        } else {
+          console.warn("[item-check] masterFunctionId missing, check skipped");
+        }
+      } catch (err) {
+        console.error("[item-check] request failed", err);
+        // If the backend sends the "already used" message with an error status
+        const errMsg = err?.response?.data?.msg;
+        if (typeof errMsg === "string" && /already\s+been\s+used/i.test(errMsg)) {
+          result = { used: true, msg: errMsg };
+        }
+      }
+
+      console.log("[item-check] parsed", result);
+
+      if (!result.used) {
+        onToggleSelectItem(menuItem, overrideCategoryName);
+        return;
+      }
+
+      const r = await Swal.fire({
+        icon: "warning",
+        title: "Item already used",
+        text: result.msg,
+        showCancelButton: true,
+        confirmButtonText: "Add anyway",
+        cancelButtonText: "Cancel",
+        focusCancel: true,
+        reverseButtons: true,
+      });
+
+      if (r.isConfirmed) {
+        onToggleSelectItem(menuItem, overrideCategoryName);
+      }
+    } finally {
+      checkingItemsRef.current.delete(itemId);
+    }
+  },
+  [
+    mode,
+    selectedFunction,
+    eventData,
+    userId,
+    onToggleSelectItem,
+    getSelectedIdsForFunction,
+  ],
+);
 
           const bulkSelectByPackageType = useCallback(
           async (type) => {
@@ -3462,6 +3593,55 @@ categoryPrice: Number(menuItem.categoryPrice ?? 0),
   packageInfoByFunction, permissionRawMaterials, personCount, defaultRate,
 ]);
 
+
+
+const persistDraft = useCallback(() => {
+  if (!selectedFunction || !eventId) return;
+  const bucket = selectedByFunction[selectedFunction];
+  if (!bucket) return;
+  try {
+    sessionStorage.setItem(
+      getDraftKey(selectedFunction),
+      JSON.stringify({
+        savedAt: Date.now(),
+        bucket,
+        addon: addonState[selectedFunction] || {},
+        primary: primaryItemsByFunction[selectedFunction] || {},
+        images: categoryImagesByFunction[selectedFunction] || {},
+        spaces: categorySpacesByFunction[selectedFunction] || {},
+        packageApplied: !!packageAppliedForFunction[selectedFunction],
+        packageInfo: packageInfoByFunction[selectedFunction] || null,
+        packageCategories: packageCategoriesByFunction[selectedFunction] || [],
+        packageLimits: packageCategoryLimitsByFunction[selectedFunction] || {},
+        packageItems: packageItemsByFunction[selectedFunction] || [],
+        permissionRawMaterials,
+      }),
+    );
+  } catch (e) {
+    console.warn("Draft save failed", e);
+  }
+}, [
+  selectedFunction, eventId, mode, selectedByFunction, addonState,
+  primaryItemsByFunction, categoryImagesByFunction, categorySpacesByFunction,
+  packageAppliedForFunction, packageInfoByFunction, packageCategoriesByFunction,
+  packageCategoryLimitsByFunction, packageItemsByFunction, permissionRawMaterials,
+]);
+
+// auto-save draft while there are unsaved edits (debounced)
+useEffect(() => {
+  if (!isDirty || isPrepLoading) return;
+  const t = setTimeout(persistDraft, 300);
+  return () => clearTimeout(t);
+}, [isDirty, isPrepLoading, persistDraft]);
+
+// leaving the page: save the draft and go, no modal
+useEffect(() => {
+  if (blocker.state === "blocked") {
+    persistDraft();
+    blocker.proceed();
+  }
+}, [blocker, persistDraft]);
+
           const nameOf = (item) => item?.nameEnglish || `Item#${item?.id}`;
 
 const buildFullChangeSummary = (prev, next) => {
@@ -3646,6 +3826,7 @@ const buildFullChangeSummary = (prev, next) => {
 
             if (resp?.data?.success === true) {
               setIsDirty(false);
+              clearDraft(); 
               const newId = resp?.data?.data?.id || payload.id;
               setSelectedByFunction((prev) => ({ ...prev, _menuPrepId: newId }));
               setHasExistingData(true);
@@ -4177,7 +4358,7 @@ const handleSubCategoryChange = (subCatName, subCatId, subCatInfo) => {
   </div>
 )}
             {/* Unsaved Changes Warning Modal */}
-            {blocker.state === "blocked" && (
+            {/* {blocker.state === "blocked" && (
               <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
                 <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
                   <div className="flex items-center gap-3 mb-3">
@@ -4216,7 +4397,7 @@ const handleSubCategoryChange = (subCatName, subCatId, subCatInfo) => {
                   </div>
                 </div>
               </div>
-            )}
+            )} */}
           <div className="flex flex-col w-full custom-scrollbar" style={{ height: "100vh", overflow: "hidden" }}>
           <div className="flex-1 px-4 py-2 overflow-y-auto ">
                 <div className="flex justify-between items-center mb-4">
@@ -4763,7 +4944,7 @@ const handleSubCategoryChange = (subCatName, subCatId, subCatInfo) => {
                     onChange={(v) => setItemSearchTerm(v)}
                     allMenuItems={allMenuItemsForSuggestion}
                     selectedIdsSet={getSelectedIdsForFunction(selectedFunction)}
-                    onToggleSelect={onToggleSelectItem}
+                     onToggleSelect={onSelectItemWithCheck}
                     category={selectedCategory}
                     getLocalizedName={(item) => item.menuItemName || ""}
                     getLocalizedCategoryName={(item) =>
@@ -4799,7 +4980,7 @@ categoryId={itemSearchTerm.trim() ? 0 : selectedCategoryId}
 subCategoryId={itemSearchTerm.trim() ? 0 : selectedSubCategoryId}
 searchTerm={itemSearchTerm}
           selectedIdsSet={getSelectedIdsForFunction(selectedFunction)}
-          onToggleSelect={onToggleSelectItem}
+          onToggleSelect={onSelectItemWithCheck}
           selectedFunctionId={selectedFunction}
           packageItems={currentPackageItems}
           selectedItemsData={selectedByFunction[selectedFunction]}

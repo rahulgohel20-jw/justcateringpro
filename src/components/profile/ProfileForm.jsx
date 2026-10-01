@@ -738,22 +738,21 @@ followupDay: values.followupDay || "",
   </div>
 </Form.Item>
         <Form.Item
-          label={
-            <FormattedMessage id="COMMON.ADDRESS" defaultMessage="Address" />
-          }
-          name="address"
-         
-        >
-          <Input
-            size="large"
-            placeholder={intl.formatMessage({
-              id: "COMMON.ENTER_ADDRESS",
-              defaultMessage: "Enter your address",
-            })}
-            readOnly={!isEditing}
-            className="rounded-xl h-11 bg-[#F2F7FB] border border-[#E6ECF1]"
-          />
-        </Form.Item>
+  label={
+    <FormattedMessage id="COMMON.ADDRESS" defaultMessage="Address" />
+  }
+  name="address"
+>
+  <TextArea
+    rows={3}
+    placeholder={intl.formatMessage({
+      id: "COMMON.ENTER_ADDRESS",
+      defaultMessage: "Enter your address",
+    })}
+    readOnly={!isEditing}
+    className="rounded-xl bg-[#F2F7FB] border border-[#E6ECF1]"
+  />
+</Form.Item>
       </div>
 
       <div

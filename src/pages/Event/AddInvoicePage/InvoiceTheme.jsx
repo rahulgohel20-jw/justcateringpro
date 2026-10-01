@@ -19,6 +19,12 @@ import {
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { useReportPermission } from "@/hooks/useReportPermission";
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.js?url"; 
+
+
+
+
+
 
 const EXCLUSIVE_MODULE_NAMES = ["Exclusive Theme", "Back Office Theme"];
 
@@ -714,8 +720,7 @@ const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobi
   const [pdfUrl, setPdfUrl] = useState("");
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);  // ✅ added
-  const pdfPlugin = defaultLayoutPlugin();
-  const userId = localStorage.getItem("userId");
+const pdfPlugin = defaultLayoutPlugin({ sidebarTabs: () => [] });  const userId = localStorage.getItem("userId");
   
   const lang = localStorage.getItem("lang");
   const language =
@@ -1055,26 +1060,45 @@ isAdvancedPay:opts.isAdvancedPay ?? false,
     return results.filter((r) => r.status === "fulfilled").map((r) => r.value);
   };
 
-  // Merge multiple PDF URLs into one blob URL using pdf-lib
-  const mergePdfUrls = async (urls) => {
-    if (urls.length === 1) return urls[0];
 
-    const merged = await PDFDocument.create();
-    for (const url of urls) {
-      try {
-        const res = await fetch(url);
-        const bytes = await res.arrayBuffer();
-        const pdf = await PDFDocument.load(bytes);
-        const pages = await merged.copyPages(pdf, pdf.getPageIndices());
-        pages.forEach((p) => merged.addPage(p));
-      } catch (e) {
-        console.warn("Failed to merge PDF:", url, e);
-      }
-    }
-    const mergedBytes = await merged.save();
-    const blob = new Blob([mergedBytes], { type: "application/pdf" });
-    return URL.createObjectURL(blob);
-  };
+const mergePdfUrls = async (urls) => {
+  if (urls.length === 1) return urls[0];
+
+  console.time("1-download");
+  const buffers = await Promise.all(urls.map(async (url) => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.arrayBuffer();
+  }));
+  console.timeEnd("1-download");
+
+  console.time("2-parse");
+  const docs = await Promise.all(
+    buffers.map((b) => PDFDocument.load(b, { updateMetadata: false })),
+  );
+  console.timeEnd("2-parse");
+
+  console.time("3-copy+save");
+  const merged = await PDFDocument.create();
+  for (const doc of docs) {
+    const pages = await merged.copyPages(doc, doc.getPageIndices());
+    pages.forEach((p) => merged.addPage(p));
+  }
+  const bytes = await merged.save({ useObjectStreams: false });
+  console.timeEnd("3-copy+save");
+
+  return URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+};
+
+
+const closePdfModal = () => {
+  setIsPdfModalVisible(false);
+  setPdfUrl((prev) => {
+    if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+    return "";
+  });
+};
+
 
 const handleConfigGenerate = async (configData) => {
   setGeneratingPdf(true);
@@ -1509,10 +1533,7 @@ const handleWhatsAppClick = () => {
           />
         }
         open={isPdfModalVisible}
-        onCancel={() => {
-          setIsPdfModalVisible(false);
-          setPdfUrl("");
-        }}
+         onCancel={closePdfModal}
         width="70%"
         style={{ top: 20, maxWidth: "1200px" }}
         footer={
@@ -1529,10 +1550,7 @@ const handleWhatsAppClick = () => {
             </button>
             <button
               className="btn btn-light w-full sm:w-auto"
-              onClick={() => {
-                setIsPdfModalVisible(false);
-                setPdfUrl("");
-              }}
+             onClick={closePdfModal}
             >
               <FormattedMessage id="COMMON.CLOSE" defaultMessage="Close" />
             </button>
@@ -1541,7 +1559,7 @@ const handleWhatsAppClick = () => {
       >
         <div style={{ height: "70vh" }}>
           {pdfUrl && (
-            <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
+            <Worker workerUrl={workerUrl}>              
               <Viewer
                 fileUrl={pdfUrl}
                 plugins={[pdfPlugin]}

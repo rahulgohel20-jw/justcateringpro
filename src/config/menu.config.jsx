@@ -910,6 +910,30 @@ id="COMMON.ITEMRAWMATERIALUNITCHANGE"              defaultMessage="Item Raw Mate
   moduleName: "CRM",
   alwaysVisible: true,
 },
+
+{
+  title: (
+    <a
+      href={`https://pos.justcatering.in/sso?t=${encodeURIComponent(
+        localStorage.getItem("userToken") || ""
+      )}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center w-full"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <FormattedMessage id="COMMON.POS" defaultMessage="POS" />
+      <span className="ml-2 rounded bg-primary px-2 py-0.5 text-xs text-white">
+        PRO
+      </span>
+    </a>
+  ),
+  icon: "ki-filled ki-shop text-lg text-primary",
+  path: "#",
+  pageName: "POS",
+  moduleName: "POS",
+  alwaysVisible: true,
+},
     {
      title: (
     <div className="w-full flex justify-between items-center">
