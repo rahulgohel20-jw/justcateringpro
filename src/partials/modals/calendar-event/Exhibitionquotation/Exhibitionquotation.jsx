@@ -469,111 +469,123 @@ function EstimateTable({
 
 
 
-function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateField  , onDeleteDay }) {
+function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateField, onDeleteDay }) {
   const total = day.rows.reduce((s, r) => s + r.qty * r.rate, 0);
   const totalQty = day.rows.reduce((s, r) => s + r.qty, 0);
   const totalRate = day.rows.reduce((s, r) => s + r.rate, 0);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-3 mt-2.5">
+    <div className="bg-white border border-slate-200 rounded-xl p-2 mt-2">
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <div className="flex items-center gap-2.5">
-          <div className="relative">
-           {/* AFTER */}
-<DatePicker
-  value={day.date ? dayjs(day.date, DATE_FORMAT) : null}
-  format={DATE_FORMAT}
-  placeholder="Select date"
-  allowClear={false}
-  onChange={(_, dateString) => onUpdateField(day.id, "date", dateString)}
-  style={{ width: 150, fontWeight: 700 }}
-/>
-          </div>
+        <div className="flex items-center gap-2">
+          <DatePicker
+            size="small"
+            value={day.date ? dayjs(day.date, DATE_FORMAT) : null}
+            format={DATE_FORMAT}
+            placeholder="Select date"
+            allowClear={false}
+            onChange={(_, dateString) => onUpdateField(day.id, "date", dateString)}
+            style={{ width: 130, fontWeight: 600, fontSize: 12 }}
+          />
           <input
             type="text"
             value={day.label}
             onChange={(e) => onUpdateField(day.id, "label", e.target.value)}
             placeholder="Scope label"
-            className="bg-slate-100 text-slate-500 text-[11px] px-2.5 py-1.5 rounded-full border-none w-[170px] font-medium"
+            className="bg-slate-100 text-slate-500 text-[11px] px-2 h-6 rounded-full border-none w-[140px] font-medium"
           />
         </div>
 
         <div className="flex items-center gap-2">
-  <div className="flex items-center gap-2 cursor-pointer" onClick={() => onToggle(day.id)}>
-    <div className="text-right">
-      <div className="text-[15px] font-bold text-blue-700">{money(total)}</div>
-    </div>
-    <ChevronDown size={16} className={`text-slate-500 transition-transform ${day.open ? "" : "-rotate-90"}`} />
-  </div>
-  <button
-    onClick={() => onDeleteDay(day)}
-    className="text-slate-400 hover:text-red-600 p-1"
-    title="Delete Date Scope"
-  >
-    <Trash2 size={15} />
-  </button>
-</div>
+          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onToggle(day.id)}>
+            <div className="text-[13px] font-bold text-blue-700">{money(total)}</div>
+            <ChevronDown size={14} className={`text-slate-500 transition-transform ${day.open ? "" : "-rotate-90"}`} />
+          </div>
+          <button
+            onClick={() => onDeleteDay(day)}
+            className="text-slate-400 hover:text-red-600 p-1"
+            title="Delete Date Scope"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
 
       {day.open && (
-        <div className="mt-3">
+        <div className="mt-2">
           <div className="overflow-x-auto scroll-visible">
-          <table className="w-full border-collapse text-[13px]">
-            <thead>
-              <tr>
-                {["PARTICULARS NAME", "QUANTITY", "RATE", "TOTAL AMOUNT", ""].map((h) => (
-                  <th key={h} className="text-left text-slate-500 font-semibold text-[11px] py-2 px-1.5 border-b border-slate-200">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {day.rows.map((r) => (
-                <tr key={r.id}>
-                  <td className="py-2 px-1.5 border-b border-slate-200">
-                    <input
-                      className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px]"
-                      value={r.name}
-                      onChange={(e) => onUpdateRow(day.id, r.id, "name", e.target.value)}
-                    />
-                  </td>
-                  <td className="py-2 px-1.5 border-b border-slate-200">
-                    <input
-                      type="number"
-                      className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px] text-center"
-                      value={r.qty}
-                      onChange={(e) => onUpdateRow(day.id, r.id, "qty", Number(e.target.value))}
-                    />
-                  </td>
-                  <td className="py-2 px-1.5 border-b border-slate-200">
-                    <input
-                      type="number"
-                      className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px] text-right"
-                      value={r.rate}
-                      onChange={(e) => onUpdateRow(day.id, r.id, "rate", Number(e.target.value))}
-                    />
-                  </td>
-                  <td className="py-2 px-1.5 border-b border-slate-200 text-right font-medium">
-                    {money(r.qty * r.rate)}
-                  </td>
-                  <td className="py-2 px-1.5 border-b border-slate-200 text-center">
-<button onClick={() => onDeleteRow(day.id, r.id)} className="text-slate-400 hover:text-red-600">  <Trash2 size={14} />
-</button>
-                  </td>
+            <table className="w-full border-collapse text-[12px] table-fixed min-w-[600px]">
+              <colgroup>
+                <col />
+                <col className="w-[110px]" />
+                <col className="w-[130px]" />
+                <col className="w-[140px]" />
+                <col className="w-[36px]" />
+              </colgroup>
+              <thead>
+                <tr>
+                  {["PARTICULARS NAME", "QUANTITY", "RATE", "TOTAL AMOUNT", ""].map((h) => (
+                    <th
+                      key={h}
+                      className={`text-slate-500 font-semibold text-[10.5px] py-1 px-1.5 border-b border-slate-200 ${
+                        h === "RATE" || h === "TOTAL AMOUNT" ? "text-right" : "text-left"
+                      }`}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {day.rows.map((r) => (
+                  <tr key={r.id} className="h-8">
+                    <td className="py-1 px-1.5 border-b border-slate-100">
+                      <input
+                        className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none"
+                        value={r.name}
+                        onChange={(e) => onUpdateRow(day.id, r.id, "name", e.target.value)}
+                      />
+                    </td>
+                    <td className="py-1 px-1.5 border-b border-slate-100">
+                      <input
+                        type="number"
+                        className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none text-center"
+                        value={r.qty}
+                        onChange={(e) => onUpdateRow(day.id, r.id, "qty", Number(e.target.value))}
+                      />
+                    </td>
+                    <td className="py-1 px-1.5 border-b border-slate-100">
+                      <input
+                        type="number"
+                        className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none text-right"
+                        value={r.rate}
+                        onChange={(e) => onUpdateRow(day.id, r.id, "rate", Number(e.target.value))}
+                      />
+                    </td>
+                    <td className="py-1 px-1.5 border-b border-slate-100 text-right font-medium leading-none">
+                      {money(r.qty * r.rate)}
+                    </td>
+                    <td className="py-1 px-1.5 border-b border-slate-100 text-center">
+                      <button onClick={() => onDeleteRow(day.id, r.id)} className="text-slate-400 hover:text-red-600 align-middle">
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <button onClick={() => onAddRow(day.id)} className="text-primary text-[13px] font-semibold py-2 px-1">
+
+          <button onClick={() => onAddRow(day.id)} className="text-primary text-[12px] font-semibold py-1 px-1">
             + Add Particulars Row
           </button>
-          <div className="flex justify-between items-center text-[12.5px] mt-2">
-<span className="text-slate-500 font-semibold">{day.date || "Select date"} — Total:</span>            <span className="text-slate-500">
-              Total Quantity: <span className="font-semibold text-slate-700">{totalQty}</span>
-              &nbsp;&nbsp; Total Rate: <span className="font-semibold text-slate-700">{money(totalRate)}</span>
-              &nbsp;&nbsp; Total Amount: <span className="font-bold text-blue-700">{money(total)}</span>
+
+          <div className="flex justify-between items-center text-[11px] mt-1">
+            {/* <span className="text-slate-500 font-semibold">{day.date || "Select date"} — Total:</span> */}
+            <span className="text-slate-500">
+              Qty: <span className="font-semibold text-slate-700">{totalQty}</span>
+              &nbsp;&nbsp; Rate: <span className="font-semibold text-slate-700">{money(totalRate)}</span>
+              &nbsp;&nbsp; Amount: <span className="font-bold text-blue-700">{money(total)}</span>
             </span>
           </div>
         </div>
@@ -607,7 +619,7 @@ const userId = localStorage.getItem("userId");
    const [estimates, setEstimates] = useState([]);
   const [days, setDays] = useState(initialDays);
   const [notes, setNotes] = useState("");
-const [openSections, setOpenSections] = useState({ s1: false, s2: false, s3: false, s4: false });
+const [openSections, setOpenSections] = useState({ s1: false, s2: false, s3: false, s4: true });
 const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
 
@@ -1061,7 +1073,8 @@ const buildOtherModules = () =>
     items: rowsToItems(rowsForApi(day)),
   }));
 
-  const buildPayload = () => {
+  const buildPayload = (overrides = {}) => {
+  const extra = overrides.extraGroup ?? extraGroup;
 
     return {
       billingname: billingName,
@@ -1092,14 +1105,14 @@ const buildOtherModules = () =>
           payments: paymentsFinal.map(toApiPayment),
         },
         {
-          id: extraGroup.id || null,
-          groupType: GROUP_TYPE_EXTRA,
-          discountPercent: extraGroup.discountPercent,
-          gstPercent: extraGroup.gstPercent,
-          tdsPercent: extraGroup.tdsPercent,
-          modules: extraGroup.modules,
-          payments: extraGroup.payments,
-        },
+        id: extra.id || null,
+        groupType: GROUP_TYPE_EXTRA,
+        discountPercent: extra.discountPercent,
+        gstPercent: extra.gstPercent,
+        tdsPercent: extra.tdsPercent,
+        modules: extra.modules,
+        payments: extra.payments,
+      },
       ],
     };
   };
@@ -1145,14 +1158,13 @@ const totalPaidFinal = useApi
   : paymentsFinal.reduce((s, p) => s + Number(p.amount || 0), 0);
 const remainingFinal = otherGrand - totalPaidFinal;
 
-  // ---- Save / Update the quotation itself ----
- const handleSaveQuotation = async () => {
-    if (!eventId) {
-       console.error("Event ID missing.");
-      return;
-    }
+const handleSaveQuotation = async (overrides = {}) => {
+  if (!eventId) {
+    console.error("Event ID missing.");
+    return;
+  }
 
-  const payload = buildPayload();
+  const payload = buildPayload(overrides);
     console.log("[handleSaveQuotation] full payload sent to API:", JSON.stringify(payload, null, 2));
 
     setSaving(true);
@@ -1264,14 +1276,17 @@ const handleToggleLock = async () => {
   };
   return (
     <div className="min-h-screen font-sans text-slate-800">
-      <ExtraQuotationModal
-        open={isExtraQuotationOpen}
-        onClose={() => setIsExtraQuotationOpen(false)}
-        group={extraGroup}
-        sectionLabel={eventNameDisplay}
-        onSave={setExtraGroup}
+     <ExtraQuotationModal
+  open={isExtraQuotationOpen}
+  onClose={() => setIsExtraQuotationOpen(false)}
+  group={extraGroup}
+  sectionLabel={eventNameDisplay}
+  onSave={async (group) => {
+    setExtraGroup(group);
+    return await handleSaveQuotation({ extraGroup: group });
+  }}
   onServerDelete={handleExtraServerDelete}
-      />
+/>
       <SetupModal
         open={isSetupOpen}
         onClose={() => setIsSetupOpen(false)}

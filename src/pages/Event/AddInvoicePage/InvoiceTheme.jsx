@@ -295,7 +295,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
               withOutBg: config.withOutBg === 0,
               isAllItemTogether: config.isAllItemTogether === 0,
 isShowRoomDetails: canShowRoomDetails && config.isShowRoomDetails === 0,  
-isShowFunctionDetails: config.isShowFunctionDetails === 0,
+isShowFunctionDetails: config.isShowFunctionDetails === 1,
             isShowFunctionImg: config.isShowFunctionImg == 0,
               withVendor: config.withVendor === 0,
               isNotes: config.isNotes === 0,
@@ -700,7 +700,7 @@ const getCompanyAuthInfo = () => {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobileNumber, partyName }) => {
+const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobileNumber, partyName ,invoiceId = null, }) => {
   const [selectedThemes, setSelectedThemes] = useState({}); // { [moduleId]: themeId }
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -911,6 +911,7 @@ const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobi
           backOfficeId, 
             showLastPage,
             isSignature,
+isinvoice === 0 ? (invoiceId ?? 0) : 0,
         ),
       ),
     );
