@@ -287,7 +287,7 @@ const buildInvoiceChangeSummary = (prevSnapshot, current) => {
   const [bankDetails, setBankDetails] = useState([]);
   const [payments, setPayments] = useState([]);
   const [footerData, setFooterData] = useState({
-    notes: "Thanks for your Business...",
+    notes: "",
     gst: 0,
     cgst: 0,
     sgst: 0,
@@ -1054,6 +1054,16 @@ isDiscountPercent: inferredIsPercent,
   };
 
  const handleInputChange = (index, field, value) => {
+    const row = rows[index];
+
+  // function name / date can only be changed with access (custom rows are always editable)
+  if (
+    (field === "name" || field === "date") &&
+    !row?.isCustom &&
+    !canAccessgeneratemultipleinvoice
+  ) {
+    return;
+  }
   setIsEdited(true);
   const updatedRows = rows.map((row, i) =>
     i === index ? { ...row, [field]: value } : row,
@@ -1112,6 +1122,10 @@ isDiscountPercent: inferredIsPercent,
 };
 
  const handleDeleteRow = async (key) => {
+    if (!canAccessgeneratemultipleinvoice) {
+    message.warning("You don't have permission to delete functions");
+    return;
+  }
   const row = rows.find((r) => r.key === key);
 
   // saved item (has a real id) → delete on the server first
@@ -1234,6 +1248,13 @@ const extractSavedId = (res) => {
   if (typeof d === "number" || typeof d === "string") return d; // API returns just the id
   return res?.data?.id ?? null;
 };
+// 👇 add this right below it
+const getApiError = (err, fallback) =>
+  err?.response?.data?.msg ||
+  err?.response?.data?.message ||
+  err?.response?.data?.error ||
+  err?.message ||
+  fallback;
   const handleSaveInvoice = async (silent = false) => {
     if (isAdditional && !groupId) {
   message.warning("Please save the main invoice first");
@@ -1410,6 +1431,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
 
       const invId = invoiceData?.id || -1;
       const response = await UpdateInvoice(invId, payload);
+      console.log("UpdateInvoice response:", response?.data);  
 
        if (response?.data?.success === true) {
         const isUpdate = !!invoiceData?.id;
@@ -1479,42 +1501,52 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
           prevRows.map((row) => ({ ...row, isNewRow: false, isCustom: true })),
         );
 
-        if (isAdditional) {
-          const savedId = extractSavedId(response) || invoiceData?.id;
+        // 1) show the message from the API right away (so it always appears)
+        message.success(
+          response?.data?.msg ||
+            response?.data?.message ||
+            "Invoice saved successfully!",
+        );
+         // 2) reload from the GET API
+        try {
+          if (isAdditional) {
+            let targetId = extractSavedId(response) || invoiceData?.id;
 
-          if (savedId) {
-            // keep id in state immediately, then refresh from the GET API
-            setInvoiceData((prev) => ({ ...prev, id: savedId }));
-            await fetchInvoiceData(savedId, true);
-          } else {
-            // fallback: API gave no id, so reload the list and take the newest additional invoice
-            const res = await GetInvoiceByEventId(eventId);
-            const list = res?.data?.data?.["Event Invoice Details"] || [];
-            const latest = list
-              .filter((i) => !i.isMainInvoice)
-              .sort((a, b) => b.id - a.id)[0];
-
-            if (latest) {
-              setInvoiceData((prev) => ({ ...prev, id: latest.id }));
-              await fetchInvoiceData(latest.id, true);
-            } else {
-              message.warning("Saved, but could not reload the invoice");
+            if (!targetId) {
+              const res = await GetInvoiceByEventId(eventId);
+              const list = res?.data?.data?.["Event Invoice Details"] || [];
+              targetId = list
+                .filter((i) => !i.isMainInvoice)
+                .sort((a, b) => b.id - a.id)[0]?.id;
             }
-         }
-          return true;
-         } else {
-          // main invoice
-          await fetchInvoiceData(null, true);
-          return true;
+
+            if (targetId) {
+              setInvoiceData((prev) => ({ ...prev, id: targetId }));
+              await fetchInvoiceData(targetId, true);
+            } else {
+              console.warn("Saved, but the new invoice is not in the GET list");
+            }
+          } else {
+            await fetchInvoiceData(null, true);
+          }
+        } catch (reloadErr) {
+          console.error("Reload after save failed:", reloadErr);
         }
+
+        return true;
       } else {
-        message.error(response?.data?.msg || "Failed to save invoice");
-        return false; 
+        // API replied success:false → show its message
+        message.error(
+          response?.data?.msg ||
+            response?.data?.message ||
+            "Failed to save invoice",
+        );
+        return false;
       }
     } catch (error) {
       console.error("Full error:", error);
-      message.error("Something went wrong while saving");
-       return false;   
+      message.error(getApiError(error, "Something went wrong while saving"));
+      return false;
     } finally {
       setIsSaving(false);
       setLoadingPdf(false);
@@ -2108,6 +2140,8 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
   isOfferRateUser={isOfferRateUser}
   onRateBlur={handleRateBlur}
   hideTaxColumns={hideTaxColumns}
+  canEditFunction={canAccessgeneratemultipleinvoice}     // 👈 new
+  canDeleteFunction={canAccessgeneratemultipleinvoice}
 />
             {/* Advance Payments Section */}
             <div className="border rounded-xl mb-5 p-4">
