@@ -30,10 +30,29 @@ import { useModuleAccess } from "../../../hooks/useModuleAccess";
 import { WhatsAppPdf } from "../../../services/apiServices";
 import dayjs from "dayjs";
 
-const WhatsAppModal = ({ isOpen, onClose, onSend, mobileNumber, mode = "api" }) => {
+
+const normalizeMobile = (v) => String(v || "").replace(/\D/g, "").slice(-10);
+
+const WhatsAppModal = ({
+  isOpen,
+  onClose,
+  onSend,
+  mobileNumber,
+  defaultName = "",
+  defaultMobile = "",
+  mode = "api",
+}) => {
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [error, setError] = useState("");
+
+  // Prefill with the client's details each time the modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    setName(defaultName || "");
+    setMobile(normalizeMobile(defaultMobile));
+    setError("");
+  }, [isOpen, defaultName, defaultMobile]);
 
   const handleSend = () => {
     const cleaned = mobile.replace(/\D/g, "");
@@ -379,7 +398,8 @@ const MenuReport = ({
   customPackageTemplateMasterId,
    functionName,        
   functionDateTime,   
-  venueName,       
+  venueName, 
+  partyMobile,      
 }) => {
   const pdfPlugin = defaultLayoutPlugin();
   const userId = localStorage.getItem("userId");
@@ -1406,6 +1426,7 @@ setShortMenuSelectedItems([]);
 const handleWhatsAppShare = (mode = "api") => {
   setWhatsAppSendMode(mode);
 
+ 
   if (selectedAgency.length === 1) {
     const agency = agencies.find((a) => a.id === selectedAgency[0]);
     if (agency?.contactNo) {
@@ -1418,6 +1439,15 @@ const handleWhatsAppShare = (mode = "api") => {
       return;
     }
   }
+
+
+  const clientMobile = normalizeMobile(partyMobile);
+  if (mode === "api" && clientMobile.length === 10) {
+    handleWhatsAppSend(`+91${clientMobile}`, eventName || "");
+    return;
+  }
+
+  // 3) Web mode, or no client number on the event -> modal (prefilled with client details)
   setShowWhatsAppModal(true);
 };
 
@@ -1481,6 +1511,8 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
   onClose={() => setShowWhatsAppModal(false)}
   onSend={whatsAppSendMode === "web" ? openWebWhatsApp : handleWhatsAppSend}
   mobileNumber={mobileNumber}
+  defaultName={eventName}          
+  defaultMobile={partyMobile}
   mode={whatsAppSendMode}
 />
       <CustomModal

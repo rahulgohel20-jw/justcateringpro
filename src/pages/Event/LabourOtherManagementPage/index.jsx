@@ -2032,7 +2032,7 @@ className="flex gap-3 border rounded overflow-x-auto py-2 px-10 text-gray-500 bg
                         defaultMessage="Checklist"
                       />
                     </button>
-                    {canAccessAccounting && (
+                    {/* {canAccessAccounting && (
                       <button
                         onClick={() => setAllLabour(true)}
                         className="btn btn-primary btn-sm h-10 flex-1 sm:flex-initial"
@@ -2048,7 +2048,7 @@ className="flex gap-3 border rounded overflow-x-auto py-2 px-10 text-gray-500 bg
                           defaultMessage="Pay All Labour"
                         />
                       </button>
-                    )}
+                    )} */}
                   </div>
                 </div>
               </div>
