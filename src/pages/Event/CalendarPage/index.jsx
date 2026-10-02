@@ -150,14 +150,16 @@ const { isHallAllowed } = useBanquetPermission()
       return "#E75480";
     }
 
-    switch (statusCode) {
-      case 0:
-        return "#3788d8";
-      case 1:
-        return "rgba(40, 167, 69, 1)";
-      default:
-        return "#6b7280";
-    }
+   switch (statusCode) {
+  case 0:
+    return "#3788d8";
+  case 1:
+    return "rgba(40, 167, 69, 1)";
+  case 4:
+    return "#FDE68A";
+  default:
+    return "#6b7280";
+}
   };
 
   const splitDateTime = (dateTimeString) => {
@@ -362,6 +364,7 @@ const FetchEventdetails = (
               remarksGujarati: item.remarksGujarati || "",
               remarksHindi: item.remarksHindi || "",
               color: color,
+              textColor: item.status === 4 ? "#000000" : "#ffffff",
               allDay: true,
               createdAt: item.createdAt,
             };
@@ -480,6 +483,20 @@ setRMenuCount(rMenuTotal);
                 ({statusCounts[2] || 0})
               </span>
             </div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 rounded-lg">
+  <span
+    className="w-3 h-3 rounded-full"
+    style={{ backgroundColor: "#FDE68A" }}
+  ></span>
+
+  <span className="text-xs font-medium text-gray-700">
+    {intl.formatMessage({
+      id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CANCEL",
+      defaultMessage: "Completed Till Agency",
+    })}
+    ({statusCounts[4] || 0})
+  </span>
+</div>
           </div>
 
           {/* Desktop: Horizontal Pills with Create Button */}
@@ -520,6 +537,16 @@ setRMenuCount(rMenuTotal);
       })}
       {" "}({statusCounts[2] || 0})
     </span>
+  <span
+  className="text-sm font-medium rounded-lg px-4 py-2"
+  style={{ backgroundColor: "#FDE68A", color: "#000" }}
+>
+  {intl.formatMessage({
+    id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_COMPLETED_TILL_AGENCY",
+    defaultMessage: "Completed Till Agency",
+  })}
+  {" "}({statusCounts[4] || 0})
+</span>
   </div>
 
             <div className="flex flex-wrap items-center gap-2">
