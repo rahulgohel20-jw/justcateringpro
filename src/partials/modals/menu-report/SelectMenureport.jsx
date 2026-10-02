@@ -841,6 +841,7 @@ if (mode === "package" && String(userId) === "359") {
         mappingId={mappingId}
         selectedTemplateId={selectedTemplateId}
         eventName={eventName}
+        partyMobile={PartyNumber} 
         selectedTemplateName={selectedTemplateName}
         PartyNumber={PartyNumber}
         isNamePlateTheme={isNamePlateTheme}
