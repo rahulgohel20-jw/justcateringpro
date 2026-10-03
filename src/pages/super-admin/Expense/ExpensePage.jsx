@@ -41,6 +41,8 @@ import {
   buildColumns,
 } from "./expenseConstants";
 import { FormattedMessage } from "react-intl";
+import { useMemo } from "react"; // add to the existing react import
+import { useExpensePermission } from "@/hooks/useExpensePermission";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 export const formatDate = (raw) => {
@@ -468,7 +470,7 @@ const EmptyState = () => (
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ExpensePage = () => {
   const permExpense = usePermission("Expense");
-  const userId = localStorage.getItem("mainId");
+  const userId = localStorage.getItem("userId"); // if expense bn thai toh mainId kri devanu -message by : rahul :)
   const numericUserId = Number(localStorage.getItem("mainId") || userId);
   const [allTabs, setAllTabs] = useState([]);
   const [tabsLoading, setTabsLoading] = useState(true);
@@ -523,6 +525,9 @@ const [showReportDatePicker, setShowReportDatePicker] = useState(false);
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
 };
+
+const { isExpenseAllowed, filterTabs } = useExpensePermission();
+const visibleTabs = useMemo(() => filterTabs(allTabs), [allTabs, filterTabs]);
 
 const openReportPanel = (row) => {
     setReportRow(row);
@@ -665,6 +670,7 @@ useEffect(() => {
       setTabsError(null);
       try {
         const res = await GETAllByuserIdincomeExpensetype(userId, "expense");
+        console.log("TYPES RES", userId, res?.data);
         if (cancelled) return;
         const apiTabs = Array.isArray(res?.data?.data)
           ? res.data.data.map(mapApiTypeToTab)
@@ -1124,7 +1130,9 @@ const handleReport = () =>
     activeTab === "all"
       ? (allExpenseSummary?.totalUnPaidAmount ?? 0)
       : summary.remaing_expense;
-  const expenseGroups = allExpenseSummary?.expenses ?? [];
+  const expenseGroups = (allExpenseSummary?.expenses ?? []).filter((g) =>
+  isExpenseAllowed(g.typeId, g.typeName),
+);
   const tripExpenses = allExpenseSummary?.tripExpenses ?? [];
   const filteredData = data.filter(
     (row) =>
@@ -1419,7 +1427,7 @@ const handleReport = () =>
       <div className="flex items-center gap-2 mb-5">
         <div className="flex-1">
           <TabBar
-            allTabs={allTabs}
+            allTabs={visibleTabs}
             activeTab={activeTab ?? ""}
             onSelect={(tab) => {
               setActiveTab(tab);
@@ -1427,7 +1435,7 @@ const handleReport = () =>
             }}
           />
         </div>
-        {[1, 2].includes(Number(roleId)) && (
+        
           <button
             type="button"
             onClick={() => setAddTypeOpen(true)}
@@ -1436,7 +1444,7 @@ const handleReport = () =>
           >
             <IconPlus />
           </button>
-        )}
+        
       </div>
 
       {tabsError && (
@@ -1450,7 +1458,7 @@ const handleReport = () =>
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-gray-900">
-                <FormattedMessage id="COMMON.ALL_EXPENSES" defaultMessage="All Expenses" />All Expenses
+                <FormattedMessage id="COMMON.ALL_EXPENSES" defaultMessage="All Expenses" />
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
                 {startDate} → {closeDate}
