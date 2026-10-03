@@ -3131,26 +3131,17 @@ rows.forEach((r, i) => {
     setIsSelectMenuReport(true);
   }
 
-  const openSummaryItemModalchefoutside = async () => {
-    const functionId = getEventFunctionId(activeFunction);
-    const res = await MenuAllocationTypeSummary(functionId, eventId, "Chef");
-    setchefsummary(res.data.data["Menu Allocation Details"] || []);
-    setIsModalOpen(true);
-  };
+ const openSummaryItemModalchefoutside = () => {
+  setIsModalOpen(true);
+};
 
-  const openSummaryItemModalOustsideAgency = async () => {
-    const functionId = getEventFunctionId(activeFunction);
-    const res = await MenuAllocationTypeSummary(functionId, eventId, "Outside");
-    setoutsidesummary(res.data.data["Menu Allocation Details"] || []);
-    setIsOutsideAgencyModalOpen(true);
-  };
+ const openSummaryItemModalOustsideAgency = () => {
+  setIsOutsideAgencyModalOpen(true);
+};
 
-  const openSummaryItemModalInHouseCook = async () => {
-    const functionId = getEventFunctionId(activeFunction);
-    const res = await MenuAllocationTypeSummary(functionId, eventId, "Inside");
-    setinsidesummary(res?.data?.data["Menu Allocation Details"] || []);
-    setIsInHouseCookModalOpen(true);
-  };
+ const openSummaryItemModalInHouseCook = () => {
+  setIsInHouseCookModalOpen(true);
+};
 
   const handleSyncRawMaterial = async () => {
   if (syncCooldownRef.current) return;
