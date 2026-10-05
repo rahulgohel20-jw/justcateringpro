@@ -169,27 +169,23 @@ const [alsoSaveAsFunction, setAlsoSaveAsFunction] =
       // FUNCTION API
       // ONLY USER 356 + TOGGLE ON
       // ----------------------------------------
-      if (
-        String(Id) === "356" &&
-        alsoSaveAsFunction
-      ) {
-        const functionPayload = {
-          nameEnglish: formData.nameEnglish,
-          nameGujarati: formData.nameGujarati,
-          nameHindi: formData.nameHindi,
-          startTime: formData.startTime
-            ? formData.startTime.format("HH:mm A")
-            : "",
-          endTime: formData.endTime
-            ? formData.endTime.format("HH:mm A")
-            : "",
-          userId: Id,
-        };
+     if (String(Id) === "356" && alsoSaveAsFunction) {
+  const functionPayload = new FormData();
+  functionPayload.append("nameEnglish", formData.nameEnglish);
+  functionPayload.append("nameGujarati", formData.nameGujarati);
+  functionPayload.append("nameHindi", formData.nameHindi);
+  functionPayload.append(
+    "startTime",
+    formData.startTime ? formData.startTime.format("HH:mm A") : "",
+  );
+  functionPayload.append(
+    "endTime",
+    formData.endTime ? formData.endTime.format("HH:mm A") : "",
+  );
+  functionPayload.append("userId", Id);
 
-        apiCalls.push(
-          AddFunction(functionPayload)
-        );
-      }
+  apiCalls.push(AddFunction(functionPayload));
+}
 
       // ----------------------------------------
       // Execute APIs
