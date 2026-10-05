@@ -80,7 +80,7 @@ const [loadingEvents, setLoadingEvents] = useState(false);
 
   let Id = localStorage.getItem("userId");
   const normalizedLocalUserId = Number(Id ?? 0);
-
+const isAgencyUser = normalizedLocalUserId === 376 ;
   const isFunctionDateUser = (eventItem) => {
     const eventOwnerId = Number(
       eventItem?.userId ?? eventItem?.managerId ?? eventItem?.createdBy ?? 0,
@@ -374,13 +374,13 @@ const FetchEventdetails = (
           }
         })
         .filter((item) => item !== null)
-        .filter((item) => {
-          if (!canAccessBanquet) return true;           // non-banquet users see all events
-          return isHallAllowed(item.banquetHallId || 0); // banquet users: check hall rights
-        })
-        .filter((item) => {
-          if (isInquiryVisible) return true;   // allowed to see inquiries
-          return item.statusCode !== 0;        // status 0 = Inquiry, hide it otherwise
+      .filter((item) => {
+  if (isInquiryVisible) return true;
+  return item.statusCode !== 0;
+})
+.filter((item) => {
+  if (isAgencyUser) return true;       // only user 233 sees "Completed Till Agency"
+  return item.statusCode !== 4;     // status 0 = Inquiry, hide it otherwise
         });
 
       setData(mappedEvents);
@@ -468,16 +468,20 @@ const legendItems = [
     bg: "rgba(191, 34, 37, 1)",
     color: "#fff",
   },
-  {
-    key: "agency",
-    label: intl.formatMessage({
-      id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_COMPLETED_TILL_AGENCY",
-      defaultMessage: "Completed Till Agency",
-    }),
-    count: statusCounts[4] || 0,
-    bg: "#FDE68A",
-    color: "#000",
-  },
+...(isAgencyUser
+    ? [
+        {
+          key: "agency",
+          label: intl.formatMessage({
+            id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_COMPLETED_TILL_AGENCY",
+            defaultMessage: "Completed Till Agency",
+          }),
+          count: statusCounts[4] || 0,
+          bg: "#FDE68A",
+          color: "#000",
+        },
+      ]
+    : []),
 ];
 
   return (
@@ -546,20 +550,21 @@ const legendItems = [
                 ({statusCounts[2] || 0})
               </span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 rounded-lg">
-  <span
-    className="w-3 h-3 rounded-full"
-    style={{ backgroundColor: "#FDE68A" }}
-  ></span>
-
-  <span className="text-xs font-medium text-gray-700">
-    {intl.formatMessage({
-      id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CANCEL",
-      defaultMessage: "Completed Till Agency",
-    })}
-    ({statusCounts[4] || 0})
-  </span>
-</div>
+           {isAgencyUser && (
+  <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 rounded-lg">
+    <span
+      className="w-3 h-3 rounded-full"
+      style={{ backgroundColor: "#FDE68A" }}
+    ></span>
+    <span className="text-xs font-medium text-gray-700">
+      {intl.formatMessage({
+        id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CANCEL",
+        defaultMessage: "Completed Till Agency",
+      })}
+      ({statusCounts[4] || 0})
+    </span>
+  </div>
+)}
           </div>
 
           {/* Desktop: Horizontal Pills with Create Button */}
@@ -590,7 +595,9 @@ const legendItems = [
       <option value={1}>Confirm</option>
       <option value={2}>Cancel</option>
       <option value={3}>Tentative</option>
-      <option value={4}>Completed Till Agency</option>
+      {isAgencyUser && (
+  <option value={4}>Completed Till Agency</option>
+)}
     </select>
 
     {canAccessBanquet && (

@@ -84,7 +84,9 @@ const hideTaxColumns = HIDE_TAX_COLUMNS_USER_IDS.includes(String(invoiceUserId))
     const isVatUser = VAT_USER.includes(String(invoiceUserId));
   
 const isTaxUser = TAX_USER.includes(String(invoiceUserId));
-  
+  const REMAINING_USER_IDS = ["233"];
+const showRemaining = REMAINING_USER_IDS.includes(String(invoiceUserId));
+const [savedRemaining, setSavedRemaining] = useState(null);
   const getUserRoleId = () => {
   try {
     const authStorage = localStorage.getItem("auth-storage");
@@ -384,7 +386,7 @@ const initialInvoiceSnapshotRef = useRef(null);
   (parseFloat(serviceTaxTotalAmount) || 0) +
   (parseFloat(vatTaxTotalAmount) || 0);
 
-const finalGrandTotal = footerData.grandTotal || 0;
+const finalGrandTotal = (footerData.grandTotal || 0) + extraTaxTotal;
 const finalRemainingAmount = finalGrandTotal - totalAdvancePaid;
 
   useEffect(() => {
@@ -678,7 +680,15 @@ isExtraCharges: item.isExtraCharges === true,
 
       setRows(mappedRows);
       setOriginalRows(mappedRows); 
-
+if (showRemaining) {
+  const qRemaining =
+    (parseFloat(qInfo.chequePayment) || 0) +
+    (parseFloat(qInfo.cgstAmnt) || 0) +
+    (parseFloat(qInfo.cgstAmntDecor) || 0) +
+    (parseFloat(qInfo.sgstAmnt) || 0) +
+    (parseFloat(qInfo.sgstAmntDecor) || 0);
+  setSavedRemaining(qRemaining);
+}
      const prevExtraTax =
   (parseFloat(qInfo.foodTaxTotalAmount) || 0) +
   (parseFloat(qInfo.serviceTaxTotalAmount) || 0) +
@@ -845,6 +855,11 @@ if (!silent) setLoading(true);
         }
 
         setInvoiceData(invoiceDetails);
+       if (showRemaining) {
+  setSavedRemaining(
+    parseFloat(response?.data?.data?.remainingAmnt) || 0,
+  );
+} 
         if (!isAdditional && invoiceDetails.invoiceGroupId) {
   onGroupIdChange?.(invoiceDetails.invoiceGroupId);
 }
@@ -1600,20 +1615,34 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
     <Fragment>
       <style>{responsiveStyles}</style>
       <Container>
-        <div className="gap-2 mb-3">
+      <div className="flex items-center justify-between mb-3">
+  {/* Left */}
   {!isAdditional && (
-    <Breadcrumbs
-      items={[
-        {
-          title: (
-            <FormattedMessage
-              id="INVOICE.TAX_INVOICE"
-              defaultMessage="Tax Invoice"
-            />
-          ),
-        },
-      ]}
-    />
+    <h2 className="text-xl font-semibold text-gray-900">
+      <FormattedMessage
+        id="INVOICE.TAX_INVOICE"
+        defaultMessage="Tax Invoice"
+      />
+    </h2>
+  )}
+
+  {/* Right */}
+  {showRemaining && !isAdditional && (
+    <div className="flex justify-end">
+      <div className="inline-flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-2 shadow-sm">
+        <span className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
+          Remaining Amount
+        </span>
+
+        <span className="text-xl font-bold text-red-600">
+          ₹
+          {Number(savedRemaining ?? 0).toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </span>
+      </div>
+    </div>
   )}
 </div>
 
@@ -2132,6 +2161,25 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
     </div>
   </div>
 </div> )}
+{/* {showRemaining && !isAdditional && (
+  <div className="flex justify-end mb-3">
+    <div className="inline-flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-2 shadow-sm">
+     
+      <span className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
+        Remaining Amount
+      </span>
+      <span className="text-xl font-bold text-red-600">
+        ₹{Number(savedRemaining ?? 0).toLocaleString("en-IN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}
+      </span>
+    </div>
+  </div>
+)} */}
+
+
+
             <ItemTable
   rows={rows}
   onInputChange={handleInputChange}
@@ -2142,6 +2190,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
   hideTaxColumns={hideTaxColumns}
   canEditFunction={canAccessgeneratemultipleinvoice}     // 👈 new
   canDeleteFunction={canAccessgeneratemultipleinvoice}
+  remainingAmount={showRemaining && !isAdditional ? (savedRemaining ?? 0) : null}
 />
             {/* Advance Payments Section */}
             <div className="border rounded-xl mb-5 p-4">
@@ -2410,6 +2459,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
 
             <InvoiceFooter
   invoiceData={invoiceData}
+remainingAmount={showRemaining ? (savedRemaining ?? finalRemainingAmount) : finalRemainingAmount}  totalAdvance={totalAdvancePaid}
   rows={rows}
   permissionInvoice={permissionInvoice}
   footerData={footerData}
