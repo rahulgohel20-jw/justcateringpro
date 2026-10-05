@@ -426,7 +426,8 @@ const ItemRow = ({
 }) => {
 
   const isDeleted = itemStatus === "CANCELLED"; // ← locked state
-
+const isAddonHighlightUser = String(localStorage.getItem("userId")) === "757";
+const highlightAddon = isAddonHighlightUser && !!isItemAddons && !isDeleted;
 const [showSubItemModal, setShowSubItemModal] = useState(false);
  const [showHeadingModal, setShowHeadingModal] = useState(false); 
 const [showItemSpaceModal, setShowItemSpaceModal] = useState(false);
@@ -536,8 +537,12 @@ useEffect(() => {
             }}
             {...provItem.draggableProps}
 className={`relative p-2 rounded-lg transition-shadow ${
-  isOverLimit ? "bg-yellow-100 border-2 border-yellow-200" : getStatusClasses(itemStatus, "item")
-} ${snap.isDragging ? "shadow-lg ring-2 ring-blue-400" : ""}`}          >
+  isOverLimit
+    ? "bg-yellow-100 border-2 border-yellow-200"
+    : highlightAddon
+      ? "bg-yellow-100 border-2 border-yellow-300"
+      : getStatusClasses(itemStatus, "item")
+} ${snap.isDragging ? "shadow-lg ring-2 ring-blue-400" : ""}`}       >
             {/* TOP: drag handle + image + name + badges — full width, nothing competing for space */}
             <div
               {...(isDeleted ? {} : provItem.dragHandleProps)}
@@ -582,7 +587,15 @@ className={`relative p-2 rounded-lg transition-shadow ${
 )}
               <div className="flex flex-col min-w-0 flex-1">
                 <span
-                  className={`text-sm font-semibold ${itemStatus === "CANCELLED" ? "line-through text-gray-400" : isItemAddons ? "text-primary" : "text-gray-900"}`}
+                  className={`text-sm font-semibold ${
+  itemStatus === "CANCELLED"
+    ? "line-through text-gray-400"
+    : highlightAddon
+      ? "text-yellow-800"
+      : isItemAddons
+        ? "text-primary"
+        : "text-gray-900"
+}`}
                 >
                   {sequenceNumber}. {displayItemName}
                 </span>
@@ -590,11 +603,19 @@ className={`relative p-2 rounded-lg transition-shadow ${
                 {/* Badges — wrap freely on their own line, never push the name around */}
                 {(isItemAddons || item.itemSpace > 0 || subItem || item.itemHeading || isDeleted || item.vendorName) && (
                   <div className="flex flex-wrap items-center gap-1 mt-1">
-                    {isItemAddons && (
-                      <span className="text-[9px] font-semibold bg-blue-100 text-primary border border-blue-300 px-1.5 py-0.5 rounded-full leading-none">
-                        Add-on
-                      </span>
-                    )}
+                   
+                     {isItemAddons && (
+  <span
+    className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full leading-none border ${
+      highlightAddon
+        ? "bg-yellow-200 text-yellow-800 border-yellow-400"
+        : "bg-blue-100 text-primary border-blue-300"
+    }`}
+  >
+    Add-on
+  </span>
+)}
+                  
                     {item.itemSpace > 0 && (
                       <span className="text-[9px] font-semibold bg-indigo-100 text-indigo-600 border border-indigo-300 px-1.5 py-0.5 rounded-full leading-none">
                         Space: {item.itemSpace}
@@ -1047,7 +1068,7 @@ const SelectedItems = ({
 }) => {
 
   const { categoriesOrder = [], categories = {} } = data;
-
+const isAddonHighlightUser = String(localStorage.getItem("userId")) === "757";
  const [expandedCategories, setExpandedCategories] = useState({});
 const [expandedCategoryInstructions, setExpandedCategoryInstructions] = useState({});
 const [categoryInstructionsMap, setCategoryInstructionsMap] = useState({});
@@ -1558,7 +1579,8 @@ const catHeadingText = data.categoryHeadings?.[catName]?.[subLangKey] || "";
 
 const catSpace = data.categorySpaces?.[catName] || 0;
 const catStatus = items[0]?.categoryStatus || "NORMAL";  
-
+const highlightCat =
+  isAddonHighlightUser && !!addonState[catName]?.cat && catStatus !== "CANCELLED";
 return (
   <Draggable
     key={catName}
@@ -1569,7 +1591,11 @@ return (
       <div
         ref={provCat.innerRef}
         {...provCat.draggableProps}
-        className={`border rounded-xl shadow-sm p-3 ${getStatusClasses(catStatus, "category")}`}
+  className={`border rounded-xl shadow-sm p-3 ${
+  highlightCat
+    ? "bg-yellow-50 border-yellow-400"
+    : getStatusClasses(catStatus, "category")
+}`}
       >
                             <div className="mb-3">
                               <div className="flex items-center justify-end gap-1 text-gray-500 mt-2">
@@ -1759,11 +1785,17 @@ return (
                                       Any {anyCount}
                                     </span>
                                   )}
-                                  {addonState[catName]?.cat && (
-                                    <span className="text-[10px] font-semibold bg-blue-100 text-primary border border-blue-300 px-1.5 py-0.5 rounded-full leading-none">
-                                      Add-on
-                                    </span>
-                                  )}
+                                 {addonState[catName]?.cat && (
+  <span
+    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none border ${
+      highlightCat
+        ? "bg-yellow-200 text-yellow-800 border-yellow-400"
+        : "bg-blue-100 text-primary border-blue-300"
+    }`}
+  >
+    Add-on
+  </span>
+)}
                                   {catSpace > 0 && (
                                     <span className="text-[10px] font-semibold bg-indigo-100 text-indigo-600 border border-indigo-300 px-1.5 py-0.5 rounded-full leading-none">
                                       Space: {catSpace}

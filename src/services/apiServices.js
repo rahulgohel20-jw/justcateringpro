@@ -4069,3 +4069,31 @@ export const AddExpenseRightsByMember = (memberId, data = {}) => {
 export const GetExpenseRightsByMember  = (memberId  , userId) => {
   return GET(`/expense-rights/getAll?memberId=${memberId}&userId=${userId}`);
 };
+
+export const addOrUpdateBatchWisestoreissue = (data) => {
+  return POST(`/storeissuereturn/add-update-batchwise`, data);
+};
+
+export const addOrUpdateBatchWisestore = (data) => {
+  return POST(`/storepo/add-update-batchwise`,data);
+};
+
+export const getAllRawMaterialByUserId = (page, size, userId, searchName = "") => {
+  const query = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+    userId: String(userId),
+    searchName: searchName || "",
+  });
+  return GET(`/storepo/getAllRawMaterialWithExpiryDates?${query.toString()}`);
+};
+
+export const getAllRawMaterialWithExpiryDates = (page , size , userId, searchName = "") => {
+  const query = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+    userId: String(userId),
+    searchName: searchName || "",
+  });
+  return GET(`/storepo/getAllRawMaterialWithExpiryDates?${query.toString()}`);
+};
