@@ -4059,3 +4059,31 @@ export const deleteinvoicebyid = (invoiceId) => {
 export const deleteinvoiceitemid = (invoiceItemId) => {
   return DELETE(`/invoice/deletebyinvoiceitemid?invoiceItemId=${invoiceItemId}`);
 };
+
+export const addOrUpdateBatchWisestoreissue = (data) => {
+  return POST(`/storeissuereturn/add-update-batchwise`, data);
+};
+
+export const addOrUpdateBatchWisestore = (data) => {
+  return POST(`/storepo/add-update-batchwise`,data);
+};
+
+export const getAllRawMaterialByUserId = (page, size, userId, searchName = "") => {
+  const query = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+    userId: String(userId),
+    searchName: searchName || "",
+  });
+  return GET(`/storepo/getAllRawMaterialWithExpiryDates?${query.toString()}`);
+};
+
+export const getAllRawMaterialWithExpiryDates = (page , size , userId, searchName = "") => {
+  const query = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+    userId: String(userId),
+    searchName: searchName || "",
+  });
+  return GET(`/storepo/getAllRawMaterialWithExpiryDates?${query.toString()}`);
+};
