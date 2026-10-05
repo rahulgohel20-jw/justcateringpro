@@ -59,7 +59,8 @@
           UploadMenuItemImage,
           Getmenusubcategory,
           checkRMenu,
-          MenuItemCheckUsuable
+          MenuItemCheckUsuable,
+          GetAllEventFunction, 
           } from "@/services/apiServices";
           import { useMenuPrepStore } from "@/store/useMenuPrepStore";
           import AddMenuItem from "@/partials/modals/add-menu-item/AddMenuItem";
@@ -873,6 +874,10 @@ const getItemRate = (m) => {
   if (r > 0) return r;
   return Number(m?.categoryPrice) || 0;
 };
+
+const ITEM_USAGE_CHECK_USER_IDS = [768];
+const AI_TEMPLATE_ID = 8;
+
           const EventPlanningPage = ({ mode = "menu" }) => {
           useNetworkSpeed({ enabled: true });
           const intl = useIntl();
@@ -957,21 +962,38 @@ const getItemRate = (m) => {
           const [isSubmitting, setIsSubmitting] = useState(false);
 
           const [showAiModal, setShowAiModal] = useState(false);
-          const [aiTemplates, setAiTemplates] = useState([]);
-          const [aiPackages, setAiPackages] = useState([]);
-          const [aiTemplateId, setAiTemplateId] = useState(null);
-          const [aiFunctionName, setAiFunctionName] = useState("");
-          const [aiPackageId, setAiPackageId] = useState(null);
-          const [aiGenerating, setAiGenerating] = useState(false);
-          const [aiDone, setAiDone] = useState(false);
-          const [aiTplLoading, setAiTplLoading] = useState(false);
-          const [aiPkgLoading, setAiPkgLoading] = useState(false);
-          const [aiTemplateSearch, setAiTemplateSearch] = useState("");
-          const [aiPackageSearch, setAiPackageSearch] = useState("");
-          const [aiTplOpen, setAiTplOpen] = useState(false);
-          const [aiPkgOpen, setAiPkgOpen] = useState(false);
-          const [aiLoadingMessage, setAiLoadingMessage] = useState("");
-          const [aiProgress, setAiProgress] = useState(0);
+const [aiStep, setAiStep] = useState(0); // 0 = Template, 1 = Functions, 2 = Price Range
+// const [aiTemplates, setAiTemplates] = useState([]);
+// const [aiTemplateId, setAiTemplateId] = useState(null);
+const [aiFunctionName, setAiFunctionName] = useState("");
+const [aiGenerating, setAiGenerating] = useState(false);
+const [aiDone, setAiDone] = useState(false);
+// const [aiTplLoading, setAiTplLoading] = useState(false);
+// const [aiTemplateSearch, setAiTemplateSearch] = useState("");
+// const [aiTplOpen, setAiTplOpen] = useState(false);
+const [aiLoadingMessage, setAiLoadingMessage] = useState("");
+const [aiProgress, setAiProgress] = useState(0);
+
+const [aiAllFunctions, setAiAllFunctions] = useState([]);
+const [aiFunctionsLoading, setAiFunctionsLoading] = useState(false);
+const [aiFunctionSearch, setAiFunctionSearch] = useState("");
+const [aiSelectedFunctionIds, setAiSelectedFunctionIds] = useState([]);
+
+const PRICE_RANGE_PRESETS = [
+  { label: "₹500 - ₹800", value: "500-800" },
+  { label: "₹800 - ₹1200", value: "800-1200" },
+  { label: "₹1200 - ₹1800", value: "1200-1800" },
+  { label: "₹1800 - ₹2500", value: "1800-2500" },
+];
+const [aiPriceRange, setAiPriceRange] = useState("");
+const [aiCustomMin, setAiCustomMin] = useState("");
+const [aiCustomMax, setAiCustomMax] = useState("");
+
+const [aiFunctionPage, setAiFunctionPage] = useState(1);
+const [aiFunctionHasMore, setAiFunctionHasMore] = useState(false);
+const [aiFunctionLoadingMore, setAiFunctionLoadingMore] = useState(false);
+const AI_FUNCTION_PAGE_SIZE = 20;
+const aiFunctionListRef = useRef(null);
 
           const [showShareModal, setShowShareModal] = useState(false);
 
@@ -1391,175 +1413,211 @@ const overLimitItemIds = useMemo(() => {
           }
           };
 
-          const openAiModal = async () => {
-          setShowAiModal(true);
-          setAiDone(false);
-          setAiGenerating(false);
-          setAiTemplateId(null);
-          setAiPackageId(null);
-          setAiTemplateSearch("");
-          setAiPackageSearch("");
+        const openAiModal = () => {
+  setShowAiModal(true);
+  setAiDone(false);
+  setAiGenerating(false);
+  setAiStep(0);
+  setAiSelectedFunctionIds(selectedFunction ? [selectedFunction] : []);
+  setAiFunctionSearch("");
+  setAiPriceRange("");
+  setAiCustomMin("");
+  setAiCustomMax("");
 
+  const fn = eventData?.eventFunctions?.find((f) => f.id === selectedFunction);
+  setAiFunctionName(fn?.function?.nameEnglish || fn?.nameEnglish || "");
 
-          const fn = eventData?.eventFunctions?.find(
-            (f) => f.id === selectedFunction,
-          );
-          setAiFunctionName(fn?.function?.nameEnglish || fn?.nameEnglish || "");
+  setAiFunctionPage(1);
+  setAiFunctionHasMore(false);
+  setAiAllFunctions([]);
+  fetchAiFunctions(1, "", false);
+};
 
+const fetchAiFunctions = useCallback(
+  (page = 1, search = "", append = false) => {
+    page === 1 ? setAiFunctionsLoading(true) : setAiFunctionLoadingMore(true);
 
-          setAiTplLoading(true);
-          try {
-            const r = await GetAllAiTemplates(userId);
+    GetAllEventFunction(userId, { page, size: AI_FUNCTION_PAGE_SIZE, search })
+      .then((r) => {
+        const data = r?.data?.data || {};
+        const list =
+          data["EventFunctions"] ||
+          data.eventFunctions ||
+          (Array.isArray(data) ? data : []);
+        const total = data.totalItems || data.total || 0;
 
-            setAiTemplates(r?.data?.data?.AITemplates || []);
-          } finally {
-            setAiTplLoading(false);
-          }
+        setAiAllFunctions((prev) => (append ? [...prev, ...list] : list));
+        setAiFunctionPage(page);
+        setAiFunctionHasMore(page * AI_FUNCTION_PAGE_SIZE < total);
+      })
+      .catch((err) => {
+        console.error("Failed to load functions for AI modal", err);
+        if (!append) setAiAllFunctions([]);
+        setAiFunctionHasMore(false);
+      })
+      .finally(() => {
+        setAiFunctionsLoading(false);
+        setAiFunctionLoadingMore(false);
+      });
+  },
+  [userId],
+);
+const toggleAiFunctionSelect = useCallback((id) => {
+  setAiSelectedFunctionIds((prev) =>
+    prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+  );
+}, []);
+const aiStepValid = {
+  0: aiSelectedFunctionIds.length > 0,
+  1:
+    !!aiPriceRange &&
+    (aiPriceRange !== "Custom" || aiCustomMin || aiCustomMax),
+}[aiStep];
 
+useEffect(() => {
+  if (!showAiModal || aiStep !== 0) return;
+  const timer = setTimeout(() => {
+    setAiFunctionPage(1);
+    setAiFunctionHasMore(false);
+    fetchAiFunctions(1, aiFunctionSearch, false);
+  }, 400);
+  return () => clearTimeout(timer);
+}, [aiFunctionSearch, showAiModal, aiStep, fetchAiFunctions]);
 
-          setAiPkgLoading(true);
-          try {
-            const r = await GetCustomPackageapi(userId);
-            setAiPackages(r?.data?.data?.["Package Details"] || []);
-          } finally {
-            setAiPkgLoading(false);
-          }
-          };
+const handleAiGenerate = async () => {
+  if (aiSelectedFunctionIds.length === 0) return;
+  setAiGenerating(true);
+  setAiProgress(0);
+  setShowAiModal(false);
 
-          const handleAiGenerate = async () => {
-          if (!aiTemplateId) return;
-          setAiGenerating(true);
-          setAiProgress(0);
-          setShowAiModal(false);
+  let msgIdx = 0;
+  setAiLoadingMessage(AI_LOADING_MESSAGES[0]);
+  const msgInterval = setInterval(() => {
+    msgIdx = (msgIdx + 1) % AI_LOADING_MESSAGES.length;
+    setAiLoadingMessage(AI_LOADING_MESSAGES[msgIdx]);
+  }, 1800);
 
+  let currentProgress = 0;
+  const progressInterval = setInterval(() => {
+    currentProgress += 1;
+    if (currentProgress <= 85) {
+      setAiProgress(currentProgress);
+    } else {
+      clearInterval(progressInterval);
+    }
+  }, 120);
 
-          let msgIdx = 0;
-          setAiLoadingMessage(AI_LOADING_MESSAGES[0]);
-          const msgInterval = setInterval(() => {
-            msgIdx = (msgIdx + 1) % AI_LOADING_MESSAGES.length;
-            setAiLoadingMessage(AI_LOADING_MESSAGES[msgIdx]);
-          }, 1800);
+  const finalPriceRange =
+    aiPriceRange === "Custom"
+      ? `${aiCustomMin || 0}-${aiCustomMax || 0}`
+      : aiPriceRange;
 
-          let currentProgress = 0;
-          const progressInterval = setInterval(() => {
-            currentProgress += 1;
-            if (currentProgress <= 85) {
-              setAiProgress(currentProgress);
-            } else {
-              clearInterval(progressInterval);
-            }
-          }, 120); 
+  try {
+   const resp = await GenerateMenuAi({
+  aiTemplateId: AI_TEMPLATE_ID,
+  eventFunctionIds: aiSelectedFunctionIds.join(","),
+  functionName: aiFunctionName,
+  priceRange: finalPriceRange || "",
+  userId: Number(userId) || 0,
+});
+    clearInterval(progressInterval);
+    setAiProgress(100);
 
-          try {
-            const resp = await GenerateMenuAi({
-              aiTemplateId: aiTemplateId,
-              functionName: aiFunctionName,
-              packageId: aiPackageId || 0,
-              userId: Number(userId) || 0,
-            });
+    const aiData = resp?.data?.data;
+    const isSuccess = resp?.data?.success;
 
-            
-            clearInterval(progressInterval);
-            setAiProgress(100);
+    if (isSuccess && Array.isArray(aiData) && aiData.length > 0) {
+      const categories = {};
+      const order = [];
 
-            const aiData = resp?.data?.data;
-            const isSuccess = resp?.data?.success;
+      aiData.forEach((cat) => {
+        const catName = cat.menuCategoryName || "Uncategorized";
+        const catNameHindi = cat.menuCategoryNameHindi || catName;
+        const catNameGujarati = cat.menuCategoryNameGujarati || catName;
+        const catId = Number(cat.menuCategoryId || 0);
 
-            if (isSuccess && Array.isArray(aiData) && aiData.length > 0) {
-              const categories = {};
-              const order = [];
+        const items = (cat.selectedMenuPreparationItems || []).map((item) => ({
+          id: Number(item.menuItemId),
+          nameEnglish: item.menuItemName || "",
+          nameHindi: item.menuItemNameHindi || item.menuItemName || "",
+          nameGujarati: item.menuItemNameGujarati || item.menuItemName || "",
+          imagePath: "",
+          rate: 0,
+          menuCategoryName: catName,
+          menuCategoryNameHindi: catNameHindi,
+          menuCategoryNameGujarati: catNameGujarati,
+          catId,
+          itemSlogan: item.itemSlogan || "",
+          itemNotes: { english: "", hindi: "", gujarati: "" },
+          itemSpace: 0,
+        }));
 
-              aiData.forEach((cat) => {
-                const catName = cat.menuCategoryName || "Uncategorized";
-                const catNameHindi = cat.menuCategoryNameHindi || catName;
-                const catNameGujarati = cat.menuCategoryNameGujarati || catName;
-                const catId = Number(cat.menuCategoryId || 0);
+        if (items.length > 0) {
+          categories[catName] = items;
+          order.push(catName);
+        }
+      });
 
-                const items = (cat.selectedMenuPreparationItems || []).map(
-                  (item) => ({
-                    id: Number(item.menuItemId),
-                    nameEnglish: item.menuItemName || "",
-                    nameHindi: item.menuItemNameHindi || item.menuItemName || "",
-                    nameGujarati:
-                      item.menuItemNameGujarati || item.menuItemName || "",
-                    imagePath: "",
-                    rate: 0,
-                    menuCategoryName: catName,
-                    menuCategoryNameHindi: catNameHindi,
-                    menuCategoryNameGujarati: catNameGujarati,
-                    catId,
-                    itemSlogan: item.itemSlogan || "",
-                    itemNotes: { english: "", hindi: "", gujarati: "" },
-                    itemSpace: 0,
-                  }),
-                );
+      const categorySlogans = {};
+      aiData.forEach((cat) => {
+        const catName = cat.menuCategoryName || "Uncategorized";
+        categorySlogans[catName] = cat.menuSlogan || "";
+      });
 
-                if (items.length > 0) {
-                  categories[catName] = items;
-                  order.push(catName);
-                }
-              });
+      setSelectedByFunction((prev) => ({
+        ...prev,
+        [selectedFunction]: {
+          categoriesOrder: order,
+          categories,
+          categoryNotes: {},
+          categorySlogans,
+        },
+      }));
 
-              const categorySlogans = {};
-              aiData.forEach((cat) => {
-                const catName = cat.menuCategoryName || "Uncategorized";
-                categorySlogans[catName] = cat.menuSlogan || "";
-              });
+      setHasExistingData(true);
+      setIsDirty(true);
+      setAiDone(true);
 
-              setSelectedByFunction((prev) => ({
-                ...prev,
-                [selectedFunction]: {
-                  categoriesOrder: order,
-                  categories,
-                  categoryNotes: {},
-                  categorySlogans,
-                },
-              }));
+      setTimeout(() => {
+        setShowAiModal(false);
+        setAiDone(false);
+        setAiProgress(0);
+      }, 1000);
 
-              setHasExistingData(true);
-              setIsDirty(true);
-              setAiDone(true);
-
-              setTimeout(() => {
-                setShowAiModal(false);
-                setAiDone(false);
-                setAiProgress(0);
-              }, 1000);
-
-              Swal.fire({
-                icon: "success",
-                title: "AI Menu Generated!",
-                text: `${order.length} categories with ${Object.values(categories).flat().length} items added.`,
-                timer: 2000,
-                showConfirmButton: false,
-              });
-            } else {
-              clearInterval(progressInterval);
-              setAiProgress(0);
-              Swal.fire({
-                icon: "error",
-                title: "Generation Failed",
-                text:
-                  resp?.data?.message ||
-                  "AI could not generate a menu. Try a different template or package.",
-              });
-            }
-          } catch (err) {
-            clearInterval(progressInterval);
-            setAiProgress(0);
-            console.error("AI generation failed", err);
-            Swal.fire({
-              icon: "error",
-              title: "Error",
-              text: err?.response?.data?.msg || "Something went wrong.",
-            });
-          } finally {
-            clearInterval(msgInterval);
-            clearInterval(progressInterval);
-            setAiGenerating(false);
-            setAiLoadingMessage("");
-          }
-          };
+      Swal.fire({
+        icon: "success",
+        title: "AI Menu Generated!",
+        text: `${order.length} categories with ${Object.values(categories).flat().length} items added.`,
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } else {
+      clearInterval(progressInterval);
+      setAiProgress(0);
+      Swal.fire({
+        icon: "error",
+        title: "Generation Failed",
+        text:
+          resp?.data?.message ||
+          "AI could not generate a menu. Try a different template or price range.",
+      });
+    }
+  } catch (err) {
+    clearInterval(progressInterval);
+    setAiProgress(0);
+    console.error("AI generation failed", err);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: err?.response?.data?.msg || "Something went wrong.",
+    });
+  } finally {
+    clearInterval(msgInterval);
+    clearInterval(progressInterval);
+    setAiGenerating(false);
+    setAiLoadingMessage("");
+  }
+};
 
           const fetchExtraCharges = useCallback(async () => {
           if (!eventId || !selectedFunction) return;
@@ -2751,7 +2809,9 @@ const onSelectItemWithCheck = useCallback(
     const itemId = Number(menuItem.id ?? menuItem.menuItemId);
     const alreadySelected = getSelectedIdsForFunction(selectedFunction).has(itemId);
 
-    if (mode !== "menu" || !selectedFunction || alreadySelected) {
+    const shouldCheckUsage = ITEM_USAGE_CHECK_USER_IDS.includes(currentUserId);
+
+    if (mode !== "menu" || !shouldCheckUsage || !selectedFunction || alreadySelected) {
       onToggleSelectItem(menuItem, overrideCategoryName);
       return;
     }
@@ -2816,6 +2876,7 @@ const onSelectItemWithCheck = useCallback(
     selectedFunction,
     eventData,
     userId,
+    currentUserId,
     onToggleSelectItem,
     getSelectedIdsForFunction,
   ],
@@ -5538,342 +5599,271 @@ searchTerm={itemSearchTerm}
               </div>
             )}
 
-            {/* AI Generate Menu Modal */}
-            {showAiModal && (
-              <>
-                <div
-                  className="fixed inset-0 z-50"
-                  style={{
-                    background: "rgba(0,0,0,.45)",
-                    backdropFilter: "blur(4px)",
-                  }}
-                  onClick={() => setShowAiModal(false)}
-                />
-                <div
-                  className="fixed top-1/2 left-1/2 z-50 bg-white rounded-2xl"
-                  style={{
-                    transform: "translate(-50%,-50%)",
-                    width: "min(460px,95vw)",
-                    boxShadow: "0 32px 64px rgba(0,0,0,.18)",
-                    overflow: "visible",
-                  }}
-                >
-                  {/* Header */}
-                  <div
-                    className="flex items-center justify-between px-6 py-5 rounded-t-2xl"
-                    style={{
-                      background: "linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7)",
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center"
-                        style={{ background: "rgba(255,255,255,.2)" }}
-                      >
-                        <Sparkles size={18} color="#fff" />
-                      </div>
-                      <div>
-                        <p className="text-white font-bold text-base leading-tight">
-                          AI Menu Generator
-                        </p>
-                        <p
-                          className="text-xs mt-0.5"
-                          style={{ color: "rgba(255,255,255,.75)" }}
-                        >
-                          Let AI craft the perfect menu
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowAiModal(false)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-                      style={{ background: "rgba(255,255,255,.15)" }}
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
+        
+{/* AI Generate Menu Modal */}
+{showAiModal && (
+  <>
+    <div
+      className="fixed inset-0 z-50"
+      style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(4px)" }}
+      onClick={() => setShowAiModal(false)}
+    />
+    <div
+      className="fixed top-1/2 left-1/2 z-50 bg-white rounded-2xl"
+      style={{
+        transform: "translate(-50%,-50%)",
+        width: "min(460px,95vw)",
+        boxShadow: "0 32px 64px rgba(0,0,0,.18)",
+        overflow: "visible",
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-6 py-5 rounded-t-2xl"
+        style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6,#a855f7)" }}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,.2)" }}
+          >
+            <Sparkles size={18} color="#fff" />
+          </div>
+          <div>
+            <p className="text-white font-bold text-base leading-tight">AI Menu Generator</p>
+            <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,.75)" }}>
+              Let AI craft the perfect menu
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowAiModal(false)}
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
+          style={{ background: "rgba(255,255,255,.15)" }}
+        >
+          <X size={16} />
+        </button>
+      </div>
 
-                  {/* Body */}
-                  <div className="px-6 py-5 flex flex-col gap-4">
-                    {/* Template Dropdown */}
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        Template *
-                      </label>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          className="w-full h-10 px-3 rounded-lg border text-sm flex items-center justify-between"
-                          style={{
-                            borderColor: aiTplOpen ? "#6366f1" : "#e5e7eb",
-                            background: "#fafafa",
-                          }}
-                          onClick={() => {
-                            setAiTplOpen((o) => !o);
-                            setAiPkgOpen(false);
-                          }}
-                        >
-                          <span
-                            style={{ color: aiTemplateId ? "#111827" : "#9ca3af" }}
-                          >
-                            {aiTplLoading
-                              ? "Loading…"
-                              : (Array.isArray(aiTemplates)
-                                  ? aiTemplates.find((t) => t.id === aiTemplateId)
-                                      ?.nameEnglish
-                                  : null) || "Select a template…"}
-                          </span>
-                          <ChevronDown
-                            size={14}
-                            className="text-gray-400"
-                            style={{
-                              transform: aiTplOpen ? "rotate(180deg)" : "none",
-                              transition: "transform .2s",
-                            }}
-                          />
-                        </button>
-                        {aiTplOpen && (
-                          <div
-                            className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
-                            style={{ zIndex: 9999 }}
-                          >
-                            <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
-                              <Search size={13} className="text-gray-400" />
-                              <input
-                                autoFocus
-                                className="flex-1 text-sm outline-none bg-transparent"
-                                placeholder="Search templates…"
-                                value={aiTemplateSearch}
-                                onChange={(e) => setAiTemplateSearch(e.target.value)}
-                              />
-                            </div>
-                            <div style={{ maxHeight: 180, overflowY: "auto" }}>
-                              {aiTemplates.filter((t) =>
-                                t.nameEnglish
-                                  ?.toLowerCase()
-                                  .includes(aiTemplateSearch.toLowerCase()),
-                              ).length === 0 ? (
-                                <div className="px-3 py-3 text-sm text-gray-400">
-                                  No templates found
-                                </div>
-                              ) : (
-                                aiTemplates
-                                  .filter((t) =>
-                                    t.nameEnglish
-                                      ?.toLowerCase()
-                                      .includes(aiTemplateSearch.toLowerCase()),
-                                  )
-                                  .map((t) => (
-                                    <div
-                                      key={t.id}
-                                      className="px-3 py-2.5 text-sm cursor-pointer flex items-center justify-between"
-                                      style={{
-                                        background:
-                                          t.id === aiTemplateId ? "#ede9fe" : "",
-                                        color:
-                                          t.id === aiTemplateId
-                                            ? "#5b21b6"
-                                            : "#374151",
-                                        fontWeight: t.id === aiTemplateId ? 600 : 400,
-                                      }}
-                                      onMouseEnter={(e) => {
-                                        if (t.id !== aiTemplateId)
-                                          e.currentTarget.style.background =
-                                            "#f5f3ff";
-                                      }}
-                                      onMouseLeave={(e) => {
-                                        if (t.id !== aiTemplateId)
-                                          e.currentTarget.style.background = "";
-                                      }}
-                                      onClick={() => {
-                                        setAiTemplateId(t.id);
-                                        setAiTplOpen(false);
-                                        setAiTemplateSearch("");
-                                      }}
-                                    >
-                                      {t.nameEnglish}
-                                      {t.id === aiTemplateId && (
-                                        <CheckCircle2 size={13} color="#7c3aed" />
-                                      )}
-                                    </div>
-                                  ))
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Function Name */}
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        Function Name
-                      </label>
-                      <input
-                        className="h-10 px-3 rounded-lg border text-sm outline-none"
-                        style={{ borderColor: "#e5e7eb", background: "#fafafa" }}
-                        placeholder="e.g. Breakfast, Dinner…"
-                        value={aiFunctionName}
-                        onChange={(e) => setAiFunctionName(e.target.value)}
-                        onFocus={(e) => (e.target.style.borderColor = "#6366f1")}
-                        onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
-                      />
-                    </div>
-
-                    {/* Package Dropdown */}
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        Package{" "}
-                      </label>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          className="w-full h-10 px-3 rounded-lg border text-sm flex items-center justify-between"
-                          style={{
-                            borderColor: aiPkgOpen ? "#6366f1" : "#e5e7eb",
-                            background: "#fafafa",
-                          }}
-                          onClick={() => {
-                            setAiPkgOpen((o) => !o);
-                            setAiTplOpen(false);
-                          }}
-                        >
-                          <span
-                            style={{ color: aiPackageId ? "#111827" : "#9ca3af" }}
-                          >
-                            {aiPkgLoading
-                              ? "Loading…"
-                              : (Array.isArray(aiPackages)
-                                  ? aiPackages.find((p) => p.id === aiPackageId)
-                                      ?.nameEnglish
-                                  : null) || "No package selected"}{" "}
-                          </span>
-                          <ChevronDown
-                            size={14}
-                            className="text-gray-400"
-                            style={{
-                              transform: aiPkgOpen ? "rotate(180deg)" : "none",
-                              transition: "transform .2s",
-                            }}
-                          />
-                        </button>
-                        {aiPkgOpen && (
-                          <div
-                            className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
-                            style={{ zIndex: 9999 }}
-                          >
-                            <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100">
-                              <Search size={13} className="text-gray-400" />
-                              <input
-                                autoFocus
-                                className="flex-1 text-sm outline-none bg-transparent"
-                                placeholder="Search packages…"
-                                value={aiPackageSearch}
-                                onChange={(e) => setAiPackageSearch(e.target.value)}
-                              />
-                            </div>
-                            <div style={{ maxHeight: 180, overflowY: "auto" }}>
-                              <div
-                                className="px-3 py-2.5 text-sm cursor-pointer"
-                                style={{ color: "#9ca3af" }}
-                                onMouseEnter={(e) =>
-                                  (e.currentTarget.style.background = "#f9fafb")
-                                }
-                                onMouseLeave={(e) =>
-                                  (e.currentTarget.style.background = "")
-                                }
-                                onClick={() => {
-                                  setAiPackageId(null);
-                                  setAiPkgOpen(false);
-                                  setAiPackageSearch("");
-                                }}
-                              >
-                                No package
-                              </div>
-                              {aiPackages
-                                .filter((p) =>
-                                  p.nameEnglish
-                                    ?.toLowerCase()
-                                    .includes(aiPackageSearch.toLowerCase()),
-                                )
-                                .map((p) => (
-                                  <div
-                                    key={p.id}
-                                    className="px-3 py-2.5 text-sm cursor-pointer flex items-center justify-between"
-                                    style={{
-                                      background:
-                                        p.id === aiPackageId ? "#ede9fe" : "",
-                                      color:
-                                        p.id === aiPackageId ? "#5b21b6" : "#374151",
-                                      fontWeight: p.id === aiPackageId ? 600 : 400,
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      if (p.id !== aiPackageId)
-                                        e.currentTarget.style.background = "#f5f3ff";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      if (p.id !== aiPackageId)
-                                        e.currentTarget.style.background = "";
-                                    }}
-                                    onClick={() => {
-                                      setAiPackageId(p.id);
-                                      setAiPkgOpen(false);
-                                      setAiPackageSearch("");
-                                    }}
-                                  >
-                                    <span>{p.nameEnglish}</span>
-                                    <span className="flex items-center gap-2">
-                                      {/* {p.price && <span className="text-xs text-gray-400">₹{p.price}</span>} */}
-                                      {p.id === aiPackageId && (
-                                        <CheckCircle2 size={13} color="#7c3aed" />
-                                      )}
-                                    </span>
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50">
-                    <button
-                      className="h-9 px-4 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-500 hover:text-gray-700"
-                      onClick={() => setShowAiModal(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      disabled={!aiTemplateId || aiGenerating}
-                      onClick={handleAiGenerate}
-                      className="h-9 px-5 rounded-lg text-white text-sm font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{
-                        background: aiDone
-                          ? "linear-gradient(135deg,#10b981,#059669)"
-                          : "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                        boxShadow: "0 4px 14px rgba(99,102,241,.35)",
-                      }}
-                    >
-                      {aiDone ? (
-                        <>
-                          <CheckCircle2 size={15} /> Generated!
-                        </>
-                      ) : aiGenerating ? (
-                        <>
-                          <Loader2 size={15} className="animate-spin" /> Generating…
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles size={15} /> Generate Menu
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </>
+      {/* Progress dots */}
+      <div className="flex items-center justify-center gap-2 pt-4">
+        {["Functions", "Price Range"].map((label, idx) => (
+          <div key={label} className="flex items-center gap-2">
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                idx === aiStep
+                  ? "bg-primary text-white"
+                  : idx < aiStep
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-200 text-gray-400"
+              }`}
+            >
+              {idx < aiStep ? <CheckCircle2 size={14} /> : idx + 1}
+            </div>
+            {idx < 1 && (
+              <div className={`w-8 h-0.5 ${idx < aiStep ? "bg-green-500" : "bg-gray-200"}`} />
             )}
+          </div>
+        ))}
+      </div>
+      <p className="text-center text-xs font-semibold text-gray-500 mt-1.5 uppercase tracking-wide">
+        Step {aiStep + 1} of 2 — {["Functions", "Price Range"][aiStep]}
+      </p>
+
+      {/* Body */}
+      <div className="px-6 py-5 flex flex-col gap-4 min-h-[220px]">
+        {/* STEP 0: Functions */}
+        {aiStep === 0 && (
+          <>
+            <p className="text-sm font-semibold text-gray-800">
+              Which functions would you like to generate the menu for?
+            </p>
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                className="w-full h-9 pl-8 pr-3 rounded-lg border border-gray-200 text-sm outline-none"
+                placeholder="Search functions…"
+                value={aiFunctionSearch}
+                onChange={(e) => setAiFunctionSearch(e.target.value)}
+              />
+            </div>
+            <div
+              ref={aiFunctionListRef}
+              className="border border-gray-200 rounded-lg overflow-y-auto"
+              style={{ maxHeight: 220 }}
+              onScroll={(e) => {
+                const el = e.target;
+                if (
+                  el.scrollTop + el.clientHeight >= el.scrollHeight - 20 &&
+                  aiFunctionHasMore &&
+                  !aiFunctionLoadingMore
+                ) {
+                  fetchAiFunctions(aiFunctionPage + 1, aiFunctionSearch, true);
+                }
+              }}
+            >
+              {aiFunctionsLoading ? (
+                <div className="px-3 py-6 text-sm text-gray-400 text-center flex items-center justify-center gap-2">
+                  <div className="w-3.5 h-3.5 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
+                  Loading functions…
+                </div>
+              ) : aiAllFunctions.length === 0 ? (
+                <div className="px-3 py-6 text-sm text-gray-400 text-center">No functions found</div>
+              ) : (
+                <>
+                  {aiAllFunctions.map((f) => {
+                    const id = f.id;
+                    const name =
+                      f.nameEnglish || f.functionName || f.function?.nameEnglish || `Function #${id}`;
+                    const checked = aiSelectedFunctionIds.includes(id);
+                    return (
+                      <label
+                        key={id}
+                        className="flex items-center gap-3 px-3 py-2.5 border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleAiFunctionSelect(id)}
+                          className="w-4 h-4 accent-primary"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{name}</p>
+                          {(f.functionStartDateTime || f.eventNo) && (
+                            <p className="text-[11px] text-gray-400 truncate">
+                              {[f.eventNo, f.functionStartDateTime].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
+                  {aiFunctionLoadingMore && (
+                    <div className="px-3 py-2 text-xs text-gray-400 text-center flex items-center justify-center gap-2">
+                      <div className="w-3 h-3 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
+                      Loading more…
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <p className="text-[11px] text-gray-400">
+              {aiSelectedFunctionIds.length} function{aiSelectedFunctionIds.length === 1 ? "" : "s"} selected
+            </p>
+          </>
+        )}
+
+        {/* STEP 1: Price range */}
+        {aiStep === 1 && (
+          <>
+            <p className="text-sm font-semibold text-gray-800">
+              What price range should the menu target?
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {PRICE_RANGE_PRESETS.map((preset) => (
+                <button
+                  key={preset.value}
+                  type="button"
+                  onClick={() => setAiPriceRange(preset.value)}
+                  className={`h-10 rounded-lg border text-sm font-semibold transition-colors ${
+                    aiPriceRange === preset.value
+                      ? "bg-primary text-white border-primary"
+                      : "bg-white text-gray-700 border-gray-200 hover:border-primary"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setAiPriceRange("Custom")}
+                className={`h-10 rounded-lg border text-sm font-semibold transition-colors col-span-2 ${
+                  aiPriceRange === "Custom"
+                    ? "bg-primary text-white border-primary"
+                    : "bg-white text-gray-700 border-gray-200 hover:border-primary"
+                }`}
+              >
+                Custom Range
+              </button>
+            </div>
+
+            {aiPriceRange === "Custom" && (
+              <div className="flex items-center gap-2 pt-1">
+                <div className="flex-1 flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-gray-500 uppercase">Min ₹</label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="h-10 px-3 rounded-lg border border-gray-200 text-sm outline-none"
+                    placeholder="0"
+                    value={aiCustomMin}
+                    onChange={(e) => setAiCustomMin(e.target.value)}
+                  />
+                </div>
+                <span className="text-gray-400 mt-4">—</span>
+                <div className="flex-1 flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-gray-500 uppercase">Max ₹</label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="h-10 px-3 rounded-lg border border-gray-200 text-sm outline-none"
+                    placeholder="0"
+                    value={aiCustomMax}
+                    onChange={(e) => setAiCustomMax(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="flex justify-between gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+        <button
+          className="h-9 px-4 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-500 hover:text-gray-700"
+          onClick={() => (aiStep === 0 ? setShowAiModal(false) : setAiStep((s) => s - 1))}
+        >
+          {aiStep === 0 ? "Cancel" : "Back"}
+        </button>
+
+        {aiStep < 1 ? (
+          <button
+            disabled={!aiStepValid}
+            onClick={() => setAiStep((s) => s + 1)}
+            className="h-9 px-5 rounded-lg text-white text-sm font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              boxShadow: "0 4px 14px rgba(99,102,241,.35)",
+            }}
+          >
+            Next
+          </button>
+        ) : (
+          <button
+            disabled={!aiStepValid || aiGenerating}
+            onClick={handleAiGenerate}
+            className="h-9 px-5 rounded-lg text-white text-sm font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: aiDone
+                ? "linear-gradient(135deg,#10b981,#059669)"
+                : "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              boxShadow: "0 4px 14px rgba(99,102,241,.35)",
+            }}
+          >
+            {aiDone ? (
+              <><CheckCircle2 size={15} /> Generated!</>
+            ) : aiGenerating ? (
+              <><Loader2 size={15} className="animate-spin" /> Generating…</>
+            ) : (
+              <><Sparkles size={15} /> Generate Menu</>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  </>
+)}
           {/* Share Menu Modal */}
           {showShareModal && (
           <>

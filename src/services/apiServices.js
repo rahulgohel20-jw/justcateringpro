@@ -4060,6 +4060,16 @@ export const deleteinvoiceitemid = (invoiceItemId) => {
   return DELETE(`/invoice/deletebyinvoiceitemid?invoiceItemId=${invoiceItemId}`);
 };
 
+export const AddExpenseRightsByMember = (memberId, data = {}) => {
+  return POST(`/expense-rights/add-update?memberId=${memberId}`, data);
+};
+
+
+
+export const GetExpenseRightsByMember  = (memberId  , userId) => {
+  return GET(`/expense-rights/getAll?memberId=${memberId}&userId=${userId}`);
+};
+
 export const addOrUpdateBatchWisestoreissue = (data) => {
   return POST(`/storeissuereturn/add-update-batchwise`, data);
 };

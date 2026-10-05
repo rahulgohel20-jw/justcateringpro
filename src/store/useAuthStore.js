@@ -12,6 +12,8 @@ export const useAuthStore = create(
       roleReportRights: null,
       banquetRights: [],
       stockTypeRights: [],
+      expenseRights: [],
+
 
       setAuth: (user, token, rights, upgradedModules = [], roleReportRights = null) =>
         set({
@@ -23,6 +25,7 @@ export const useAuthStore = create(
           roleReportRights,
           banquetRights: user?.banquetRights || [],
           stockTypeRights: user?.stockTypeRights || [],
+          expenseRights: user?.expenseRights || [],
         }),
 
       clearAuth: () =>
@@ -35,6 +38,7 @@ export const useAuthStore = create(
           roleReportRights: null,
           banquetRights: [],
           stockTypeRights: [],
+          expenseRights: [],
         }),
     }),
     {

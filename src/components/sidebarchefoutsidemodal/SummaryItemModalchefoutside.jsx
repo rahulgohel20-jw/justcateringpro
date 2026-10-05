@@ -307,23 +307,38 @@ const [waSendMode, setWaSendMode] = useState("api");
   }, [open, onClose]);
 
   useEffect(() => {
-    if (!open) return;
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await GetOutsideSummary(eventFunctionId, eventId, type);
-        const menuAllocationDetails = response.data.data["Menu Allocation Details"];
-        if (menuAllocationDetails?.length > 0) setApiData(menuAllocationDetails);
-      } catch (error) {
-        console.error("Error fetching summary data:", error);
-        setError("Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [open, eventFunctionId, eventId, type]);
+  if (!open) return;
+
+  let cancelled = false;
+
+  setApiData(null);
+  setExpandedItems({});
+  setError(null);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const response = await GetOutsideSummary(eventFunctionId, eventId, type);
+      if (cancelled) return;
+
+      const details = response?.data?.data?.["Menu Allocation Details"];
+      setApiData(Array.isArray(details) && details.length > 0 ? details : []);
+    } catch (err) {
+      if (cancelled) return;
+      console.error("Error fetching summary data:", err);
+      setApiData([]);
+      setError("Failed to load data");
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
+
+  fetchData();
+
+  return () => {
+    cancelled = true;
+  };
+}, [open, eventFunctionId, eventId, type]);
 
 
 
