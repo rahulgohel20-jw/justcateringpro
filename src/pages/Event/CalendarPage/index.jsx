@@ -417,6 +417,69 @@ setRMenuCount(rMenuTotal);
   }
 };
 
+const legendItems = [
+  {
+    key: "inquiry",
+    label: intl.formatMessage({
+      id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_INQUIRY",
+      defaultMessage: "Inquiry",
+    }),
+    count: statusCounts[0] || 0,
+    bg: "#3788d8",
+    color: "#fff",
+  },
+  {
+    key: "rmenu",
+    label: intl.formatMessage({
+      id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CONFIRM_WITHOUT_MENU",
+      defaultMessage: "Remaining Menu",
+    }),
+    count: rMenuCount,
+    bg: "#E75480",
+    color: "#fff",
+  },
+  {
+    key: "confirm",
+    label: intl.formatMessage({
+      id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_COMPLETED",
+      defaultMessage: "Confirm",
+    }),
+    count: statusCounts[1] || 0,
+    bg: "rgba(40, 167, 69, 1)",
+    color: "#fff",
+  },
+  {
+    key: "tentative",
+    label: intl.formatMessage({
+      id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_TENTATIVE",
+      defaultMessage: "Tentative",
+    }),
+    count: statusCounts[3] || 0,
+    bg: "#757677",
+    color: "#fff",
+  },
+  {
+    key: "cancel",
+    label: intl.formatMessage({
+      id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CANCEL",
+      defaultMessage: "Cancel",
+    }),
+    count: statusCounts[2] || 0,
+    bg: "rgba(191, 34, 37, 1)",
+    color: "#fff",
+  },
+  {
+    key: "agency",
+    label: intl.formatMessage({
+      id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_COMPLETED_TILL_AGENCY",
+      defaultMessage: "Completed Till Agency",
+    }),
+    count: statusCounts[4] || 0,
+    bg: "#FDE68A",
+    color: "#000",
+  },
+];
+
   return (
     <Fragment>
       <Container>
@@ -500,121 +563,76 @@ setRMenuCount(rMenuTotal);
           </div>
 
           {/* Desktop: Horizontal Pills with Create Button */}
-          <div className="hidden md:flex md:items-center md:justify-between">
-  <div className="flex flex-wrap items-center gap-2">
-    <span className="text-sm font-medium bg-[#3788d8] rounded-lg px-4 py-2 text-white">
-      {intl.formatMessage({
-        id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_INQUIRY",
-        defaultMessage: "Inquiry",
-      })}
-      {" "}({statusCounts[0] || 0})
-    </span>
-    <span className="text-sm font-medium bg-[#E75480] rounded-lg px-4 py-2 text-white">
-      {intl.formatMessage({
-        id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CONFIRM_WITHOUT_MENU",
-        defaultMessage: "Remaining Menu",
-      })}
-      {" "}({rMenuCount})
-    </span>
-    <span className="text-sm font-medium bg-success rounded-lg px-4 py-2 text-white">
-      {intl.formatMessage({
-        id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_COMPLETED",
-        defaultMessage: "Confirm",
-      })}
-      {" "}({statusCounts[1] || 0})
-    </span>
-    <span className="text-sm font-medium bg-[#757677] rounded-lg px-4 py-2 text-white">
-      {intl.formatMessage({
-        id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_TENTATIVE",
-        defaultMessage: "Tentative",
-      })}
-      {" "}({statusCounts[3] || 0})
-    </span>
-    <span className="text-sm font-medium bg-danger rounded-lg px-4 py-2 text-white">
-      {intl.formatMessage({
-        id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_CANCEL",
-        defaultMessage: "Cancel",
-      })}
-      {" "}({statusCounts[2] || 0})
-    </span>
-  <span
-  className="text-sm font-medium rounded-lg px-4 py-2"
-  style={{ backgroundColor: "#FDE68A", color: "#000" }}
->
-  {intl.formatMessage({
-    id: "USER.DASHBOARD.DASHBOARD_CALENDAR_FILTER_COMPLETED_TILL_AGENCY",
-    defaultMessage: "Completed Till Agency",
-  })}
-  {" "}({statusCounts[4] || 0})
-</span>
+     
+<div className="hidden md:flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3">
+  {/* Legend pills */}
+  <div className="flex flex-wrap items-center gap-2 min-w-0">
+    {legendItems.map((item) => (
+      <span
+        key={item.key}
+        className="inline-flex items-center h-9 px-4 rounded-lg text-sm font-medium whitespace-nowrap"
+        style={{ backgroundColor: item.bg, color: item.color }}
+      >
+        {item.label} ({item.count})
+      </span>
+    ))}
   </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Status Filter Dropdown */}
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(Number(e.target.value))}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value={-1}>All Statuses</option>
-                <option value={0}>Inquiry</option>
-                <option value={1}>Confirm</option>
-                <option value={2}>Cancel</option>
-                <option value={3}>Tentative</option>
-              </select>
+  {/* Filters + actions */}
+  <div className="flex flex-wrap items-center gap-2 xl:justify-end xl:flex-shrink-0">
+    <select
+      value={statusFilter}
+      onChange={(e) => setStatusFilter(Number(e.target.value))}
+      className="h-9 border border-gray-300 rounded-lg px-3 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+    >
+      <option value={-1}>All Statuses</option>
+      <option value={0}>Inquiry</option>
+      <option value={1}>Confirm</option>
+      <option value={2}>Cancel</option>
+      <option value={3}>Tentative</option>
+      <option value={4}>Completed Till Agency</option>
+    </select>
 
+    {canAccessBanquet && (
+      <button
+        className="btn btn-light border border-primary text-primary text-sm h-9 px-4 inline-flex items-center gap-2 rounded-lg whitespace-nowrap hover:bg-primary hover:text-white transition"
+        onClick={() => setIsAvailabilityOpen(true)}
+      >
+        <i className="ki-filled ki-calendar-tick"></i>
+        <FormattedMessage
+          id="USER.DASHBOARD.DASHBOARD_CALENDAR_CHECK_AVAILABILITY_BUTTON"
+          defaultMessage="Check Availability"
+        />
+      </button>
+    )}
 
-                {canAccessBanquet && (
-              <button
-  className="btn btn-light border border-primary text-primary text-sm py-2 px-4 flex items-center gap-2 rounded-lg hover:bg-primary hover:text-white transition"
-  onClick={() => setIsAvailabilityOpen(true)}
->
-  <i className="ki-filled ki-calendar-tick"></i>
-  <span>
-                  <FormattedMessage
-                    id="USER.DASHBOARD.DASHBOARD_CALENDAR_CHECK_AVAILABILITY_BUTTON"
-                    defaultMessage="Check Availability"
-                  />
-                </span>
-</button>
-              
-                )}
+    {canAccessFollowUp && isFollowUpPermission.view && (
+      <button
+        className="btn btn-light border border-primary text-primary text-sm h-9 px-4 inline-flex items-center gap-2 rounded-lg whitespace-nowrap hover:bg-primary hover:text-white transition"
+        onClick={() => navigate("/followup-calendar")}
+      >
+        <i className="ki-filled ki-calendar-tick"></i>
+        <FormattedMessage
+          id="USER.DASHBOARD.FOLLOWUP_CALENDAR_BUTTON"
+          defaultMessage="Follow Up Calendar"
+        />
+      </button>
+    )}
 
-                {canAccessFollowUp && isFollowUpPermission.view && (
-                <button
-  className="btn btn-light border border-primary text-primary text-sm py-2 px-4 flex items-center gap-2 rounded-lg hover:bg-primary hover:text-white transition"
-  onClick={() => navigate("/followup-calendar")}
->
-  <i className="ki-filled ki-calendar-tick"></i>
-  <span>
-    <FormattedMessage
-      id="USER.DASHBOARD.FOLLOWUP_CALENDAR_BUTTON"
-      defaultMessage="Follow Up Calendar"
-    />
-  </span>
-</button>
-                )}
-
-{permissions.add && (
-              
-              <button
-                className="btn btn-primary text-sm py-2.5 px-6 flex items-center gap-2 rounded-lg"
-                onClick={() => navigate("/add-event")}
-              >
-                <i className="ki-filled ki-plus text-lg"></i>
-                <span>
-                  <FormattedMessage
-                    id="USER.DASHBOARD.DASHBOARD_CALENDAR_ADD_EVENT_BUTTON"
-                    defaultMessage="Add Event"
-                  />
-                </span>
-              </button>
-              
-            )}
-            </div>
-                  
-            
-          </div>
+    {permissions.add && (
+      <button
+        className="btn btn-primary text-sm h-9 px-5 inline-flex items-center gap-2 rounded-lg whitespace-nowrap"
+        onClick={() => navigate("/add-event")}
+      >
+        <i className="ki-filled ki-plus"></i>
+        <FormattedMessage
+          id="USER.DASHBOARD.DASHBOARD_CALENDAR_ADD_EVENT_BUTTON"
+          defaultMessage="Add Event"
+        />
+      </button>
+    )}
+  </div>
+</div>
         </div>
 
         {/* Create Event Button - Mobile Full Width */}
