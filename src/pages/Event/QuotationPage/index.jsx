@@ -54,7 +54,7 @@
       const isVatUser = VAT_USER.includes(String(userId));
       const isTaxUser = TAX_USER.includes(String(userId));
     const isOfferRateUser = OFFER_RATE_USER_IDS.includes(String(userId));
-    const DECOR_GST_USER_IDS = ["757"];
+    const DECOR_GST_USER_IDS = ["233"];
   const isDecorGstUser = DECOR_GST_USER_IDS.includes(String(userId));
       const [quotationId, setQuotationId] = useState(null);
       const { eventId } = useParams();
@@ -726,10 +726,20 @@ const cateringBase = isDecorGstUser
 
 const handleChequeCateringChange = (value) => {
   setIsEdited(true);
-  setChequePaymentCatering(value); // does NOT touch normal cheque
-  const val = parseFloat(value) || 0;
-  const decorAmt = parseFloat(chequePaymentDecor) || 0;
-  cateringBaseRef.current = val + decorAmt; // recompute base so decor still subtracts correctly next time
+  setChequePaymentCatering(value);
+
+  const catering = parseFloat(value) || 0;
+  const total = parseFloat(chequePayment) || 0;
+  const decor = parseFloat(Math.max(0, total - catering).toFixed(2));
+
+  setChequePaymentDecor(String(decor));
+  setDecorTax((prev) => ({
+    CGST: { ...prev.CGST, amount: calcPctAmount(decor, prev.CGST.percentage) },
+    SGST: { ...prev.SGST, amount: calcPctAmount(decor, prev.SGST.percentage) },
+    IGST: { ...prev.IGST, amount: calcPctAmount(decor, prev.IGST.percentage) },
+  }));
+
+  cateringBaseRef.current = total;
 };
 
 // normal cheque changes -> becomes the new catering base, then subtract any existing decor amount
@@ -866,8 +876,9 @@ useEffect(() => {
   }));
 
   // Decor cheque is subtracted from the catering base
-  const newCatering = Math.max(0, cateringBaseRef.current - base);
-  setChequePaymentCatering(newCatering);
+const total = parseFloat(chequePayment) || 0;
+setChequePaymentCatering(parseFloat(Math.max(0, total - base).toFixed(2)));
+cateringBaseRef.current = total;
 };
 
   // % changed -> amount auto-calculates, amount changed -> % auto-calculates
