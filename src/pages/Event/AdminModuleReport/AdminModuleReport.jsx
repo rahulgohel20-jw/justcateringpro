@@ -19,6 +19,7 @@ const AGENCY_MODULES = [
 ];
 const ORDER_MODULES = ["Order Summary Theme"];
 const RAW_MATERIAL_MODULES = ["Raw Material Theme"];
+const ORDER_HISTORY_MODULES = ["Order History Theme"];
 
 export default function AdminModuleReport() {
   const { eventId } = useParams();
@@ -141,6 +142,7 @@ export default function AdminModuleReport() {
                 "Outside Agency Theme",
                 "Order Summary Theme",
                 "Raw Material Theme",
+                "Order History Theme",
               ].includes(module.nameEnglish),
           );
 
@@ -169,6 +171,8 @@ export default function AdminModuleReport() {
     switch (moduleName) {
       case "Order Summary Theme":
         return "ki-notepad-edit";
+        case "Order History Theme":
+  return "ki-time";
       default:
         return "ki-document";
     }
@@ -264,7 +268,10 @@ export default function AdminModuleReport() {
   } else if (module.nameEnglish === "Raw Material Theme") {
     setAgencyType("raw_material");
     setIsManager(false);
-  } else {
+  } else if (module.nameEnglish === "Order History Theme") {
+  setAgencyType("order_history");
+  setIsManager(false);
+} else {
     setAgencyType("");
     setIsManager(false);
   }
@@ -284,7 +291,11 @@ export default function AdminModuleReport() {
       }
     }
 
-    if (module.nameEnglish === "Order Summary Theme") return true;
+    if (
+  module.nameEnglish === "Order Summary Theme" ||
+  module.nameEnglish === "Order History Theme"
+)
+  return true;
     if (module.nameEnglish === "Raw Material Theme") {
       return template.name === "Datewise Raw Material Report";
     }
@@ -297,6 +308,8 @@ export default function AdminModuleReport() {
     if (activeTab === "agency") return AGENCY_MODULES.includes(m.nameEnglish);
     if (activeTab === "order") return ORDER_MODULES.includes(m.nameEnglish);
     if (activeTab === "raw") return RAW_MATERIAL_MODULES.includes(m.nameEnglish);
+    if (activeTab === "history")
+  return ORDER_HISTORY_MODULES.includes(m.nameEnglish);
     return false;
   });
 
@@ -362,6 +375,23 @@ export default function AdminModuleReport() {
             <i className="ki-filled ki-basket text-base" />
             <FormattedMessage id="REPORTS.RAW_MATERIAL_REPORT" defaultMessage="Raw Material Report" />
           </button>
+          <button
+  onClick={() => {
+    setActiveTab("history");
+    setSelectedParty("");
+  }}
+  className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+    activeTab === "history"
+      ? "bg-white text-primary shadow-sm"
+      : "text-gray-500 hover:text-gray-700"
+  }`}
+>
+  <i className="ki-filled ki-time text-base" />
+  <FormattedMessage
+    id="REPORTS.ORDER_HISTORY_REPORT"
+    defaultMessage="Order History Report"
+  />
+</button>
         </div>
 
         {loading ? (

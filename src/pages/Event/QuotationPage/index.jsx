@@ -54,7 +54,7 @@
       const isVatUser = VAT_USER.includes(String(userId));
       const isTaxUser = TAX_USER.includes(String(userId));
     const isOfferRateUser = OFFER_RATE_USER_IDS.includes(String(userId));
-    const DECOR_GST_USER_IDS = ["233"];
+    const DECOR_GST_USER_IDS = ["757"];
   const isDecorGstUser = DECOR_GST_USER_IDS.includes(String(userId));
       const [quotationId, setQuotationId] = useState(null);
       const { eventId } = useParams();
@@ -88,6 +88,7 @@
       const [extraFunctions, setExtraFunctions] = useState([]);
       const [loadingExtraFunctions, setLoadingExtraFunctions] = useState(false);
       const [isLocked, setIsLocked] = useState(false);
+      const [lockDateAt, setLockDateAt] = useState(""); 
       const [postLockNewIds, setPostLockNewIds] = useState(new Set());
       const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [historyLogs, setHistoryLogs] = useState([]);
@@ -569,6 +570,7 @@ const cateringBaseRef = useRef(0);
                 isFromQuotationItems: false,
                 isExtraQuotationFunction: true,
                 isNewFunction: true, 
+                isAddedAfterLock: isLocked,
               })),
           );
         } catch (err) {
@@ -950,6 +952,7 @@ cateringBaseRef.current = total;
                       menuCatId: item.menuCatId || null,
                       eventFunctionId: item.eventFunctionId || 0,
                       isLocked: item.isLocked || false,
+                      isAddedAfterLock: item.isAddedAfterLock === true,
                       name: item.functionName || "",
                       date:
                         item.functionDate &&
@@ -1206,7 +1209,7 @@ cateringBaseRef.current = loadedCateringVal + loadedDecorVal; // reconstruct pre
               setOriginalFunctions(deduplicatedFunctions);
               setIsExtraFunction(quotationInfo.isExtraFunction === true);
               setIsLocked(quotationInfo.isLocked === true);
-
+              setLockDateAt(quotationInfo.lockDateAt || "");
               initialQuotationSnapshotRef.current = {
                 functions: JSON.parse(JSON.stringify(deduplicatedFunctions)),
                 taxDetails: JSON.parse(JSON.stringify(mappedData.taxDetails)),
@@ -1393,6 +1396,7 @@ cateringDecorTotal: formatAmount(cateringDecorTotal),    };
               isFromQuotationItems: false,
               isNewFunction: true,
               isLocked: false,
+              isAddedAfterLock: isLocked,
               extraTax: "",
               taxRate: "0",
               customPackageId: "",
@@ -1403,7 +1407,8 @@ cateringDecorTotal: formatAmount(cateringDecorTotal),    };
           ],
         }));
       };
-    const isPostLockEditable = (fn) => fn.isLocked === false || postLockNewIds.has(fn._tempId);
+    const isPostLockEditable = (fn) =>
+  fn.isLocked === false || fn.isAddedAfterLock === true || postLockNewIds.has(fn._tempId);
       const handleDeleteFunction = (itemId, index) => {
         if (index === 0) return;
 
@@ -1553,7 +1558,10 @@ cateringDecorTotal: formatAmount(cateringDecorTotal),    };
         setIsEdited(true);
       };
 
-      const buildPayload = () => {
+      const buildPayload = (overrides = {}) => {
+  const effectiveIsLocked = overrides.isLocked ?? isLocked;
+  const effectiveLockDateAt =
+    overrides.lockDateAt !== undefined ? overrides.lockDateAt : lockDateAt;
         let Id = localStorage.getItem("userId");
         const allFunctions = searchTerm.trim()
           ? originalFunctions
@@ -1741,7 +1749,12 @@ const grandTotal =
             isEventFunction: fn.isExtraQuotationFunction
               ? false
               : fn.isFromQuotationItems === true,
-            isLocked: fn.isLocked || false,
+            isLocked:
+  overrides.isLocked !== undefined ? overrides.isLocked : fn.isLocked || false,
+isAddedAfterLock:
+  overrides.isLocked === false
+    ? false // unlocking resets the flag
+    : fn.isAddedAfterLock === true || postLockNewIds.has(fn._tempId),
             eventFunctionId: fn.isExtraQuotationFunction
               ? null
               : fn.eventFunctionId || 0,
@@ -1757,7 +1770,8 @@ const grandTotal =
               ? Number(fn.customPackagePrice)
               : 0,
           })),
-          isLocked: isLocked,
+           isLocked: effectiveIsLocked,
+          lockDateAt: effectiveIsLocked ? effectiveLockDateAt : "",
           subTotal: parseFloat(subtotal),
           grandTotal: grandTotal,
           cgst: `${cgstPercentage}`,
@@ -1956,8 +1970,8 @@ chequePaymentCatering: cateringChequeAmt,
       });
   };
 
-      const saveNotes = () => {
-        const payload = buildPayload();
+      const saveNotes = (overrides = {}) => {
+        const payload = buildPayload(overrides);
 
         if (!quotationId) {
           return Promise.reject("No quotationId");
@@ -2465,12 +2479,28 @@ const baseAmount = cateringBase;
 
     if (!result.isConfirmed) return;
 
+        const lockDate = lock ? dayjs().format("DD/MM/YYYY hh:mm A") : "";
+
     try {
+      // 1) original lock API, unchanged (no date passed here)
       const res = await upadtelockinquotation(quotationId, lock);
       const resData = res?.data;
 
       if (resData?.success === true) {
+        // 2) save the lock date only via UpdateQuotation
+        try {
+          await saveNotes({ isLocked: lock, lockDateAt: lockDate });
+        } catch (dateErr) {
+          console.error("Lock date save failed:", dateErr);
+          message.warning("Quotation locked, but the lock date could not be saved.");
+        }
+
         setIsLocked(lock);
+        setLockDateAt(lockDate);
+        await FetchGetQuotation();
+      
+        setIsLocked(lock);
+        setLockDateAt(lockDate);
         await FetchGetQuotation();
         sendQuotationLog({
           status: lock ? "LOCK_SUCCESS" : "UNLOCK_SUCCESS",

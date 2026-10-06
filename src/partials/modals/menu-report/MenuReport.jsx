@@ -368,6 +368,29 @@ const applyToggle = (prev, key) => {
   return { ...prev, [key]: !prev[key] };
 };
 
+const flattenMenuItems = (data = []) => {
+  const seen = new Set();
+  const out = [];
+  data.forEach((cat) => {
+    (cat.menuItems || []).forEach((i) => {
+      if (seen.has(i.menuItemId)) return;
+      seen.add(i.menuItemId);
+      out.push({
+        id: i.menuItemId,
+        nameEnglish: i.menuItemName,
+        categoryId: cat.menuCategoryId,
+        categoryName: cat.menuCategoryName,
+      });
+    });
+  });
+  return out;
+};
+
+const extractMenuCategories = (data = []) =>
+  data
+    .filter((cat) => (cat.menuItems || []).length > 0)
+    .map((cat) => ({ id: cat.menuCategoryId, name: cat.menuCategoryName }));
+
 const MenuReport = ({
   isModalOpen,
   setIsModalOpen,
@@ -426,6 +449,8 @@ const isDefaultHalfPaxOn = defaultHalfPaxOnUserIds.includes(String(userId));
   const [selectedManager, setSelectedManager] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [menuCategories, setMenuCategories] = useState([]);
+const [selectedMenuCategories, setSelectedMenuCategories] = useState([]);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [loadingFilters, setLoadingFilters] = useState(false);
@@ -516,6 +541,12 @@ const languageOptions = [
   useEffect(() => {
     fetchFonts();
   }, [isModalOpen, exclusive]);
+
+  useEffect(() => {
+  if (!isModalOpen) return;
+  if (adminStartDate) setStartDate(adminStartDate);
+  if (adminEndDate) setEndDate(adminEndDate);
+}, [isModalOpen, adminStartDate, adminEndDate]);
 
   useEffect(() => {
     if (!pdfUrl) return;
@@ -960,11 +991,13 @@ useEffect(() => {
 }, [isModalOpen, isDropdownStatus, eventId, agencyType, userId]);
 
   useEffect(() => {
-  if (!isModalOpen || isDropdownStatus !== 1 || !showItemDropdown || isAdminModuleReport) {
-    setItems([]);
-    setSelectedItems([]);
-    return;
-  }
+if (!isModalOpen || isDropdownStatus !== 1 || !showItemDropdown || isAdminModuleReport) {
+  setItems([]);
+  setSelectedItems([]);
+  setMenuCategories([]);
+  setSelectedMenuCategories([]);
+  return;
+}
 
   // No Agency dropdown (e.g. date-driven configs, or any isItem-only config)
   // → fetch all items via the simpler menu-preparation endpoint, no party filter.
@@ -976,35 +1009,47 @@ useEffect(() => {
     return;
   }
 
-  const singleFunctionId = Array.isArray(eventFunctionId)
-    ? (eventFunctionId.find((id) => id !== -1) ?? -1)
-    : (eventFunctionId ?? -1);
+  // const singleFunctionId = Array.isArray(eventFunctionId)
+  //   ? (eventFunctionId.find((id) => id !== -1) ?? -1)
+  //   : (eventFunctionId ?? -1);
 
- const fetchItems = async () => {
+const fetchItems = async () => {
   setLoadingFilters(true);
   try {
-    const itemsRes = fetchWithoutAgencyFilter
-      ? await getallmenuselecteditem(eventId, singleFunctionId)
-      : await GetSelectedItemsForReportFilter(eventFunctionId, eventId, selectedAgency);
+    let itemsRes;
 
-    if (itemsRes?.data?.success && itemsRes?.data?.data) {
-      // getallmenuselecteditem returns menuItemId instead of id — normalize
-      // so the rest of the component (Select options, payload.itemId) can
-      // treat both endpoints' results the same way.
-      const normalizedItems = fetchWithoutAgencyFilter
-        ? itemsRes.data.data.map((i) => ({
-            ...i,
-            id: i.menuItemId,
-          }))
-        : itemsRes.data.data;
-
-      setItems(normalizedItems);
-      if (fetchWithoutAgencyFilter) {
-        setSelectedItems(normalizedItems.map((i) => i.id));
-      }
+    if (fetchWithoutAgencyFilter) {
+      const { sd, ed } = getRangeDates();
+     if (!sd || !ed) {
+  setItems([]);
+  setSelectedItems([]);
+  setMenuCategories([]);
+  setSelectedMenuCategories([]);
+  return;
+}
+      itemsRes = await getallmenuselecteditem(sd, ed, userId);
     } else {
-      setItems([]);
+      itemsRes = await GetSelectedItemsForReportFilter(eventFunctionId, eventId, selectedAgency);
     }
+
+   if (itemsRes?.data?.success && itemsRes?.data?.data) {
+  if (fetchWithoutAgencyFilter) {
+    const cats = extractMenuCategories(itemsRes.data.data);
+    const flat = flattenMenuItems(itemsRes.data.data);
+    setMenuCategories(cats);
+    setSelectedMenuCategories(cats.map((c) => c.id)); // all selected by default
+    setItems(flat);
+    setSelectedItems(flat.map((i) => i.id));
+  } else {
+    setMenuCategories([]);
+    setSelectedMenuCategories([]);
+    setItems(itemsRes.data.data);
+  }
+} else {
+  setItems([]);
+  setMenuCategories([]);
+  setSelectedMenuCategories([]);
+}
   } catch (err) {
     errorMsgPopup("Failed to load items");
     setItems([]);
@@ -1018,12 +1063,16 @@ useEffect(() => {
   isDropdownStatus,
   showItemDropdown,
   showAgencyDropdown,
+  selectedAgency,
   eventFunctionId,
   eventId,
-  selectedAgency,
   isAdminModuleReport,
+  startDate,
+  endDate,
+  adminStartDate,
+  adminEndDate,
+  userId,
 ]);
-
 // Load Short Menu template + its configuration when the flag is on
 useEffect(() => {
   if (!isModalOpen || !addShortMenu) {
@@ -1086,23 +1135,26 @@ useEffect(() => {
     setShortMenuSelectedItems([]);
     return;
   }
-  const fnId = Array.isArray(eventFunctionId)
-    ? (eventFunctionId.find((id) => id !== -1) ?? -1)
-    : (eventFunctionId ?? -1);
 
   (async () => {
     try {
-      const res = await getallmenuselecteditem(eventId, fnId);
+      const { sd, ed } = getRangeDates();
+      if (!sd || !ed) {
+        setShortMenuItems([]);
+        setShortMenuSelectedItems([]);
+        return;
+      }
+      const res = await getallmenuselecteditem(sd, ed, userId);
       if (res?.data?.success && res?.data?.data) {
-        const list = res.data.data.map((i) => ({ ...i, id: i.menuItemId }));
+        const list = flattenMenuItems(res.data.data);
         setShortMenuItems(list);
-        setShortMenuSelectedItems(list.map((i) => i.id)); // all selected by default
+        setShortMenuSelectedItems(list.map((i) => i.id));
       }
     } catch {
       errorMsgPopup("Failed to load Short Menu items");
     }
   })();
-}, [isModalOpen, addShortMenu, shortMenuHasItems, eventId, eventFunctionId]);
+}, [isModalOpen, addShortMenu, shortMenuHasItems, startDate, endDate, adminStartDate, adminEndDate, userId]);
 
 
 const openWebWhatsApp = (mobile, recipientName) => {
@@ -1119,11 +1171,21 @@ const openWebWhatsApp = (mobile, recipientName) => {
   window.open(waUrl, "_blank", "noopener,noreferrer");
   setShowWhatsAppModal(false);
 };
+
   const formatAdminDate = (dateString) => {
     if (!dateString) return null;
     const [year, month, day] = dateString.split("-");
     return `${day}/${month}/${year}`;
   };
+
+  const getRangeDates = () => {
+  const s = startDate || adminStartDate;
+  const e = endDate || adminEndDate;
+  return {
+    sd: s ? formatAdminDate(s) : null,
+    ed: e ? formatAdminDate(e) : null,
+  };
+};
 
   const toggleAll = (checked) => {
     setOptions((prev) => {
@@ -1156,6 +1218,21 @@ const isShortMenuCheckAll =
 
   const isCheckAll =
     visibleOptions.length > 0 && visibleOptions.every((key) => options[key]);
+
+    const showMenuCategoryDropdown =
+  showItemDropdown && !showAgencyDropdown && !isAdminModuleReport;
+
+const visibleItems = showMenuCategoryDropdown
+  ? items.filter((i) => selectedMenuCategories.includes(i.categoryId))
+  : items;
+
+const handleMenuCategoryChange = (ids) => {
+  setSelectedMenuCategories(ids);
+  // select every item belonging to the chosen categories
+  setSelectedItems(
+    items.filter((i) => ids.includes(i.categoryId)).map((i) => i.id),
+  );
+};
 
  const buildPayload = (opts, visible, overrides = {}) => {
   const pageSize = opts.size1?.enabled
@@ -1227,16 +1304,13 @@ const isShortMenuCheckAll =
     managerIds: selectedManager,
     itemId: selectedItems,
     rawMaterialCatIds: selectedCategory,
-    ...(adminStartDate
-      ? { startDate: formatAdminDate(adminStartDate) }
-      : startDate
-        ? { startDate: formatAdminDate(startDate) }
-        : {}),
-    ...(adminEndDate
-      ? { endDate: formatAdminDate(adminEndDate) }
-      : endDate
-        ? { endDate: formatAdminDate(endDate) }
-        : {}),
+   ...(() => {
+  const { sd, ed } = getRangeDates();
+  return {
+    ...(sd ? { startDate: sd } : {}),
+    ...(ed ? { endDate: ed } : {}),
+  };
+})(),
     ...(showStatusDropdown && { eventStatus: selectedStatus }),
     catFontId: catFontId || -1,
     itemFontId: itemFontId || -1,
@@ -1412,6 +1486,8 @@ setShortMenuSelectedItems([]);
     setStartDate(null);
     setEndDate(null);
     setSelectedStatus([]);
+    setMenuCategories([]);
+setSelectedMenuCategories([]);
     setShowStatusDropdown(false);
     setcatFontId(null);
     setItemFontId(null);
@@ -1771,7 +1847,33 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
     />
   </div>
 )}
-
+{showMenuCategoryDropdown && (
+  <div>
+    <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+      <AppstoreOutlined className="mr-1" />
+      Menu Category
+    </label>
+    <Select
+      mode="multiple"
+      value={selectedMenuCategories}
+      onChange={handleMenuCategoryChange}
+      placeholder="Select categories..."
+      className="w-full"
+      size="large"
+      loading={loadingFilters}
+      showSearch
+      optionFilterProp="children"
+      filterOption={(input, option) =>
+        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+      }
+      options={menuCategories.map((c) => ({ value: c.id, label: c.name }))}
+      getPopupContainer={() => document.body}
+      dropdownStyle={{ zIndex: 10000 }}
+      maxTagCount="responsive"
+      allowClear
+    />
+  </div>
+)}
 {showItemDropdown && (
   <div>
     <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
@@ -1791,7 +1893,7 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
       filterOption={(input, option) =>
         (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
       }
-      options={items.map((i) => ({ value: i.id, label: i.nameEnglish }))}
+      options={visibleItems.map((i) => ({ value: i.id, label: i.nameEnglish }))}
       getPopupContainer={() => document.body}
       dropdownStyle={{ zIndex: 10000 }}
       maxTagCount="responsive"

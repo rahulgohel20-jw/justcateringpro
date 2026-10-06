@@ -42,4 +42,14 @@ export const columns = ({ selectedRows, setSelectedRows, data }) => [
       <FormattedMessage id="RAW_MATERIAL.CATEGORY" defaultMessage="Category" />
     ),
   },
+  {
+    accessorKey: "subCategory",
+    header: (
+      <FormattedMessage
+        id="MENUITEM.SUB_CATEGORY"
+        defaultMessage="Sub Category"
+      />
+    ),
+    cell: ({ row }) => row.original.subCategory ?? "-",
+  },
 ];
