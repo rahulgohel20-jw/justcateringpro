@@ -59,11 +59,11 @@ export const LoginOutUser = (email, eventtype) => {
 };
 
 // Fetch single month close date
-export const Closedate = (month, year , userId) => {
+export const Closedate = (month, year, userId) => {
   return GET(`/employeeexpense?month=${month}&year=${year}&userId=${userId}`);
 };
 
-export const saveclosedate = (startDate, closeDate ,userId) => {
+export const saveclosedate = (startDate, closeDate, userId) => {
   return POST(
     `/employeeexpense/addCloseDate?startDate=${startDate}&closeDate=${closeDate}&userId=${userId}`,
   );
@@ -187,7 +187,7 @@ export const GetAllRawMaterial = (isAsc, page, pageSize, catId, Id, signal) => {
 };
 
 // complete parameter of raw material all 
-export const getallrawmaterial = (isActive  , isAsc , pageNo , pageSize  , rawMateriaCatlId , rawMaterialName, unitid , userid) => {
+export const getallrawmaterial = (isActive, isAsc, pageNo, pageSize, rawMateriaCatlId, rawMaterialName, unitid, userid) => {
   return GET(`rawmaterial/getallbyuserid?isActive=${isActive}&isAsc=${isAsc}&pageNo=${pageNo}&pageSize=${pageSize}&rawMateriaCatlId=${rawMateriaCatlId}&rawMaterialName=${rawMaterialName}&unitid=${unitid}&userid=${userid}`);
 };
 
@@ -282,14 +282,14 @@ export const GetQuotationReport = (
   backOfficeId,
   showLastPage,
   isSignature,
-    invoiceId = 0,    
+  invoiceId = 0,
 ) => {
   return POST(
     `/quotationreport/generatequotation?adminTemplateModuleId=${adminTemplateModuleId}&eventId=${eventId}&lang=${language}&userId=${userId}&isInvoice=${isInvoice}&isQrCode=${isQrCode}&isTermsCond=${isTermsCond}&isAdvance=${isAdvance}&isWithPrice=${isWithPrice}&isCompanyDetails=${isCompanyDetails}&isDecore=${isDecor}&isOnePage=${isOnePage}&isCombo=${isCombo}&isNotes=${isNotes}&exclusiveThemeId=${exclusiveThemeId}&backOfficeId=${backOfficeId}&showLastPage=${showLastPage}&isSignature=${isSignature}&invoiceId=${invoiceId}`,
   );
 };
 
-export const GetAllQuotationByFilter = (enddate, startdate,userid, id ,isVenue  ) => {
+export const GetAllQuotationByFilter = (enddate, startdate, userid, id, isVenue) => {
   return GET(
     `/quotation/getallbyfilter?endDate=${enddate}&startDate=${startdate}&userid=${userid}&id=${id}&isVenue=${isVenue}`,
   );
@@ -466,7 +466,7 @@ const getIsVisible = () => {
   try {
     const authStorage = localStorage.getItem("auth-storage");
     const parsed = JSON.parse(authStorage);
-    return parsed?.state?.user?.isVisible ?? true; 
+    return parsed?.state?.user?.isVisible ?? true;
   } catch {
     return true;
   }
@@ -482,7 +482,7 @@ export const GetEventMaster = (
   banqId = -1,
   partyName = ""
 ) => {
-  const isVisible = getIsVisible();   
+  const isVisible = getIsVisible();
   if (isVisible === false) {
     month = -1;
     year = -1;
@@ -530,7 +530,7 @@ export const FetchAccountparty = (userId) => {
   );
 };
 
-export const Fetchacoountledger = (endDate, partyId, startDate, userId , vendorCat, type ) => {
+export const Fetchacoountledger = (endDate, partyId, startDate, userId, vendorCat, type) => {
   return GET(
     `/vendorpayment/getaccountladger?endDate=${endDate}&partyId=${partyId}&startDate=${startDate}&userId=${userId}&vendorCat=${vendorCat}&type=${type}`,
   );
@@ -1147,7 +1147,7 @@ export const GetAllVendorPayment = (eventId, isLabour) => {
   );
 };
 
-export const GetAllPaymentDetails = (userId, isPayable ) => {
+export const GetAllPaymentDetails = (userId, isPayable) => {
   return GET(
     `/vendorpayment/getallvendorpayment?userId=${userId}&isPayable=${isPayable}`,
   );
@@ -1284,7 +1284,7 @@ export const GetUserlogs = (data, endDate, startDate, eventId, userId) => {
   if (endDate) queryParams.set("endDate", endDate);
   if (startDate) queryParams.set("startDate", startDate);
   if (eventId) queryParams.set("eventId", eventId);
-   if (userId) queryParams.set("userId", userId);
+  if (userId) queryParams.set("userId", userId);
 
   return GET(`/user-logs/getUserLogs?${queryParams.toString()}`);
 };
@@ -1326,7 +1326,7 @@ export const getsuperadmingenerateInvoiceCode = () => {
   return GET(`/invoice-operations/generateInvoiceCode`);
 };
 
-export const GetSuperalladmininvoice = (startDate, endDate, planId , customerId) => {
+export const GetSuperalladmininvoice = (startDate, endDate, planId, customerId) => {
   return GET(
     `/invoice-operations/getAllAdminInvoice?startDate=${startDate}&endDate=${endDate}&planId=${planId}&customerId=${customerId}`,
   );
@@ -1550,7 +1550,7 @@ export const GetAllleadmaster = (lead, userId) => {
   return GET(`/leadmaster/getAll?AssignId=${lead}&userId=${userId}`);
 };
 
-export const GetLeadCode = (userId ) => {
+export const GetLeadCode = (userId) => {
   return GET(`/leadmaster/generateLeadCode?userId=${userId}`);
 };
 
@@ -1875,9 +1875,9 @@ export const GetSelectedItemsForReportFilter = (
 
   return GET(
     `/menupreparation/getselectedmenuitembyeventandeventfunctionid` +
-      `?eventFunctionId=${event_func_id}` +
-      `&eventId=${event_id}` +
-      (partyQuery ? `&${partyQuery}` : ""),
+    `?eventFunctionId=${event_func_id}` +
+    `&eventId=${event_id}` +
+    (partyQuery ? `&${partyQuery}` : ""),
   );
 };
 
@@ -1892,13 +1892,13 @@ export const GetNamePlateByNamePlateType = (
 ) => {
   return GET(
     `/nameplate/getbynameplatetype` +
-      `?eventFunctionId=${eventFunctionId}` +
-      `&eventId=${eventId}` +
-      `&isCounterItem=${isCounterItem}` +
-      `&isStandyItem=${isStandyItem}` +
-      `&isTableMenuItem=${isTableMenuItem}` +
-      `&lang=${lang}` +
-      `&userId=${userId}`,
+    `?eventFunctionId=${eventFunctionId}` +
+    `&eventId=${eventId}` +
+    `&isCounterItem=${isCounterItem}` +
+    `&isStandyItem=${isStandyItem}` +
+    `&isTableMenuItem=${isTableMenuItem}` +
+    `&lang=${lang}` +
+    `&userId=${userId}`,
   );
 };
 
@@ -1928,7 +1928,7 @@ export const GetbankdetailsbyuserId = (userId) => {
   return GET(`bankdetails/getbyuserid?userId=${userId}`);
 };
 
-export const GetCopyItem = (userId, isCaptainRecipe ) => {
+export const GetCopyItem = (userId, isCaptainRecipe) => {
   return GET(`/menuitems/getallexistingrawitems?userId=${userId}&isCaptainRecipe=${isCaptainRecipe}`);
 };
 
@@ -2007,7 +2007,7 @@ export const assignMultipleLeadToMember = (
   const leadIdParams = leadIds.map((id) => `leadId=${id}`).join("&");
   const finalUrl = `/leadmaster/assignMultipleLeadToMember?${leadIdParams}&memberId=${memberId}&closeDate=${encodeURIComponent(closeDate)}&expirationDate=${encodeURIComponent(expirationDate)}&description=${encodeURIComponent(description)}`;
 
-  
+
 
   return PUT(finalUrl);
 };
@@ -2077,7 +2077,7 @@ export const GETgetPaymentHistoryByInvoiceId = (invoiceId) => {
   );
 };
 
-export const DeleteRecordpaymentbyid = (invoicePaymentHistoryId , invoiceId) => {
+export const DeleteRecordpaymentbyid = (invoicePaymentHistoryId, invoiceId) => {
   return DELETE(
     `/invoice-operations/deletePaymentDetailByInvoicePaymentHistoryId?invoicePaymentHistoryId=${invoicePaymentHistoryId}&invoiceId=${invoiceId}`,
   );
@@ -2101,11 +2101,11 @@ export const deletepipeline = (pipelineId) => {
   return DELETE(`/pipeline/delete?pipelineId=${pipelineId}`);
 };
 
-export const GETallpipeline = (userId ) => {
+export const GETallpipeline = (userId) => {
   return GET(`pipeline/getall?userId=${userId}`);
 };
 
-export const GETstagesleaddatabypipeline = (pipelineId, userId , memberId) => {
+export const GETstagesleaddatabypipeline = (pipelineId, userId, memberId) => {
   return GET(
     `pipeline/getstageleaddatabypipelineid?pipelineId=${pipelineId}&userId=${userId}&memberId=${memberId}`,
   );
@@ -2170,7 +2170,7 @@ export const Addupdateemployeeexpense = (data) => {
 };
 
 export const GEtEmployeeExpensebytype = (
-  accountContactId , 
+  accountContactId,
   userId,
   expenseType,
   startDate,
@@ -2183,7 +2183,7 @@ export const GEtEmployeeExpensebytype = (
 
 export const GEtEmpofficeExpensebytype = (
   userId,
-  incomeExpenseTypeId ,
+  incomeExpenseTypeId,
   startDate,
   endDate,
   accountContactId,
@@ -2247,10 +2247,10 @@ export const deleteOfficePayout = (payoutid) => {
 };
 
 // trippayout
- export const updatepayoutforTrip = (data) => {
-   return PUT(
-     `employeeexpense/payoutTripExpense` , data);
- };
+export const updatepayoutforTrip = (data) => {
+  return PUT(
+    `employeeexpense/payoutTripExpense`, data);
+};
 
 export const getAllTripPayoutHistoryByExpenseId = (expenseId) => {
   return GET(`employeeexpense/getalltrippayouthistorybyexpenseid?expenseId=${expenseId}`);
@@ -2262,7 +2262,7 @@ export const deleteTripPayout = (payoutId) => {
   return DELETE(`/employeeexpense/deletetrippayout?payoutId=${payoutId}`);
 }
 
-export const GETALLexpense = (endDate, startDate, userId , accountContactId) => {
+export const GETALLexpense = (endDate, startDate, userId, accountContactId) => {
   return GET(
     `employeeexpense/getAllExpenses?endDate=${encodeURIComponent(endDate)}&startDate=${encodeURIComponent(startDate)}&userId=${userId}&accountContactId=${accountContactId}`,
   );
@@ -2272,7 +2272,7 @@ export const AddStockType = (data) => {
   return POST(`/stocktype/add`, data);
 };
 
-export const GetStockTypeByUserId = (userId , mainType) => {
+export const GetStockTypeByUserId = (userId, mainType) => {
   return GET(`/stocktype/getallbyuserid?userId=${userId}&mainType=${mainType}`);
 };
 
@@ -2296,7 +2296,7 @@ export const getautomanualpurchsaseid = (sotPoId) => {
   return GET(`/sot/manual-po/detail/${sotPoId}`);
 };
 
-export const GetAllPurchase = (userId, page = 0, size = 100 , searchName) => {
+export const GetAllPurchase = (userId, page = 0, size = 100, searchName) => {
   return GET(`/purchaseorder/getbyuser?userId=${userId}&page=${page}&size=${size}&searchName=${searchName}`);
 };
 
@@ -2319,7 +2319,7 @@ export const UpdateUserPlan = (date, id, otp) => {
   );
 };
 
-export const DeleteUserById = (id, otp , isAdmin) => {
+export const DeleteUserById = (id, otp, isAdmin) => {
   return DELETE(`/user/deleteuserbyid?userId=${id}&otp=${otp}&isAdmin=${isAdmin}`);
 };
 
@@ -2385,7 +2385,7 @@ export const GetIssueDetailbyPOCode = (pocode, id) => {
   );
 };
 
-export const GetOPBItems = (id, pageNo, size, userid , itemName) => {
+export const GetOPBItems = (id, pageNo, size, userid, itemName) => {
   return GET(
     `/rawmaterialopb/getbycategory?categoryId=${id}&pageNo=${pageNo}&pageSize=${size}&userId=${userid}&itemName=${itemName}`,
   );
@@ -2411,7 +2411,7 @@ export const GetStockReport = (itemName, id, catId, stockId, fromDate, toDate, p
   );
 };
 
-export const GetStockPdfReport2 = (id, catId, stockId, isCompanyDetails, itemName , kitchenTypeId = 0 , withImage) => {
+export const GetStockPdfReport2 = (id, catId, stockId, isCompanyDetails, itemName, kitchenTypeId = 0, withImage) => {
   return GET(
     `datewisestockreport/pdf?categoryId=${catId}&stockTypeId=${stockId}&userId=${id}&isCompanyDetails=${isCompanyDetails}&itemName=${itemName}&kitchenTypeId=${kitchenTypeId}&withImage=${withImage}`,
   );
@@ -2429,7 +2429,7 @@ export const GetStockPdfReport = (id, catId, stockId, fromDate, toDate, isCompan
   );
 };
 
-export const GetStockLedgerPdfReport = (id, rawMaterialId, fromDate, toDate,isCompanyDetails) => {
+export const GetStockLedgerPdfReport = (id, rawMaterialId, fromDate, toDate, isCompanyDetails) => {
   return GET(
     `stockledger/pdf?rawMaterialId=${rawMaterialId}&userId=${id}&fromDate=${fromDate}&toDate=${toDate}&isCompanyDetails=${isCompanyDetails}`,
   );
@@ -2501,7 +2501,7 @@ export const Addleadsource = (name, userId) => {
   return POST(`/lead-source/add?name=${encodeURIComponent(name)}&userId=${userId}`);
 };
 
-export const GetAllLeadSource = (userId ) => {
+export const GetAllLeadSource = (userId) => {
   return GET(`/lead-source/getall?userId=${userId}`);
 };
 
@@ -2509,7 +2509,7 @@ export const DeleteLeadSource = (leadSourceId) => {
   return DELETE(`/lead-source/deletebyid?leadSourceId=${leadSourceId}`);
 };
 
-export const updateLeadSource = (leadSourceId, name  , userId) => {
+export const updateLeadSource = (leadSourceId, name, userId) => {
   return PUT(
     `/lead-source/update?leadSourceId=${leadSourceId}&name=${encodeURIComponent(name)}&userId=${userId}`,
   );
@@ -2599,7 +2599,7 @@ export const GetAllIncome = ({
   paymentMode,
   typeId,
   userId,
-  accountType ,
+  accountType,
 }) => {
   return GET(
     `income/get?bankAccountId=${bankAccountId}&cashAccountId=${cashAccountId}&startDate=${startDate}&endDate=${endDate}&paymentMode=${paymentMode}&userId=${userId}&accountType=${accountType}&typeId=${typeId}`,
@@ -2693,8 +2693,7 @@ export const Deletebank = (Id) => {
 
 export const CashAccountGetAll = (userId, isPrimary = "") => {
   return GET(
-    `/cash-opb/getallbyuserid?userId=${userId}&isPrimary=${
-      isPrimary === true ? true : ""
+    `/cash-opb/getallbyuserid?userId=${userId}&isPrimary=${isPrimary === true ? true : ""
     }`,
   );
 };
@@ -2737,33 +2736,33 @@ export const GETallbytypereciptpayment = ({
 };
 
 export const Getbyidreciptpayment = (accountEntryId) => {
-  return GET (`/account-entry/getbyid?accountEntryId=${accountEntryId}`)
-} 
+  return GET(`/account-entry/getbyid?accountEntryId=${accountEntryId}`)
+}
 
-export const AddExtraCharges = ( payload) => {
+export const AddExtraCharges = (payload) => {
   return POST(`/extracharges/saveOrUpdate`, payload);
 };
 
 
 export const GetExtraCharges = (eventFunctionId, userId, eventId) => {
-  return GET (`/extracharges/get?eventFunctionId=${eventFunctionId}&userId=${userId}&eventId=${eventId}`)
-} 
-
-export const GetPurchaseReturnPdf = (isCompanyDetails , porId , userId, isPrice ) => {
-  return GET (`/purchaseorderreturn/pdf?isCompanyDetails=${isCompanyDetails}&porId=${porId}&userId=${userId}&isPrice=${isPrice}`)
-} 
-
-
-export const GetStoreIssuePdf = (isCompanyDetails , porId , userId ) => {
-  return GET (`/storepo/pdf?isCompanyDetails=${isCompanyDetails}&poId=${porId}&userId=${userId}`)
+  return GET(`/extracharges/get?eventFunctionId=${eventFunctionId}&userId=${userId}&eventId=${eventId}`)
 }
 
-export const GetStoreIssueReturnPdf = (isCompanyDetails , porId , userId ) => {
-  return GET (`/storeissuereturn/pdf?isCompanyDetails=${isCompanyDetails}&sirId=${porId}&userId=${userId}`)
+export const GetPurchaseReturnPdf = (isCompanyDetails, porId, userId, isPrice) => {
+  return GET(`/purchaseorderreturn/pdf?isCompanyDetails=${isCompanyDetails}&porId=${porId}&userId=${userId}&isPrice=${isPrice}`)
+}
+
+
+export const GetStoreIssuePdf = (isCompanyDetails, porId, userId) => {
+  return GET(`/storepo/pdf?isCompanyDetails=${isCompanyDetails}&poId=${porId}&userId=${userId}`)
+}
+
+export const GetStoreIssueReturnPdf = (isCompanyDetails, porId, userId) => {
+  return GET(`/storeissuereturn/pdf?isCompanyDetails=${isCompanyDetails}&sirId=${porId}&userId=${userId}`)
 }
 
 export const GetChefRequisitionPdf = (isCompanyDetails, lang, porId, userId) => {
-  return GET (`/chefrequisition/pdf?isCompanyDetails=${isCompanyDetails}&lang=${lang}&crId=${porId}&userId=${userId}`)
+  return GET(`/chefrequisition/pdf?isCompanyDetails=${isCompanyDetails}&lang=${lang}&crId=${porId}&userId=${userId}`)
 }
 export const GetStoreRequisitionPdf = (isCompanyDetails, lang, porId, userId) => {
   return GET(`/storerequisition/pdf?isCompanyDetails=${isCompanyDetails}&lang=${lang}&crId=${porId}&userId=${userId}`);
@@ -2775,8 +2774,8 @@ export const AddCategoryImages = (payload) => {
 };
 
 
-export const GetCategoryImg = (userId , isCatImg ) => {
-  return GET (`/catbgselection/getall?isCatImg=${isCatImg}&userId=${userId}`)
+export const GetCategoryImg = (userId, isCatImg) => {
+  return GET(`/catbgselection/getall?isCatImg=${isCatImg}&userId=${userId}`)
 }
 
 export const DeleteCategoryImg = (id) => {
@@ -2788,11 +2787,11 @@ export const AddAccountTranfer = (payload) => {
   return POST(`/amount-transfer/add-update`, payload);
 };
 
-export const GETalltransfer = (endDate, startDate , userId) => {
+export const GETalltransfer = (endDate, startDate, userId) => {
   return GET(`/amount-transfer/getall?endDate=${endDate}&startDate=${startDate}&userId=${userId}`);
 };
 
-export const GETById = (id , userId) => {
+export const GETById = (id, userId) => {
   return GET(`/amount-transfer/getbyid?id=${id}&userId=${userId}`);
 };
 
@@ -2818,7 +2817,7 @@ export const getreceivablepayable = (userId, startDate, endDate, entryType) => {
   params.append("entryType", entryType);
   if (startDate) params.append("startDate", startDate);
   if (endDate) params.append("endDate", endDate);
-  
+
   return GET(`/recievale-payable/getallmonthwise?${params.toString()}`);
 };
 
@@ -2840,7 +2839,7 @@ export const GetAllAccountContactMaster = (userId) => {
 
 export const deleteAccountconstactMaster = (accountContactId) => {
   return DELETE(`/account-contact/deletebyid?accountContactId=${accountContactId}`);
-  
+
 };
 export const GETbyidaccountcontactmaster = (accountContactId) => {
   return GET(`/account-contact/getbyid?accountContactId=${accountContactId}`);
@@ -2895,12 +2894,12 @@ export const GetInfoAutoManualPO = (sotPoId) => {
   return GET(`/sot/manual-po/info/${sotPoId}`);
 };
 
-export const GetGstReportData = (fromDate, toDate, userId, type , gstType) => {
+export const GetGstReportData = (fromDate, toDate, userId, type, gstType) => {
   return GET(`/gst-report/data?fromDate=${fromDate}&toDate=${toDate}&userId=${userId}&type=${type}&gstType=${gstType}`);
 };
 
 
-export const GetGstReportPdf = (fromDate, toDate, userId, type , gstType) => {
+export const GetGstReportPdf = (fromDate, toDate, userId, type, gstType) => {
   return GET(`/gst-report/pdf?fromDate=${fromDate}&toDate=${toDate}&userId=${userId}&type=${type}&gstType=${gstType}`);
 };
 
@@ -2945,12 +2944,12 @@ export const Getgenerateusermenuitemrawmaterialexcel = (userId) => {
   return POST(`/report/generate-user-menuitem-rawmaterial-excel?userId=${userId}`);
 };
 
-export const GetAllCrCodes = ( userId) => {
+export const GetAllCrCodes = (userId) => {
   return GET(`/storepo/getallcrcodes?userId=${userId}`);
 };
 
-export const GetMaterialByCrcode = ( crcode, userId ) => {
-  return GET(`/storepo/getbycrcode?crcode=${crcode }&userId=${userId}`);
+export const GetMaterialByCrcode = (crcode, userId) => {
+  return GET(`/storepo/getbycrcode?crcode=${crcode}&userId=${userId}`);
 };
 
 export const AddEventfunctionmanagerassign = (data) => {
@@ -2991,12 +2990,12 @@ export const reportpdfforrmdisposable = (
   );
 };
 
-export const getallcaptainrecipe = (userId , status) => {
+export const getallcaptainrecipe = (userId, status) => {
   return GET(`/captain-receipe-master/getallbyuserid?userId=${userId}&status=${status}`);
 };
 
-export const getCaptainReceipeById = (id ,isSync) => {
-  return GET(`/captain-receipe-master/getbyid?id=${id}&isSync=${isSync}`); 
+export const getCaptainReceipeById = (id, isSync) => {
+  return GET(`/captain-receipe-master/getbyid?id=${id}&isSync=${isSync}`);
 };
 
 export const addupdatecaptainreceipe = (data) => {
@@ -3010,7 +3009,7 @@ export const deletecaptainreceipe = (id) => {
 export const updateCaptainReceipeStatusById = (id, status) => {
   return PUT(`/captain-receipe-master/updatestatusbyid?id=${id}&status=${status}`);
 };
-export const getsynccaptainrecipe = (userId) =>{
+export const getsynccaptainrecipe = (userId) => {
   return GET(`captain-receipe-master/syncallcaptainreceiperawmaterial?userId=${userId}`);
 }
 
@@ -3057,7 +3056,7 @@ export const AddBanquet = (data) => {
 };
 
 
-export const DeleteBanquet = (id,userId) => {
+export const DeleteBanquet = (id, userId) => {
   return DELETE(`/banquethall/delete/${id}?userId=${userId}`);
 };
 
@@ -3085,23 +3084,23 @@ export const DeleteCrockerySOT = (sotId) => {
   return DELETE(`/sotcrockery/delete/${sotId}`);
 };
 
-export const GetStorePoPdf = (userId, storePoId , isCompanyDetails ) => {
+export const GetStorePoPdf = (userId, storePoId, isCompanyDetails) => {
   return GET(`/storeissuereturn/pdf-by-storepo?userId=${userId}&storePoId=${storePoId}&isCompanyDetails=${isCompanyDetails}`);
 };
 
 export const GenerateMenuLink = (payload) => {
-  return POST(`/menu-share/generate`,payload);
+  return POST(`/menu-share/generate`, payload);
 };
 
 
 export const VerifyMenuLink = (payload) => {
-  return POST(`/menu-share/verify`,payload);
+  return POST(`/menu-share/verify`, payload);
 }
 
 
 
 export const StorePoPricePdf = (payload, userId) => {
-  return POST(`/storepo/pdfwithprice?userId=${userId}`,payload);
+  return POST(`/storepo/pdfwithprice?userId=${userId}`, payload);
 }
 
 export const CustomPackagePdf = (payload) => {
@@ -3143,7 +3142,7 @@ export const addupdatefollowupmodal = (data) => {
 };
 
 export const AddBanquetShiftApi = (payload) => {
-  return POST(`/banquetshift/add-update`,payload);
+  return POST(`/banquetshift/add-update`, payload);
 }
 
 
@@ -3161,7 +3160,7 @@ export const BanquetShiftStatus = (id) => {
 }
 
 export const AssignEventsToChild = (payload) => {
-  return POST(`/eventmaster/assigneventstochild`,payload);
+  return POST(`/eventmaster/assigneventstochild`, payload);
 }
 
 export const IsChildUserExist = (userId) => {
@@ -3175,11 +3174,11 @@ export const AvailabilityCheck = (userId, bookingDate, hallIds, eventId) => {
   return GET(`/banquetshift/availability?userId=${userId}&bookingDate=${bookingDate}&${hallIdParams}&eventId=${eventId}`);
 };
 
-export const OverAllAvailabilityCheck = (userId, endDate , startDate) => {
+export const OverAllAvailabilityCheck = (userId, endDate, startDate) => {
   return GET(`/banquetshift/datewise-availability?userId=${userId}&startDate=${startDate}&endDate=${endDate}`);
 };
 
-export const  addeventremrk = (data) => {
+export const addeventremrk = (data) => {
   return POST(`eventremark/add`, data);
 };
 
@@ -3187,15 +3186,15 @@ export const deleteeventremark = (id) => {
   return DELETE(`eventremark/deletebyid?id=${id}`);
 };
 
-export const GetAllEventRemarks = (remarkTypeName , userId) =>{
-return GET(`/eventremark/getallbyuserid?remarkTypeName=${remarkTypeName}&userId=${userId}`);
+export const GetAllEventRemarks = (remarkTypeName, userId) => {
+  return GET(`/eventremark/getallbyuserid?remarkTypeName=${remarkTypeName}&userId=${userId}`);
 }
 
 export const geteventremarkbyid = (id) => {
   return GET(`eventremark/getbyid?id=${id}`);
 }
- 
-export const  updateeventremark = ( id , data) => {
+
+export const updateeventremark = (id, data) => {
   return PUT(`eventremark/update?id=${id}`, data);
 };
 export const AvailabilityCheckByFunction = (userId, bookingDate, hallId, eventFunctionId) => {
@@ -3204,7 +3203,7 @@ export const AvailabilityCheckByFunction = (userId, bookingDate, hallId, eventFu
 
 
 export const AddRoom = (payload) => {
-  return POST(`/room/add`,payload);
+  return POST(`/room/add`, payload);
 }
 
 
@@ -3300,23 +3299,23 @@ export const upadtelockinquotation = (quotationId, isLock) => {
   return PUT(`/quotation/lock-quotation?quotationId=${quotationId}&isLock=${isLock}`);
 };
 
-export const getEventVendorDatainviewmanger = (eventFunctionId , eventId , type) =>{
-  return GET (`/eventmaster/geteventvendordata?eventFunctionId=${eventFunctionId}&eventId=${eventId}&type=${type}`);
+export const getEventVendorDatainviewmanger = (eventFunctionId, eventId, type) => {
+  return GET(`/eventmaster/geteventvendordata?eventFunctionId=${eventFunctionId}&eventId=${eventId}&type=${type}`);
 };
 
-export const getexcelforqutation = (startDate, endDate, userid , id , isVenue) => {
+export const getexcelforqutation = (startDate, endDate, userid, id, isVenue) => {
   return GET(`/quotation/quotationexcel?userid=${userid}&startDate=${startDate}&endDate=${endDate}&id=${id}&isVenue=${isVenue}`);
 };
 
-export const getexcelforinvoice = (startDate , endDate , userid , id , isVenue) => {
+export const getexcelforinvoice = (startDate, endDate, userid, id, isVenue) => {
   return GET(`/invoice/invoiceexcel?userid=${userid}&startDate=${startDate}&endDate=${endDate}&id=${id}&isVenue=${isVenue}`);
 };
 
-export const AccountLedgerExcel = (startDate , endDate , userid,partyId , vendorCat, ledgerType ) => {
+export const AccountLedgerExcel = (startDate, endDate, userid, partyId, vendorCat, ledgerType) => {
   return GET(`/vendorpayment/account-ledger-excel?userId=${userid}&partyId=${partyId}&startDate=${startDate}&endDate=${endDate}&vendorCat=${vendorCat}&type=${ledgerType}`);
 };
 
-export const AccountLedgerPdf = (startDate , endDate , userid,partyId  , vendorCat, ledgerType ) => {
+export const AccountLedgerPdf = (startDate, endDate, userid, partyId, vendorCat, ledgerType) => {
   return GET(`/vendorpayment/account-ledger-pdf?userId=${userid}&partyId=${partyId}&startDate=${startDate}&endDate=${endDate}&vendorCat=${vendorCat}&type=${ledgerType} `);
 };
 
@@ -3327,24 +3326,24 @@ export const invoicecodeforadmin = (userId) => {
 
 
 
-export const AddBanquetRights = (data,userId) => {
+export const AddBanquetRights = (data, userId) => {
   return POST(`/banquet-rights/add?userId=${userId}`, data);
 };
 
-export const GetBanquetRightsByUserId = (userId ,memberId) => {
+export const GetBanquetRightsByUserId = (userId, memberId) => {
   return GET(`/banquet-rights/getbyuser?userId=${memberId}&memberId=${userId}`);
 };
 
 
-export const StoreReportSot = (sotId ) => {
+export const StoreReportSot = (sotId) => {
   return GET(`/sot/storereport/${sotId}`);
 };
 
-export const SotReportPdf = (sotId, isCompanyDetails, userId  ) => {
+export const SotReportPdf = (sotId, isCompanyDetails, userId) => {
   return GET(`/sot/pdf/${sotId}?isCompanyDetails=${isCompanyDetails}&userId=${userId}`);
 };
 
-export const CrockerySotReportPdf = (sotId, isCompanyDetails, userId  ) => {
+export const CrockerySotReportPdf = (sotId, isCompanyDetails, userId) => {
   return GET(`/sotcrockery/pdf/${sotId}?isCompanyDetails=${isCompanyDetails}&userId=${userId}`);
 };
 
@@ -3357,48 +3356,48 @@ export const DeleteGuestById = (id) => {
   return DELETE(`/tester-master/deletebyid?id=${id}`);
 };
 
-export const GetAllGuest = (userId ) => {
+export const GetAllGuest = (userId) => {
   return GET(`/tester-master/getall?userId=${userId}`);
 };
 
 
-export const Addupdategroundtask = (data) =>{
-  return POST (`/eventgroundtask/addorupdate` , data) ;
+export const Addupdategroundtask = (data) => {
+  return POST(`/eventgroundtask/addorupdate`, data);
 };
 
-export const GETALLAssignaskmanager = (isActive , resourceType , userId) => {
-  return GET (`/eventgroundtask/getall?isActive=${isActive}&resourceType=${resourceType}&userId=${userId}`);
+export const GETALLAssignaskmanager = (isActive, resourceType, userId) => {
+  return GET(`/eventgroundtask/getall?isActive=${isActive}&resourceType=${resourceType}&userId=${userId}`);
 };
 
-export const Deleteassignmanger = (id) =>{
+export const Deleteassignmanger = (id) => {
   return DELETE(`/eventgroundtask/delete?id=${id}`);
 };
 
-export const updateStatusassignmanger = (id , isActive) => {
-  return PUT (`/eventgroundtask/update-status?id=${id}&isActive=${isActive}`);
+export const updateStatusassignmanger = (id, isActive) => {
+  return PUT(`/eventgroundtask/update-status?id=${id}&isActive=${isActive}`);
 };
-export const GenerateTesterLink = (payload ) => {
-  return POST(`/event-food-testing/generate-link`,payload);
-};
-
-
-
-export const GetFoodTestingMenu = (payload ) => {
-  return POST(`/event-food-testing/getMenu`,payload);
+export const GenerateTesterLink = (payload) => {
+  return POST(`/event-food-testing/generate-link`, payload);
 };
 
 
-export const SaveTesterMenu = (payload ) => {
-  return POST(`/event-food-testing/add-update`,payload);
+
+export const GetFoodTestingMenu = (payload) => {
+  return POST(`/event-food-testing/getMenu`, payload);
 };
 
 
-export const GetAllGeneratedLinkGuest = (eventId , eventFunctionId  ) => {
+export const SaveTesterMenu = (payload) => {
+  return POST(`/event-food-testing/add-update`, payload);
+};
+
+
+export const GetAllGeneratedLinkGuest = (eventId, eventFunctionId) => {
   return GET(`/event-food-testing/getall?eventId=${eventId}&eventFunctionId=${eventFunctionId}`);
 };
 
 
-export const addupdateeventvendordata = (data) =>{
+export const addupdateeventvendordata = (data) => {
   return POST(`/eventmaster/addupdateeventvendordata`, data);
 };
 
@@ -3406,98 +3405,98 @@ export const ChangePreparationStatus = (eventId, status) => {
   return POST(`/menupreparation/updatePreparationStatus?eventId=${eventId}&status=${status}`);
 };
 
-export const GetPreparationStatus = (eventId ) => {
+export const GetPreparationStatus = (eventId) => {
   return GET(`/menupreparation/getPrepStatus?eventId=${eventId}`);
 };
 
 
-export const AddChildRole = (payload ) => {
-  return POST(`/role-hierarchy/addorupdate`,payload);
+export const AddChildRole = (payload) => {
+  return POST(`/role-hierarchy/addorupdate`, payload);
 };
 
 
-export const GetChildRolesByParentId = (roleId ,userId ) => {
+export const GetChildRolesByParentId = (roleId, userId) => {
   return GET(`/role-hierarchy/getchildren?userId=${userId}&roleId=${roleId}`);
 };
 
 
-export const DeleteChildRole = (id) =>{
+export const DeleteChildRole = (id) => {
   return DELETE(`/role-hierarchy/deletebyid?hierarchyId=${id}`);
 };
 
-export const GetRoleTree = (roleId ,userId  ) => {
+export const GetRoleTree = (roleId, userId) => {
   return GET(`/role-hierarchy/gettree?userId=${userId}&roleId=${roleId}`);
 };
 
 
-export const GetParentUser = (roleId ,userId  ) => {
+export const GetParentUser = (roleId, userId) => {
   return GET(`/user/parentuser?userId=${userId}&roleId=${roleId}`);
 };
 
 
-export const AddRevisionHistory = (payload ) => {
-  return POST(`/revision-history/addorupdate`,payload);
+export const AddRevisionHistory = (payload) => {
+  return POST(`/revision-history/addorupdate`, payload);
 };
 
 
-export const GetAllRevisionHistory = (eventId ,userId ) => {
+export const GetAllRevisionHistory = (eventId, userId) => {
   return GET(`/revision-history/getall?userId=${userId}&eventId=${eventId}`);
 };
 
-export const DeleteRevisionHistory = (id) =>{
+export const DeleteRevisionHistory = (id) => {
   return DELETE(`/revision-history/delete?id=${id}`);
 };
 
 
-export const AddDecorCategory = (payload ) => {
-  return POST(`/decoremaincategory/addorupdate`,payload);
+export const AddDecorCategory = (payload) => {
+  return POST(`/decoremaincategory/addorupdate`, payload);
 };
 
 
-export const DeleteDecorCategory = (id) =>{
+export const DeleteDecorCategory = (id) => {
   return DELETE(`/decoremaincategory/deletebyid?id=${id}`);
 };
 
 
-export const GetAllDecorCategory = (userId ) => {
+export const GetAllDecorCategory = (userId) => {
   return GET(`/decoremaincategory/getallbyuserid?userid=${userId}&isActive=true`);
 };
 
 
-export const UpdateDecorCategoryStatus = (id, isActive ) => {
+export const UpdateDecorCategoryStatus = (id, isActive) => {
   return PUT(`/decoremaincategory/updatestatus?id=${id}&isActive=${isActive}`);
 };
 
 
-export const AddDecorItem = (payload ) => {
-  return POST(`/decoreitem/addorupdate`,payload);
+export const AddDecorItem = (payload) => {
+  return POST(`/decoreitem/addorupdate`, payload);
 };
 
 
 
-export const DeleteDecorItem = (id) =>{
+export const DeleteDecorItem = (id) => {
   return DELETE(`/decoreitem/deletebyid?id=${id}`);
 };
 
-export const GetAllDecorItem = (userId ) => {
+export const GetAllDecorItem = (userId) => {
   return GET(`/decoreitem/getallbyuserid?userId=${userId}`);
 };
 
 
-export const UpdateDecorItemStatus = (id, isActive ) => {
+export const UpdateDecorItemStatus = (id, isActive) => {
   return PUT(`/decoreitem/updatestatus?id=${id}&isActive=${isActive}`);
 };
 
 
-export const AddDecorPackage = (payload ) => {
-  return POST(`/decorepackage/addorupdate`,payload);
+export const AddDecorPackage = (payload) => {
+  return POST(`/decorepackage/addorupdate`, payload);
 };
 
-export const GetDecorPackageById = (id ) => {
+export const GetDecorPackageById = (id) => {
   return GET(`/decorepackage/getbyid?id=${id}`);
 };
 
-export const DeleteDecorPackage = (id) =>{
+export const DeleteDecorPackage = (id) => {
   return DELETE(`/decorepackage/delete?id=${id}`);
 };
 
@@ -3505,12 +3504,12 @@ export const GetAllDecorPackage = (id) => {
   return GET(`/decorepackage/getallbyuserid?userid=${id}`);
 };
 
-export const UpdateDecorPackageStatus = (id, isActive ) => {
+export const UpdateDecorPackageStatus = (id, isActive) => {
   return PUT(`/decorepackage/status?id=${id}&isActive=${isActive}`);
 };
 
-export const DecorePrep = (payload ) => {
-  return POST(`/decorepreparation/addOrUpdate`,payload);
+export const DecorePrep = (payload) => {
+  return POST(`/decorepreparation/addOrUpdate`, payload);
 };
 
 
@@ -3541,7 +3540,7 @@ export const AddEventAdvancePayment = (data) => {
   return POST(`/event-adv-payment/add-update`, data);
 };
 
-export const DeleteEventAdvancePayment = (id) =>{
+export const DeleteEventAdvancePayment = (id) => {
   return DELETE(`/event-adv-payment/deletebyid?id=${id}`);
 };
 
@@ -3549,21 +3548,21 @@ export const GetAllEventAdvancePayment = (id) => {
   return GET(`/event-adv-payment/getall?eventId=${id}`);
 };
 
-export const getreportpdfforadvancepayment = (advancePaymentId , eventId , userId , isTermsCond  , eventFunctionId) => {
+export const getreportpdfforadvancepayment = (advancePaymentId, eventId, userId, isTermsCond, eventFunctionId) => {
   return GET(`/event-adv-payment/getreport?advancePaymentId=${advancePaymentId}&eventId=${eventId}&userId=${userId}&isTermsCond=${isTermsCond}&eventFunctionId=${eventFunctionId}`);
 };
 
-export const ADDupadteeventwisetermscondition = ( data ) => {
-  return POST (`/event-terms-and-condition/add-update` , data) ;
+export const ADDupadteeventwisetermscondition = (data) => {
+  return POST(`/event-terms-and-condition/add-update`, data);
 
 };
 
-export const GETALleventwisetermcondition = (eventId ) =>{
-  return GET (`/event-terms-and-condition/getbyeventId?eventId=${eventId}`);
+export const GETALleventwisetermcondition = (eventId) => {
+  return GET(`/event-terms-and-condition/getbyeventId?eventId=${eventId}`);
 };
 
-export const termrsconditionstatuts =   (id , isActive) =>{
-  return PUT (`/termscondition/isActive?id=${id}&isActive=${isActive}`);
+export const termrsconditionstatuts = (id, isActive) => {
+  return PUT(`/termscondition/isActive?id=${id}&isActive=${isActive}`);
 };
 
 export const Addupdtaehallpackagerate = (data) => {
@@ -3582,8 +3581,8 @@ export const Updatestatus = (id, isActive) => {
   return PUT(`/hallpackage/updatestatus?id=${id}&isActive=${isActive}`);
 };
 
-export const getpriceininfunctionadd = (functionPax , hallId , packageId) => {
-return GET(`/hallpackage/getprice?functionPax=${functionPax}&hallId=${hallId}&packageId=${packageId}`);
+export const getpriceininfunctionadd = (functionPax, hallId, packageId) => {
+  return GET(`/hallpackage/getprice?functionPax=${functionPax}&hallId=${hallId}&packageId=${packageId}`);
 };
 
 export const updateeventmaster = (data) => {
@@ -3594,7 +3593,7 @@ export const CheckSOT = (eventId, userId) => {
   return GET(`/sot/check-sot?eventId=${eventId}&userId=${userId}`)
 }
 
-export const IsInquiryVisible = (isVisible , userId) => {
+export const IsInquiryVisible = (isVisible, userId) => {
   return PUT(`/user/isinquiryvisible?isVisible=${isVisible}&userId=${userId}`);
 };
 
@@ -3602,7 +3601,7 @@ export const GeneratePurchaseDateWiseReport = (endDate, startDate, isCompanyDeta
   return POST(`/purchasereport/generate-datewise-puchase-report?endDate=${endDate}&startDate=${startDate}&isCompanyDetails=${isCompanyDetails}&isPrice=${isPrice}&userId=${userId}`);
 };
 
-export const pdffordebitpaymentinaccount = ( isCompanyDetails , isPayable  , userId) =>{
+export const pdffordebitpaymentinaccount = (isCompanyDetails, isPayable, userId) => {
   return POST(`/vendorpayment/generate-vendor-payment-report?isCompanyDetails=${isCompanyDetails}&isPayable=${isPayable}&userId=${userId}`);
 };
 
@@ -3621,17 +3620,17 @@ export const GetAllCrockerySOT = (userId) => {
 };
 
 
-export const  getpartywitheventforstock = (userId) =>{
- return GET(`/storepo/getallparties?userId=${userId}`);
+export const getpartywitheventforstock = (userId) => {
+  return GET(`/storepo/getallparties?userId=${userId}`);
 };
 
 
 export const GeneratePaymentReceipt = (
   isCompanyDetails,
-   isPayable = 0,
+  isPayable = 0,
   userId,
   vendorPayId,
- 
+
 ) => {
   return POST(
     `/vendorpayment/generate-payment-receipt?isCompanyDetails=${isCompanyDetails}&isPayable=${isPayable}&userId=${userId}&vendorPayId=${vendorPayId}`
@@ -3639,12 +3638,12 @@ export const GeneratePaymentReceipt = (
 };
 
 
-export const SyncItemWiseRawMaterial = (eventFunctionid , eventId , menuItemId) => {
+export const SyncItemWiseRawMaterial = (eventFunctionid, eventId, menuItemId) => {
   return DELETE(`/menuallocation/syncitemwiserawmaterial?eventFunctionid=${eventFunctionid}&eventId=${eventId}&menuItemId=${menuItemId}`);
 };
 
 
-export const getRawMaterialPriceforpurchase = ( supplierId  , rawMaterialId , userId) =>{
+export const getRawMaterialPriceforpurchase = (supplierId, rawMaterialId, userId) => {
   return GET(`/purchaseorder/get-raw-material-price?supplierId=${supplierId}&rawMaterialId=${rawMaterialId}&userId=${userId}`);
 };
 
@@ -3659,22 +3658,22 @@ export const DeleteManagerTask = (id) => {
 };
 
 
-export const  GetAllManagerTask = (userId) =>{
- return GET(`/managertask/getall?userId=${userId}`);
+export const GetAllManagerTask = (userId) => {
+  return GET(`/managertask/getall?userId=${userId}`);
 };
 
 
-export const  GetSummaryManagerTask = (eventFunctionId, managerId ) =>{
- return GET(`/eventfunction-managertask/getmanagertasksummary?eventFunctionId=${eventFunctionId}&managerId=${managerId}`);
+export const GetSummaryManagerTask = (eventFunctionId, managerId) => {
+  return GET(`/eventfunction-managertask/getmanagertasksummary?eventFunctionId=${eventFunctionId}&managerId=${managerId}`);
 };
 
 
-export const  GetEventFunctionManagerTask = (eventFunctionId, managerId, type ) =>{
- return GET(`/eventfunction-managertask/geteventfunctionmanagertask?eventFunctionId=${eventFunctionId}&managerId=${managerId}&type=${type}`);
+export const GetEventFunctionManagerTask = (eventFunctionId, managerId, type) => {
+  return GET(`/eventfunction-managertask/geteventfunctionmanagertask?eventFunctionId=${eventFunctionId}&managerId=${managerId}&type=${type}`);
 };
 
-export const  GetFunctionWiseManagerTask = (eventFunctionId, managerId ) =>{
- return GET(`/eventfunction-managertask/geteventfunctionmanagertask?eventFunctionId=${eventFunctionId}&managerId=${managerId}`);
+export const GetFunctionWiseManagerTask = (eventFunctionId, managerId) => {
+  return GET(`/eventfunction-managertask/geteventfunctionmanagertask?eventFunctionId=${eventFunctionId}&managerId=${managerId}`);
 };
 
 
@@ -3682,27 +3681,27 @@ export const AssignEventFunctionManagerTask = (data) => {
   return POST(`/eventfunction-managertask/add-update`, data);
 };
 
-export const  GetEventFunctionWiseManagerTask = (eventId ) =>{
- return GET(`/eventfunction-managertask/getallfunctionwisemanagertask?eventId=${eventId}`);
+export const GetEventFunctionWiseManagerTask = (eventId) => {
+  return GET(`/eventfunction-managertask/getallfunctionwisemanagertask?eventId=${eventId}`);
 };
 
-export const CreateLabourHelper = (data) =>{
-  return POST(`/laborhelper/add`,data);
+export const CreateLabourHelper = (data) => {
+  return POST(`/laborhelper/add`, data);
 };
 
-export const UpdateLabourHelper = (data) =>{
-return PUT(`/laborhelper/update`, data);
+export const UpdateLabourHelper = (data) => {
+  return PUT(`/laborhelper/update`, data);
 };
 
-export const getAllLaborHelperByContactCategoryId = ( contactCategoryId) => {
+export const getAllLaborHelperByContactCategoryId = (contactCategoryId) => {
   return GET(`/laborhelper/getallbycontactcategoryid?contactCategoryId=${contactCategoryId}`);
 };
 
-export const getalllabourhelperbyuserid = (userId ) => {
+export const getalllabourhelperbyuserid = (userId) => {
   return GET(`/laborhelper/getallbyuserid?userId=${userId}`);
 };
 
-export const deletelabourhelperbyid = (id) =>{
+export const deletelabourhelperbyid = (id) => {
   return DELETE(`/laborhelper/delete?id=${id}`);
 };
 
@@ -3713,7 +3712,7 @@ export const getAllLaborHelperByPartyId = (partyId) => {
 
 
 export const saveEventLaborHelpers = (data) => {
-  return POST(`/eventlaborhelper/save`,data);
+  return POST(`/eventlaborhelper/save`, data);
 };
 
 
@@ -3721,8 +3720,8 @@ export const getByEventIdlabourhleper = (eventId) => {
   return GET(`/eventlaborhelper/getbyeventid?eventId=${eventId}`);
 };
 
-export const getfunctioneventpartywiselabourhelper = (  eventFunctionId , partyId , eventId ) => {
-  return GET( `/laborhelper/getallbypartyandeventdetails?eventFunctionId=${eventFunctionId}&partyId=${partyId}&eventId=${eventId}`);
+export const getfunctioneventpartywiselabourhelper = (eventFunctionId, partyId, eventId) => {
+  return GET(`/laborhelper/getallbypartyandeventdetails?eventFunctionId=${eventFunctionId}&partyId=${partyId}&eventId=${eventId}`);
 };
 
 export const generateGrnNumber = (userId) => {
@@ -3730,48 +3729,48 @@ export const generateGrnNumber = (userId) => {
 };
 
 export const AddSpecialNotes = (data) => {
-  return POST(`/specialnotes/add-update`,data);
+  return POST(`/specialnotes/add-update`, data);
 };
 
-export const GetSpecialNotes = (eventFunctionId,managerId,userId) => {
+export const GetSpecialNotes = (eventFunctionId, managerId, userId) => {
   return GET(`/specialnotes/getspecialnotes?eventFunctionId=${eventFunctionId}&managerId=${managerId}&userId=${userId}`);
 };
 
 
-export const GetPermissableNonPermissable = (eventFunctionId, eventId , userId) => {
+export const GetPermissableNonPermissable = (eventFunctionId, eventId, userId) => {
   return GET(`/menupreparation/geteventfunctionpermissionrawmaterial?eventFunctionId=${eventFunctionId}&eventId=${eventId}&userId=${userId}`);
 };
 
 
-export const sotidbygetbyid = (sotId) => { 
+export const sotidbygetbyid = (sotId) => {
   return GET(`/sot/getbyid/${sotId}`);
 };
 
-export const deleteSotDetails = (sotDetailIds) =>{
-  return DELETE (`/sot/delete-sot-details?sotDetailIds=${sotDetailIds}`);
+export const deleteSotDetails = (sotDetailIds) => {
+  return DELETE(`/sot/delete-sot-details?sotDetailIds=${sotDetailIds}`);
 };
 
-export const GetByPoCode = (pocode,userId) => { 
+export const GetByPoCode = (pocode, userId) => {
   return GET(`/storepo/getbypocode?pocode=${pocode}&userId=${userId}`);
 };
 
 
 export const UploadDecorImagePlanning = (data) => {
-  return POST(`/decorepreparation/decorimage`,data);
+  return POST(`/decorepreparation/decorimage`, data);
 };
 
 
-export const getAllInquiryfortapregister = () =>{
-  return GET (`/tap-inquiry/getall` , );
+export const getAllInquiryfortapregister = () => {
+  return GET(`/tap-inquiry/getall`,);
 };
 
-export const generateDatewiseStoreIssueReport = (startDate, endDate, userId, isCompanyDetails, isWithPrice, priceType  , kitchenTypeId) => {
+export const generateDatewiseStoreIssueReport = (startDate, endDate, userId, isCompanyDetails, isWithPrice, priceType, kitchenTypeId) => {
   return POST(`storepo/datewiseStoreIssueReport?startDate=${startDate}&endDate=${endDate}&userId=${userId}&isCompanyDetails=${isCompanyDetails}&isWithPrice=${isWithPrice}&priceType=${priceType}&kitchenTypeId=${kitchenTypeId}`);
 }
 
 
 export const isActiveUserNotification = (data) => {
-  return PUT(`/usernotificationconfig/isActive`,data);
+  return PUT(`/usernotificationconfig/isActive`, data);
 };
 
 
@@ -3782,7 +3781,7 @@ export const GetSloganByMenuId = (menuId, userId, isJainSlogan = false) => {
 };
 
 export const WhatsAppPdf = (data) => {
-  return POST(`/whatsappconfig/sendpdf`,data);
+  return POST(`/whatsappconfig/sendpdf`, data);
 };
 
 
@@ -3791,9 +3790,9 @@ export const StockTypeRights = (data) => {
   return POST(`/stocktype/stocktyperights`, data);
 };
 
-  
-export const GetStockTypeRights = ( userId) =>{
-  return GET (`/stocktype/getallstocktyperights?userId=${userId}`);
+
+export const GetStockTypeRights = (userId) => {
+  return GET(`/stocktype/getallstocktyperights?userId=${userId}`);
 };
 
 export const UploadMenuItemImage = (menuItemId, userId, data) => {
@@ -3801,23 +3800,23 @@ export const UploadMenuItemImage = (menuItemId, userId, data) => {
 };
 
 
-export const AddEventFollowUp = (dto ) => {
-  return POST(`/eventfollowup/add-update`, dto );
+export const AddEventFollowUp = (dto) => {
+  return POST(`/eventfollowup/add-update`, dto);
 };
 
 
-export const DeleteEventFollowUp = (id) =>{
-  return DELETE (`/eventfollowup/delete?id=${id}`);
+export const DeleteEventFollowUp = (id) => {
+  return DELETE(`/eventfollowup/delete?id=${id}`);
 };
 
 
-export const GetEventFollowUp = ( eventId, userId, endDate, startDate) =>{
-  return GET (`/eventfollowup/getall?userId=${userId}&eventId=${eventId}&startDate=${startDate}&endDate=${endDate}`);
+export const GetEventFollowUp = (eventId, userId, endDate, startDate) => {
+  return GET(`/eventfollowup/getall?userId=${userId}&eventId=${eventId}&startDate=${startDate}&endDate=${endDate}`);
 };
 
 
-export const GetAllFollowUp = (userId) =>{
-  return GET (`/eventfollowup/getall?userId=${userId}`);
+export const GetAllFollowUp = (userId) => {
+  return GET(`/eventfollowup/getall?userId=${userId}`);
 };
 
 
@@ -3825,16 +3824,16 @@ export const followupnotiy = (endDate, eventId, isDone, managerId, startDate, us
   return GET(`/eventfollowup/getall?endDate=${endDate}&eventId=${eventId}&isDone=${isDone}&managerId=${managerId}&startDate=${startDate}&userId=${userId}`);
 };
 
-export const AddInquiry = (data ) => {
-  return POST(`/inquiry/add`, data );
+export const AddInquiry = (data) => {
+  return POST(`/inquiry/add`, data);
 };
 
-export const DeleteInquiry = (id,userId) =>{
-  return DELETE (`/inquiry/deleteinquirybyid?id=${id}&userId=${userId}`);
+export const DeleteInquiry = (id, userId) => {
+  return DELETE(`/inquiry/deleteinquirybyid?id=${id}&userId=${userId}`);
 }
 
-export const GetAllInquiry = (userId, endDate,startDate) =>{
-  return GET (`/inquiry/getallinquiry?userId=${userId}&endDate=${endDate}&startDate=${startDate}`);
+export const GetAllInquiry = (userId, endDate, startDate) => {
+  return GET(`/inquiry/getallinquiry?userId=${userId}&endDate=${endDate}&startDate=${startDate}`);
 };
 
 
@@ -3848,8 +3847,8 @@ export const deleteSecurityDeposit = (securityDepositId) => {
 };
 
 
-export const GetGeneralFix = (rawCatIds , eventFunctionIds ,eventId ) =>{
-  return GET (`/eventfunctiongeneral/getallgeneralfixraw?rawCatIds=${rawCatIds}&eventFunctionIds=${eventFunctionIds}&eventId=${eventId}`);
+export const GetGeneralFix = (rawCatIds, eventFunctionIds, eventId) => {
+  return GET(`/eventfunctiongeneral/getallgeneralfixraw?rawCatIds=${rawCatIds}&eventFunctionIds=${eventFunctionIds}&eventId=${eventId}`);
 };
 
 export const AddUpdateGeneralFix = (data) => {
@@ -3858,28 +3857,28 @@ export const AddUpdateGeneralFix = (data) => {
 
 export const getAllSecurityDepositByEventId = (eventId) => {
   return GET(`/quotation/getAllSecurityDepositByEventId?eventId=${eventId}`);
-};  
+};
 
 export const GenerateDateWiseLogReport = (startDate, endDate, email, memberEmail, userId) => {
   const params = new URLSearchParams();
-  params.append("startDate",   startDate   || "");
-  params.append("endDate",     endDate     || "");
-  params.append("email",       email       || "");
+  params.append("startDate", startDate || "");
+  params.append("endDate", endDate || "");
+  params.append("email", email || "");
   params.append("memberEmail", memberEmail || "");
-  params.append("userId",      userId      || "");
+  params.append("userId", userId || "");
   return GET(`/report/generate-date-wise-log-report?${params.toString()}`);
 };
 
-export const GetAllApprovedPurchase = (userId,page, size) => {
+export const GetAllApprovedPurchase = (userId, page, size) => {
   return GET(`/purchase-approval/getAllApprovedRequest?userId=${userId}&page=${page}&size=${size}`);
-}; 
+};
 
 export const generatePurchaseRequestCode = (userId) => {
   return GET(`/purchase-approval/generate-purchase-request-code?userId=${userId}`);
 };
 
 export const addUpdatePurchaseRequest = (data) => {
-  return POST(`/purchase-approval/add-update` ,data);
+  return POST(`/purchase-approval/add-update`, data);
 };
 
 export const getallpurchasereport = (userId, status = "ALL", page = 0, size = 10, searchName = "") => {
@@ -3893,12 +3892,12 @@ export const getpurchaseapprovalbyid = (purchaseRequestId) => {
 
 };
 
-export const getRawMaterialbyPurchaseRequestId = (endDate ,rawMaterialCatId , startDate , page , size ,rawMaterialName , purchaseRequestId, isAllData) => {
+export const getRawMaterialbyPurchaseRequestId = (endDate, rawMaterialCatId, startDate, page, size, rawMaterialName, purchaseRequestId, isAllData) => {
   return GET(`/purchase-approval/getRawMaterial?endDate=${endDate}&rawMaterialCatId=${rawMaterialCatId}&startDate=${startDate}&page=${page}&size=${size}&rawMaterialName=${rawMaterialName}&purchaseRequestId=${purchaseRequestId}&isAllData=${isAllData}`);
 };
 
 // complate raw matt
-export const GetAllRawMaterialcategory = (categoryTypeId , userid , isActive , categoryName) => {
+export const GetAllRawMaterialcategory = (categoryTypeId, userid, isActive, categoryName) => {
   return GET(
     `/rawmaterialcategory/getallbyuserid?categoryTypeId=${categoryTypeId}&userid=${userid}&isActive=${isActive}&categoryName=${categoryName}`,
   );
@@ -3920,8 +3919,10 @@ export const getreportguestsign = (eventId, isCompanyDetails, userId) => {
   return GET(`/guest-signature/generate-guest-signature-report?eventId=${eventId}&isCompanyDetails=${isCompanyDetails}&userId=${userId}`);
 };
 
-export const getallmenuselecteditem = (eventId , eventFunctionId ) => {
-  return GET(`/menupreparation/getAllMenuPreparationItems?eventId=${eventId}&eventFunctionId=${eventFunctionId}`);
+export const getallmenuselecteditem = (startDate, endDate, userId) => {
+  return GET(
+    `/menupreparation/getAllMenuPreparationItems?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}&userId=${userId}`,
+  );
 };
 
 
@@ -3939,7 +3940,7 @@ export const GetEventByFilter = (endDate, eventDate, eventStatus, partyName, sta
   return GET(`/eventmaster/getalleventbyfilter?${params.toString()}`);
 };
 
-export const getpdfpurchaseapproval = (purchaseApprovalRequestId , userId) => {
+export const getpdfpurchaseapproval = (purchaseApprovalRequestId, userId) => {
   return GET(`purchase-approval/purchase-approval-sheet-report?purchaseApprovalRequestId=${purchaseApprovalRequestId}&userId=${userId}`);
 };
 
@@ -3958,12 +3959,12 @@ export const adduploadsignature = (file, userId) => {
   return POST(`/user/upload-signature`, formData);
 };
 
-export const getbyexhibitionevenybuuser  = (eventId , userId) => {
+export const getbyexhibitionevenybuuser = (eventId, userId) => {
   return GET(`/exhibition/quotations/by-event-user?eventId=${eventId}&userId=${userId}`);
 };
 
-export const updateehibition = (quotationId , data) => {
-  return PUT(`/exhibition/quotations/update?quotationId=${quotationId}`,data);
+export const updateehibition = (quotationId, data) => {
+  return PUT(`/exhibition/quotations/update?quotationId=${quotationId}`, data);
 };
 
 // User Exhibition Setup Controller APIs
@@ -4019,18 +4020,18 @@ export const updatelock = (quotationId) => {
   return PUT(`/exhibition/quotations/lock?quotationId=${quotationId}`);
 };
 export const updtaeunlock = (quotationId) => {
-  return PUT (`/exhibition/quotations/unlock?quotationId=${quotationId}`);
+  return PUT(`/exhibition/quotations/unlock?quotationId=${quotationId}`);
 };
 
-  export const deletebyitemis = ( itemId , moduleId) => {
-    return DELETE(`/exhibition/modules/items/delete?itemId=${itemId}&moduleId=${moduleId}`,);
-  };
+export const deletebyitemis = (itemId, moduleId) => {
+  return DELETE(`/exhibition/modules/items/delete?itemId=${itemId}&moduleId=${moduleId}`,);
+};
 
- export const deletegroupbyquotation = (groupId, moduleId) =>
+export const deletegroupbyquotation = (groupId, moduleId) =>
   DELETE(`/exhibition/groups/modules/delete?groupId=${groupId}&moduleId=${moduleId}`);
 
-export const Aislogsfirmenuitemandcategory = ( data) => {
-  return POST(`/ai-menu/generate`,data);
+export const Aislogsfirmenuitemandcategory = (data) => {
+  return POST(`/ai-menu/generate`, data);
 };
 
 export const checkRMenu = (eventId) => {
@@ -4038,7 +4039,7 @@ export const checkRMenu = (eventId) => {
 };
 export const CheckRMenu = checkRMenu;
 
-export const deletepaymemtbyqxhibition = (groupId , paymentId) => {
+export const deletepaymemtbyqxhibition = (groupId, paymentId) => {
   return DELETE(`/exhibition/groups/payments/delete?groupId=${groupId}&paymentId=${paymentId}`);
 };
 
@@ -4048,8 +4049,8 @@ export const UpdtaemenuItemsubcatergoryconfig = (queryString) => {
 };
 
 
-export const MenuItemCheckUsuable = ( functionId , menuItemId , userId ) => {
-  return POST(`/menupreparation/checkitemexist?functionId=${functionId}&menuItemId=${menuItemId}&userId=${userId}`);
+export const MenuItemCheckUsuable = (eventId, menuItemId, userId) => {
+  return POST(`/menupreparation/checkitemexist?eventId=${eventId}&menuItemId=${menuItemId}&userId=${userId}`);
 };
 
 export const deleteinvoicebyid = (invoiceId) => {
@@ -4066,7 +4067,7 @@ export const AddExpenseRightsByMember = (memberId, data = {}) => {
 
 
 
-export const GetExpenseRightsByMember  = (memberId  , userId) => {
+export const GetExpenseRightsByMember = (memberId, userId) => {
   return GET(`/expense-rights/getAll?memberId=${memberId}&userId=${userId}`);
 };
 
@@ -4075,7 +4076,7 @@ export const addOrUpdateBatchWisestoreissue = (data) => {
 };
 
 export const addOrUpdateBatchWisestore = (data) => {
-  return POST(`/storepo/add-update-batchwise`,data);
+  return POST(`/storepo/add-update-batchwise`, data);
 };
 
 export const getAllRawMaterialByUserId = (page, size, userId, searchName = "") => {
@@ -4088,7 +4089,7 @@ export const getAllRawMaterialByUserId = (page, size, userId, searchName = "") =
   return GET(`/storepo/getAllRawMaterialWithExpiryDates?${query.toString()}`);
 };
 
-export const getAllRawMaterialWithExpiryDates = (page , size , userId, searchName = "") => {
+export const getAllRawMaterialWithExpiryDates = (page, size, userId, searchName = "") => {
   const query = new URLSearchParams({
     page: String(page),
     size: String(size),
@@ -4098,6 +4099,7 @@ export const getAllRawMaterialWithExpiryDates = (page , size , userId, searchNam
   return GET(`/storepo/getAllRawMaterialWithExpiryDates?${query.toString()}`);
 };
 
+<<<<<<< HEAD
 export const genratebarcode = (qty , rawMaterialId , userId) => {
   return GET(`/rawmaterial/generate-barcode?qty=${qty}&rawMaterialId=${rawMaterialId}&userId=${userId}`);
 };
@@ -4109,3 +4111,140 @@ export const addupdateselectedmultiplemenuitemimages = (data) => {
 export const getallselectedmenuitemimages =  (eventFunctionId , userId , eventId , menuCategoryId) => { 
   return GET(`/menupreparation/getAllMenuItemImages?eventFunctionId=${eventFunctionId}&userId=${userId}&eventId=${eventId}&menuCategoryId=${menuCategoryId}`);
 };
+=======
+
+
+// Chat System APIs
+
+/**
+ * Event Chat API Services
+ * Matches your project's GET, POST, PUT, DELETE structure from ./axiosInstance
+ *
+ * You can paste these directly into your project's apiServices.js file!
+ */
+
+
+
+// ==========================================
+// 1. EVENT CHAT CORE MESSAGING APIS
+// ==========================================
+
+// Send message (supports reply/thread via parentMessageId)
+export const SendEventChatMessage = (data) => {
+  return POST(`/event-chat/send`, data);
+};
+
+// Get messages for an event (paginated)
+export const GetEventChatMessages = (eventId, page = 0, size = 30) => {
+  return GET(
+    `/event-chat/get-messages?eventId=${eventId}&page=${page}&size=${size}`
+  );
+};
+
+// Get thread replies for a specific message
+export const GetEventChatThreadReplies = (parentMessageId, page = 0, size = 20) => {
+  return GET(
+    `/event-chat/get-thread-replies?parentMessageId=${parentMessageId}&page=${page}&size=${size}`
+  );
+};
+
+// Update message text (within edit window)
+export const UpdateEventChatMessage = (messageId, message) => {
+  return PUT(`/event-chat/update?messageId=${messageId}`, { message });
+};
+
+// Delete message
+export const DeleteEventChatMessage = (messageId) => {
+  return DELETE(`/event-chat/delete?messageId=${messageId}`);
+};
+
+// Mark messages as read (clears unread badge)
+export const MarkEventChatRead = (eventId, lastReadMessageId) => {
+  return POST(`/event-chat/mark-read`, {
+    eventId,
+    lastReadMessageId,
+  });
+};
+
+// Get unread count for a single event
+export const GetEventChatUnreadCount = (eventId) => {
+  return GET(`/event-chat/get-unread-count?eventId=${eventId}`);
+};
+
+// Get unread summary for multiple events (for sidebar counters)
+export const GetEventChatUnreadSummary = (eventIds = []) => {
+  return POST(`/event-chat/get-unread-summary`, eventIds);
+};
+
+// Get event team participants (online status & admin badges)
+export const GetEventChatParticipants = (eventId) => {
+  return GET(`/event-chat/get-participants?eventId=${eventId}`);
+};
+
+// Search chat messages by keyword
+export const SearchEventChatMessages = (eventId, keyword, page = 0, size = 20) => {
+  return GET(
+    `/event-chat/search?eventId=${eventId}&keyword=${encodeURIComponent(
+      keyword
+    )}&page=${page}&size=${size}`
+  );
+};
+
+// Add reaction ("LIKE", "LOVE", "LAUGH", "CELEBRATE", "THUMBS_UP", "QUESTION")
+export const AddEventChatReaction = (messageId, reactionType) => {
+  return POST(`/event-chat/reaction`, {
+    messageId,
+    reactionType,
+  });
+};
+
+// Remove reaction
+export const RemoveEventChatReaction = (messageId, reactionType) => {
+  return DELETE(`/event-chat/reaction`, {
+    data: { messageId, reactionType },
+  });
+};
+
+// Pin message
+export const PinEventChatMessage = (messageId) => {
+  return POST(`/event-chat/pin?messageId=${messageId}`, {});
+};
+
+// Unpin message
+export const UnpinEventChatMessage = (messageId) => {
+  return DELETE(`/event-chat/pin?messageId=${messageId}`);
+};
+
+// Register device token for push notifications
+export const RegisterEventChatDeviceToken = (data) => {
+  return POST(`/event-chat/device-token`, data);
+};
+
+// ==========================================
+// 2. EVENT INTEGRATION HELPER
+// Uses existing eventmaster endpoint to load events list
+// ==========================================
+export const GetEventMasterForChat = (userId, isChildUser = false) => {
+  return GET(
+    `/eventmaster/getallbyuserid?userId=${userId}&isChildUser=${isChildUser}&month=-1&year=-1&isVisible=true`
+  );
+};
+
+// ==========================================
+// 3. CAMELCASE ALIASES (Optional convenience)
+// ==========================================
+export const sendMessage = (data) => SendEventChatMessage(data);
+export const getMessages = (eventId, page, size) => GetEventChatMessages(eventId, page, size);
+export const getThreadReplies = (parentMessageId, page, size) => GetEventChatThreadReplies(parentMessageId, page, size);
+export const updateMessage = (messageId, message) => UpdateEventChatMessage(messageId, message);
+export const deleteMessage = (messageId) => DeleteEventChatMessage(messageId);
+export const markRead = (eventId, lastReadMessageId) => MarkEventChatRead(eventId, lastReadMessageId);
+export const getUnreadCount = (eventId) => GetEventChatUnreadCount(eventId);
+export const getUnreadSummary = (eventIds) => GetEventChatUnreadSummary(eventIds);
+export const getParticipants = (eventId) => GetEventChatParticipants(eventId);
+export const searchMessages = (eventId, keyword, page, size) => SearchEventChatMessages(eventId, keyword, page, size);
+export const addReaction = (messageId, reactionType) => AddEventChatReaction(messageId, reactionType);
+export const removeReaction = (messageId, reactionType) => RemoveEventChatReaction(messageId, reactionType);
+export const pinMessage = (messageId) => PinEventChatMessage(messageId);
+export const unpinMessage = (messageId) => UnpinEventChatMessage(messageId);
+>>>>>>> 8c67bca2d0706972f2ffb3dc05822d39e50a5bd1

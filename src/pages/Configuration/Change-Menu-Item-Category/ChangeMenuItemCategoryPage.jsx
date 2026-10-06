@@ -140,7 +140,10 @@ const ChangeMenuItemCategoryPage = () => {
           id: item.id,
           menuItem: item.nameEnglish?.trim() ?? "N/A",
           category: item.menuCategoryNameEnglish?.trim() ?? "N/A",
+          subCategory: item.menuSubCategoryNameEnglish?.trim() || "-",
         }));
+
+        console.log("formattedData", formattedData[0]);
 
         setTableData(formattedData);
       } catch (error) {
@@ -239,7 +242,8 @@ const ChangeMenuItemCategoryPage = () => {
     const query = searchQuery.toLowerCase();
     return (
       item.menuItem.toLowerCase().includes(query) ||
-      item.category.toLowerCase().includes(query)
+      item.category.toLowerCase().includes(query) ||
+      item.subCategory.toLowerCase().includes(query)
     );
   });
 

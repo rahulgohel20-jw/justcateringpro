@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, ChevronDown } from "lucide-react";
 import Swal from "sweetalert2";
 import DatePicker from "react-datepicker";
@@ -23,12 +23,12 @@ const AddAdvancePaymentForm = ({
   const intl = useIntl();
   const [paymentDate, setPaymentDate] = useState(null);
   const [amount, setAmount] = useState("");
-  const [paymentMode, setPaymentMode] = useState("")
-  const [cashId, setCashAccountId] = useState(""); 
+  const [paymentMode, setPaymentMode] = useState("");
+  const [cashId, setCashAccountId] = useState("");
   const [referenceId, setReferenceId] = useState("");
   const [remark, setRemark] = useState("");
   const [saving, setSaving] = useState(false);
-const [depositTo, setDepositTo] = useState(""); 
+  const [depositTo, setDepositTo] = useState("");
   const [bankList, setBankList] = useState([]);
   const [cashList, setCashList] = useState([]);
   const [memberList, setMemberList] = useState([]);
@@ -59,8 +59,8 @@ const [depositTo, setDepositTo] = useState("");
       setReferenceId(editingPayment.referenceId ?? "");
       setRemark(editingPayment.remark ?? "");
       setEntryBy(String(editingPayment.entryBy ?? ""));
-     setFunctionId(editingPayment.eventFunctionId ? String(editingPayment.eventFunctionId) : "");
-     setBanquetHallId(editingPayment.banquetHallId ? String(editingPayment.banquetHallId) : "");
+      setFunctionId(editingPayment.eventFunctionId ? String(editingPayment.eventFunctionId) : "");
+      setBanquetHallId(editingPayment.banquetHallId ? String(editingPayment.banquetHallId) : "");
     } else {
       setPaymentDate(null);
       setAmount("");
@@ -75,19 +75,19 @@ const [depositTo, setDepositTo] = useState("");
     }
   }, [editingPayment]);
 
-useEffect(() => {
-  if (bankList.length > 0 && !depositTo && paymentMode && paymentMode !== "Cash" && !editingPayment) {
-    const primary = getPrimaryAccount(bankList);
-    if (primary) setDepositTo(String(primary.id));
-  }
-}, [bankList]);
+  useEffect(() => {
+    if (bankList.length > 0 && !depositTo && paymentMode && paymentMode !== "Cash" && !editingPayment) {
+      const primary = getPrimaryAccount(bankList);
+      if (primary) setDepositTo(String(primary.id));
+    }
+  }, [bankList]);
 
-useEffect(() => {
-  if (cashList.length > 0 && !cashId && paymentMode === "Cash" && !editingPayment) {
-    const primary = getPrimaryAccount(cashList);
-    if (primary) setCashAccountId(String(primary.id));
-  }
-}, [cashList]);
+  useEffect(() => {
+    if (cashList.length > 0 && !cashId && paymentMode === "Cash" && !editingPayment) {
+      const primary = getPrimaryAccount(cashList);
+      if (primary) setCashAccountId(String(primary.id));
+    }
+  }, [cashList]);
 
   useEffect(() => {
     if (paymentMode === "Cash" && !referenceId) {
@@ -95,7 +95,6 @@ useEffect(() => {
     }
   }, [paymentMode]);
 
-  
   useEffect(() => {
     const fetchBank = async () => {
       try {
@@ -159,38 +158,38 @@ useEffect(() => {
     if (eventId) fetchFunctions();
   }, [eventId]);
 
-useEffect(() => {
-  if (functionList.length > 0 && editingPayment?.eventFunctionId) {
-    setFunctionId(String(editingPayment.eventFunctionId));
-  }
-}, [functionList]);
+  useEffect(() => {
+    if (functionList.length > 0 && editingPayment?.eventFunctionId) {
+      setFunctionId(String(editingPayment.eventFunctionId));
+    }
+  }, [functionList]);
 
-const buildFunctionLabels = (f) => {
-  const functionName =
-    f.function?.nameEnglish || f.function?.nameHindi || "Function";
+  const buildFunctionLabels = (f) => {
+    const functionName =
+      f.function?.nameEnglish || f.function?.nameHindi || "Function";
 
-  const start = f.functionStartDateTime || "";
-  const end = f.functionEndDateTime || "";
-  const timeRange = [start, end].filter(Boolean).join(" - ");
-  const functionPart = timeRange ? `${functionName}, ${timeRange}` : functionName;
+    const start = f.functionStartDateTime || "";
+    const end = f.functionEndDateTime || "";
+    const timeRange = [start, end].filter(Boolean).join(" - ");
+    const functionPart = timeRange ? `${functionName}, ${timeRange}` : functionName;
 
-  let venueEntries = [];
+    let venueEntries = [];
 
-  if (f.banquetHallShifts && f.banquetHallShifts.length > 0) {
-    venueEntries = f.banquetHallShifts.map((shift) => {
-      const hallName = shift.banquetHallName?.trim() || "No Venue";
-      const venuePart = shift.shiftName ? `${hallName} (${shift.shiftName})` : hallName;
-      return { venuePart, banquetHallId: shift.banquetHallId ?? null };
-    });
-  } else {
-    venueEntries = [{ venuePart: "No Venue", banquetHallId: null }];
-  }
+    if (f.banquetHallShifts && f.banquetHallShifts.length > 0) {
+      venueEntries = f.banquetHallShifts.map((shift) => {
+        const hallName = shift.banquetHallName?.trim() || "No Venue";
+        const venuePart = shift.shiftName ? `${hallName} (${shift.shiftName})` : hallName;
+        return { venuePart, banquetHallId: shift.banquetHallId ?? null };
+      });
+    } else {
+      venueEntries = [{ venuePart: "No Venue", banquetHallId: null }];
+    }
 
-  return venueEntries.map(({ venuePart, banquetHallId }) => ({
-    label: `${venuePart} (${functionPart})`,
-    banquetHallId,
-  }));
-};
+    return venueEntries.map(({ venuePart, banquetHallId }) => ({
+      label: `${venuePart} (${functionPart})`,
+      banquetHallId,
+    }));
+  };
 
   const formatDate = (date) => {
     if (!date) return "";
@@ -211,16 +210,16 @@ const buildFunctionLabels = (f) => {
       });
       return;
     }
-      if (!functionId) {
-    Swal.fire({
-      icon: "warning",
-      title: intl.formatMessage({
-        id: "USER.ADVANCE_PAYMENT.FORM.SELECT_VENUE_WARNING",
-        defaultMessage: "Please select a Venue",
-      }),
-    });
-    return;
-  }
+    if (!functionId && banquetHallId !== "-1") {
+      Swal.fire({
+        icon: "warning",
+        title: intl.formatMessage({
+          id: "USER.ADVANCE_PAYMENT.FORM.SELECT_VENUE_WARNING",
+          defaultMessage: "Please select a Venue",
+        }),
+      });
+      return;
+    }
     if (paymentMode === "Cash" && !cashId) {
       Swal.fire({
         icon: "warning",
@@ -248,10 +247,10 @@ const buildFunctionLabels = (f) => {
       userId: Number(userId),
       entryBy: Number(entryBy),
       eventFunctionId: functionId ? Number(functionId) : null,
-       banquetHallId: banquetHallId ? Number(banquetHallId) : null,
+      banquetHallId: banquetHallId ? Number(banquetHallId) : null,
       amount: Number(amount),
       paymentMode,
-      bankId: paymentMode !== "Cash" ? Number(depositTo) || null: null,
+      bankId: paymentMode !== "Cash" ? Number(depositTo) || null : null,
       cashId: paymentMode === "Cash" ? Number(cashId) || null : null,
       paymentDate: formatDate(paymentDate),
       referenceId,
@@ -266,13 +265,13 @@ const buildFunctionLabels = (f) => {
           icon: "success",
           title: editingPayment
             ? intl.formatMessage({
-                id: "USER.ADVANCE_PAYMENT.FORM.PAYMENT_UPDATED",
-                defaultMessage: "Payment updated!",
-              })
+              id: "USER.ADVANCE_PAYMENT.FORM.PAYMENT_UPDATED",
+              defaultMessage: "Payment updated!",
+            })
             : intl.formatMessage({
-                id: "USER.ADVANCE_PAYMENT.FORM.PAYMENT_ADDED",
-                defaultMessage: "Payment added!",
-              }),
+              id: "USER.ADVANCE_PAYMENT.FORM.PAYMENT_ADDED",
+              defaultMessage: "Payment added!",
+            }),
           timer: 1200,
           showConfirmButton: false,
         });
@@ -303,16 +302,25 @@ const buildFunctionLabels = (f) => {
     }
   };
 
-  const inputCls = "w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+  const inputCls =
+    "w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
   const labelCls = "text-xs font-semibold text-gray-600 uppercase tracking-wide";
 
   const getPrimaryAccount = (list) => {
-  if (!list || list.length === 0) return null;
-  return list.find((a) => a.isPrimary === 1 || a.isPrimary === true) || list[0];
-};
-const selectedVenueValue = functionId
-  ? `${functionId}|${banquetHallId || "null"}`
-  : undefined;
+    if (!list || list.length === 0) return null;
+    return list.find((a) => a.isPrimary === 1 || a.isPrimary === true) || list[0];
+  };
+
+  // "All" is identified only by banquetHallId === "-1".
+  // functionId is filled with the first function's id so the payload never sends null.
+  const isAllVenues = banquetHallId === "-1";
+
+  const selectedVenueValue = isAllVenues
+    ? "ALL"
+    : functionId
+      ? `${functionId}|${banquetHallId || "null"}`
+      : undefined;
+
   return (
     <div className="flex flex-col gap-4">
       {/* Date + Amount */}
@@ -353,69 +361,85 @@ const selectedVenueValue = functionId
         </div>
       </div>
 
-    
-{/* Function (Venue / Banquet) */}
-<div className="flex flex-col gap-1.5">
-  <label className={labelCls}>
-    <FormattedMessage id="USER.ADVANCE_PAYMENT.FORM.VENUE_LABEL" defaultMessage="Venue" />{" "}
-    <span className="text-red-500">*</span>
-  </label>
-  {loadingFunctions ? (
-    <Select
-      loading
-      
-      disabled
-      placeholder={intl.formatMessage({
-        id: "USER.ADVANCE_PAYMENT.FORM.LOADING",
-        defaultMessage: "Loading...",
-      })}
-      className="w-full"
-      size="large"
-    />
-  ) : (
-    (() => {
-      const venueOptions = functionList.flatMap((f) =>
-  buildFunctionLabels(f).map(({ label, banquetHallId: hallId }) => ({
-    value: `${f.id}|${hallId}`,
-    label,
-  }))
-);
+      {/* Function (Venue / Banquet) */}
+      <div className="flex flex-col gap-1.5">
+        <label className={labelCls}>
+          <FormattedMessage id="USER.ADVANCE_PAYMENT.FORM.VENUE_LABEL" defaultMessage="Venue" />{" "}
+          <span className="text-red-500">*</span>
+        </label>
+        {loadingFunctions ? (
+          <Select
+            loading
+            disabled
+            placeholder={intl.formatMessage({
+              id: "USER.ADVANCE_PAYMENT.FORM.LOADING",
+              defaultMessage: "Loading...",
+            })}
+            className="w-full"
+            size="large"
+          />
+        ) : (
+          (() => {
+            const venueOptions = [
+              {
+                value: "ALL",
+                label: intl.formatMessage({
+                  id: "USER.ADVANCE_PAYMENT.FORM.ALL_VENUES",
+                  defaultMessage: "All",
+                }),
+              },
+              ...functionList.flatMap((f) =>
+                buildFunctionLabels(f).map(({ label, banquetHallId: hallId }) => ({
+                  value: `${f.id}|${hallId}`,
+                  label,
+                })),
+              ),
+            ];
 
-      if (venueOptions.length === 0) {
-        return (
-          <div className={`${inputCls} bg-gray-50 text-gray-400 flex items-center`}>
-            <FormattedMessage id="USER.ADVANCE_PAYMENT.FORM.NO_VENUE_AVAILABLE" defaultMessage="No Venue Available" />
-          </div>
-        );
-      }
-
-      return (
-        <Select
-          value={selectedVenueValue}
-          onChange={(val) => {
-            if (!val) {
-              setFunctionId("");
-              setBanquetHallId("");
-              return;
+            if (functionList.length === 0) {
+              return (
+                <div className={`${inputCls} bg-gray-50 text-gray-400 flex items-center`}>
+                  <FormattedMessage
+                    id="USER.ADVANCE_PAYMENT.FORM.NO_VENUE_AVAILABLE"
+                    defaultMessage="No Venue Available"
+                  />
+                </div>
+              );
             }
-            const [fId, hallId] = String(val).split("|");
-            setFunctionId(fId);
-            setBanquetHallId(hallId || "");
-          }}
-          placeholder={intl.formatMessage({
-            id: "USER.ADVANCE_PAYMENT.FORM.SELECT_VENUE_PLACEHOLDER",
-            defaultMessage: "Select venue",
-          })}
-          allowClear
-          size="large"
-          className="w-full"
-          popupMatchSelectWidth={false}
-          options={venueOptions}
-        />
-      );
-    })()
-  )}
-</div>
+
+            return (
+              <Select
+                value={selectedVenueValue}
+                onChange={(val) => {
+                  if (!val) {
+                    setFunctionId("");
+                    setBanquetHallId("");
+                    return;
+                  }
+                  if (val === "ALL") {
+                    setFunctionId(functionList[0]?.id ? String(functionList[0].id) : "");
+                    setBanquetHallId("-1");
+                    return;
+                  }
+                  const [fId, hallId] = String(val).split("|");
+                  setFunctionId(fId);
+                  setBanquetHallId(hallId === "null" ? "" : hallId || "");
+                }}
+                placeholder={intl.formatMessage({
+                  id: "USER.ADVANCE_PAYMENT.FORM.SELECT_VENUE_PLACEHOLDER",
+                  defaultMessage: "Select venue",
+                })}
+                allowClear
+                size="large"
+                className="w-full"
+                popupMatchSelectWidth={false}
+                options={venueOptions}
+              />
+            );
+          })()
+        )}
+      </div>
+
       {/* Payment Mode */}
       <div className="flex flex-col gap-1.5">
         <label className={labelCls}>
@@ -423,24 +447,24 @@ const selectedVenueValue = functionId
           <span className="text-red-500">*</span>
         </label>
         <div className="relative">
-   <select
-  value={paymentMode}
-onChange={(e) => {
-  const mode = e.target.value;
-  setPaymentMode(mode);
-  setReferenceId(""); 
-  if (mode === "Cash") {
-    setDepositTo("");
-    const primaryCash = getPrimaryAccount(cashList);
-    if (primaryCash) setCashAccountId(String(primaryCash.id));
-  } else {
-    setCashAccountId("");
-    const primaryBank = getPrimaryAccount(bankList);
-    if (primaryBank) setDepositTo(String(primaryBank.id));
-  }
-}}
-  className={`${inputCls} pr-9 appearance-none bg-white`}
->
+          <select
+            value={paymentMode}
+            onChange={(e) => {
+              const mode = e.target.value;
+              setPaymentMode(mode);
+              setReferenceId("");
+              if (mode === "Cash") {
+                setDepositTo("");
+                const primaryCash = getPrimaryAccount(cashList);
+                if (primaryCash) setCashAccountId(String(primaryCash.id));
+              } else {
+                setCashAccountId("");
+                const primaryBank = getPrimaryAccount(bankList);
+                if (primaryBank) setDepositTo(String(primaryBank.id));
+              }
+            }}
+            className={`${inputCls} pr-9 appearance-none bg-white`}
+          >
             <option value="">
               {intl.formatMessage({
                 id: "USER.ADVANCE_PAYMENT.FORM.SELECT_MODE_OPTION",
@@ -492,20 +516,25 @@ onChange={(e) => {
             <option value="">
               {loadingMembers
                 ? intl.formatMessage({
-                    id: "USER.ADVANCE_PAYMENT.FORM.LOADING",
-                    defaultMessage: "Loading...",
-                  })
+                  id: "USER.ADVANCE_PAYMENT.FORM.LOADING",
+                  defaultMessage: "Loading...",
+                })
                 : intl.formatMessage({
-                    id: "USER.ADVANCE_PAYMENT.FORM.SELECT_MEMBER_PLACEHOLDER",
-                    defaultMessage: "Select member",
-                  })}
+                  id: "USER.ADVANCE_PAYMENT.FORM.SELECT_MEMBER_PLACEHOLDER",
+                  defaultMessage: "Select member",
+                })}
             </option>
             {memberList.map((m) => {
               const id = m.id ?? m.userId;
-              const name = [m.firstName, m.lastName].filter(Boolean).join(" ").trim()
-                || m.userName || m.name || `Member #${id}`;
+              const name =
+                [m.firstName, m.lastName].filter(Boolean).join(" ").trim() ||
+                m.userName ||
+                m.name ||
+                `Member #${id}`;
               return (
-                <option key={id} value={id}>{name}</option>
+                <option key={id} value={id}>
+                  {name}
+                </option>
               );
             })}
           </select>
@@ -513,62 +542,14 @@ onChange={(e) => {
         </div>
       </div>
 
-      {/* Bank / Cash Account */}
-      {/* {paymentMode && (
-        <div className="flex flex-col gap-1.5">
-          {paymentMode === "Cash" ? (
-            <>
-              <label className={labelCls}>Cash Account <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <select
-                  value={cashId}
-                  onChange={(e) => setCashAccountId(e.target.value)}
-                  className={`${inputCls} pr-9 appearance-none bg-white`}
-                  disabled={loadingCash}
-                >
-                  <option value="">
-                    {loadingCash ? "Loading..." : "Select Cash Account"}
-                  </option>
-                  {cashList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.accountName ?? c.name ?? `Cash #${c.id}`}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </>
-          ) : (
-            <>
-              <label className={labelCls}>Bank <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <select
-                  value={depositTo}
-                  onChange={(e) => setDepositTo(e.target.value)}
-                  className={`${inputCls} pr-9 appearance-none bg-white`}
-                  disabled={loadingBank}
-                >
-                  <option value="">
-                    {loadingBank ? "Loading..." : "Select Bank"}
-                  </option>
-                  {bankList.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.bankName} ({b.accountNo?.slice(-4)})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </>
-          )}
-        </div>
-      )} */}
-
       {/* Reference ID + Remarks */}
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <label className={labelCls}>
-            <FormattedMessage id="USER.ADVANCE_PAYMENT.FORM.TRANSACTION_ID_LABEL" defaultMessage="Transcation ID" />
+            <FormattedMessage
+              id="USER.ADVANCE_PAYMENT.FORM.TRANSACTION_ID_LABEL"
+              defaultMessage="Transcation ID"
+            />
           </label>
           <input
             type="text"

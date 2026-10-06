@@ -138,6 +138,7 @@ import QuotationPage from "@/pages/Event/QuotationPage";
 import EventInvoicePage from "@/pages/Event/EventInvoicePage";
 import ProformaInvoicePage from "@/pages/Event/ProformaInvoicePage";
 import AddInvoicePage from "@/pages/Event/AddInvoicePage";
+import EventChatSystem from "@/pages/Event/EventChatSystem";
 import InvoiceViewPage from "@/pages/Event/InvoiceViewPage";
 import CustomerMaster from "@/pages/master/customer";
 import AllMemberMaster from "@/pages/master/all-menbers";
@@ -570,6 +571,8 @@ const AppRoutingSetup = () => {
           <Route path="/dish-costing/:eventId" element={<DishCostingPage />} />
           <Route path="/quotation" element={<QuotationPage />} />
           <Route path="/quotation/:eventId" element={<QuotationPage />} />
+          <Route path="/event-chat" element={<EventChatSystem />} />
+          <Route path="/event-chat/:eventId" element={<EventChatSystem />} />
           <Route path="/event-invoice" element={<EventInvoicePage />} />
           <Route path="/proforma-invoice" element={<ProformaInvoicePage />} />
           <Route path="/invoice-dashboard" element={<EventInvoicePage />} />
