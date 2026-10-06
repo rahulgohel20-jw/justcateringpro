@@ -396,7 +396,7 @@
       menuPrepId, eventFunctionId, personCount, defaultRate,
       categoriesOrder, categories, categoryNotes, categorySlogans,
   categoryRenames, primaryItems, itemRenames,
-      categorySubTexts, categoryHeadings, categoryImages, categorySpaces,
+      categorySubTexts, categoryHeadings, categoryImages, categorySpaces,categoryMultiImageIds, 
       addonState, packageApplied, packageInfo, packageItems,categoryIds,
       permissionRawMaterials,
       userId, 
@@ -420,9 +420,14 @@
     const catSpace    = categorySpaces?.[catName]   || 0;
     const subCatData  = categorySubTexts?.[catName] || {};
     const headingData = categoryHeadings?.[catName] || {};
-    const multiImageMenuItemIds = Array.from(
-      new Set((allItems.multiImageMenuItemIds || []).map((id) => Number(id)).filter(Boolean)),
-    );
+   const activeItemIds = new Set(items.map((i) => Number(i.id)));
+const multiImageMenuItemIds = Array.from(
+  new Set(
+    (categoryMultiImageIds?.[catName] || [])
+      .map(Number)
+      .filter((id) => id && activeItemIds.has(id)),   // drops removed/cancelled items
+  ),
+);
 
       return {
         // menuCategoryId:           first.catId || 0,

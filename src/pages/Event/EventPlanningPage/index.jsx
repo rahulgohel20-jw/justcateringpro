@@ -871,7 +871,7 @@ const getItemRate = (m) => {
   return Number(m?.categoryPrice) || 0;
 };
 
-const ITEM_USAGE_CHECK_USER_IDS = [768, 233];
+ const ITEM_USAGE_CHECK_USER_IDS = [768, 233];
 const AI_TEMPLATE_ID = 8;
 
 const EventPlanningPage = ({ mode = "menu" }) => {
@@ -2144,7 +2144,7 @@ const EventPlanningPage = ({ mode = "menu" }) => {
       const categoryHeadingsMap = {};
       const loadedAddonState = {};
       const categoryIdsMap = {};
-
+const categoryMultiImageIdsMap = {};
 
       setDefaultRate(prepMeta?.eventFunction?.rate ?? "");
 
@@ -2165,7 +2165,7 @@ const EventPlanningPage = ({ mode = "menu" }) => {
         subCatTextMap[norm.catName] = norm.subCat;
         categoryIdsMap[norm.catName] = norm.catId;
         categoryHeadingsMap[norm.catName] = norm.catHeading;
-
+categoryMultiImageIdsMap[norm.catName] = norm.multiImageMenuItemIds || [];
 
         if (
           norm.nicknames?.english?.trim() ||
@@ -2211,6 +2211,7 @@ const EventPlanningPage = ({ mode = "menu" }) => {
         categoryHeadings: categoryHeadingsMap,
         categoryRenames: categoryRenamesMap,
         categoryIds: categoryIdsMap,
+         categoryMultiImageIds: categoryMultiImageIdsMap,  
       };
 
       setSelectedByFunction((prev) => ({
@@ -2224,6 +2225,7 @@ const EventPlanningPage = ({ mode = "menu" }) => {
           categoryHeadings: categoryHeadingsMap,
           categoryRenames: categoryRenamesMap,
           categoryIds: categoryIdsMap,
+          categoryMultiImageIds: categoryMultiImageIdsMap,
         },
         _menuPrepId: menuPrepId,
       }));
@@ -3567,6 +3569,7 @@ const EventPlanningPage = ({ mode = "menu" }) => {
       categorySpaces: categorySpacesByFunction[selectedFunction] || {},
       categoryRenames: selectedByFunction[selectedFunction]?.categoryRenames || {},
       categoryIds: bucket.categoryIds || {},
+      categoryMultiImageIds: bucket.categoryMultiImageIds || {},
       primaryItems: primaryItemsByFunction[selectedFunction] || {},
       itemRenames: selectedByFunction[selectedFunction]?.itemRenames || {},
       itemReportNames: selectedByFunction[selectedFunction]?.itemReportNames || {},
@@ -5092,66 +5095,16 @@ const EventPlanningPage = ({ mode = "menu" }) => {
 
               {/* SelectedItems already has its own internal overflow-y-auto.no-scrollbar wrapper —
               this outer div just needs to be the flexed, sized container that constrains it */}
-<<<<<<< HEAD
-          <div className="flex-1 min-h-0 flex flex-col ">
-            <SelectedItems
-            loading={isPrepLoading}
-            functionRate={Number(defaultRate) || 0}
-            packageInfo={packageInfoByFunction[selectedFunction] || null} 
-             overLimitItemIds={overLimitItemIds}  
-             eventId={eventId}
-              onQtyChange={handleQtyChange}
-              mode={mode}
-              key={selectedFunction}
-              readOnly={!canEdit}
-              functionId={selectedFunction}
-              onSubCatSave={handleSubCatSave}
-              onItemSubSave={handleItemSubSave}
-              onCategoryHeadingSave={handleCategoryHeadingSave} 
-              onItemHeadingSave={handleItemHeadingSave} 
-              data={{
-                ...(selectedByFunction[selectedFunction] || { categoriesOrder: [], categories: {} }),
-                categorySpaces: categorySpacesByFunction[selectedFunction] || {},
-              }}
-              onRemove={(f, c, i) => onRemoveSelectedItem(f || selectedFunction, c, i)}
-              onDragEndNewState={(state) => onDragEndSelected(selectedFunction, state)}
-              showRates={showRates}
-              showImage={showImage}
-              onRateChange={onRateChange}
-              onOpenItemNotes={openItemNotesModal}
-              onOpenCategoryNotes={openCategoryNotesModal}
-              onInstructionsChange={onInstructionsChange}
-              onOpenItemIns={openInsModal}
-              addonState={addonState[selectedFunction] || {}}
-              onToggleCategoryAddon={handleToggleCategoryAddon}
-              onToggleItemAddon={handleToggleItemAddon}
-              packageCategoryLimits={
-                packageAppliedForFunction[selectedFunction]
-                  ? packageCategoryLimitsByFunction[selectedFunction] || {}
-                  : {}
-              }
-              onSpaceSave={handleCategorySpaceSave}
-              onItemSpaceSave={handleItemSpaceSave}
-              onImageSave={handleImageSave}
-              categoryImages={categoryImagesByFunction[selectedFunction] || {}}
-              onRenameItemSave={handleRenameItem}
-              onRenameCatSave={handleRenameCat}
-              primaryItems={primaryItemsByFunction[selectedFunction] || {}}
-              onSelectPrimaryItem={handleSelectPrimaryItem}
-              onItemImageUpload={handleItemImageUpload} 
-                onCategoryInstructionsChange={onCategoryInstructionsChange}
-                onMenuItemImageUpload={handleMenuItemImageUpload}
-                onVendorSave={handleVendorSave}
-            />
-          </div>
-          </div>
-=======
+
+         
+
               <div className="flex-1 min-h-0 flex flex-col ">
                 <SelectedItems
                   loading={isPrepLoading}
                   functionRate={Number(defaultRate) || 0}
                   packageInfo={packageInfoByFunction[selectedFunction] || null}
                   overLimitItemIds={overLimitItemIds}
+                  eventId={eventId}
                   onQtyChange={handleQtyChange}
                   mode={mode}
                   key={selectedFunction}
@@ -5197,7 +5150,7 @@ const EventPlanningPage = ({ mode = "menu" }) => {
                 />
               </div>
             </div>
->>>>>>> 8c67bca2d0706972f2ffb3dc05822d39e50a5bd1
+
           </div>
 
           <button
@@ -5214,163 +5167,95 @@ const EventPlanningPage = ({ mode = "menu" }) => {
               </span>
             )}
           </button>
+{/* Bottom-sheet overlay — mobile/tablet only
+{showSelectedSheet && (
+  <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
+    <div
+      className="absolute inset-0 bg-black/50"
+      onClick={() => setShowSelectedSheet(false)}
+    />
+    <div
+      className="relative bg-gray-100 rounded-t-2xl shadow-2xl flex flex-col"
+      style={{ height: "85vh", animation: "eventSheetSlideUp .28s ease-out" }}
+    >
+      <div className="relative flex items-center justify-between border-b p-3 flex-shrink-0 bg-white rounded-t-2xl">
+        <span className="absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1.5 bg-gray-300 rounded-full" />
+        <p className="font-semibold text-gray-700 mt-2">Selected Items</p>
+        <div className="flex items-center gap-1 mt-2">
+          <button type="button" className="p-1 rounded hover:bg-gray-100" onClick={() => setShowImage(!showImage)}>
+            {showImage ? <Eye size={20} className="text-primary" /> : <EyeOff size={20} className="text-primary" />}
+          </button>
+          <button type="button" className="p-1 rounded hover:bg-gray-100" onClick={() => setShowRates(!showRates)}>
+            {showRates ? <Eye className="text-primary" size={20} /> : <EyeOff className="text-primary" size={20} />}
+          </button>
+          <button type="button" className="p-1 rounded hover:bg-gray-100" onClick={() => setShowSelectedSheet(false)}>
+            <X size={20} className="text-gray-500" />
+          </button>
+        </div>
+      </div>
 
-          {/* Bottom-sheet overlay — mobile/tablet only */}
-          {showSelectedSheet && (
-<<<<<<< HEAD
-          <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setShowSelectedSheet(false)}
-          />
-          <div
-            className="relative bg-gray-100 rounded-t-2xl shadow-2xl flex flex-col"
-            style={{ height: "85vh", animation: "eventSheetSlideUp .28s ease-out" }}
-          >
-            <div className="relative flex items-center justify-between border-b p-3 flex-shrink-0 bg-white rounded-t-2xl">
-              <span className="absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1.5 bg-gray-300 rounded-full" />
-              <p className="font-semibold text-gray-700 mt-2">Selected Items</p>
-              <div className="flex items-center gap-1 mt-2">
-                <button type="button" className="p-1 rounded hover:bg-gray-100" onClick={() => setShowImage(!showImage)}>
-                  {showImage ? <Eye size={20} className="text-primary" /> : <EyeOff size={20} className="text-primary" />}
-                </button>
-                <button type="button" className="p-1 rounded hover:bg-gray-100" onClick={() => setShowRates(!showRates)}>
-                  {showRates ? <Eye className="text-primary" size={20} /> : <EyeOff className="text-primary" size={20} />}
-                </button>
-                <button type="button" className="p-1 rounded hover:bg-gray-100" onClick={() => setShowSelectedSheet(false)}>
-                  <X size={20} className="text-gray-500" />
-                </button>
-              </div>
-            </div>
-
-            <div className="flex-1 min-h-0 flex flex-col">
-              <SelectedItems
-                loading={isPrepLoading}
-                functionRate={Number(defaultRate) || 0}
-                packageInfo={packageInfoByFunction[selectedFunction] || null}
-                overLimitItemIds={overLimitItemIds}
-                eventId={eventId}
-                onQtyChange={handleQtyChange}
-                mode={mode}
-                key={`sheet-${selectedFunction}`}
-                readOnly={!canEdit}
-                functionId={selectedFunction}
-                onSubCatSave={handleSubCatSave}
-                onItemSubSave={handleItemSubSave}
-                data={{
-                  ...(selectedByFunction[selectedFunction] || { categoriesOrder: [], categories: {} }),
-                  categorySpaces: categorySpacesByFunction[selectedFunction] || {},
-                }}
-                onRemove={(f, c, i) => onRemoveSelectedItem(f || selectedFunction, c, i)}
-                onDragEndNewState={(state) => onDragEndSelected(selectedFunction, state)}
-                showRates={showRates}
-                showImage={showImage}
-                onRateChange={onRateChange}
-                onOpenItemNotes={openItemNotesModal}
-                onOpenCategoryNotes={openCategoryNotesModal}
-                onInstructionsChange={onInstructionsChange}
-                onOpenItemIns={openInsModal}
-                addonState={addonState[selectedFunction] || {}}
-                onToggleCategoryAddon={handleToggleCategoryAddon}
-                onToggleItemAddon={handleToggleItemAddon}
-                packageCategoryLimits={
-                  packageAppliedForFunction[selectedFunction]
-                    ? packageCategoryLimitsByFunction[selectedFunction] || {}
-                    : {}
-                }
-                onSpaceSave={handleCategorySpaceSave}
-                onItemSpaceSave={handleItemSpaceSave}
-                onImageSave={handleImageSave}
-                categoryImages={categoryImagesByFunction[selectedFunction] || {}}
-                onRenameItemSave={handleRenameItem}
-                onRenameCatSave={handleRenameCat}
-                primaryItems={primaryItemsByFunction[selectedFunction] || {}}
-                onSelectPrimaryItem={handleSelectPrimaryItem}
-                  onCategoryInstructionsChange={onCategoryInstructionsChange}
-=======
-            <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
-              <div
-                className="absolute inset-0 bg-black/50"
-                onClick={() => setShowSelectedSheet(false)}
->>>>>>> 8c67bca2d0706972f2ffb3dc05822d39e50a5bd1
-              />
-              <div
-                className="relative bg-gray-100 rounded-t-2xl shadow-2xl flex flex-col"
-                style={{ height: "85vh", animation: "eventSheetSlideUp .28s ease-out" }}
-              >
-                <div className="relative flex items-center justify-between border-b p-3 flex-shrink-0 bg-white rounded-t-2xl">
-                  <span className="absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1.5 bg-gray-300 rounded-full" />
-                  <p className="font-semibold text-gray-700 mt-2">Selected Items</p>
-                  <div className="flex items-center gap-1 mt-2">
-                    <button type="button" className="p-1 rounded hover:bg-gray-100" onClick={() => setShowImage(!showImage)}>
-                      {showImage ? <Eye size={20} className="text-primary" /> : <EyeOff size={20} className="text-primary" />}
-                    </button>
-                    <button type="button" className="p-1 rounded hover:bg-gray-100" onClick={() => setShowRates(!showRates)}>
-                      {showRates ? <Eye className="text-primary" size={20} /> : <EyeOff className="text-primary" size={20} />}
-                    </button>
-                    <button type="button" className="p-1 rounded hover:bg-gray-100" onClick={() => setShowSelectedSheet(false)}>
-                      <X size={20} className="text-gray-500" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex-1 min-h-0 flex flex-col">
-                  <SelectedItems
-                    loading={isPrepLoading}
-                    functionRate={Number(defaultRate) || 0}
-                    packageInfo={packageInfoByFunction[selectedFunction] || null}
-                    overLimitItemIds={overLimitItemIds}
-                    onQtyChange={handleQtyChange}
-                    mode={mode}
-                    key={`sheet-${selectedFunction}`}
-                    readOnly={!canEdit}
-                    functionId={selectedFunction}
-                    onSubCatSave={handleSubCatSave}
-                    onItemSubSave={handleItemSubSave}
-                    data={{
-                      ...(selectedByFunction[selectedFunction] || { categoriesOrder: [], categories: {} }),
-                      categorySpaces: categorySpacesByFunction[selectedFunction] || {},
-                    }}
-                    onRemove={(f, c, i) => onRemoveSelectedItem(f || selectedFunction, c, i)}
-                    onDragEndNewState={(state) => onDragEndSelected(selectedFunction, state)}
-                    showRates={showRates}
-                    showImage={showImage}
-                    onRateChange={onRateChange}
-                    onOpenItemNotes={openItemNotesModal}
-                    onOpenCategoryNotes={openCategoryNotesModal}
-                    onInstructionsChange={onInstructionsChange}
-                    onOpenItemIns={openInsModal}
-                    addonState={addonState[selectedFunction] || {}}
-                    onToggleCategoryAddon={handleToggleCategoryAddon}
-                    onToggleItemAddon={handleToggleItemAddon}
-                    packageCategoryLimits={
-                      packageAppliedForFunction[selectedFunction]
-                        ? packageCategoryLimitsByFunction[selectedFunction] || {}
-                        : {}
-                    }
-                    onSpaceSave={handleCategorySpaceSave}
-                    onItemSpaceSave={handleItemSpaceSave}
-                    onImageSave={handleImageSave}
-                    categoryImages={categoryImagesByFunction[selectedFunction] || {}}
-                    onRenameItemSave={handleRenameItem}
-                    onRenameCatSave={handleRenameCat}
-                    primaryItems={primaryItemsByFunction[selectedFunction] || {}}
-                    onSelectPrimaryItem={handleSelectPrimaryItem}
-                    onCategoryInstructionsChange={onCategoryInstructionsChange}
-                  />
-                </div>
-              </div>
-              <style>{`
-            @keyframes eventSheetSlideUp {
-              from { transform: translateY(100%); }
-              to   { transform: translateY(0); }
-            }
-          `}</style>
-            </div>
-          )}
-
-
-
+      <div className="flex-1 min-h-0 flex flex-col">
+        <SelectedItems
+          loading={isPrepLoading}
+          functionRate={Number(defaultRate) || 0}
+          packageInfo={packageInfoByFunction[selectedFunction] || null}
+          overLimitItemIds={overLimitItemIds}
+          eventId={eventId}
+          onQtyChange={handleQtyChange}
+          mode={mode}
+          key={`sheet-${selectedFunction}`}
+          readOnly={!canEdit}
+          functionId={selectedFunction}
+          onSubCatSave={handleSubCatSave}
+          onItemSubSave={handleItemSubSave}
+          onCategoryHeadingSave={handleCategoryHeadingSave}
+          onItemHeadingSave={handleItemHeadingSave}
+          data={{
+            ...(selectedByFunction[selectedFunction] || { categoriesOrder: [], categories: {} }),
+            categorySpaces: categorySpacesByFunction[selectedFunction] || {},
+          }}
+          onRemove={(f, c, i) => onRemoveSelectedItem(f || selectedFunction, c, i)}
+          onDragEndNewState={(state) => onDragEndSelected(selectedFunction, state)}
+          showRates={showRates}
+          showImage={showImage}
+          onRateChange={onRateChange}
+          onOpenItemNotes={openItemNotesModal}
+          onOpenCategoryNotes={openCategoryNotesModal}
+          onInstructionsChange={onInstructionsChange}
+          onOpenItemIns={openInsModal}
+          addonState={addonState[selectedFunction] || {}}
+          onToggleCategoryAddon={handleToggleCategoryAddon}
+          onToggleItemAddon={handleToggleItemAddon}
+          packageCategoryLimits={
+            packageAppliedForFunction[selectedFunction]
+              ? packageCategoryLimitsByFunction[selectedFunction] || {}
+              : {}
+          }
+          onSpaceSave={handleCategorySpaceSave}
+          onItemSpaceSave={handleItemSpaceSave}
+          onImageSave={handleImageSave}
+          categoryImages={categoryImagesByFunction[selectedFunction] || {}}
+          onRenameItemSave={handleRenameItem}
+          onRenameCatSave={handleRenameCat}
+          primaryItems={primaryItemsByFunction[selectedFunction] || {}}
+          onSelectPrimaryItem={handleSelectPrimaryItem}
+          onItemImageUpload={handleItemImageUpload}
+          onCategoryInstructionsChange={onCategoryInstructionsChange}
+          onMenuItemImageUpload={handleMenuItemImageUpload}
+          onVendorSave={handleVendorSave}
+        />
+      </div>
+    </div>
+    <style>{`
+      @keyframes eventSheetSlideUp {
+        from { transform: translateY(100%); }
+        to   { transform: translateY(0); }
+      }
+    `}</style>
+  </div>
+)} */}
+         
+           
         </div>
         <div className="fixed bottom-20 right-4 z-40">
           {canAccessStock && (
