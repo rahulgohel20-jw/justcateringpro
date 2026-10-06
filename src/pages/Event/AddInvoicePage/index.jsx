@@ -84,7 +84,7 @@ const hideTaxColumns = HIDE_TAX_COLUMNS_USER_IDS.includes(String(invoiceUserId))
     const isVatUser = VAT_USER.includes(String(invoiceUserId));
   
 const isTaxUser = TAX_USER.includes(String(invoiceUserId));
-  const REMAINING_USER_IDS = ["233"];
+  const REMAINING_USER_IDS = ["757"];
 const showRemaining = REMAINING_USER_IDS.includes(String(invoiceUserId));
 const [savedRemaining, setSavedRemaining] = useState(null);
   const getUserRoleId = () => {
