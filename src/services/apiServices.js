@@ -4099,6 +4099,19 @@ export const getAllRawMaterialWithExpiryDates = (page, size, userId, searchName 
   return GET(`/storepo/getAllRawMaterialWithExpiryDates?${query.toString()}`);
 };
 
+<<<<<<< HEAD
+export const genratebarcode = (qty , rawMaterialId , userId) => {
+  return GET(`/rawmaterial/generate-barcode?qty=${qty}&rawMaterialId=${rawMaterialId}&userId=${userId}`);
+};
+
+export const addupdateselectedmultiplemenuitemimages = (data) => {
+  return POST(`/menupreparation/add-update-selected-item-image`, data);
+};
+
+export const getallselectedmenuitemimages =  (eventFunctionId , userId , eventId , menuCategoryId) => { 
+  return GET(`/menupreparation/getAllMenuItemImages?eventFunctionId=${eventFunctionId}&userId=${userId}&eventId=${eventId}&menuCategoryId=${menuCategoryId}`);
+};
+=======
 
 
 // Chat System APIs
@@ -4234,3 +4247,4 @@ export const addReaction = (messageId, reactionType) => AddEventChatReaction(mes
 export const removeReaction = (messageId, reactionType) => RemoveEventChatReaction(messageId, reactionType);
 export const pinMessage = (messageId) => PinEventChatMessage(messageId);
 export const unpinMessage = (messageId) => UnpinEventChatMessage(messageId);
+>>>>>>> 8c67bca2d0706972f2ffb3dc05822d39e50a5bd1

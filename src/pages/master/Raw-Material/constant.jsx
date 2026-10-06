@@ -1,8 +1,7 @@
 import { Popconfirm, Tooltip } from "antd";
 import { FormattedMessage } from "react-intl";
 
-export const columns = (onEdit, onDelete, onStatus, permissions = {}) => [
-  {
+export const columns = (onEdit, onDelete, onStatus, permissions = {}, onBarcode) => [  {
     accessorKey: "sr_no",
     header: <FormattedMessage id="COMMON.SR_NO" defaultMessage="Sr. No." />,
     meta: {
@@ -163,6 +162,17 @@ export const columns = (onEdit, onDelete, onStatus, permissions = {}) => [
               </button>
             </Tooltip>
           )}
+          {onBarcode && (
+  <Tooltip title="Generate Barcode">
+    <button
+      className="btn btn-sm btn-icon btn-clear"
+      title="Generate Barcode"
+      onClick={() => onBarcode(row.original)}
+    >
+      <i className="ki-filled ki-barcode text-gray-700"></i>
+    </button>
+  </Tooltip>
+)}
         </div>
       );
     },

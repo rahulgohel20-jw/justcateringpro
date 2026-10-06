@@ -265,6 +265,10 @@
           (f) => Number(f[fields.categoryId] ?? f.menuCategoryId ?? 0) === Number(rawCat[fields.categoryId] ?? 0)
         );
 
+  const multiImageMenuItemIds = Array.from(
+    new Set((rawCat.multiImageMenuItemIds || []).map((id) => Number(id)).filter(Boolean)),
+  );
+
   // const sourceItems = savedItems;
 
           const isPackage   = prepMeta.isPackage || false;
@@ -364,10 +368,12 @@
         vendorName: it.vendorName || flat.vendorName || "",
       };
     });
+  items.multiImageMenuItemIds = multiImageMenuItemIds;
 
   return { 
     catName, catNameHindi, catNameGujarati, 
     catId, notes, slogan, images, space, subCat,catHeading, items, 
+    multiImageMenuItemIds,
     isAddon: !!rawCat[fields.isCategoryAddon],
     categoryStatus,
     reportNameEnglish:  rawCat.reportNameEnglish  || originalCatName,
@@ -408,12 +414,15 @@
     const allItems    = categories[catName] || [];
     const items       = allItems.filter((item) => item.itemStatus !== "CANCELLED");
     const first       = allItems[0] || {};
-      const noteObj     = categoryNotes?.[catName]    || {};
-      const slogan      = categorySlogans?.[catName]  || "";
-      const imgData     = categoryImages?.[catName]   || {};
-      const catSpace    = categorySpaces?.[catName]   || 0;
-      const subCatData  = categorySubTexts?.[catName] || {};
-      const headingData = categoryHeadings?.[catName] || {};
+    const noteObj     = categoryNotes?.[catName]    || {};
+    const slogan      = categorySlogans?.[catName]  || "";
+    const imgData     = categoryImages?.[catName]   || {};
+    const catSpace    = categorySpaces?.[catName]   || 0;
+    const subCatData  = categorySubTexts?.[catName] || {};
+    const headingData = categoryHeadings?.[catName] || {};
+    const multiImageMenuItemIds = Array.from(
+      new Set((allItems.multiImageMenuItemIds || []).map((id) => Number(id)).filter(Boolean)),
+    );
 
       return {
         // menuCategoryId:           first.catId || 0,
@@ -474,6 +483,7 @@
         startTime:                "",
         isMenuCatAddons:          !!addonState?.[catName]?.cat,
         categoryStatus:           allItems[0]?.categoryStatus || "NORMAL",
+        multiImageMenuItemIds:    multiImageMenuItemIds,
   changedAfterCompletion:   allItems[0]?.changedAfterCompletion ?? null,
         bgImgId:                  imgData.bgImgId  || 0,
         catImgId:                 imgData.catImgId || 0,

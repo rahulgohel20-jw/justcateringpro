@@ -55,7 +55,6 @@ const ItemTable = ({ rows, onInputChange, onAddRow, onDeleteRow, isOfferRateUser
             defaultMessage: "Name",
           })}
           value={record.name}
-          disabled={!record.isCustom && !record.isNewRow && !canEditFunction} // 👈 new
           onChange={(e) => onInputChange(index, "name", e.target.value)}
           className="border-none shadow-none"
         />
@@ -79,7 +78,6 @@ const ItemTable = ({ rows, onInputChange, onAddRow, onDeleteRow, isOfferRateUser
               format: "hh:mm A",
             }}
             format="DD-MM-YYYY hh:mm A"
-            disabled={!record.isCustom && !record.isNewRow && !canEditFunction} // 👈 new
             value={dateValue}
             onChange={(date) =>
               onInputChange(index, "date", date ? date.toISOString() : "")

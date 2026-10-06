@@ -5,10 +5,22 @@ import React, {
   useCallback,
   useRef,
 } from "react";
+import { Modal } from "antd";
+import Swal from "sweetalert2";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { toAbsoluteUrl } from "@/utils";
 import { GetCategoryImg } from "@/services/apiServices";
-import { ArrowUpNarrowWide, Plus, Space, UploadCloud, CaseUpper, Heading } from "lucide-react";import { Translateapi } from "../../../../services/apiServices";
+import {
+  ArrowUpNarrowWide,
+  Plus,
+  Space,
+  UploadCloud,
+  CaseUpper,
+  Heading,
+  Search,
+  UtensilsCrossed,
+} from "lucide-react";
+import { Translateapi } from "../../../../services/apiServices";
 import { ChevronDown } from "lucide-react";
 import MultiLangInputBox from "../../../../components/form-inputs/MultiLangInputbox";
 import { getLangConfig } from "@/utils/langConfig";
@@ -1023,6 +1035,137 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {}, mode = "menu
   );
 };
 
+const StationItemsModal = ({
+  title,
+  items = [],
+  initialSelected = [],
+  language = "en",
+  onClose,
+  onSave,
+}) => {
+  const normalizedInitial = Array.isArray(initialSelected)
+    ? initialSelected.map(Number).filter(Boolean)
+    : [];
+
+  const [selectedIds, setSelectedIds] = useState(() => {
+    const savedIds = normalizedInitial.length > 0 ? normalizedInitial : [];
+    if (savedIds.length > 0) {
+      const allItemsSelected = items.length > 0 && savedIds.length === items.length;
+      return allItemsSelected ? [savedIds[0]] : savedIds;
+    }
+
+    const firstItem = items[0];
+    const firstId = Number(firstItem?.menuItemId ?? firstItem?.id ?? firstItem?.itemId ?? 0);
+    return firstId ? [firstId] : [];
+  });
+  const [search, setSearch] = useState("");
+
+  const getItemId = (it) => Number(it.menuItemId ?? it.id ?? it.itemId ?? 0);
+
+  const getName = (it) => {
+    const base = {
+      en: it.menuItemName || it.nameEnglish || it.name || it.itemName,
+      hi: it.menuItemNameHindi || it.nameHindi || it.itemNameHindi,
+      gu: it.menuItemNameGujarati || it.nameGujarati || it.itemNameGujarati,
+    };
+    return (base[language] || base.en || "").trim();
+  };
+
+  const getImg = (it) => {
+    const src = it.imagePath || it.image || it.itemImage || it.imgUrl || it.imageUrl;
+    return src && src !== "null" && /\.(jpg|jpeg|png|webp|gif)$/i.test(src)
+      ? src
+      : toAbsoluteUrl("/media/menu/noImage.jpg");
+  };
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((it) => (getName(it) || "").toLowerCase().includes(q));
+  }, [items, search]);
+
+  const selectedItems = useMemo(
+    () => items.filter((it) => selectedIds.includes(getItemId(it))),
+    [items, selectedIds],
+  );
+
+  const toggle = (id) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id],
+    );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6">
+        <h2 className="text-base font-semibold text-gray-800 mb-3">
+        <span className="text-primary font-bold">{title}</span>
+        </h2>
+
+        {/* Search */}
+
+        {/* All items grid */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar border border-gray-200 rounded-lg p-2">
+          {filtered.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">No items found</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {filtered.map((it) => {
+                const itemId = getItemId(it);
+                const checked = selectedIds.includes(itemId);
+                return (
+                  <div
+                    key={itemId}
+                    onClick={() => toggle(itemId)}
+                    className={`relative cursor-pointer rounded-lg border-2 overflow-hidden transition ${
+                      checked ? "border-primary bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <img
+                      src={getImg(it)}
+                      alt={getName(it)}
+                      loading="lazy"
+                      className="w-full h-24 object-cover"
+                    />
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      readOnly
+                      className="absolute top-1.5 left-1.5 w-4 h-4 accent-primary"
+                    />
+                    <p className="text-xs font-medium text-gray-800 p-1.5 line-clamp-2">
+                      {getName(it)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm hover:bg-gray-200"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onSave(selectedIds, selectedItems);
+              onClose();
+            }}
+            className="px-4 py-2 rounded-lg bg-primary text-white text-sm hover:opacity-90"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─────────────────────────────────────────────────────────────────
 // SelectedItems
 // ─────────────────────────────────────────────────────────────────
@@ -1065,6 +1208,7 @@ const SelectedItems = ({
    onCategoryInstructionsChange = () => {}, 
     onVendorSave = () => {},
     overLimitItemIds = new Set(), 
+    eventId = 0,
 }) => {
 
   const { categoriesOrder = [], categories = {} } = data;
@@ -1091,6 +1235,8 @@ const [itemInstructions, setItemInstructions] = useState({});
   const [itemImageModal, setItemImageModal] = useState(null); // { catName, item }
 const [itemImageUploading, setItemImageUploading] = useState(false);
 const [headingCatModal, setHeadingCatModal] = useState(null);
+const [stationItemsModal, setStationItemsModal] = useState(null);
+const isSpecialStationUser = Number(localStorage.getItem("userId")) === 545; //smari lakhani 
 
 
 
@@ -1555,6 +1701,40 @@ if (loading) {
   />
 )}
 
+      {stationItemsModal && isSpecialStationUser && (
+        <StationItemsModal
+          title={stationItemsModal.catName}
+          items={stationItemsModal.items || []}
+          initialSelected={
+            Array.isArray(stationItemsModal.selectedIds)
+              ? stationItemsModal.selectedIds
+              : (stationItemsModal.items || []).map((it) => Number(it.menuItemId ?? it.id ?? it.itemId ?? 0)).filter(Boolean)
+          }
+          onClose={() => setStationItemsModal(null)}
+          onSave={(selectedIds) => {
+            const selectedSet = new Set((selectedIds || []).map((id) => Number(id)));
+            const nextItems = (stationItemsModal.items || []).filter((it) => {
+              const itemId = Number(it.menuItemId ?? it.id ?? it.itemId ?? 0);
+              return selectedSet.has(itemId);
+            });
+
+            const selectedItemIds = nextItems
+              .map((it) => Number(it.menuItemId ?? it.id ?? it.itemId ?? 0))
+              .filter(Boolean);
+
+            nextItems.multiImageMenuItemIds = selectedItemIds;
+
+            onDragEndNewState({
+              categoriesOrder: [...categoriesOrder],
+              categories: { ...categories, [stationItemsModal.catName]: nextItems },
+              categoryNotes: data.categoryNotes,
+              categorySlogans: data.categorySlogans,
+            });
+            setStationItemsModal(null);
+          }}
+        />
+      )}
+
       <div className="w-full flex flex-col h-full overflow-hidden">
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <DragDropContext
@@ -1670,6 +1850,27 @@ return (
                                     onClick={(e) => { e.stopPropagation(); setHeadingCatModal(catName); }}
                                   >
                                     <Heading size={18} className="text-teal-800 bg-teal-100 rounded-full p-0.5" />
+                                  </button>
+                                )}
+
+                                {isSpecialStationUser && (
+                                  <button
+                                    type="button"
+                                    title="Station Items"
+                                    className="p-1 rounded hover:bg-gray-100"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const categorySelectedIds = Array.isArray(items?.multiImageMenuItemIds)
+                                        ? items.multiImageMenuItemIds
+                                        : [];
+                                      setStationItemsModal({
+                                        catName,
+                                        items,
+                                        selectedIds: categorySelectedIds,
+                                      });
+                                    }}
+                                  >
+                                    <UtensilsCrossed size={18} className="text-primary bg-primary/10 rounded-md p-0.5" />
                                   </button>
                                 )}
 

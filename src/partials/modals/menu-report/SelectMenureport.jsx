@@ -158,6 +158,7 @@ else if (mode === "allocation" && !ischef && !isOutside) {
                 "Chef Agency Theme",
                 "Outside Agency Theme",
                 "Name Plate Theme",
+                "General Fix Theme",
                 "Attendance Theme", 
                 
               ].includes(module.nameEnglish),

@@ -410,7 +410,7 @@ const CrockeryCutleryReportModal = ({
        isShowFunctionDetails:options.isShowFunctionDetails,
        isShowFunctionImg:options.isShowFunctionImg,
        isNotes : options.isNotes,
-       showLastPage : option.showLastPage,
+       showLastPage : options.showLastPage,
        isSignatureVisible: options.isSignatureVisible,
       isCompanyLogo: options.companyLogo,
       isPartyDetails: options.partyDetails,

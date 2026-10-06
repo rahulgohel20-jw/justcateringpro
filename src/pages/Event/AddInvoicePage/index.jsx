@@ -1071,14 +1071,6 @@ isDiscountPercent: inferredIsPercent,
  const handleInputChange = (index, field, value) => {
     const row = rows[index];
 
-  // function name / date can only be changed with access (custom rows are always editable)
-  if (
-    (field === "name" || field === "date") &&
-    !row?.isCustom &&
-    !canAccessgeneratemultipleinvoice
-  ) {
-    return;
-  }
   setIsEdited(true);
   const updatedRows = rows.map((row, i) =>
     i === index ? { ...row, [field]: value } : row,
