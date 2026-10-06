@@ -10,13 +10,14 @@ import {
   UpdateSequence,
   SearchRawMaterial,
   Getallgeneralfix,
+    genratebarcode,
 } from "@/services/apiServices";
 import useStyle from "./style";
 import AddRawMaterial from "@/partials/modals/add-raw-material/AddRawMaterial";
 import Swal from "sweetalert2";
 import { FormattedMessage } from "react-intl";
 import { useIntl } from "react-intl";
-import { Select } from "antd";
+import { Select  , Modal , InputNumber } from "antd";
 import { usePermission } from "../../../hooks/usePermission";
 
 const RawMaterial = () => {
@@ -41,7 +42,13 @@ const RawMaterial = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const [sortOrder, setSortOrder] = useState("");
   let Id = localStorage.getItem("userId");
-
+const [barcodeOpen, setBarcodeOpen] = useState(false);
+const [barcodeItem, setBarcodeItem] = useState(null);
+const [barcodeQty, setBarcodeQty] = useState(1);
+const [barcodeLoading, setBarcodeLoading] = useState(false);
+const [printQty, setPrintQty] = useState(1);
+const [printLoading, setPrintLoading] = useState(false);
+const isBarcodeUser = Number(Id) === 376; //AMONCAR 
   const field = useMemo(() => {
   const languageMap = {
     en: "nameEnglish",
@@ -290,7 +297,50 @@ useEffect(() => {
     setDraggedIndex(null);
     setDragOverIndex(null);
   };
+const handlePrintAll = async () => {
+  const qty = Number(printQty ?? 1);
+  if (!qty || qty < 1) {
+    Swal.fire({
+      icon: "warning",
+      title: "Invalid Quantity",
+      text: "Please enter a quantity of at least 1.",
+    });
+    return;
+  }
 
+  if (!displayData.length) {
+    Swal.fire({ icon: "info", title: "No items to print" });
+    return;
+  }
+
+  try {
+    setPrintLoading(true);
+    const res = await genratebarcode(qty, -1, Id);
+    const fileUrl =
+      res?.data?.fileUrl ||
+      res?.data?.data?.fileUrl ||
+      (typeof res?.data?.data === "string" ? res.data.data : "");
+
+    if (fileUrl) {
+      window.open(fileUrl, "_blank", "noopener,noreferrer");
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: res?.data?.msg || "Failed to generate barcode.",
+      });
+    }
+  } catch (error) {
+    console.error("Print error:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Something went wrong while generating the PDF.",
+    });
+  } finally {
+    setPrintLoading(false);
+  }
+};
   const DeleteRawMaterial = (raw_material_id) => {
     Swal.fire({
       title: "Are you sure?",
@@ -352,12 +402,60 @@ const handleRefreshData = () => {
     FetchRawMaterial(currentPage, categoryFilter || 0, sortOrder);
   }
 };
-  const tableColumns = columns(
-    handleEdit,
-    DeleteRawMaterial,
-    statusRaw,
-    permissions,
-  );
+
+const handleBarcodeClick = (row) => {
+  setBarcodeItem(row);
+  setBarcodeQty(1);
+  setBarcodeOpen(true);
+};
+
+const handleGenerateBarcode = async () => {
+  const qty = Number(barcodeQty);
+  if (!qty || qty < 1) {
+    Swal.fire({
+      icon: "warning",
+      title: "Invalid Quantity",
+      text: "Please enter a quantity of at least 1.",
+    });
+    return;
+  }
+
+  try {
+    setBarcodeLoading(true);
+    const res = await genratebarcode(qty, barcodeItem.raw_material_id, Id);
+    const fileUrl =
+      res?.data?.fileUrl ||
+      res?.data?.data?.fileUrl ||
+      (typeof res?.data?.data === "string" ? res.data.data : "");
+
+    if (fileUrl) {
+      window.open(fileUrl, "_blank", "noopener,noreferrer");
+      setBarcodeOpen(false);
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: res?.data?.msg || "Failed to generate barcode.",
+      });
+    }
+  } catch (error) {
+    console.error("Barcode error:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Something went wrong while generating the barcode.",
+    });
+  } finally {
+    setBarcodeLoading(false);
+  }
+};
+const tableColumns = columns(
+  handleEdit,
+  DeleteRawMaterial,
+  statusRaw,
+  permissions,
+  isBarcodeUser ? handleBarcodeClick : undefined,
+);
 
   return (
     <Fragment>
@@ -440,23 +538,37 @@ const handleRefreshData = () => {
             )}
           </div>
 
-          {permissions.add && (
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  setSelectedRawMaterial(null);
-                  setIsRawMaterialModalOpen(true);
-                }}
-              >
-                <i className="ki-filled ki-plus"></i>
-                <FormattedMessage
-                  id="USER.MASTER.ADD_CONTACT_CATEGORY"
-                  defaultMessage="Create New"
-                />
-              </button>
-            </div>
-          )}
+         <div className="flex flex-wrap items-center gap-2">
+  {isBarcodeUser && (
+    <>
+     
+      <button
+        className="btn btn-secondary"
+        onClick={handlePrintAll}
+        disabled={printLoading}
+      >
+        <i className="ki-filled ki-printer"></i>
+        {printLoading ? "Generating..." : "Print"}
+      </button>
+    </>
+  )}
+
+  {permissions.add && (
+    <button
+      className="btn btn-primary"
+      onClick={() => {
+        setSelectedRawMaterial(null);
+        setIsRawMaterialModalOpen(true);
+      }}
+    >
+      <i className="ki-filled ki-plus"></i>
+      <FormattedMessage
+        id="USER.MASTER.ADD_CONTACT_CATEGORY"
+        defaultMessage="Create New"
+      />
+    </button>
+  )}
+</div>
         </div>
 
         <AddRawMaterial
@@ -465,7 +577,46 @@ const handleRefreshData = () => {
           refreshData={handleRefreshData}
           rawmaterial={selectedRawMaterial}
         />
-
+<Modal
+  title="Generate Barcode"
+  centered
+  open={barcodeOpen}
+  onCancel={() => setBarcodeOpen(false)}
+  footer={[
+    <button
+      key="cancel"
+      className="btn btn-light"
+      onClick={() => setBarcodeOpen(false)}
+    >
+      Cancel
+    </button>,
+    <button
+      key="generate"
+      className="btn btn-primary ms-2"
+      onClick={handleGenerateBarcode}
+      disabled={barcodeLoading}
+    >
+      {barcodeLoading ? "Generating..." : "Generate"}
+    </button>,
+  ]}
+>
+  <div className="flex flex-col gap-3 py-2">
+    <div className="text-sm text-gray-700">
+      Item: <b>{barcodeItem?.raw_material_name}</b>
+    </div>
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-700">Quantity</span>
+      <InputNumber
+        min={1}
+        value={barcodeQty}
+        onChange={(v) => setBarcodeQty(v)}
+        onPressEnter={handleGenerateBarcode}
+        style={{ width: 140 }}
+        autoFocus
+      />
+    </div>
+  </div>
+</Modal>
         <div className="card">
           <div className="table-responsive">
             <div className="relative">

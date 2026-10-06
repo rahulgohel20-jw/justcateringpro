@@ -4097,3 +4097,15 @@ export const getAllRawMaterialWithExpiryDates = (page , size , userId, searchNam
   });
   return GET(`/storepo/getAllRawMaterialWithExpiryDates?${query.toString()}`);
 };
+
+export const genratebarcode = (qty , rawMaterialId , userId) => {
+  return GET(`/rawmaterial/generate-barcode?qty=${qty}&rawMaterialId=${rawMaterialId}&userId=${userId}`);
+};
+
+export const addupdateselectedmultiplemenuitemimages = (data) => {
+  return POST(`/menupreparation/add-update-selected-item-image`, data);
+};
+
+export const getallselectedmenuitemimages =  (eventFunctionId , userId , eventId , menuCategoryId) => { 
+  return GET(`/menupreparation/getAllMenuItemImages?eventFunctionId=${eventFunctionId}&userId=${userId}&eventId=${eventId}&menuCategoryId=${menuCategoryId}`);
+};
