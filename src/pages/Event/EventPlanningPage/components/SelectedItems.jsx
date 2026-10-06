@@ -1047,17 +1047,7 @@ const StationItemsModal = ({
     ? initialSelected.map(Number).filter(Boolean)
     : [];
 
-  const [selectedIds, setSelectedIds] = useState(() => {
-    const savedIds = normalizedInitial.length > 0 ? normalizedInitial : [];
-    if (savedIds.length > 0) {
-      const allItemsSelected = items.length > 0 && savedIds.length === items.length;
-      return allItemsSelected ? [savedIds[0]] : savedIds;
-    }
-
-    const firstItem = items[0];
-    const firstId = Number(firstItem?.menuItemId ?? firstItem?.id ?? firstItem?.itemId ?? 0);
-    return firstId ? [firstId] : [];
-  });
+  const [selectedIds, setSelectedIds] = useState(normalizedInitial);
   const [search, setSearch] = useState("");
 
   const getItemId = (it) => Number(it.menuItemId ?? it.id ?? it.itemId ?? 0);
@@ -1236,7 +1226,7 @@ const [itemInstructions, setItemInstructions] = useState({});
 const [itemImageUploading, setItemImageUploading] = useState(false);
 const [headingCatModal, setHeadingCatModal] = useState(null);
 const [stationItemsModal, setStationItemsModal] = useState(null);
-const isSpecialStationUser = Number(localStorage.getItem("userId")) === 545; //smari lakhani 
+const isSpecialStationUser = Number(localStorage.getItem("userId")) === 545; //smari lakhani 545
 
 
 
@@ -1701,34 +1691,22 @@ if (loading) {
   />
 )}
 
-      {stationItemsModal && isSpecialStationUser && (
+           {stationItemsModal && isSpecialStationUser && (
         <StationItemsModal
           title={stationItemsModal.catName}
           items={stationItemsModal.items || []}
-          initialSelected={
-            Array.isArray(stationItemsModal.selectedIds)
-              ? stationItemsModal.selectedIds
-              : (stationItemsModal.items || []).map((it) => Number(it.menuItemId ?? it.id ?? it.itemId ?? 0)).filter(Boolean)
-          }
+          initialSelected={stationItemsModal.selectedIds || []}
           onClose={() => setStationItemsModal(null)}
           onSave={(selectedIds) => {
-            const selectedSet = new Set((selectedIds || []).map((id) => Number(id)));
-            const nextItems = (stationItemsModal.items || []).filter((it) => {
-              const itemId = Number(it.menuItemId ?? it.id ?? it.itemId ?? 0);
-              return selectedSet.has(itemId);
-            });
-
-            const selectedItemIds = nextItems
-              .map((it) => Number(it.menuItemId ?? it.id ?? it.itemId ?? 0))
-              .filter(Boolean);
-
-            nextItems.multiImageMenuItemIds = selectedItemIds;
-
             onDragEndNewState({
               categoriesOrder: [...categoriesOrder],
-              categories: { ...categories, [stationItemsModal.catName]: nextItems },
+              categories: { ...categories },   // items stay untouched
               categoryNotes: data.categoryNotes,
               categorySlogans: data.categorySlogans,
+              categoryMultiImageIds: {
+                ...(data.categoryMultiImageIds || {}),
+                [stationItemsModal.catName]: (selectedIds || []).map(Number),
+              },
             });
             setStationItemsModal(null);
           }}
@@ -1860,14 +1838,11 @@ return (
                                     className="p-1 rounded hover:bg-gray-100"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      const categorySelectedIds = Array.isArray(items?.multiImageMenuItemIds)
-                                        ? items.multiImageMenuItemIds
-                                        : [];
-                                      setStationItemsModal({
-                                        catName,
-                                        items,
-                                        selectedIds: categorySelectedIds,
-                                      });
+                                     setStationItemsModal({
+  catName,
+  items,
+  selectedIds: data.categoryMultiImageIds?.[catName] || [],
+});
                                     }}
                                   >
                                     <UtensilsCrossed size={18} className="text-primary bg-primary/10 rounded-md p-0.5" />
