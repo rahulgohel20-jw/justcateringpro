@@ -1,7 +1,7 @@
 import { Fragment, useState, useEffect, useCallback } from "react";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
-import { columns } from "./constant";
+import { columns  , buildUnitOptions } from "./constant";
 import {
   GetRawMaterialcategory,
   GetAllRawMaterials,
@@ -26,7 +26,69 @@ const RawmaterialChange = () => {
   const [rawMaterialLoading, setRawMaterialLoading] = useState(false);
   const [rawMaterialPage, setRawMaterialPage] = useState(1);
   const [rawMaterialHasMore, setRawMaterialHasMore] = useState(true);
+  const [bulkQty, setBulkQty] = useState("");
+const [bulkUnitId, setBulkUnitId] = useState(null);
   const intl = useIntl();
+
+  const getUnitId = (u) => u.id;
+const getUnitName = (u) => u.name;
+
+const bulkUnitOptions = (() => {
+  const selected = tableData.filter((r) => selectedRows.has(r.sr_no));
+  if (!selected.length) return [];
+
+  const lists = selected.map((r) => buildUnitOptions(r.unit));
+  return lists[0].filter((opt) =>
+    lists.every((list) => list.some((x) => x.value === opt.value)),
+  );
+})();
+
+const handleBulkApply = () => {
+  if (selectedRows.size === 0) {
+    Swal.fire({ icon: "warning", title: "Select items first" });
+    return;
+  }
+  if (bulkQty === "" && !bulkUnitId) {
+    Swal.fire({ icon: "warning", title: "Enter a quantity or select a unit" });
+    return;
+  }
+
+  const unitOption = bulkUnitOptions.find((o) => o.value === bulkUnitId);
+
+  setTableData((prev) =>
+    prev.map((row) => {
+      if (!selectedRows.has(row.sr_no)) return row;
+      return {
+        ...row,
+        ...(bulkQty !== "" && { final_qyt: bulkQty }),
+        ...(bulkUnitId && {
+          final_unit_id: bulkUnitId,
+          final_unit: unitOption?.label,
+        }),
+      };
+    }),
+  );
+
+  setModifiedRows((prev) => {
+    const next = new Set(prev);
+    selectedRows.forEach((id) => next.add(id));
+    return next;
+  });
+};
+
+const handleFieldChange = (srNo, fieldOrObject, value) => {
+  setTableData((prev) =>
+    prev.map((row) =>
+      row.sr_no !== srNo
+        ? row
+        : typeof fieldOrObject === "object"
+          ? { ...row, ...fieldOrObject }
+          : { ...row, [fieldOrObject]: value },
+    ),
+  );
+  setModifiedRows((prev) => new Set(prev).add(srNo));
+};
+
   const handleRowSelect = (srNo, checked) => {
     setSelectedRows((prev) => {
       const next = new Set(prev);
@@ -199,64 +261,72 @@ const RawmaterialChange = () => {
       fetchRawMaterial(selectedCategory, rawMaterialPage + 1, true);
     }
   };
-  const handleFieldChange = (srNo, fieldOrObject, value) => {
-    setTableData((prev) =>
-      prev.map((row) => {
-        if (row.sr_no !== srNo) return row;
-        const updated =
-          typeof fieldOrObject === "object"
-            ? { ...row, ...fieldOrObject }
-            : { ...row, [fieldOrObject]: value };
-        setModifiedRows((prev) => new Set(prev).add(srNo));
-        return updated;
-      }),
-    );
-  };
+ 
+const handleUpdate = async () => {
+  if (selectedRows.size === 0) {
+    Swal.fire({ icon: "warning", title: "Please select at least one item" });
+    return;
+  }
 
-  const handleUpdate = async () => {
-    const changedRows = tableData.filter((row) => selectedRows.has(row.sr_no));
+  const changedRows = tableData.filter((row) => selectedRows.has(row.sr_no));
 
-    const payload = changedRows.map((row) => ({
-      id: row.id,
-      itemId: row.itemId,
-      finalWeight: Number(row.final_qyt),
-      finalUnitId: row.final_unit_id,
-      rawMaterialUnitId: row.rawMatUnitId,
-      supplierRate: row.supplierRate,
-    }));
+  const invalid = changedRows.find(
+    (r) =>
+      r.final_qyt === "" ||
+      isNaN(Number(r.final_qyt)) ||
+      Number(r.final_qyt) < 0,
+  );
+  if (invalid) {
+    Swal.fire({
+      icon: "error",
+      title: "Invalid quantity",
+      text: `Check quantity for "${invalid.item_name}"`,
+    });
+    return;
+  }
 
-    try {
-      const response = await UpdateItemRawMaterialWeight(payload);
+  const payload = changedRows.map((row) => ({
+    id: row.id,
+    itemId: row.itemId,
+    finalWeight: Number(row.final_qyt),
+    finalUnitId: row.final_unit_id,
+    rawMaterialUnitId: row.rawMatUnitId,
+    supplierRate: row.supplierRate,
+  }));
 
-      if (response?.data?.success) {
-        Swal.fire({
-          icon: "success",
-          title: "Updated!",
-          text: response?.data?.msg || "Units updated successfully.",
-          confirmButtonColor: "#3085d6",
-        }).then(() => {
-          fetchRawMaterialData(selectedRawMaterial);
-          setSelectedRows(new Set());
-        });
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Update Failed",
-          text:
-            response?.data?.msg || "Something went wrong. Please try again.",
-          confirmButtonColor: "#d33",
-        });
-      }
-    } catch (error) {
-      console.error("Update failed:", error);
+  try {
+    const response = await UpdateItemRawMaterialWeight(payload);
+
+    if (response?.data?.success) {
+      Swal.fire({
+        icon: "success",
+        title: "Updated!",
+        text: response?.data?.msg || "Units updated successfully.",
+        confirmButtonColor: "#3085d6",
+      }).then(() => {
+        fetchRawMaterialData(selectedRawMaterial);
+        setSelectedRows(new Set());
+        setBulkQty("");
+        setBulkUnitId(null);
+      });
+    } else {
       Swal.fire({
         icon: "error",
-        title: "Error",
-        text: "An unexpected error occurred. Please try again.",
+        title: "Update Failed",
+        text: response?.data?.msg || "Something went wrong. Please try again.",
         confirmButtonColor: "#d33",
       });
     }
-  };
+  } catch (error) {
+    console.error("Update failed:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "An unexpected error occurred. Please try again.",
+      confirmButtonColor: "#d33",
+    });
+  }
+};
 
   return (
     <Fragment>
@@ -317,7 +387,42 @@ const RawmaterialChange = () => {
             </div>
           </div>
 
+
           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 mb-3 p-3 border rounded bg-gray-50">
+  <span className="text-sm text-gray-600">
+    {selectedRows.size} selected
+  </span>
+
+  <input
+    type="number"
+    min="0"
+    className="input w-[140px]"
+    placeholder="Quantity"
+    value={bulkQty}
+    onChange={(e) => setBulkQty(e.target.value)}
+    disabled={selectedRows.size === 0}
+  />
+
+  <Select
+    placeholder="Select Unit"
+    className="min-w-[160px]"
+    options={bulkUnitOptions}
+    value={bulkUnitId}
+    onChange={setBulkUnitId}
+    allowClear
+    disabled={selectedRows.size === 0}
+    notFoundContent="No common unit for selected items"
+  />
+
+  <button
+    className="btn btn-light"
+    onClick={handleBulkApply}
+    disabled={selectedRows.size === 0}
+  >
+    Apply to selected
+  </button>
+</div>
             <button className="btn btn-primary" onClick={handleUpdate}>
 Update            </button>
           </div>
