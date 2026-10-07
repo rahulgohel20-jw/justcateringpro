@@ -25,6 +25,7 @@
       DeleteQuotationAdvancePayment,
       addupdateSecurityDeposit,   
     deleteSecurityDeposit, 
+    qutationlockreport,
     } from "@/services/apiServices";
     import useStyles from "./style";
     import dayjs from "dayjs";
@@ -56,6 +57,9 @@
     const isOfferRateUser = OFFER_RATE_USER_IDS.includes(String(userId));
     const DECOR_GST_USER_IDS = ["757"];
   const isDecorGstUser = DECOR_GST_USER_IDS.includes(String(userId));
+  const LOCK_REPORT_USER_IDS = ["233", "299", "298"];
+const canViewLockReport = LOCK_REPORT_USER_IDS.includes(String(userId));
+const [isLockReportLoading, setIsLockReportLoading] = useState(false);
       const [quotationId, setQuotationId] = useState(null);
       const { eventId } = useParams();
       const [billingName, setBillingName] = useState("");
@@ -2254,7 +2258,47 @@ const baseAmount = cateringBase;
       setChequePayment(newCheque);
     }
   };
+const handleLockReport = async () => {
+  if (isLockReportLoading) return;
 
+  if (isEdited) {
+    message.warning("Please save your changes before generating the lock report.");
+    return;
+  }
+
+  const reportWindow = window.open("", "_blank");
+  setIsLockReportLoading(true);
+
+  try {
+    const res = await qutationlockreport(
+      eventId,
+      isDecor ? true : false,
+      0,          // isInvoice
+      userId,
+    );
+
+    const reportPath =
+      res?.data?.report_path ||
+      res?.data?.data?.report_path ||
+      res?.data?.data;
+
+    if (reportPath && typeof reportPath === "string") {
+      if (reportWindow) {
+        reportWindow.location.href = reportPath;
+      } else {
+        window.open(reportPath, "_blank", "noopener,noreferrer");
+      }
+    } else {
+      reportWindow?.close();
+      message.error(res?.data?.msg || "Lock report not available");
+    }
+  } catch (error) {
+    reportWindow?.close();
+    message.error(getErrorMessage(error, "Failed to generate lock report"));
+  } finally {
+    setIsLockReportLoading(false);
+  }
+};
       const handleGenrateReport = () => {
         setLoadingPdf(true);
 
@@ -2756,7 +2800,35 @@ const baseAmount = cateringBase;
           />
         </button>
       )}  
-
+{canViewLockReport && (
+  <Tooltip title="Lock Report">
+    <button
+      className="btn btn-primary w-full lg:w-auto"
+      onClick={handleLockReport}
+      disabled={isLockReportLoading || loadingPdf || isSavingQuotation}
+    >
+      {isLockReportLoading ? (
+        <i className="ki-filled ki-loading animate-spin"></i>
+      ) : (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+          <path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" />
+          <rect x="6" y="14" width="12" height="8" rx="1" />
+        </svg>
+      )}
+    </button>
+  </Tooltip>
+)}
     <button
         className="btn btn-primary w-full lg:w-auto"
         onClick={handleSaveAndOpenPdf}

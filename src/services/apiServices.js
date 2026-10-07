@@ -4245,3 +4245,15 @@ export const addReaction = (messageId, reactionType) => AddEventChatReaction(mes
 export const removeReaction = (messageId, reactionType) => RemoveEventChatReaction(messageId, reactionType);
 export const pinMessage = (messageId) => PinEventChatMessage(messageId);
 export const unpinMessage = (messageId) => UnpinEventChatMessage(messageId);
+
+
+
+export const qutationlockreport = (eventId, isDecor, isInvoice, userId) => {
+  return GET(
+    `report/generate-quotation-lock-report/?eventId=${eventId}&isDecor=${isDecor}&isInvoice=${isInvoice}&userId=${userId}`
+  );
+};
+
+export const purchasereportvendorwise = (startDate , endDate , uerId)=> {
+  return GET(`purchaseorder/purchaseReportPdf?startDate=${startDate}&endDate=${endDate}&userId=${uerId}`);
+};
