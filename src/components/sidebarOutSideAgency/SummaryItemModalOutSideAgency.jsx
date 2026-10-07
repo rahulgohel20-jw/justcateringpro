@@ -304,6 +304,7 @@ const singleFunctionInfo =
   formData.append("isShowEventRemarks", 0);
   formData.append("showAdditional", 0);
   formData.append("isAgencyNextPage", 0);
+  formData.append("isItemShow",1);
   formData.append("storeIssueWise" , 0);
   formData.append("isAddStoreIssue",0);
   formData.append("is5Column" , 0);

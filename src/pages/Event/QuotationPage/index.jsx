@@ -59,7 +59,7 @@
   const isDecorGstUser = DECOR_GST_USER_IDS.includes(String(userId));
   const LOCK_REPORT_USER_IDS = ["233", "299", "298"];
 const canViewLockReport = LOCK_REPORT_USER_IDS.includes(String(userId));
-const isFinalBillingFeatureUser = ["233", "299", "289"].includes(String(userId));
+const isFinalBillingFeatureUser = ["233", "299", "289"]
 const [billingView, setBillingView] = useState("BEFORE");
 const [isLockReportLoading, setIsLockReportLoading] = useState(false);
       const [quotationId, setQuotationId] = useState(null);

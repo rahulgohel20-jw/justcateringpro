@@ -244,6 +244,7 @@ export const columns = (
     return <YesNoIcon value={row.original.isShowFunctionImg}/>;
   },
 },
+
  {
     accessorKey: "action",
     header: "Action",
