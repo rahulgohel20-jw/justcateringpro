@@ -59,6 +59,8 @@
   const isDecorGstUser = DECOR_GST_USER_IDS.includes(String(userId));
   const LOCK_REPORT_USER_IDS = ["233", "299", "298"];
 const canViewLockReport = LOCK_REPORT_USER_IDS.includes(String(userId));
+const isFinalBillingFeatureUser = ["233", "299", "289"].includes(String(userId));
+const [billingView, setBillingView] = useState("BEFORE");
 const [isLockReportLoading, setIsLockReportLoading] = useState(false);
       const [quotationId, setQuotationId] = useState(null);
       const { eventId } = useParams();
@@ -574,8 +576,7 @@ const cateringBaseRef = useRef(0);
                 isFromQuotationItems: false,
                 isExtraQuotationFunction: true,
                 isNewFunction: true, 
-                isAddedAfterLock: isLocked,
-              })),
+isAddedAfterFinal: isFinalBillingFeatureUser && billingView === "FINAL",              })),
           );
         } catch (err) {
           console.error("Error fetching extra functions:", err);
@@ -956,7 +957,7 @@ cateringBaseRef.current = total;
                       menuCatId: item.menuCatId || null,
                       eventFunctionId: item.eventFunctionId || 0,
                       isLocked: item.isLocked || false,
-                      isAddedAfterLock: item.isAddedAfterLock === true,
+isAddedAfterFinal: item.isAddedAfterFinal === true,
                       name: item.functionName || "",
                       date:
                         item.functionDate &&
@@ -1377,6 +1378,15 @@ cateringDecorTotal: formatAmount(cateringDecorTotal),    };
     quotationData.functions.length > 0 &&
     quotationData.functions.every((fn) => fn.isRoom);
 
+    
+const visibleFunctionRows = quotationData.functions
+  .map((fn, index) => ({ fn, index }))
+.filter(
+  ({ fn }) =>
+    !isFinalBillingFeatureUser ||
+    billingView === "BEFORE" ||
+    fn.isAddedAfterFinal === true,
+);
       const handleAddFunction = () => {
         const eventStartDate = quotationData.estimateDate
           ? dayjs(quotationData.estimateDate, "DD MMMM YYYY")
@@ -1400,7 +1410,7 @@ cateringDecorTotal: formatAmount(cateringDecorTotal),    };
               isFromQuotationItems: false,
               isNewFunction: true,
               isLocked: false,
-              isAddedAfterLock: isLocked,
+isAddedAfterFinal: isFinalBillingFeatureUser && billingView === "FINAL",
               extraTax: "",
               taxRate: "0",
               customPackageId: "",
@@ -1411,9 +1421,9 @@ cateringDecorTotal: formatAmount(cateringDecorTotal),    };
           ],
         }));
       };
-    const isPostLockEditable = (fn) =>
-  fn.isLocked === false || fn.isAddedAfterLock === true || postLockNewIds.has(fn._tempId);
-      const handleDeleteFunction = (itemId, index) => {
+const isPostLockEditable = (fn) =>
+  fn.isLocked === false || postLockNewIds.has(fn._tempId);
+          const handleDeleteFunction = (itemId, index) => {
         if (index === 0) return;
 
         if (itemId && itemId !== 0) {
@@ -1755,10 +1765,7 @@ const grandTotal =
               : fn.isFromQuotationItems === true,
             isLocked:
   overrides.isLocked !== undefined ? overrides.isLocked : fn.isLocked || false,
-isAddedAfterLock:
-  overrides.isLocked === false
-    ? false // unlocking resets the flag
-    : fn.isAddedAfterLock === true || postLockNewIds.has(fn._tempId),
+isAddedAfterFinal: fn.isAddedAfterFinal === true,
             eventFunctionId: fn.isExtraQuotationFunction
               ? null
               : fn.eventFunctionId || 0,
@@ -2800,7 +2807,7 @@ const handleLockReport = async () => {
           />
         </button>
       )}  
-{canViewLockReport && (
+{canViewLockReport && (!isFinalBillingFeatureUser || billingView === "FINAL") && (
   <Tooltip title="Lock Report">
     <button
       className="btn btn-primary w-full lg:w-auto"
@@ -2829,6 +2836,26 @@ const handleLockReport = async () => {
     </button>
   </Tooltip>
 )}
+{isFinalBillingFeatureUser && (
+  <Tooltip
+    title={
+      billingView === "BEFORE"
+        ? "Click to switch to Estimate"
+        : "Click to switch to Before Billing"
+    }
+  >
+    <button
+      type="button"
+      className="btn btn-primary w-full lg:w-auto"
+      onClick={() =>
+        setBillingView((prev) => (prev === "BEFORE" ? "FINAL" : "BEFORE"))
+      }
+    >
+      {billingView === "BEFORE" ? "Before Billing" : "Estimate"}
+    </button>
+  </Tooltip>
+)}
+
     <button
         className="btn btn-primary w-full lg:w-auto"
         onClick={handleSaveAndOpenPdf}
@@ -3256,8 +3283,7 @@ const handleLockReport = async () => {
 
                   {/* Function Rows - Responsive */}
                   <div className="divide-y divide-gray-200">
-                    {quotationData.functions.map((fn, index) => (
-      <div
+{visibleFunctionRows.map(({ fn, index }) => (      <div
         key={fn._tempId || fn.id}
         className="flex flex-col md:flex-row md:items-center md:justify-between p-4 gap-3 md:gap-0 hover:bg-gray-50 transition-colors"
       >
@@ -3283,7 +3309,7 @@ const handleLockReport = async () => {
 
         {/* Date — HIDE for decor */}
       {!isDecor && !fn.isExtraQuotationFunction && (
-    fn.isRoom || fn.isNewFunction ? (
+    fn.isRoom || (fn.isNewFunction && !isFinalBillingFeatureUser) ? (
       <div className="hidden md:block flex-1 md:px-2" />
     ) : (
       <div className="flex-1 md:px-2">
