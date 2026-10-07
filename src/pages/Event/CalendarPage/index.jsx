@@ -701,6 +701,7 @@ const legendItems = [
                   disabled={loadingEvents}
                   className="border border-gray-300 rounded-lg px-2.5 py-2 text-xs md:text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
+                  <option value={0}>Select Venue</option>
                   <option value={-1}>All Venues</option>
                   {venueList.map((v) => (
                     <option key={v.id} value={v.id}>
@@ -723,6 +724,7 @@ const legendItems = [
                     disabled={loadingEvents}
                     className="border border-gray-300 rounded-lg px-2.5 py-2 text-xs md:text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
+                    <option value={0}>Select Banquet</option>
                     <option value={-1}>All Banquets</option>
                     {banquetList.map((b) => (
                       <option key={b.id} value={b.id}>
