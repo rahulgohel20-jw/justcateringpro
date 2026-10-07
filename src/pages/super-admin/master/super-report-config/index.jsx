@@ -62,6 +62,7 @@ const SuperReportConfig = () => {
         isShowEventRemarks:item.isShowEventRemarks , 
         showAdditional:item.showAdditional,
         isAgencyNextPage:item.isAgencyNextPage,
+        isItemShow:item.isItemShow,
         storeIssueWise:item.storeIssueWise,
         isAddStoreIssue:item.isAddStoreIssue,
         is5Column:item.is5Column,
