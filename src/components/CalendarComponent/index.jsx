@@ -25,13 +25,6 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
     if (initialDate instanceof Date && !isNaN(initialDate.getTime())) {
       return initialDate;
     }
-    try {
-      const sm = sessionStorage.getItem("calendar_selected_month") || localStorage.getItem("calendar_selected_month");
-      const sy = sessionStorage.getItem("calendar_selected_year") || localStorage.getItem("calendar_selected_year");
-      if (sm && sy) {
-        return new Date(Number(sy), Number(sm) - 1, 1);
-      }
-    } catch (e) {}
     return new Date();
   };
 
