@@ -5,10 +5,22 @@ import React, {
   useCallback,
   useRef,
 } from "react";
+import { Modal } from "antd";
+import Swal from "sweetalert2";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { toAbsoluteUrl } from "@/utils";
 import { GetCategoryImg } from "@/services/apiServices";
-import { ArrowUpNarrowWide, Plus, Space, UploadCloud, CaseUpper, Heading } from "lucide-react";import { Translateapi } from "../../../../services/apiServices";
+import {
+  ArrowUpNarrowWide,
+  Plus,
+  Space,
+  UploadCloud,
+  CaseUpper,
+  Heading,
+  Search,
+  UtensilsCrossed,
+} from "lucide-react";
+import { Translateapi } from "../../../../services/apiServices";
 import { ChevronDown } from "lucide-react";
 import MultiLangInputBox from "../../../../components/form-inputs/MultiLangInputbox";
 import { getLangConfig } from "@/utils/langConfig";
@@ -426,7 +438,8 @@ const ItemRow = ({
 }) => {
 
   const isDeleted = itemStatus === "CANCELLED"; // ← locked state
-
+const isAddonHighlightUser = String(localStorage.getItem("userId")) === "757";
+const highlightAddon = isAddonHighlightUser && !!isItemAddons && !isDeleted;
 const [showSubItemModal, setShowSubItemModal] = useState(false);
  const [showHeadingModal, setShowHeadingModal] = useState(false); 
 const [showItemSpaceModal, setShowItemSpaceModal] = useState(false);
@@ -536,8 +549,12 @@ useEffect(() => {
             }}
             {...provItem.draggableProps}
 className={`relative p-2 rounded-lg transition-shadow ${
-  isOverLimit ? "bg-yellow-100 border-2 border-yellow-200" : getStatusClasses(itemStatus, "item")
-} ${snap.isDragging ? "shadow-lg ring-2 ring-blue-400" : ""}`}          >
+  isOverLimit
+    ? "bg-yellow-100 border-2 border-yellow-200"
+    : highlightAddon
+      ? "bg-yellow-100 border-2 border-yellow-300"
+      : getStatusClasses(itemStatus, "item")
+} ${snap.isDragging ? "shadow-lg ring-2 ring-blue-400" : ""}`}       >
             {/* TOP: drag handle + image + name + badges — full width, nothing competing for space */}
             <div
               {...(isDeleted ? {} : provItem.dragHandleProps)}
@@ -582,7 +599,15 @@ className={`relative p-2 rounded-lg transition-shadow ${
 )}
               <div className="flex flex-col min-w-0 flex-1">
                 <span
-                  className={`text-sm font-semibold ${itemStatus === "CANCELLED" ? "line-through text-gray-400" : isItemAddons ? "text-primary" : "text-gray-900"}`}
+                  className={`text-sm font-semibold ${
+  itemStatus === "CANCELLED"
+    ? "line-through text-gray-400"
+    : highlightAddon
+      ? "text-yellow-800"
+      : isItemAddons
+        ? "text-primary"
+        : "text-gray-900"
+}`}
                 >
                   {sequenceNumber}. {displayItemName}
                 </span>
@@ -590,11 +615,19 @@ className={`relative p-2 rounded-lg transition-shadow ${
                 {/* Badges — wrap freely on their own line, never push the name around */}
                 {(isItemAddons || item.itemSpace > 0 || subItem || item.itemHeading || isDeleted || item.vendorName) && (
                   <div className="flex flex-wrap items-center gap-1 mt-1">
-                    {isItemAddons && (
-                      <span className="text-[9px] font-semibold bg-blue-100 text-primary border border-blue-300 px-1.5 py-0.5 rounded-full leading-none">
-                        Add-on
-                      </span>
-                    )}
+                   
+                     {isItemAddons && (
+  <span
+    className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full leading-none border ${
+      highlightAddon
+        ? "bg-yellow-200 text-yellow-800 border-yellow-400"
+        : "bg-blue-100 text-primary border-blue-300"
+    }`}
+  >
+    Add-on
+  </span>
+)}
+                  
                     {item.itemSpace > 0 && (
                       <span className="text-[9px] font-semibold bg-indigo-100 text-indigo-600 border border-indigo-300 px-1.5 py-0.5 rounded-full leading-none">
                         Space: {item.itemSpace}
@@ -1002,6 +1035,127 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {}, mode = "menu
   );
 };
 
+const StationItemsModal = ({
+  title,
+  items = [],
+  initialSelected = [],
+  language = "en",
+  onClose,
+  onSave,
+}) => {
+  const normalizedInitial = Array.isArray(initialSelected)
+    ? initialSelected.map(Number).filter(Boolean)
+    : [];
+
+  const [selectedIds, setSelectedIds] = useState(normalizedInitial);
+  const [search, setSearch] = useState("");
+
+  const getItemId = (it) => Number(it.menuItemId ?? it.id ?? it.itemId ?? 0);
+
+  const getName = (it) => {
+    const base = {
+      en: it.menuItemName || it.nameEnglish || it.name || it.itemName,
+      hi: it.menuItemNameHindi || it.nameHindi || it.itemNameHindi,
+      gu: it.menuItemNameGujarati || it.nameGujarati || it.itemNameGujarati,
+    };
+    return (base[language] || base.en || "").trim();
+  };
+
+  const getImg = (it) => {
+    const src = it.imagePath || it.image || it.itemImage || it.imgUrl || it.imageUrl;
+    return src && src !== "null" && /\.(jpg|jpeg|png|webp|gif)$/i.test(src)
+      ? src
+      : toAbsoluteUrl("/media/menu/noImage.jpg");
+  };
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((it) => (getName(it) || "").toLowerCase().includes(q));
+  }, [items, search]);
+
+  const selectedItems = useMemo(
+    () => items.filter((it) => selectedIds.includes(getItemId(it))),
+    [items, selectedIds],
+  );
+
+  const toggle = (id) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id],
+    );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6">
+        <h2 className="text-base font-semibold text-gray-800 mb-3">
+        <span className="text-primary font-bold">{title}</span>
+        </h2>
+
+        {/* Search */}
+
+        {/* All items grid */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar border border-gray-200 rounded-lg p-2">
+          {filtered.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">No items found</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {filtered.map((it) => {
+                const itemId = getItemId(it);
+                const checked = selectedIds.includes(itemId);
+                return (
+                  <div
+                    key={itemId}
+                    onClick={() => toggle(itemId)}
+                    className={`relative cursor-pointer rounded-lg border-2 overflow-hidden transition ${
+                      checked ? "border-primary bg-blue-50" : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <img
+                      src={getImg(it)}
+                      alt={getName(it)}
+                      loading="lazy"
+                      className="w-full h-24 object-cover"
+                    />
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      readOnly
+                      className="absolute top-1.5 left-1.5 w-4 h-4 accent-primary"
+                    />
+                    <p className="text-xs font-medium text-gray-800 p-1.5 line-clamp-2">
+                      {getName(it)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm hover:bg-gray-200"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onSave(selectedIds, selectedItems);
+              onClose();
+            }}
+            className="px-4 py-2 rounded-lg bg-primary text-white text-sm hover:opacity-90"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─────────────────────────────────────────────────────────────────
 // SelectedItems
 // ─────────────────────────────────────────────────────────────────
@@ -1044,10 +1198,11 @@ const SelectedItems = ({
    onCategoryInstructionsChange = () => {}, 
     onVendorSave = () => {},
     overLimitItemIds = new Set(), 
+    eventId = 0,
 }) => {
 
   const { categoriesOrder = [], categories = {} } = data;
-
+const isAddonHighlightUser = String(localStorage.getItem("userId")) === "757";
  const [expandedCategories, setExpandedCategories] = useState({});
 const [expandedCategoryInstructions, setExpandedCategoryInstructions] = useState({});
 const [categoryInstructionsMap, setCategoryInstructionsMap] = useState({});
@@ -1070,6 +1225,8 @@ const [itemInstructions, setItemInstructions] = useState({});
   const [itemImageModal, setItemImageModal] = useState(null); // { catName, item }
 const [itemImageUploading, setItemImageUploading] = useState(false);
 const [headingCatModal, setHeadingCatModal] = useState(null);
+const [stationItemsModal, setStationItemsModal] = useState(null);
+const isSpecialStationUser = Number(localStorage.getItem("userId")) === 545; //smari lakhani 545
 
 
 
@@ -1534,6 +1691,28 @@ if (loading) {
   />
 )}
 
+           {stationItemsModal && isSpecialStationUser && (
+        <StationItemsModal
+          title={stationItemsModal.catName}
+          items={stationItemsModal.items || []}
+          initialSelected={stationItemsModal.selectedIds || []}
+          onClose={() => setStationItemsModal(null)}
+          onSave={(selectedIds) => {
+            onDragEndNewState({
+              categoriesOrder: [...categoriesOrder],
+              categories: { ...categories },   // items stay untouched
+              categoryNotes: data.categoryNotes,
+              categorySlogans: data.categorySlogans,
+              categoryMultiImageIds: {
+                ...(data.categoryMultiImageIds || {}),
+                [stationItemsModal.catName]: (selectedIds || []).map(Number),
+              },
+            });
+            setStationItemsModal(null);
+          }}
+        />
+      )}
+
       <div className="w-full flex flex-col h-full overflow-hidden">
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <DragDropContext
@@ -1558,7 +1737,8 @@ const catHeadingText = data.categoryHeadings?.[catName]?.[subLangKey] || "";
 
 const catSpace = data.categorySpaces?.[catName] || 0;
 const catStatus = items[0]?.categoryStatus || "NORMAL";  
-
+const highlightCat =
+  isAddonHighlightUser && !!addonState[catName]?.cat && catStatus !== "CANCELLED";
 return (
   <Draggable
     key={catName}
@@ -1569,7 +1749,11 @@ return (
       <div
         ref={provCat.innerRef}
         {...provCat.draggableProps}
-        className={`border rounded-xl shadow-sm p-3 ${getStatusClasses(catStatus, "category")}`}
+  className={`border rounded-xl shadow-sm p-3 ${
+  highlightCat
+    ? "bg-yellow-50 border-yellow-400"
+    : getStatusClasses(catStatus, "category")
+}`}
       >
                             <div className="mb-3">
                               <div className="flex items-center justify-end gap-1 text-gray-500 mt-2">
@@ -1644,6 +1828,24 @@ return (
                                     onClick={(e) => { e.stopPropagation(); setHeadingCatModal(catName); }}
                                   >
                                     <Heading size={18} className="text-teal-800 bg-teal-100 rounded-full p-0.5" />
+                                  </button>
+                                )}
+
+                                {isSpecialStationUser && (
+                                  <button
+                                    type="button"
+                                    title="Station Items"
+                                    className="p-1 rounded hover:bg-gray-100"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                     setStationItemsModal({
+  catName,
+  items,
+  selectedIds: data.categoryMultiImageIds?.[catName] || [],
+});
+                                    }}
+                                  >
+                                    <UtensilsCrossed size={18} className="text-primary bg-primary/10 rounded-md p-0.5" />
                                   </button>
                                 )}
 
@@ -1759,11 +1961,17 @@ return (
                                       Any {anyCount}
                                     </span>
                                   )}
-                                  {addonState[catName]?.cat && (
-                                    <span className="text-[10px] font-semibold bg-blue-100 text-primary border border-blue-300 px-1.5 py-0.5 rounded-full leading-none">
-                                      Add-on
-                                    </span>
-                                  )}
+                                 {addonState[catName]?.cat && (
+  <span
+    className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none border ${
+      highlightCat
+        ? "bg-yellow-200 text-yellow-800 border-yellow-400"
+        : "bg-blue-100 text-primary border-blue-300"
+    }`}
+  >
+    Add-on
+  </span>
+)}
                                   {catSpace > 0 && (
                                     <span className="text-[10px] font-semibold bg-indigo-100 text-indigo-600 border border-indigo-300 px-1.5 py-0.5 rounded-full leading-none">
                                       Space: {catSpace}

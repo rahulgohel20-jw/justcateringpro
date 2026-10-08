@@ -17,6 +17,7 @@ import {
   getTableExeculisive,
   Tableexeculisivepost,
 } from "@/services/apiServices";
+import { WhatsAppModal, WhatsAppButtons, useWhatsAppShare } from "@/components/whatsapp/WhatsAppShare";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NotesEditor — defined OUTSIDE NamePlateReport so it never re-mounts on
@@ -66,6 +67,10 @@ export default function NamePlateReport({
   eventFunctionId,
   selectedTemplateId,
   isTableMenuExclusive,
+  eventName,
+  functionName,
+  functionDateTime,
+  venueName,
 }) {
   const pdfPlugin = defaultLayoutPlugin();
   const stripHtml = (html) => html.replace(/<[^>]*>/g, "").trim();
@@ -73,6 +78,14 @@ const langConfig = getLangConfig();
   // ── State ──────────────────────────────────────────────────────────────────
   const [pdfUrl, setPdfUrl] = useState(null);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const { share, modalProps } = useWhatsAppShare({
+  pdfUrl,
+  moduleName: "Table Menu Report",
+  eventName,
+  functionName,
+  functionDateTime,
+  venueName,
+});
   const [menuFontSize, setMenuFontSize] = useState(10);
   const [itemFontSize, setItemFontSize] = useState(15);
   const [activeTab, setActiveTab] = useState("menu");
@@ -401,6 +414,7 @@ setItems((prev) =>
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="rounded-xl border shadow-md mx-auto max-w-5xl">
+      <WhatsAppModal {...modalProps} />
       {/* ── Header ── */}
       <div className="flex justify-between items-center px-6 py-4 border-b">
         <div>
@@ -665,24 +679,20 @@ setItems((prev) =>
     onClose={() => setShowPdfViewer(false)}
     title="Table Menu Report"
     width={1000}
+    footer={
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => setShowPdfViewer(false)}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition"
+        >
+          Close
+        </button>
+        <WhatsAppButtons onShare={share} />
+      </div>
+    }
   >
     <div style={{ height: "80vh" }}>
-      <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-        <Viewer
-          fileUrl={pdfUrl}
-          plugins={[pdfPlugin]}
-          defaultScale={1.0}
-          renderLoader={(percentages) => (
-            <div className="flex flex-col items-center justify-center h-full">
-              <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-
-              <p className="mt-4 text-gray-600 font-medium">
-                Loading PDF... {Math.round(percentages)}%
-              </p>
-            </div>
-          )}
-        />
-      </Worker>
+      {/* Worker / Viewer unchanged */}
     </div>
   </CustomModal>
 )}

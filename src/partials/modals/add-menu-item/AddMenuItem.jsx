@@ -1,19 +1,25 @@
 import { CustomModal } from "@/components/custom-modal/CustomModal";
 import { useState, useEffect, useRef } from "react";
-import { InboxOutlined } from "@ant-design/icons";
-import { Select, Upload } from "antd";
+import {   Form, Input, InputNumber, Select, Upload, Button, message, Modal, Skeleton,
+} from "antd";
 import {
   GetAllCategoryformenu,
   Getmenusubcategory,
   AddMenuItems,
   Translateapi,
+  Aislogsfirmenuitemandcategory,
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
+import {
+  InboxOutlined, ReloadOutlined, DeleteOutlined, PlusOutlined, SyncOutlined,
+  ThunderboltOutlined, CheckCircleFilled,
+} from "@ant-design/icons";
 import AddMenuCategory from "@/partials/modals/add-menu-category/AddMenuCategory";
 import AddMenuSubCategory from "@/partials/modals/add-menu-sub-category/AddMenuSubCategory";
 import { Plus } from "lucide-react";
 import { extractTranslations } from "@/utils/langConfig";
 import MultiLangInputBox from "@/components/form-inputs/MultiLangInputbox";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
 
 const { Dragger } = Upload;
 
@@ -39,7 +45,12 @@ const AddMenuItem = ({ isModalOpen, setIsModalOpen, refreshData }) => {
   const [loadingSubCategories, setLoadingSubCategories] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isSubCategoryModalOpen, setIsSubCategoryModalOpen] = useState(false);
+const { hasModuleAccess } = useModuleAccess();
+const canAccessGenerateWithAiSlogan = hasModuleAccess("Generate with Ai Solgan");
 
+const [isSloganModalOpen, setIsSloganModalOpen] = useState(false);
+const [sloganOptions, setSloganOptions] = useState([]);
+const [sloganLoading, setSloganLoading] = useState(false);
   const debounceRef = useRef(null);
   const userId = localStorage.getItem("userId");
 
@@ -64,7 +75,16 @@ const AddMenuItem = ({ isModalOpen, setIsModalOpen, refreshData }) => {
 
     return () => clearTimeout(debounceRef.current);
   }, [formData.nameEnglish]);
-
+useEffect(() => {
+  if (isModalOpen) {
+    fetchCategories();
+    setFormData(initialFormData);
+    setErrors({});
+    setSubCategoryOptions([]);
+    setIsSloganModalOpen(false);
+    setSloganOptions([]);
+  }
+}, [isModalOpen]);
   // ── Fetch ──────────────────────────────────────────────────────────────────
   const fetchCategories = async () => {
     try {
@@ -132,7 +152,42 @@ const AddMenuItem = ({ isModalOpen, setIsModalOpen, refreshData }) => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+const handleGenerateSlogan = async () => {
+  const itemName = (formData.nameEnglish || "").trim();
+  if (!itemName) {
+    message.warning("Please enter the menu item name first");
+    return;
+  }
 
+  try {
+    setSloganLoading(true);
+    setIsSloganModalOpen(true);
+    setSloganOptions([]);
+
+    const res = await Aislogsfirmenuitemandcategory({
+      name: itemName,
+      type: "ITEM",
+    });
+
+    if (!res?.data?.success) {
+      throw new Error(res?.data?.msg || "Failed to generate slogans");
+    }
+
+    setSloganOptions(res?.data?.data?.slogans || []);
+  } catch (err) {
+    console.error("AI slogan error:", err);
+    message.error(err?.response?.data?.msg || err.message || "Failed to generate slogans");
+    setIsSloganModalOpen(false);
+  } finally {
+    setSloganLoading(false);
+  }
+};
+
+const handleSelectSlogan = (slogan) => {
+  setFormData((prev) => ({ ...prev, slogan }));
+  setIsSloganModalOpen(false);
+  message.success("Slogan selected");
+};
   const handleSave = async () => {
     if (!validate()) return;
 
@@ -195,19 +250,34 @@ const AddMenuItem = ({ isModalOpen, setIsModalOpen, refreshData }) => {
           error={errors.nameEnglish}
         />
 
-        {/* ── Slogan ── */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-normal text-black">Slogan</label>
-          <div className="input">
-            <input
-              name="slogan"
-              placeholder="Enter Slogan"
-              value={formData.slogan}
-              onChange={handleChange}
-              className="h-full w-full"
-            />
-          </div>
-        </div>
+      {/* ── Slogan ── */}
+<div className="flex flex-col gap-1">
+  <div className="flex items-center justify-between">
+    <label className="text-sm font-normal text-black">Slogan</label>
+    {canAccessGenerateWithAiSlogan && (
+      <button
+        type="button"
+        onClick={handleGenerateSlogan}
+        disabled={sloganLoading}
+        className="inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium text-white
+          bg-gradient-to-r from-violet-600 to-indigo-500 shadow-sm
+          hover:shadow-md hover:from-violet-700 hover:to-indigo-600 transition disabled:opacity-60"
+      >
+        <ThunderboltOutlined />
+        {sloganLoading ? "Generating..." : "Generate with AI"}
+      </button>
+    )}
+  </div>
+  <div className="input">
+    <input
+      name="slogan"
+      placeholder="Write a slogan or generate one with AI"
+      value={formData.slogan}
+      onChange={handleChange}
+      className="h-full w-full"
+    />
+  </div>
+</div>
 
         {/* ── Price & Priority ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -353,6 +423,70 @@ const AddMenuItem = ({ isModalOpen, setIsModalOpen, refreshData }) => {
           if (formData.menuCategory) fetchSubCategories(formData.menuCategory);
         }}
       />
+      <Modal
+  open={isSloganModalOpen}
+  onCancel={() => setIsSloganModalOpen(false)}
+  width={680}
+  centered
+  zIndex={2000}
+  title={
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-500 flex items-center justify-center text-white">
+        <ThunderboltOutlined />
+      </div>
+      <div className="flex flex-col leading-tight">
+        <span className="text-base font-semibold text-gray-900">AI Slogan Suggestions</span>
+        <span className="text-xs font-normal text-gray-500">
+          For "{formData.nameEnglish}" · click one to use it
+        </span>
+      </div>
+    </div>
+  }
+  footer={
+    <div className="flex items-center justify-between">
+      <Button icon={<ReloadOutlined />} onClick={handleGenerateSlogan} loading={sloganLoading}>
+        Regenerate
+      </Button>
+      <Button onClick={() => setIsSloganModalOpen(false)}>Close</Button>
+    </div>
+  }
+>
+  <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1 mt-4">
+    {sloganLoading
+      ? [1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="rounded-xl border border-gray-100 p-4">
+            <Skeleton active title={false} paragraph={{ rows: 2 }} />
+          </div>
+        ))
+      : sloganOptions.map((s, idx) => {
+          const selected = formData.slogan === s;
+          return (
+            <div
+              key={idx}
+              onClick={() => handleSelectSlogan(s)}
+              className={`group cursor-pointer flex items-start gap-3 rounded-xl border p-4 transition-all
+                hover:shadow-md hover:-translate-y-0.5 ${
+                  selected
+                    ? "border-violet-500 bg-violet-50 shadow-sm"
+                    : "border-gray-200 bg-white hover:border-violet-300"
+                }`}
+            >
+              <span
+                className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
+                  selected
+                    ? "bg-violet-600 text-white"
+                    : "bg-gray-100 text-gray-600 group-hover:bg-violet-100 group-hover:text-violet-700"
+                }`}
+              >
+                {idx + 1}
+              </span>
+              <p className="flex-1 text-sm leading-relaxed text-gray-700">{s}</p>
+              {selected && <CheckCircleFilled className="text-violet-600 text-lg mt-0.5" />}
+            </div>
+          );
+        })}
+  </div>
+</Modal>
     </CustomModal>
   );
 };

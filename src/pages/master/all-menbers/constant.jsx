@@ -7,6 +7,8 @@ import {
   GetStockTypeByUserId,
   GetStockTypeRights,
   StockTypeRights,
+  GetExpenseRightsByMember,
+  AddExpenseRightsByMember,
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import BanquetRightsModal from "../../../partials/modals/banquet-rights/BanquetRightsModal";
@@ -285,6 +287,140 @@ const StockTypeRightsCell = ({ row }) => {
   );
 };
 
+const normalizeExpenseRights = (raw) => {
+  const list = Array.isArray(raw)
+    ? raw
+    : raw?.rights || raw?.expenseRights || [];
+  return list.map((r, i) => ({
+    id: r.expenseId ?? r.id ?? i,
+    name: r.expenseName ?? r.nameEnglish ?? r.name ?? `Right #${i + 1}`,
+    allowed: r.isAllow === true,
+  }));
+};
+
+const buildExpenseRightsPayload = (rights) => ({
+  expenseId: rights.filter((r) => r.allowed).map((r) => r.id),
+});
+
+const ExpenseRightsModal = ({ isOpen, onClose, member }) => {
+  const [rights, setRights] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && member?.memberid) fetchRights();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, member]);
+
+  const fetchRights = async () => {
+    const userId = localStorage.getItem("userId");
+    setLoading(true);
+    try {
+      const res = await GetExpenseRightsByMember(member.memberid, userId);
+      setRights(normalizeExpenseRights(res?.data?.data));
+    } catch (error) {
+      console.error("Failed to fetch expense rights:", error);
+      Swal.fire({ icon: "error", title: "Error", text: "Failed to load expense rights." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleRight = (id) =>
+    setRights((prev) => prev.map((r) => (r.id === id ? { ...r, allowed: !r.allowed } : r)));
+
+  const allSelected = rights.length > 0 && rights.every((r) => r.allowed);
+  const toggleAll = () =>
+    setRights((prev) => prev.map((r) => ({ ...r, allowed: !allSelected })));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await AddExpenseRightsByMember(
+  member.memberid,
+  buildExpenseRightsPayload(rights),
+);
+      const data = res?.data;
+      if (data?.success !== false) {
+        Swal.fire({
+          icon: "success",
+          title: "Saved",
+          text: data?.msg || "Expense rights updated successfully.",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        onClose();
+      } else {
+        Swal.fire({ icon: "error", title: "Error", text: data?.msg || "Failed to update expense rights." });
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error?.response?.data?.msg || error?.response?.data?.message || "Something went wrong.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={`Expense Rights${member?.full_name ? ` — ${member.full_name}` : ""}`}
+      open={isOpen}
+      onCancel={() => !saving && onClose()}
+      onOk={handleSave}
+      okText={saving ? "Saving..." : "Save"}
+      cancelText="Cancel"
+      okButtonProps={{ loading: saving, disabled: loading }}
+      cancelButtonProps={{ disabled: saving }}
+      maskClosable={!saving}
+    >
+      {loading ? (
+        <div className="flex items-center justify-center py-10">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent"></div>
+        </div>
+      ) : rights.length === 0 ? (
+        <Empty description="No expense rights found" />
+      ) : (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-2 mb-1">
+            <div className="flex items-center gap-2">
+              <ToggleSwitch checked={allSelected} onChange={toggleAll} />
+              <span className="text-sm font-semibold text-gray-700">Select All</span>
+            </div>
+            <span className="text-xs text-gray-400">
+              {rights.filter((r) => r.allowed).length}/{rights.length} allowed
+            </span>
+          </div>
+          <div className="max-h-[320px] overflow-y-auto flex flex-col divide-y divide-gray-50">
+            {rights.map((r) => (
+              <div key={r.id} className="flex items-center justify-between py-2">
+                <span className="text-sm text-gray-700">{r.name}</span>
+                <ToggleSwitch checked={r.allowed} onChange={() => toggleRight(r.id)} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+};
+
+const ExpenseRightsCell = ({ row }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <>
+      <Tooltip title="Expense Rights">
+        <button className="btn btn-sm btn-icon btn-clear" onClick={() => setIsOpen(true)}>
+          <i className="ki-filled ki-dollar text-success"></i>
+        </button>
+      </Tooltip>
+      <ExpenseRightsModal isOpen={isOpen} onClose={() => setIsOpen(false)} member={row.original} />
+    </>
+  );
+};
+
 const InquiryVisibleCell = ({ row }) => {
   const [checked, setChecked] = useState(!!row.original.isInquiryVisible);
   const [updating, setUpdating] = useState(false);
@@ -364,6 +500,7 @@ export const columns = (
   permissions = {},
   canAccessBanquet = false,
   canAccessStockType = false,
+  canAccessExpense = false,
 ) => [
   {
     accessorKey: "sr_no",
@@ -437,7 +574,7 @@ export const columns = (
         {canAccessBanquet && (
           <BanquetRightsCell row={row} onRefresh={onRefresh} />
         )}
-
+          {canAccessExpense && <ExpenseRightsCell row={row} />}
         <StockTypeRightsCell row={row} />
 
         {permissions.delete && <DeleteCell row={row} onRefresh={onRefresh} />}

@@ -200,8 +200,7 @@ export const columns = (
     },
   },
 ];
-
-const buildUnitOptions = (unit) => {
+export const buildUnitOptions = (unit) => {
   if (!unit) return [];
 
   const options = [

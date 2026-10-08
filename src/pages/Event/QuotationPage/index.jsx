@@ -25,6 +25,7 @@
       DeleteQuotationAdvancePayment,
       addupdateSecurityDeposit,   
     deleteSecurityDeposit, 
+    qutationlockreport,
     } from "@/services/apiServices";
     import useStyles from "./style";
     import dayjs from "dayjs";
@@ -56,6 +57,11 @@
     const isOfferRateUser = OFFER_RATE_USER_IDS.includes(String(userId));
     const DECOR_GST_USER_IDS = ["757"];
   const isDecorGstUser = DECOR_GST_USER_IDS.includes(String(userId));
+  const LOCK_REPORT_USER_IDS = ["233", "299", "298"];
+const canViewLockReport = LOCK_REPORT_USER_IDS.includes(String(userId));
+const isFinalBillingFeatureUser = ["233", "299", "289"]
+const [billingView, setBillingView] = useState("BEFORE");
+const [isLockReportLoading, setIsLockReportLoading] = useState(false);
       const [quotationId, setQuotationId] = useState(null);
       const { eventId } = useParams();
       const [billingName, setBillingName] = useState("");
@@ -88,6 +94,7 @@
       const [extraFunctions, setExtraFunctions] = useState([]);
       const [loadingExtraFunctions, setLoadingExtraFunctions] = useState(false);
       const [isLocked, setIsLocked] = useState(false);
+      const [lockDateAt, setLockDateAt] = useState(""); 
       const [postLockNewIds, setPostLockNewIds] = useState(new Set());
       const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [historyLogs, setHistoryLogs] = useState([]);
@@ -569,7 +576,7 @@ const cateringBaseRef = useRef(0);
                 isFromQuotationItems: false,
                 isExtraQuotationFunction: true,
                 isNewFunction: true, 
-              })),
+isAddedAfterFinal: isFinalBillingFeatureUser && billingView === "FINAL",              })),
           );
         } catch (err) {
           console.error("Error fetching extra functions:", err);
@@ -726,10 +733,20 @@ const cateringBase = isDecorGstUser
 
 const handleChequeCateringChange = (value) => {
   setIsEdited(true);
-  setChequePaymentCatering(value); // does NOT touch normal cheque
-  const val = parseFloat(value) || 0;
-  const decorAmt = parseFloat(chequePaymentDecor) || 0;
-  cateringBaseRef.current = val + decorAmt; // recompute base so decor still subtracts correctly next time
+  setChequePaymentCatering(value);
+
+  const catering = parseFloat(value) || 0;
+  const total = parseFloat(chequePayment) || 0;
+  const decor = parseFloat(Math.max(0, total - catering).toFixed(2));
+
+  setChequePaymentDecor(String(decor));
+  setDecorTax((prev) => ({
+    CGST: { ...prev.CGST, amount: calcPctAmount(decor, prev.CGST.percentage) },
+    SGST: { ...prev.SGST, amount: calcPctAmount(decor, prev.SGST.percentage) },
+    IGST: { ...prev.IGST, amount: calcPctAmount(decor, prev.IGST.percentage) },
+  }));
+
+  cateringBaseRef.current = total;
 };
 
 // normal cheque changes -> becomes the new catering base, then subtract any existing decor amount
@@ -866,8 +883,9 @@ useEffect(() => {
   }));
 
   // Decor cheque is subtracted from the catering base
-  const newCatering = Math.max(0, cateringBaseRef.current - base);
-  setChequePaymentCatering(newCatering);
+const total = parseFloat(chequePayment) || 0;
+setChequePaymentCatering(parseFloat(Math.max(0, total - base).toFixed(2)));
+cateringBaseRef.current = total;
 };
 
   // % changed -> amount auto-calculates, amount changed -> % auto-calculates
@@ -939,6 +957,7 @@ useEffect(() => {
                       menuCatId: item.menuCatId || null,
                       eventFunctionId: item.eventFunctionId || 0,
                       isLocked: item.isLocked || false,
+isAddedAfterFinal: item.isAddedAfterFinal === true,
                       name: item.functionName || "",
                       date:
                         item.functionDate &&
@@ -1195,7 +1214,7 @@ cateringBaseRef.current = loadedCateringVal + loadedDecorVal; // reconstruct pre
               setOriginalFunctions(deduplicatedFunctions);
               setIsExtraFunction(quotationInfo.isExtraFunction === true);
               setIsLocked(quotationInfo.isLocked === true);
-
+              setLockDateAt(quotationInfo.lockDateAt || "");
               initialQuotationSnapshotRef.current = {
                 functions: JSON.parse(JSON.stringify(deduplicatedFunctions)),
                 taxDetails: JSON.parse(JSON.stringify(mappedData.taxDetails)),
@@ -1359,6 +1378,15 @@ cateringDecorTotal: formatAmount(cateringDecorTotal),    };
     quotationData.functions.length > 0 &&
     quotationData.functions.every((fn) => fn.isRoom);
 
+    
+const visibleFunctionRows = quotationData.functions
+  .map((fn, index) => ({ fn, index }))
+.filter(
+  ({ fn }) =>
+    !isFinalBillingFeatureUser ||
+    billingView === "BEFORE" ||
+    fn.isAddedAfterFinal === true,
+);
       const handleAddFunction = () => {
         const eventStartDate = quotationData.estimateDate
           ? dayjs(quotationData.estimateDate, "DD MMMM YYYY")
@@ -1382,6 +1410,7 @@ cateringDecorTotal: formatAmount(cateringDecorTotal),    };
               isFromQuotationItems: false,
               isNewFunction: true,
               isLocked: false,
+isAddedAfterFinal: isFinalBillingFeatureUser && billingView === "FINAL",
               extraTax: "",
               taxRate: "0",
               customPackageId: "",
@@ -1392,8 +1421,9 @@ cateringDecorTotal: formatAmount(cateringDecorTotal),    };
           ],
         }));
       };
-    const isPostLockEditable = (fn) => fn.isLocked === false || postLockNewIds.has(fn._tempId);
-      const handleDeleteFunction = (itemId, index) => {
+const isPostLockEditable = (fn) =>
+  fn.isLocked === false || postLockNewIds.has(fn._tempId);
+          const handleDeleteFunction = (itemId, index) => {
         if (index === 0) return;
 
         if (itemId && itemId !== 0) {
@@ -1542,7 +1572,10 @@ cateringDecorTotal: formatAmount(cateringDecorTotal),    };
         setIsEdited(true);
       };
 
-      const buildPayload = () => {
+      const buildPayload = (overrides = {}) => {
+  const effectiveIsLocked = overrides.isLocked ?? isLocked;
+  const effectiveLockDateAt =
+    overrides.lockDateAt !== undefined ? overrides.lockDateAt : lockDateAt;
         let Id = localStorage.getItem("userId");
         const allFunctions = searchTerm.trim()
           ? originalFunctions
@@ -1730,7 +1763,9 @@ const grandTotal =
             isEventFunction: fn.isExtraQuotationFunction
               ? false
               : fn.isFromQuotationItems === true,
-            isLocked: fn.isLocked || false,
+            isLocked:
+  overrides.isLocked !== undefined ? overrides.isLocked : fn.isLocked || false,
+isAddedAfterFinal: fn.isAddedAfterFinal === true,
             eventFunctionId: fn.isExtraQuotationFunction
               ? null
               : fn.eventFunctionId || 0,
@@ -1746,7 +1781,8 @@ const grandTotal =
               ? Number(fn.customPackagePrice)
               : 0,
           })),
-          isLocked: isLocked,
+           isLocked: effectiveIsLocked,
+          lockDateAt: effectiveIsLocked ? effectiveLockDateAt : "",
           subTotal: parseFloat(subtotal),
           grandTotal: grandTotal,
           cgst: `${cgstPercentage}`,
@@ -1945,8 +1981,8 @@ chequePaymentCatering: cateringChequeAmt,
       });
   };
 
-      const saveNotes = () => {
-        const payload = buildPayload();
+      const saveNotes = (overrides = {}) => {
+        const payload = buildPayload(overrides);
 
         if (!quotationId) {
           return Promise.reject("No quotationId");
@@ -2229,7 +2265,47 @@ const baseAmount = cateringBase;
       setChequePayment(newCheque);
     }
   };
+const handleLockReport = async () => {
+  if (isLockReportLoading) return;
 
+  if (isEdited) {
+    message.warning("Please save your changes before generating the lock report.");
+    return;
+  }
+
+  const reportWindow = window.open("", "_blank");
+  setIsLockReportLoading(true);
+
+  try {
+    const res = await qutationlockreport(
+      eventId,
+      isDecor ? true : false,
+      0,          // isInvoice
+      userId,
+    );
+
+    const reportPath =
+      res?.data?.report_path ||
+      res?.data?.data?.report_path ||
+      res?.data?.data;
+
+    if (reportPath && typeof reportPath === "string") {
+      if (reportWindow) {
+        reportWindow.location.href = reportPath;
+      } else {
+        window.open(reportPath, "_blank", "noopener,noreferrer");
+      }
+    } else {
+      reportWindow?.close();
+      message.error(res?.data?.msg || "Lock report not available");
+    }
+  } catch (error) {
+    reportWindow?.close();
+    message.error(getErrorMessage(error, "Failed to generate lock report"));
+  } finally {
+    setIsLockReportLoading(false);
+  }
+};
       const handleGenrateReport = () => {
         setLoadingPdf(true);
 
@@ -2454,12 +2530,28 @@ const baseAmount = cateringBase;
 
     if (!result.isConfirmed) return;
 
+        const lockDate = lock ? dayjs().format("DD/MM/YYYY hh:mm A") : "";
+
     try {
+      // 1) original lock API, unchanged (no date passed here)
       const res = await upadtelockinquotation(quotationId, lock);
       const resData = res?.data;
 
       if (resData?.success === true) {
+        // 2) save the lock date only via UpdateQuotation
+        try {
+          await saveNotes({ isLocked: lock, lockDateAt: lockDate });
+        } catch (dateErr) {
+          console.error("Lock date save failed:", dateErr);
+          message.warning("Quotation locked, but the lock date could not be saved.");
+        }
+
         setIsLocked(lock);
+        setLockDateAt(lockDate);
+        await FetchGetQuotation();
+      
+        setIsLocked(lock);
+        setLockDateAt(lockDate);
         await FetchGetQuotation();
         sendQuotationLog({
           status: lock ? "LOCK_SUCCESS" : "UNLOCK_SUCCESS",
@@ -2715,6 +2807,54 @@ const baseAmount = cateringBase;
           />
         </button>
       )}  
+{canViewLockReport && (!isFinalBillingFeatureUser || billingView === "FINAL") && (
+  <Tooltip title="Lock Report">
+    <button
+      className="btn btn-primary w-full lg:w-auto"
+      onClick={handleLockReport}
+      disabled={isLockReportLoading || loadingPdf || isSavingQuotation}
+    >
+      {isLockReportLoading ? (
+        <i className="ki-filled ki-loading animate-spin"></i>
+      ) : (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+          <path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" />
+          <rect x="6" y="14" width="12" height="8" rx="1" />
+        </svg>
+      )}
+    </button>
+  </Tooltip>
+)}
+{isFinalBillingFeatureUser && (
+  <Tooltip
+    title={
+      billingView === "BEFORE"
+        ? "Click to switch to Estimate"
+        : "Click to switch to Before Billing"
+    }
+  >
+    <button
+      type="button"
+      className="btn btn-primary w-full lg:w-auto"
+      onClick={() =>
+        setBillingView((prev) => (prev === "BEFORE" ? "FINAL" : "BEFORE"))
+      }
+    >
+      {billingView === "BEFORE" ? "Before Billing" : "Estimate"}
+    </button>
+  </Tooltip>
+)}
 
     <button
         className="btn btn-primary w-full lg:w-auto"
@@ -3143,8 +3283,7 @@ const baseAmount = cateringBase;
 
                   {/* Function Rows - Responsive */}
                   <div className="divide-y divide-gray-200">
-                    {quotationData.functions.map((fn, index) => (
-      <div
+{visibleFunctionRows.map(({ fn, index }) => (      <div
         key={fn._tempId || fn.id}
         className="flex flex-col md:flex-row md:items-center md:justify-between p-4 gap-3 md:gap-0 hover:bg-gray-50 transition-colors"
       >
@@ -3170,7 +3309,7 @@ const baseAmount = cateringBase;
 
         {/* Date — HIDE for decor */}
       {!isDecor && !fn.isExtraQuotationFunction && (
-    fn.isRoom || fn.isNewFunction ? (
+    fn.isRoom || (fn.isNewFunction && !isFinalBillingFeatureUser) ? (
       <div className="hidden md:block flex-1 md:px-2" />
     ) : (
       <div className="flex-1 md:px-2">

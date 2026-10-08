@@ -158,6 +158,7 @@ else if (mode === "allocation" && !ischef && !isOutside) {
                 "Chef Agency Theme",
                 "Outside Agency Theme",
                 "Name Plate Theme",
+                "General Fix Theme",
                 "Attendance Theme", 
                 
               ].includes(module.nameEnglish),
@@ -841,6 +842,7 @@ if (mode === "package" && String(userId) === "359") {
         mappingId={mappingId}
         selectedTemplateId={selectedTemplateId}
         eventName={eventName}
+        partyMobile={PartyNumber} 
         selectedTemplateName={selectedTemplateName}
         PartyNumber={PartyNumber}
         isNamePlateTheme={isNamePlateTheme}

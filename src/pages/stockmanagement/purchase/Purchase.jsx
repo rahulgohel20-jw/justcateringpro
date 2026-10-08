@@ -6,7 +6,7 @@ import useStyle from "./style";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { useEffect } from "react";
-import { Info } from "lucide-react";
+import { Info, Printer } from "lucide-react";
 import { Tooltip } from "antd";
 
 import {
@@ -17,6 +17,7 @@ import {
   AddLogs,
   purchasorderexcel,
   WhatsAppPdf,
+  purchasereportvendorwise,
 } from "../../../services/apiServices";
 import { usePermission } from "../../../hooks/usePermission";
 import Swal from "sweetalert2";
@@ -84,7 +85,12 @@ const [debouncedSearch, setDebouncedSearch] = useState("");
     isPrice: true,
     submitting: false,
   });
-
+const [vendorModal, setVendorModal] = useState({
+  open: false,
+  startDate: null,
+  endDate: null,
+  submitting: false,
+});
   const navigate = useNavigate();
   const intl = useIntl();
 
@@ -543,6 +549,57 @@ const handlePrint = async (item) => {
     }
   };
 
+  const openVendorModal = () => {
+  const today = new Date();
+  setVendorModal({ open: true, startDate: today, endDate: today, submitting: false });
+};
+
+const closeVendorModal = () =>
+  setVendorModal((prev) => ({ ...prev, open: false }));
+
+const handleGenerateVendorReport = async () => {
+  const { startDate, endDate } = vendorModal;
+
+  if (!startDate || !endDate || endDate < startDate) {
+    Swal.fire({
+      icon: "warning",
+      title: "Invalid dates",
+      text: "Please select a valid date range.",
+      confirmButtonColor: "#005BA8",
+    });
+    return;
+  }
+
+  const reportWindow = window.open("", "_blank");
+  setVendorModal((prev) => ({ ...prev, submitting: true }));
+
+  try {
+    const res = await purchasereportvendorwise(
+      formatDMY(startDate),
+      formatDMY(endDate),
+      userId,
+    );
+    const url = res?.data?.report_path || res?.data?.fileUrl || res?.data?.data;
+    if (!url || typeof url !== "string") {
+      throw new Error(res?.data?.msg || "Report URL not received");
+    }
+
+    if (reportWindow) reportWindow.location.href = url;
+    else window.open(url, "_blank", "noopener,noreferrer");
+    closeVendorModal();
+  } catch (err) {
+    reportWindow?.close();
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: err?.response?.data?.msg || err?.message || "Failed to generate vendor report.",
+      confirmButtonColor: "#d33",
+    });
+  } finally {
+    setVendorModal((prev) => ({ ...prev, submitting: false }));
+  }
+};
+
   return (
     <Fragment>
       <Container>
@@ -596,6 +653,11 @@ const handlePrint = async (item) => {
       <Info size={16} />
     </button>
   </Tooltip>
+  <Tooltip title="Print vendor-wise purchase report">
+  <button className="btn btn-light" onClick={openVendorModal}>
+    <Printer size={16} /> Vendor Report
+  </button>
+</Tooltip>
             <button
               className="btn btn-light"
               onClick={openReportModal}
@@ -733,6 +795,65 @@ const handlePrint = async (item) => {
           </div>
         </div>
       )}
+
+      {vendorModal.open && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div className="bg-white rounded-xl shadow-lg w-full max-w-sm p-5">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Vendor Wise Report</h2>
+
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Start Date</label>
+          <DatePicker
+            selected={vendorModal.startDate}
+            onChange={(date) =>
+              setVendorModal((p) => ({
+                ...p,
+                startDate: date,
+                endDate: p.endDate && date && p.endDate < date ? date : p.endDate,
+              }))
+            }
+            dateFormat="dd/MM/yyyy"
+            className="input w-full"
+            placeholderText="dd/mm/yyyy"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">End Date</label>
+          <DatePicker
+            selected={vendorModal.endDate}
+            onChange={(date) => setVendorModal((p) => ({ ...p, endDate: date }))}
+            dateFormat="dd/MM/yyyy"
+            minDate={vendorModal.startDate}
+            className="input w-full"
+            placeholderText="dd/mm/yyyy"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 mt-6">
+        <button
+          type="button"
+          className="btn"
+          style={{ backgroundColor: "#6b7280", color: "#fff" }}
+          onClick={closeVendorModal}
+          disabled={vendorModal.submitting}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleGenerateVendorReport}
+          disabled={vendorModal.submitting}
+        >
+          {vendorModal.submitting ? "Generating..." : "Print"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </Fragment>
   );
 };

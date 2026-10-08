@@ -51,6 +51,7 @@ const [webWhatsAppItem, setWebWhatsAppItem] = useState(null);
 const [webWhatsAppName, setWebWhatsAppName] = useState("");
 const [webWhatsAppMobile, setWebWhatsAppMobile] = useState("");
 const [webWhatsAppSending, setWebWhatsAppSending] = useState(false);
+const [webWhatsAppCompanyDetails, setWebWhatsAppCompanyDetails] = useState(false); // default off
   const permissions = usePermission("Auto Manual PO");
   console.log(permissions);
   
@@ -224,6 +225,7 @@ const handleWebWhatsApp = (item) => {
   setWebWhatsAppItem(item);
   setWebWhatsAppName(item?.partyName || "");
   setWebWhatsAppMobile((item?.mobile || item?.partyMobile || "").replace(/\D/g, ""));
+  setWebWhatsAppCompanyDetails(false);
   setWebWhatsAppModalOpen(true);
 };
 
@@ -245,7 +247,11 @@ const handleConfirmWebWhatsApp = async () => {
   try {
     setWebWhatsAppSending(true);
 
-    const res = await PrintAutoManualPO(sotPoId, userId, 0); // 0 = without company details
+const res = await PrintAutoManualPO(
+  sotPoId,
+  userId,
+  webWhatsAppCompanyDetails ? 1 : 0, // isCompanyDetails
+);
     const fileUrl = res?.data?.fileUrl || res?.data?.data?.fileUrl;
 
     if (!fileUrl) {
@@ -498,6 +504,14 @@ const handleConfirmWebWhatsApp = async () => {
         placeholder="Enter mobile number"
         value={webWhatsAppMobile}
         onChange={(e) => setWebWhatsAppMobile(e.target.value)}
+      />
+    </div>
+      <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-700">Show Company Details</span>
+      <Switch
+        checked={webWhatsAppCompanyDetails}
+        onChange={(checked) => setWebWhatsAppCompanyDetails(checked)}
+        disabled={webWhatsAppSending}
       />
     </div>
   </div>

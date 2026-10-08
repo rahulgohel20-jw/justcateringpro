@@ -6,7 +6,8 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 dayjs.extend(customParseFormat);
 
-const ItemTable = ({ rows, onInputChange, onAddRow, onDeleteRow, isOfferRateUser = false, onRateBlur = () => {} , hideTaxColumns = false, }) => {
+const ItemTable = ({ rows, onInputChange, onAddRow, onDeleteRow, isOfferRateUser = false, onRateBlur = () => {} , hideTaxColumns = false,  canEditFunction = false,     // 👈 new
+  canDeleteFunction = false, }) => {
   const parseDateValue = (dateValue) => {
     if (!dateValue) return null;
 
@@ -54,7 +55,6 @@ const ItemTable = ({ rows, onInputChange, onAddRow, onDeleteRow, isOfferRateUser
             defaultMessage: "Name",
           })}
           value={record.name}
-          disabled={!record.isCustom && !record.isNewRow}
           onChange={(e) => onInputChange(index, "name", e.target.value)}
           className="border-none shadow-none"
         />
@@ -78,7 +78,6 @@ const ItemTable = ({ rows, onInputChange, onAddRow, onDeleteRow, isOfferRateUser
               format: "hh:mm A",
             }}
             format="DD-MM-YYYY hh:mm A"
-            disabled={!record.isCustom && !record.isNewRow}
             value={dateValue}
             onChange={(date) =>
               onInputChange(index, "date", date ? date.toISOString() : "")
@@ -208,7 +207,7 @@ const ItemTable = ({ rows, onInputChange, onAddRow, onDeleteRow, isOfferRateUser
       title: <FormattedMessage id="COMMON.ACTIONS" defaultMessage="Actions" />,
       key: "actions",
       render: (_, record) =>
-        record.isCustom || record.isNewRow ? (
+        record.isCustom || record.isNewRow || canDeleteFunction ? (
           <Button
             type="text"
             icon={<DeleteOutlined className="text-red-500" />}

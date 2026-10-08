@@ -29,6 +29,7 @@ const AllMemberMaster = () => {
 const canAccessMirrorSecurity = hasModuleAccess("Mirror Security");
 const canAccessBanquet = hasModuleAccess("Banquet")
 const canAccessStockType = hasModuleAccess("Stock Type")
+const canAccessExpense = hasModuleAccess("Account");
 
   const intl = useIntl();
 
@@ -175,13 +176,14 @@ const canAccessStockType = hasModuleAccess("Stock Type")
           </div>
         ) : (
           <TableComponent
-            columns={columns(
-              handleEdit,
-              FetchMembers,
-              permissions,
-              canAccessBanquet,
-              canAccessStockType,
-            )}
+           columns={columns(
+  handleEdit,
+  FetchMembers,
+  permissions,
+  canAccessBanquet,
+  canAccessStockType,
+  canAccessExpense,
+)}
             data={tableData}
             paginationSize={10}
           />

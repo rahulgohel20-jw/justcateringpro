@@ -39,12 +39,35 @@ const AssignEventsModal = ({ isModalOpen, setIsModalOpen, members = [] }) => {
   const authStorage = JSON.parse(localStorage.getItem("auth-storage") || "{}");
   const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
   const [paxPercentage, setPaxPercentage] = useState("");
+   const [ratePercentage, setRatePercentage] = useState("");
 
 
-  useEffect(() => {
-    if (isModalOpen) fetchEvents();
-  }, [isModalOpen, selectedMonth, selectedYear]);
+const resetForm = () => {
+  setSelectedEvents([]);
+  setSearch("");
+  setSelectedMonth("");
+  setSelectedYear(String(currentYear));
+  setFromDate("");
+  setToDate("");
+  setPaxPercentage("");
+  setRatePercentage("");
+  setEvents([]); // avoids the old list flashing on reopen
+};
 
+// Reset every time the modal opens
+useEffect(() => {
+  if (isModalOpen) resetForm();
+}, [isModalOpen]);
+
+// Fetch on open and when month/year change
+useEffect(() => {
+  if (isModalOpen) fetchEvents();
+}, [isModalOpen, selectedMonth, selectedYear]);
+
+const handleClose = () => {
+  resetForm();
+  setIsModalOpen(false);
+};
  const fetchEvents = async () => {
   try {
     const month = selectedMonth ? selectedMonth : undefined;
@@ -92,6 +115,7 @@ const AssignEventsModal = ({ isModalOpen, setIsModalOpen, members = [] }) => {
         childUserId: Number(Id),
         eventIds: selectedEvents.map((e) => Number(e.value)),
           paxPercentage: paxPercentage ? Number(paxPercentage) : undefined,
+          ratePercentage: ratePercentage ? Number(ratePercentage) : undefined,
 
       
       };
@@ -117,6 +141,7 @@ const AssignEventsModal = ({ isModalOpen, setIsModalOpen, members = [] }) => {
     setToDate("");
     setSearch("");
     setPaxPercentage("");
+    setRatePercentage("");  
   };
 
   return (
@@ -189,17 +214,31 @@ const AssignEventsModal = ({ isModalOpen, setIsModalOpen, members = [] }) => {
           </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-  <label className="form-label text-xs">Pax Percentage</label>
-  <input
-    type="tel"
-    className="input"
-    placeholder="Enter pax percentage"
-    min="0"
-    max="100"
-    value={paxPercentage}
-    onChange={(e) => setPaxPercentage(e.target.value)}
-  />
+       <div className="grid grid-cols-2 gap-3">
+  <div className="flex flex-col gap-1">
+    <label className="form-label text-xs">Pax Percentage</label>
+    <input
+      type="number"
+      className="input"
+      placeholder="Enter pax %"
+      min="0"
+      max="100"
+      value={paxPercentage}
+      onChange={(e) => setPaxPercentage(e.target.value)}
+    />
+  </div>
+  <div className="flex flex-col gap-1">
+    <label className="form-label text-xs">Rate Percentage</label>
+    <input
+      type="number"
+      className="input"
+      placeholder="Enter rate %"
+      min="0"
+      max="100"
+      value={ratePercentage}
+      onChange={(e) => setRatePercentage(e.target.value)}
+    />
+  </div>
 </div>
 
         {/* Search + Clear — search auto-filters via useMemo */}

@@ -11,6 +11,7 @@ import {
   AddLogs,
   updateeventmaster,
   GetUserlogs,
+  GetEventChatUnreadCount,
 } from "@/services/apiServices";
 import { errorMsgPopup, successMsgPopup } from "../../../underConstruction";
 import MenuReport from "@/partials/modals/menu-report/MenuReport";
@@ -25,6 +26,7 @@ import RoomDetailsModal from "../room-details/RoomDetailsModal";
 import { useModuleAccess } from "../../../hooks/useModuleAccess";
 import EventNotes from "../menu-notes/Event-Notes";
 import FollowUpTrackModal from "../followup-track/FollowUpTrackModal";
+import EventChatModal from "@/pages/Event/EventChatSystem/components/EventChatModal";
 
 const getUserEmail = () => {
   try {
@@ -76,8 +78,25 @@ const EventViewModal = ({
   const [eventHistoryLogs, setEventHistoryLogs] = useState([]);
   const [eventHistoryLoading, setEventHistoryLoading] = useState(false);
   const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const userId = localStorage.getItem("userId");
   const [contextMenu, setContextMenu] = useState(null);
+
+  useEffect(() => {
+    if (isModalOpen && safeEventId) {
+      GetEventChatUnreadCount(safeEventId)
+        .then((res) => {
+          const count =
+            res?.data?.data?.unreadCount ??
+            res?.data?.unreadCount ??
+            res?.data?.data ??
+            0;
+          setChatUnreadCount(typeof count === "number" ? count : 0);
+        })
+        .catch(() => { });
+    }
+  }, [isModalOpen, safeEventId]);
 
   const handleItemContextMenu = (e, item) => {
     if (item.disabled || !item.path) return;
@@ -115,11 +134,11 @@ const EventViewModal = ({
   }, [isModalOpen, eventDataAll?.remark, eventDataAll?.remarksGujarati, eventDataAll?.remarksHindi]);
 
   const { hasModuleAccess } = useModuleAccess();
-    const canAccessBanquet = hasModuleAccess("Banquet" );
-    const canAccessAssignManger = hasModuleAccess("Assign Manager");
-    const canAccessMenuExtraFeature = hasModuleAccess("Menu Extra Features");
-    const canAccessfollowup = hasModuleAccess("followup");
-    const canAccessExhibitionquotation = hasModuleAccess("Exhibition Quotation");
+  const canAccessBanquet = hasModuleAccess("Banquet");
+  const canAccessAssignManger = hasModuleAccess("Assign Manager");
+  const canAccessMenuExtraFeature = hasModuleAccess("Menu Extra Features");
+  const canAccessfollowup = hasModuleAccess("followup");
+  const canAccessExhibitionquotation = hasModuleAccess("Exhibition Quotation");
 
   const [prepStatus, setPrepStatus] = useState(null);
 
@@ -553,45 +572,45 @@ const EventViewModal = ({
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 space-y-2">
-              {canAccessExhibitionquotation &&(
-               <button
-   onClick={() => navigate(`/exhibition-quotation/${safeEventId}`)}
-  className="w-full flex items-center justify-between bg-green-50 hover:bg-green-50 transition-all rounded-2xl px-2 py-1 group"
->
-  <div className="flex items-center gap-3">
-    <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-green-100">
-      <i className="ki-filled ki-note text-green-600 text-xl"></i>
-    </div>
-    <div className="flex flex-col items-start">
-      <span className="text-green-600 font-semibold text-sm">
-  <FormattedMessage
-    id="USER.DASHBOARD.EVENT_VIEW.REMARKS"
-    defaultMessage="
+              {canAccessExhibitionquotation && (
+                <button
+                  onClick={() => navigate(`/exhibition-quotation/${safeEventId}`)}
+                  className="w-full flex items-center justify-between bg-green-50 hover:bg-green-50 transition-all rounded-2xl px-2 py-1 group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-green-100">
+                      <i className="ki-filled ki-note text-green-600 text-xl"></i>
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-green-600 font-semibold text-sm">
+                        <FormattedMessage
+                          id="USER.DASHBOARD.EVENT_VIEW.REMARKS"
+                          defaultMessage="
 Exhibition quotation "
-                      />
-                    </span>
+                        />
+                      </span>
 
-    </div>
-  </div>
-  <i className="ki-filled ki-right text-green-600 text-sm group-hover:translate-x-1 transition-transform"></i>
-</button> 
+                    </div>
+                  </div>
+                  <i className="ki-filled ki-right text-green-600 text-sm group-hover:translate-x-1 transition-transform"></i>
+                </button>
               )}
 
-  <button
-  onClick={() => setIsRemarksModal(true)}
-  className="w-full flex items-center justify-between bg-amber-50 hover:bg-amber-100 transition-all rounded-2xl px-2 py-1 group"
->
-  <div className="flex items-center gap-3">
-    <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-amber-100">
-      <i className="ki-filled ki-note text-amber-600 text-xl"></i>
-    </div>
-    <div className="flex flex-col items-start">
-      <span className="text-amber-600 font-semibold text-sm">
-  <FormattedMessage
-    id="USER.DASHBOARD.EVENT_VIEW.REMARKS"
-    defaultMessage="Event Remarks"
-  />
-</span>
+              <button
+                onClick={() => setIsRemarksModal(true)}
+                className="w-full flex items-center justify-between bg-amber-50 hover:bg-amber-100 transition-all rounded-2xl px-2 py-1 group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-amber-100">
+                    <i className="ki-filled ki-note text-amber-600 text-xl"></i>
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-amber-600 font-semibold text-sm">
+                      <FormattedMessage
+                        id="USER.DASHBOARD.EVENT_VIEW.REMARKS"
+                        defaultMessage="Event Remarks"
+                      />
+                    </span>
 
                   </div>
                 </div>
@@ -648,6 +667,39 @@ Exhibition quotation "
                   <i className="ki-filled ki-right text-blue-600 text-sm group-hover:translate-x-1 transition-transform"></i>
                 </button>
               )}
+
+              {/* Event Team Chat Button */}
+              {/* <button
+                type="button"
+                onClick={() => setIsChatModalOpen(true)}
+                className="w-full flex items-center justify-between bg-emerald-50 hover:bg-emerald-100 transition-all rounded-2xl px-2 py-1.5 group border border-emerald-100/70"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm border border-emerald-100 relative">
+                    <i className="ki-filled ki-messages text-emerald-600 text-xl"></i>
+                    {chatUnreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow">
+                        {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-start">
+                    <span className="text-emerald-700 font-semibold text-sm flex items-center gap-1.5">
+                      <FormattedMessage
+                        id="USER.DASHBOARD.EVENT_VIEW.CHAT"
+                        defaultMessage="Event Team Chat"
+                      />
+                      {chatUnreadCount > 0 && (
+                        <span className="bg-emerald-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                          {chatUnreadCount} new
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[11px] text-gray-500">Live communication & updates</span>
+                  </div>
+                </div>
+                <i className="ki-filled ki-right text-emerald-600 text-sm group-hover:translate-x-1 transition-transform"></i>
+              </button> */}
 
               {/* Status Section */}
               <div>
@@ -848,6 +900,27 @@ Exhibition quotation "
                   }),
                 show: permissionExpense.view,
               },
+              // {
+              //   label: (
+              //     <FormattedMessage
+              //       id="USER.DASHBOARD.EVENT_VIEW.CHAT"
+              //       defaultMessage="Team Chat"
+              //     />
+              //   ),
+              //   renderIcon: () => (
+              //     <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 relative">
+              //       <i className="ki-filled ki-messages text-2xl"></i>
+              //       {chatUnreadCount > 0 && (
+              //         <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow">
+              //           {chatUnreadCount > 99 ? "99+" : chatUnreadCount}
+              //         </span>
+              //       )}
+              //     </div>
+              //   ),
+              //   path: `/event-chat/${safeEventId}`,
+              //   onClick: () => setIsChatModalOpen(true),
+              //   show: true,
+              // },
             ]
               .filter((item) => item.show !== false)
               .map((item, idx) => (
@@ -862,11 +935,15 @@ Exhibition quotation "
                     }`}
                 >
                   <div className="text-blue-600 text-3xl mb-2">
-                    <img
-                      src={toAbsoluteUrl(item.icon)}
-                      alt={item.label}
-                      className="w-8 h-8 md:w-10 md:h-10"
-                    />
+                    {item.renderIcon ? (
+                      item.renderIcon()
+                    ) : (
+                      <img
+                        src={toAbsoluteUrl(item.icon)}
+                        alt={typeof item.label === "string" ? item.label : "Icon"}
+                        className="w-8 h-8 md:w-10 md:h-10"
+                      />
+                    )}
                   </div>
                   <p className="font-large text-gray font-bold text-center">{item.label}</p>
                 </div>
@@ -1140,6 +1217,34 @@ Exhibition quotation "
             </button>
           </div>
         )}
+
+        {/* Real-time Event Team Chat Modal */}
+        <EventChatModal
+          isOpen={isChatModalOpen}
+          onClose={() => {
+            setIsChatModalOpen(false);
+            if (safeEventId) {
+              GetEventChatUnreadCount(safeEventId)
+                .then((res) => {
+                  const count =
+                    res?.data?.data?.unreadCount ??
+                    res?.data?.unreadCount ??
+                    res?.data?.data ??
+                    0;
+                  setChatUnreadCount(typeof count === "number" ? count : 0);
+                })
+                .catch(() => { });
+            }
+          }}
+          eventId={safeEventId}
+          eventName={
+            translatedTitle ||
+            eventData?.event?._def?.title ||
+            eventDataAll?.partyName ||
+            `Event #${safeEventId}`
+          }
+          eventNo={eventDataAll?.eventNo}
+        />
 
       </CustomModal>
     )

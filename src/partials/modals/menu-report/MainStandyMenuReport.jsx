@@ -16,6 +16,7 @@ import "@react-pdf-viewer/core/lib/styles/index.css";
 import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import { getLangConfig, extractTranslations } from "@/utils/langConfig";
+import { WhatsAppModal, WhatsAppButtons, useWhatsAppShare } from "@/components/whatsapp/WhatsAppShare";
 
 
 const initialCounters = [];
@@ -26,6 +27,10 @@ const MainStandyMenuReport = ({
   eventId,
   eventFunctionId,
   selectedTemplateId,
+  eventName,
+  functionName,
+  functionDateTime,
+  venueName,
 }) => {
   const pdfPlugin = defaultLayoutPlugin({
     toolbarPlugin: {
@@ -47,6 +52,14 @@ const langConfig = getLangConfig();
   let userId = localStorage.getItem("userId");
   const [pdfUrl, setPdfUrl] = useState(null);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const { share, modalProps } = useWhatsAppShare({
+  pdfUrl,
+  moduleName: "Main Standy Report",
+  eventName,
+  functionName,
+  functionDateTime,
+  venueName,
+});
   const [mainStandyItems, setMainStandyItems] = useState([]);
 
   useEffect(() => {
@@ -289,6 +302,8 @@ setCounters((prev) =>
   };
 
   return (
+    <>
+    <WhatsAppModal {...modalProps} />
     <CustomModal
       open={isModalOpen}
       onClose={() => setIsModalOpen(false)}
@@ -441,26 +456,38 @@ setCounters((prev) =>
           </Droppable>
         </DragDropContext>
 
-        {showPdfViewer && pdfUrl && (
-          <CustomModal
-            open={showPdfViewer}
-            onClose={() => setShowPdfViewer(false)}
-            title="Main Standy Report Preview"
-            width={1000}
-          >
-            <div style={{ height: "80vh" }}>
-              <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-                <Viewer
-                  fileUrl={pdfUrl}
-                  plugins={[pdfPlugin]}
-                  defaultScale={1.0}
-                />
-              </Worker>
-            </div>
-          </CustomModal>
-        )}
+     {showPdfViewer && pdfUrl && (
+  <CustomModal
+    open={showPdfViewer}
+    onClose={() => setShowPdfViewer(false)}
+    title="Main Standy Report Preview"
+    width={1000}
+    footer={
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => setShowPdfViewer(false)}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition"
+        >
+          Close
+        </button>
+        <WhatsAppButtons onShare={share} />
+      </div>
+    }
+  >
+    <div style={{ height: "80vh" }}>
+      <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
+        <Viewer
+          fileUrl={pdfUrl}
+          plugins={[pdfPlugin]}
+          defaultScale={1.0}
+        />
+      </Worker>
+    </div>
+  </CustomModal>
+)}
       </div>
     </CustomModal>
+    </>
   );
 };
 

@@ -10,6 +10,7 @@ import {
   Translateapi,
 } from "@/services/apiServices";
 import InputToTextLang from "@/components/form-inputs/InputToTextLang";
+import MultiLangInputBox from "@/components/form-inputs/MultiLangInputbox";
 import AddContactCategory from "@/partials/modals/add-contact-category/AddContactCategory";
 import { FormattedMessage, useIntl } from "react-intl";
 import { getLangConfig, extractTranslations } from "@/utils/langConfig";
@@ -20,7 +21,7 @@ const AddCustomer = ({
   selectedCustomer,
   refreshData = () => {},
 }) => {
-  if (!isModalOpen) return null;
+  
   const intl = useIntl();
 const langConfig = getLangConfig();
   const [imagePreview, setImagePreview] = useState(null);
@@ -28,9 +29,10 @@ const langConfig = getLangConfig();
   const [categories, setCategories] = useState([]);
   const [errors, setErrors] = useState({});
   const fileInputRef = useRef();
-  const [debounceTimer, setDebounceTimer] = useState(null);
   const [isconatctModalOpen, setIsContactModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const timers = useRef({});
+
 
   // Yup validation schema
   const validationSchema = Yup.object().shape({
@@ -98,36 +100,26 @@ const langConfig = getLangConfig();
 
   const Id = localStorage.getItem("userId");
 
-  const triggerTranslate = (text, fieldType) => {
-    if (!text?.trim()) return;
+ const triggerTranslate = (text, fieldType) => {
+  if (!text?.trim()) return;
+  clearTimeout(timers.current[fieldType]);
 
-    if (debounceTimer) clearTimeout(debounceTimer);
+  timers.current[fieldType] = setTimeout(() => {
+    Translateapi(text)
+      .then((res) => {
+        const { regional, hindi } = extractTranslations(res.data);
+        setFormData((prev) =>
+          fieldType === "name"
+            ? { ...prev, nameGujarati: regional, nameHindi: hindi }
+            : { ...prev, addressGujarati: regional, addressHindi: hindi },
+        );
+      })
+      .catch((err) => console.error("Translation error:", err));
+  }, 500);
+};
 
-    const timer = setTimeout(() => {
-      Translateapi(text)
-        .then((res) => {
-  if (fieldType === "name") {
-    const { regional, hindi } = extractTranslations(res.data);
-    setFormData((prev) => ({
-      ...prev,
-      nameGujarati: regional,
-      nameHindi: hindi,
-    }));
-  }
-  if (fieldType === "address") {
-    const { regional, hindi } = extractTranslations(res.data);
-    setFormData((prev) => ({
-      ...prev,
-      addressGujarati: regional,
-      addressHindi: hindi,
-    }));
-  }
-})
-        .catch((err) => console.error("Translation error:", err));
-    }, 500);
 
-    setDebounceTimer(timer);
-  };
+useEffect(() => () => Object.values(timers.current).forEach(clearTimeout), []);
 
   useEffect(() => {
     if (formData.nameEnglish) {
@@ -219,7 +211,7 @@ type: selectedCustomer.type || "",
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setSelectedFile(file);
+      
       setSelectedFile(file);
       setImagePreview(URL.createObjectURL(file));
     }
@@ -399,6 +391,14 @@ type: selectedCustomer.type || "",
     }
   };
 
+
+  const setNameFormData = (next) => {
+  setFormData(next);
+  if (errors.nameEnglish) setErrors((prev) => ({ ...prev, nameEnglish: "" }));
+};
+
+if (!isModalOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-[#F2F7FB] rounded-xl w-full max-w-5xl p-6 relative">
@@ -430,50 +430,40 @@ type: selectedCustomer.type || "",
         <div className="overflow-y-auto max-h-[90vh]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Name */}
-            <div>
-              <InputToTextLang
-                label={
-                  <FormattedMessage
-                    id="COMMON.NAME"
-                    defaultMessage="Name"
-                  />
-                }
-                name="nameEnglish"
-                value={formData.nameEnglish}
-                onChange={handleChange}
-                placeholder={intl.formatMessage({
-                  id: "COMMON.NAME",
-                  defaultMessage: "Name",
-                })}
-                lng="en-US"
-                required
-              />
-              {errors.nameEnglish && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.nameEnglish}
-                </p>
-              )}
-            </div>
+            <div className="md:col-span-3">
+  <MultiLangInputBox
+    formData={formData}
+    setFormData={setNameFormData}
+    label={intl.formatMessage({ id: "COMMON.NAME", defaultMessage: "Name" })}
+    keys={{
+      english: "nameEnglish",
+      regional: "nameGujarati",
+      hindi: "nameHindi",
+    }}
+    cols={3}
+    required
+    error={errors.nameEnglish}
+  />
+</div>
 
-            {/* Home Address */}
-            <div className="md:col-span-2">
-              <InputToTextLang
-                label={
-                  <FormattedMessage
-                    id="COMMON.HOME_ADDRESS"
-                    defaultMessage="Home Address"
-                  />
-                }
-                name="addressEnglish"
-                placeholder={intl.formatMessage({
-                  id: "COMMON.HOME_ADDRESS",
-                  defaultMessage: "Home Address",
-                })}
-                value={formData.addressEnglish}
-                onChange={handleChange}
-                lng="en-US"
-              />
-            </div>
+{/* Home Address (English / Regional / Hindi) */}
+<div className="md:col-span-3">
+  <MultiLangInputBox
+    formData={formData}
+    setFormData={setFormData}
+    label={intl.formatMessage({
+      id: "COMMON.HOME_ADDRESS",
+      defaultMessage: "Home Address",
+    })}
+    keys={{
+      english: "addressEnglish",
+      regional: "addressGujarati",
+      hindi: "addressHindi",
+    }}
+    cols={3}
+    required={false}
+  />
+</div>
 
             {/* Contact Category */}
             <div className="flex flex-col gap-1">

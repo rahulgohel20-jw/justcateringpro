@@ -38,6 +38,7 @@ import {
   updtaeunlock,
   deletebyitemis,
   deletegroupbyquotation,
+  deletepaymemtbyqxhibition,
 } from "@/services/apiServices";
 
 dayjs.extend(customParseFormat);
@@ -122,7 +123,32 @@ function formatEventDate(raw) {
   return parsed.isValid() ? parsed.format("DD MMMM YYYY") : datePart;
 }
 
+// Fingerprint of everything that affects an estimate's totals
+const estimateSig = (e) =>
+  JSON.stringify({
+    rows: (e.rows || []).map((r) => [String(r.name || ""), Number(r.qty || 0), Number(r.rate || 0)]),
+    d: Number(e.discountPercent || 0),
+    t: Number(e.tdsPercent || 0),
+    c: Number(e.cgstPercent || 0),
+    s: Number(e.sgstPercent || 0),
+    i: Number(e.igstPercent || 0),
+    r: Number(e.roundOff || 0),
+  });
 
+// API totals if untouched, otherwise calculate locally
+const getEstimateTotals = (estimate) => {
+  if (estimate.apiTotals && estimateSig(estimate) === estimate.savedSig) {
+    return estimate.apiTotals;
+  }
+  return calcTotals(estimate.rows, {
+    tdsPercent: estimate.tdsPercent,
+    discountPercent: estimate.discountPercent,
+    cgstPercent: estimate.cgstPercent,
+    sgstPercent: estimate.sgstPercent,
+    igstPercent: estimate.igstPercent,
+    roundOff: estimate.roundOff,
+  });
+};
 function calcTotals(
   rows,
   { tdsPercent = 0.0, discountPercent = 0.0, cgstPercent = 2.5, sgstPercent = 2.5, igstPercent = 0, roundOff = 0 } = {}
@@ -138,8 +164,7 @@ function calcTotals(
   const sgst = amountAfterDiscount * (Number(sgstPercent || 0) / 100);
   const igst = amountAfterDiscount * (Number(igstPercent || 0) / 100);
   const roundOffValue = Number(roundOff || 0);
-  const grandTotal = amountAfterDiscount + cgst + sgst + igst - tds + roundOffValue;
-
+const grandTotal = amountAfterDiscount + cgst + sgst + igst - tds + roundOffValue;
   return {
     subtotal,
     discount,
@@ -173,9 +198,10 @@ function EstimateTable({
   roundOff,
   onRoundOffChange,
   onDeleteRow,
-  EstimateTable
+  EstimateTable,
+  totals
 }) {
-  const { subtotal, discount, amountAfterDiscount, tds, cgst, sgst, igst, grandTotal } = calcTotals(rows, {
+  const {  subtotal, discount, amountAfterDiscount, tds, cgst, sgst, igst, grandTotal} = totals;(rows, {
     tdsPercent,
     discountPercent,
     cgstPercent,
@@ -206,21 +232,19 @@ function EstimateTable({
     <div className="bg-white border border-slate-200 rounded-xl p-3 mt-2.5">
       {/* Estimate Header */}
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <div
+     <div
   className="text-[15px] font-bold flex items-center gap-2 cursor-pointer select-none"
   onClick={() => setOpen(!open)}
 >
+{title}
   <ChevronDown size={16} className={`text-slate-500 transition-transform ${open ? "" : "-rotate-90"}`} />
-  {title}
-  <span className="bg-indigo-50 text-indigo-700 text-[11px] px-2 py-0.5 rounded-full font-semibold">
-    {tag}
-  </span>
+  {tag}
 </div>
 
         <div className="flex items-center gap-2">
           <div className="text-right mr-2">
-            <div className="text-[10.5px] text-slate-500">Grand Total</div>
-            <div className="text-base font-bold text-blue-700">{money(grandTotal)}</div>
+            {/* <div className="text-[10.5px] text-slate-500">Grand Total</div>
+            <div className="text-base font-bold text-blue-700">{money(grandTotal)}</div> */}
           </div>
 
           {canDelete && (
@@ -244,69 +268,78 @@ function EstimateTable({
          
         </div>
       </div>
+<div className="overflow-x-auto scroll-visible">
+  <table className="w-full border-collapse text-[12px] table-fixed min-w-[600px]">
+    <colgroup>
+      <col className="w-[60px]" />
+      <col />
+      <col className="w-[110px]" />
+      <col className="w-[130px]" />
+      <col className="w-[140px]" />
+      <col className="w-[36px]" />
+    </colgroup>
+    <thead>
+      <tr>
+        {["SR.NO.", "NAME", "QUANTITY", "RATE (₹)", "TOTAL AMOUNT (₹)", ""].map((header) => (
+          <th
+            key={header}
+            className={`text-slate-500 font-semibold text-[10.5px] py-1.5 px-1.5 border-b border-slate-200 ${
+              header.includes("RATE") || header.includes("TOTAL") ? "text-right" : "text-left"
+            }`}
+          >
+            {header}
+          </th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row, index) => (
+        <tr key={row.id} className="h-8">
+          <td className="py-1 px-1.5 border-b border-slate-100 text-slate-600 leading-none">
+            {String(index + 1).padStart(2, "0")}
+          </td>
+          <td className="py-1 px-1.5 border-b border-slate-100">
+            <input
+              className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none"
+              value={row.name}
+              onChange={(e) => updateRow(row.id, "name", e.target.value)}
+            />
+          </td>
+          <td className="py-1 px-1.5 border-b border-slate-100">
+            <input
+              type="text"
+              inputMode="decimal"
+              className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none text-center"
+              value={row.qty}
+              onChange={(e) => updateRow(row.id, "qty", e.target.value)}
+            />
+          </td>
+          <td className="py-1 px-1.5 border-b border-slate-100">
+            <input
+              type="text"
+              inputMode="decimal"
+              className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none text-right"
+              value={row.rate}
+              onChange={(e) => updateRow(row.id, "rate", e.target.value)}
+            />
+          </td>
+          <td className="py-1 px-1.5 border-b border-slate-100 text-right font-medium leading-none">
+            {money(Number(row.qty || 0) * Number(row.rate || 0))}
+          </td>
+          <td className="py-1 px-1.5 border-b border-slate-100 text-center">
+            <button onClick={() => onDeleteRow(row.id)} className="text-slate-400 hover:text-red-600 align-middle">
+              <Trash2 size={13} />
+            </button>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
 
-      {/* Estimate Rows */}
-      <div className="overflow-x-auto scroll-visible">
-      <table className="w-full border-collapse text-[13px]">
-        <thead>
-          <tr>
-            {["SR.NO.", "NAME", "QUANTITY", "RATE (₹)", "TOTAL AMOUNT (₹)", ""].map((header) => (
-              <th
-                key={header}
-                className={`text-left text-slate-500 font-semibold text-[11px] py-2 px-1.5 border-b border-slate-200 ${
-                  header.includes("RATE") || header.includes("TOTAL") ? "text-right" : ""
-                }`}
-              >
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={row.id}>
-              <td className="py-2 px-1.5 border-b border-slate-200">{String(index + 1).padStart(2, "0")}</td>
-              <td className="py-2 px-1.5 border-b border-slate-200">
-                <input
-                  className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px]"
-                  value={row.name}
-                  onChange={(e) => updateRow(row.id, "name", e.target.value)}
-                />
-              </td>
-              <td className="py-2 px-1.5 border-b border-slate-200">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px] text-center"
-                  value={row.qty}
-                  onChange={(e) => updateRow(row.id, "qty", e.target.value)}
-                />
-              </td>
-              <td className="py-2 px-1.5 border-b border-slate-200">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px] text-right"
-                  value={row.rate}
-                  onChange={(e) => updateRow(row.id, "rate", e.target.value)}
-                />
-              </td>
-              <td className="py-2 px-1.5 border-b border-slate-200 text-right font-medium">
-                {money(Number(row.qty || 0) * Number(row.rate || 0))}
-              </td>
-              <td className="py-2 px-1.5 border-b border-slate-200 text-center">
-<button onClick={() => onDeleteRow(row.id)} className="text-slate-400 hover:text-red-600">  <Trash2 size={14} />
+<button onClick={addRow} className="text-primary text-[12px] font-semibold py-1.5 px-1">
+  + Add Row
 </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </div>
-
-      <button onClick={addRow} className="text-primary text-[13px] font-semibold py-2 px-1">
-        + Add Row
-      </button>
 
       {/* SUMMARY */}
       <div className="mt-3 border border-slate-200 rounded-xl p-3.5">
@@ -349,7 +382,7 @@ function EstimateTable({
           </div>
 
           <div className="flex justify-between items-center py-1.5">
-            <span>TDS u/s 194C</span>
+            <span>TDS</span>
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -436,102 +469,123 @@ function EstimateTable({
 
 
 
-function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateField }) {
+function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateField, onDeleteDay }) {
   const total = day.rows.reduce((s, r) => s + r.qty * r.rate, 0);
   const totalQty = day.rows.reduce((s, r) => s + r.qty, 0);
   const totalRate = day.rows.reduce((s, r) => s + r.rate, 0);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-3 mt-2.5">
+    <div className="bg-white border border-slate-200 rounded-xl p-2 mt-2">
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <div className="flex items-center gap-2.5">
-          <div className="relative">
-           {/* AFTER */}
-<DatePicker
-  value={day.date ? dayjs(day.date, DATE_FORMAT) : null}
-  format={DATE_FORMAT}
-  placeholder="Select date"
-  allowClear={false}
-  onChange={(_, dateString) => onUpdateField(day.id, "date", dateString)}
-  style={{ width: 150, fontWeight: 700 }}
-/>
-          </div>
+        <div className="flex items-center gap-2">
+          <DatePicker
+            size="small"
+            value={day.date ? dayjs(day.date, DATE_FORMAT) : null}
+            format={DATE_FORMAT}
+            placeholder="Select date"
+            allowClear={false}
+            onChange={(_, dateString) => onUpdateField(day.id, "date", dateString)}
+            style={{ width: 130, fontWeight: 600, fontSize: 12 }}
+          />
           <input
             type="text"
             value={day.label}
             onChange={(e) => onUpdateField(day.id, "label", e.target.value)}
             placeholder="Scope label"
-            className="bg-slate-100 text-slate-500 text-[11px] px-2.5 py-1.5 rounded-full border-none w-[170px] font-medium"
+            className="bg-slate-100 text-slate-500 text-[11px] px-2 h-6 rounded-full border-none w-[140px] font-medium"
           />
         </div>
 
-        <div className="flex items-center gap-2 cursor-pointer" onClick={() => onToggle(day.id)}>
-          <div className="text-right">
-            <div className="text-[15px] font-bold text-blue-700">{money(total)}</div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => onToggle(day.id)}>
+            <div className="text-[13px] font-bold text-blue-700">{money(total)}</div>
+            <ChevronDown size={14} className={`text-slate-500 transition-transform ${day.open ? "" : "-rotate-90"}`} />
           </div>
-          <ChevronDown size={16} className={`text-slate-500 transition-transform ${day.open ? "" : "-rotate-90"}`} />
+          <button
+            onClick={() => onDeleteDay(day)}
+            className="text-slate-400 hover:text-red-600 p-1"
+            title="Delete Date Scope"
+          >
+            <Trash2 size={14} />
+          </button>
         </div>
       </div>
 
       {day.open && (
-        <div className="mt-3">
+        <div className="mt-2">
           <div className="overflow-x-auto scroll-visible">
-          <table className="w-full border-collapse text-[13px]">
-            <thead>
-              <tr>
-                {["PARTICULARS NAME", "QUANTITY", "RATE", "TOTAL AMOUNT", ""].map((h) => (
-                  <th key={h} className="text-left text-slate-500 font-semibold text-[11px] py-2 px-1.5 border-b border-slate-200">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {day.rows.map((r) => (
-                <tr key={r.id}>
-                  <td className="py-2 px-1.5 border-b border-slate-200">
-                    <input
-                      className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px]"
-                      value={r.name}
-                      onChange={(e) => onUpdateRow(day.id, r.id, "name", e.target.value)}
-                    />
-                  </td>
-                  <td className="py-2 px-1.5 border-b border-slate-200">
-                    <input
-                      type="number"
-                      className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px] text-center"
-                      value={r.qty}
-                      onChange={(e) => onUpdateRow(day.id, r.id, "qty", Number(e.target.value))}
-                    />
-                  </td>
-                  <td className="py-2 px-1.5 border-b border-slate-200">
-                    <input
-                      type="number"
-                      className="w-full border border-slate-200 rounded-md px-2 py-1.5 text-[13px] text-right"
-                      value={r.rate}
-                      onChange={(e) => onUpdateRow(day.id, r.id, "rate", Number(e.target.value))}
-                    />
-                  </td>
-                  <td className="py-2 px-1.5 border-b border-slate-200 text-right font-medium">
-                    {money(r.qty * r.rate)}
-                  </td>
-                  <td className="py-2 px-1.5 border-b border-slate-200 text-center">
-<button onClick={() => onDeleteRow(day.id, r.id)} className="text-slate-400 hover:text-red-600">  <Trash2 size={14} />
-</button>
-                  </td>
+            <table className="w-full border-collapse text-[12px] table-fixed min-w-[600px]">
+              <colgroup>
+                <col />
+                <col className="w-[110px]" />
+                <col className="w-[130px]" />
+                <col className="w-[140px]" />
+                <col className="w-[36px]" />
+              </colgroup>
+              <thead>
+                <tr>
+                  {["PARTICULARS NAME", "QUANTITY", "RATE", "TOTAL AMOUNT", ""].map((h) => (
+                    <th
+                      key={h}
+                      className={`text-slate-500 font-semibold text-[10.5px] py-1 px-1.5 border-b border-slate-200 ${
+                        h === "RATE" || h === "TOTAL AMOUNT" ? "text-right" : "text-left"
+                      }`}
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {day.rows.map((r) => (
+                  <tr key={r.id} className="h-8">
+                    <td className="py-1 px-1.5 border-b border-slate-100">
+                      <input
+                        className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none"
+                        value={r.name}
+                        onChange={(e) => onUpdateRow(day.id, r.id, "name", e.target.value)}
+                      />
+                    </td>
+                    <td className="py-1 px-1.5 border-b border-slate-100">
+                      <input
+                        type="number"
+                        className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none text-center"
+                        value={r.qty}
+                        onChange={(e) => onUpdateRow(day.id, r.id, "qty", Number(e.target.value))}
+                      />
+                    </td>
+                    <td className="py-1 px-1.5 border-b border-slate-100">
+                      <input
+                        type="number"
+                        className="w-full h-7 border border-slate-200 rounded px-2 text-[12px] leading-none text-right"
+                        value={r.rate}
+                        onChange={(e) => onUpdateRow(day.id, r.id, "rate", Number(e.target.value))}
+                      />
+                    </td>
+                    <td className="py-1 px-1.5 border-b border-slate-100 text-right font-medium leading-none">
+                      {money(r.qty * r.rate)}
+                    </td>
+                    <td className="py-1 px-1.5 border-b border-slate-100 text-center">
+                      <button onClick={() => onDeleteRow(day.id, r.id)} className="text-slate-400 hover:text-red-600 align-middle">
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <button onClick={() => onAddRow(day.id)} className="text-primary text-[13px] font-semibold py-2 px-1">
+
+          <button onClick={() => onAddRow(day.id)} className="text-primary text-[12px] font-semibold py-1 px-1">
             + Add Particulars Row
           </button>
-          <div className="flex justify-between items-center text-[12.5px] mt-2">
-<span className="text-slate-500 font-semibold">{day.date || "Select date"} — Total:</span>            <span className="text-slate-500">
-              Total Quantity: <span className="font-semibold text-slate-700">{totalQty}</span>
-              &nbsp;&nbsp; Total Rate: <span className="font-semibold text-slate-700">{money(totalRate)}</span>
-              &nbsp;&nbsp; Total Amount: <span className="font-bold text-blue-700">{money(total)}</span>
+
+          <div className="flex justify-between items-center text-[11px] mt-1">
+            {/* <span className="text-slate-500 font-semibold">{day.date || "Select date"} — Total:</span> */}
+            <span className="text-slate-500">
+              Qty: <span className="font-semibold text-slate-700">{totalQty}</span>
+              &nbsp;&nbsp; Rate: <span className="font-semibold text-slate-700">{money(totalRate)}</span>
+              &nbsp;&nbsp; Amount: <span className="font-bold text-blue-700">{money(total)}</span>
             </span>
           </div>
         </div>
@@ -541,13 +595,12 @@ function DayCard({ day, onToggle, onUpdateRow, onDeleteRow, onAddRow, onUpdateFi
 }
 function SectionHeader({ no, title, open, onToggle, right }) {
   return (
-    <div className="flex justify-between items-center text-[12px] font-bold text-primary tracking-wide mt-5 mb-2">
-      <button type="button" onClick={onToggle} className="flex items-center gap-2 text-left">
+<div className="flex justify-between items-center text-[12px] font-bold text-primary tracking-wide px-1 py-2">      <button type="button" onClick={onToggle} className="flex items-center gap-2 text-left">
         <ChevronDown size={16} className={`text-slate-500 transition-transform ${open ? "" : "-rotate-90"}`} />
         <span className="text-[13px] font-extrabold text-blue-800 tracking-tight">
-          SECTION {no}
-          <span className="mx-2 text-slate-300">•</span>
-          <span className="text-[13px] font-bold text-black">{title}</span>
+          {/* {/* SECTION {no} */}
+          <span className="mx-2 text-slate-300">•</span> 
+          <span className="text-[14px] font-bold text-black">{title}</span>
         </span>
       </button>
       {right}
@@ -556,6 +609,8 @@ function SectionHeader({ no, title, open, onToggle, right }) {
 }
 
 export default function ExhibitionQuotation() {
+  const [baseline, setBaseline] = useState(null);
+const [justLoaded, setJustLoaded] = useState(false);
   // eventId comes from the route, e.g. /exhibition-quotation/:eventId
   const { eventId } = useParams();
   const [isExtraQuotationOpen, setIsExtraQuotationOpen] = useState(false);
@@ -564,8 +619,9 @@ const userId = localStorage.getItem("userId");
    const [estimates, setEstimates] = useState([]);
   const [days, setDays] = useState(initialDays);
   const [notes, setNotes] = useState("");
-const [openSections, setOpenSections] = useState({ s1: false, s2: false, s3: false, s4: false });
+const [openSections, setOpenSections] = useState({ s1: false, s2: false, s3: false, s4: true });
 const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+
 
 
   const [paymentsMain, setPaymentsMain] = useState([]); 
@@ -592,6 +648,7 @@ const [isSelectMenureport, setIsSelectMenuReport] = useState(false);
   // null means "not created on the backend yet"; a real id is only ever set
   // from a GET response.
   const [estimateGroupId, setEstimateGroupId] = useState(null);
+  const [apiSummary, setApiSummary] = useState(null);
   const [otherGroupId, setOtherGroupId] = useState(null);
   const [extraGroup, setExtraGroup] = useState({
     id: null,
@@ -637,23 +694,57 @@ const [isSelectMenureport, setIsSelectMenuReport] = useState(false);
             });
           }
 
-          if (estimateGroup) {
-                  setEstimateGroupId(estimateGroup.id || null);
-            setTdsPercent(typeof estimateGroup.tdsPercent === "number" ? estimateGroup.tdsPercent : 0);
-            const mappedEstimates = (estimateGroup.modules || []).map((m, idx) => ({
-              id: `estimate-${idx}`,
-              moduleId: m.id || null,
-              title: `Estimate ${String.fromCharCode(65 + idx)}`,
-             tag: m.scopeLabel || `Estimate ${String.fromCharCode(65 + idx)}`,
-             discountPercent: typeof m.discountPercent === "number" ? m.discountPercent : 0.0,
-             cgstPercent: typeof m.cgstPercent === "number" ? m.cgstPercent : 2.5,
-             sgstPercent: typeof m.sgstPercent === "number" ? m.sgstPercent : 2.5,
-             igstPercent: typeof m.igstPercent === "number" ? m.igstPercent : 0.0,
-             roundOff: typeof m.roundOff === "number" ? m.roundOff : 0,
-             rows: itemsToRows(m.items),
-           }));     
-                 setEstimates(mappedEstimates);
-         }
+         if (estimateGroup) {
+            setEstimateGroupId(estimateGroup.id || null);
+            const mappedEstimates = (estimateGroup.modules || []).map((m, idx) => {
+              const est = {
+                id: `estimate-${idx}`,
+                moduleId: m.id || null,
+                title: `Estimate ${String.fromCharCode(65 + idx)}`,
+                tag: m.scopeLabel || "",
+                discountPercent: typeof m.discountPercent === "number" ? m.discountPercent : 0.0,
+                tdsPercent:
+                  typeof m.tdsPercent === "number"
+                    ? m.tdsPercent
+                    : typeof estimateGroup.tdsPercent === "number"
+                    ? estimateGroup.tdsPercent
+                    : 0,
+                cgstPercent: typeof m.cgstPercent === "number" ? m.cgstPercent : 2.5,
+                sgstPercent: typeof m.sgstPercent === "number" ? m.sgstPercent : 2.5,
+                igstPercent: typeof m.igstPercent === "number" ? m.igstPercent : 0.0,
+                roundOff: typeof m.roundOff === "number" ? m.roundOff : 0,
+                rows: itemsToRows(m.items),
+              };
+              return {
+                ...est,
+                savedSig: estimateSig(est),
+                apiTotals: {
+                  subtotal: m.subTotal,
+                  discount: m.discountAmount,
+                  amountAfterDiscount: m.subTotal - m.discountAmount,
+                  tds: m.tdsAmount,
+                  cgst: m.cgstAmount,
+                  sgst: m.sgstAmount,
+                  igst: m.igstAmount,
+                  roundOff: m.roundOff,
+                  grandTotal: m.grandTotal,
+                },
+              };
+            });
+            setEstimates(mappedEstimates);
+          }
+
+          // must stay inside the `if (Array.isArray(quotation.groups))` branch
+        setApiSummary({
+  quotationTotal: quotation.quotationTotal,
+  estimatePaid: estimateGroup?.totalPaid,
+  estimateRemaining: estimateGroup?.remainingAmount,
+  otherSub: otherGroup?.subTotal,
+  otherGst: otherGroup?.gstAmount,
+  otherGrand: otherGroup?.grandTotal,
+  otherPaid: otherGroup?.totalPaid,
+  otherRemaining: otherGroup?.remainingAmount,
+});
 
           if (otherGroup) {
             setOtherGroupId(otherGroup.id || null);
@@ -690,10 +781,12 @@ setNotes(quotation.notes ?? "");
         setQuotationCode(quotation.quotationCode ?? "");
         setQuotationDate(quotation.quotationdate ?? "");
          setIsLocked(!!quotation.isLocked);
+         setJustLoaded(true);     
       }
     } catch (err) {
       // No saved quotation yet for this event is an expected case, not an error.
       console.info("No existing exhibition quotation found for this event yet.");
+       setJustLoaded(true); 
     }
   };
 
@@ -727,21 +820,22 @@ setNotes(quotation.notes ?? "");
   const mobileNumber = eventInfo?.mobileno || "-";
   const eventNameDisplay = eventInfo?.eventType?.nameEnglish || "-";
 
- const createPaymentHandlers = (setter) => ({
-    add: () =>
-      setter((prev) => [
-        ...prev,
-        { id: Date.now(), amount: 0, mode: "Bank Transfer (RTGS/NEFT)", dateTime: "", description: "" },
-      ]),
-    update: (id, field, value) => {
-      console.log("[payment update]", { id, field, value }); // ← ADD THIS
-      setter((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
-    },
-    remove: (id) => setter((prev) => prev.filter((p) => p.id !== id)),
-  });
+const createPaymentHandlers = (setter, getGroupId) => ({
+  add: () =>
+    setter((prev) => [
+      ...prev,
+      { id: Date.now(), amount: 0, mode: "Bank Transfer", dateTime: "", description: "" },
+    ]),
+  update: (id, field, value) => {
+    setter((prev) => prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
+  },
+  remove: (id) => deletePayment(getGroupId(), setter, id),
+});
 
-  const mainPayments = createPaymentHandlers(setPaymentsMain);
-  const finalPayments = createPaymentHandlers(setPaymentsFinal);
+const mainPayments = createPaymentHandlers(setPaymentsMain, () => estimateGroupId);
+const finalPayments = createPaymentHandlers(setPaymentsFinal, () => otherGroupId);
+
+
 
   const addEstimate = () => {
     setEstimates((prev) => {
@@ -753,10 +847,11 @@ setNotes(quotation.notes ?? "");
           id: `estimate-${letter.toLowerCase()}-${Date.now()}`,
           moduleId: null,
           title: `Estimate ${letter}`,
-          tag: "Additional Scope",
+          tag: "",
           discountPercent: 0.0,
-          cgstPercent: 2.5,
-          sgstPercent: 2.5,
+          cgstPercent: 9,
+           tdsPercent: 0.0,  
+          sgstPercent: 9,
           igstPercent: 0.0,
           roundOff: 0,
           rows: [{ id: Date.now(), name: "", qty: 1, rate: 0 }],
@@ -778,6 +873,13 @@ setNotes(quotation.notes ?? "");
       prev.map((estimate) => (estimate.id === estimateId ? { ...estimate, [field]: value } : estimate))
     );
   };
+  const handleExtraServerDelete = ({ type, id, moduleId }) => {
+  setExtraGroup((g) =>
+    type === "item"
+      ? { ...g, modules: g.modules.map((m) => m.id === moduleId ? { ...m, items: (m.items || []).filter((i) => i.id !== id) } : m) }
+      : { ...g, payments: (g.payments || []).filter((p) => p.id !== id) }
+  );
+};
 
     // ---- Server-side deletes ----
   const confirmServerDelete = async (text) => {
@@ -845,10 +947,21 @@ const runServerDelete = async (apiCall) => {
       if (!(await confirmServerDelete(`"${estimate.title}" and all its items will be permanently deleted.`))) return;
       const ok = await runServerDelete(() => deletegroupbyquotation(estimateGroupId, estimate.moduleId));
       if (!ok) return;
+      await fetchExistingQuotation();
+      return
     }
     setEstimates((prev) => prev.filter((e) => e.id !== estimate.id));
   };
-
+// Section 03: delete a whole date scope (module)
+const deleteDay = async (day) => {
+  if (day.moduleId && otherGroupId) {
+    if (!(await confirmServerDelete(`"${day.label || day.date || "This date scope"}" and all its items will be permanently deleted.`))) return;
+    const ok = await runServerDelete(() => deletegroupbyquotation(otherGroupId, day.moduleId));
+    if (!ok) return;
+  }
+  // unsaved scopes (no moduleId) are just removed locally
+  setDays((prev) => prev.filter((d) => d.id !== day.id));
+};
   // Section 03: delete one item row from a date scope
   const deleteDayRow = async (dayId, rowId) => {
     const day = days.find((d) => d.id === dayId);
@@ -862,36 +975,24 @@ const runServerDelete = async (apiCall) => {
       prev.map((d) => (d.id === dayId ? { ...d, rows: d.rows.filter((r) => r.id !== rowId) } : d))
     );
   };
+// Payments (Section 02 / Section 04): delete one advance payment
+const deletePayment = async (groupId, setter, paymentId) => {
+  const backendId = toBackendId(paymentId);
 
+  // Already saved on the server -> delete there, then reload from the API
+  if (backendId && groupId) {
+    if (!(await confirmServerDelete("This payment will be permanently deleted."))) return;
+    const ok = await runServerDelete(() => deletepaymemtbyqxhibition(groupId, backendId));
+    if (!ok) return;
+    await fetchExistingQuotation();
+    return;
+  }
+
+  // Not saved yet -> just remove it from the screen
+  setter((prev) => prev.filter((p) => p.id !== paymentId));
+};
   // Combined totals across every estimate currently on the page.
-  const allRows = estimates.flatMap((e) => e.rows);
-  const combinedSubtotal = allRows.reduce(
-    (sum, r) => sum + Number(r.qty || 0) * Number(r.rate || 0),
-    0
-  );
-  const estimateTotals = estimates.map((estimate) => calcTotals(estimate.rows, {
-    tdsPercent,
-    discountPercent: estimate.discountPercent,
-    cgstPercent: estimate.cgstPercent,
-    sgstPercent: estimate.sgstPercent,
-    igstPercent: estimate.igstPercent,
-    roundOff: estimate.roundOff,
-  }));
-  const combinedGST = estimateTotals.reduce((sum, totals) => sum + totals.cgst + totals.sgst + totals.igst, 0);
-  const combinedTDS = estimateTotals.reduce((sum, totals) => sum + totals.tds, 0);
-  const combinedGrandTotal = estimateTotals.reduce((sum, totals) => sum + totals.grandTotal, 0);
-  const totalPaidMain = paymentsMain.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-// Section 03 (date-wise) total
-const otherTotal = days.reduce(
-  (sum, d) => sum + d.rows.reduce((s, r) => s + Number(r.qty || 0) * Number(r.rate || 0), 0),
-  0
-);
 
-// Section 04 final totals
-const finalGrandTotal = combinedGrandTotal + otherTotal;
-const totalPaidFinal = paymentsFinal.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-const remainingMain = combinedGrandTotal - totalPaidMain;
-const remainingFinal = finalGrandTotal - totalPaidFinal;
   const toggleDay = (id) => setDays(days.map((d) => (d.id === id ? { ...d, open: !d.open } : d)));
   const updateDayRow = (dayId, rowId, field, value) =>
     setDays(
@@ -917,51 +1018,63 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
         id: `day-${Date.now()}`,
         moduleId: null,
         date: "",
-        label: "New Scope",
+        label: "",
         open: true,
         rows: [{ id: Date.now(), name: "", qty: 1, rate: 0 }],
       },
     ]);
-  };
+  };// A row counts as "empty" until the user types a name or a rate
+const isBlankRow = (row) =>
+  !String(row.name || "").trim() && !(Number(row.rate) > 0);
 
-  // ---- Build the update-API payload from current state ----
+// Saved modules always go through; new ones only if something was entered
+const shouldSendEstimate = (estimate) =>
+  !!estimate.moduleId || estimate.rows.some((r) => !isBlankRow(r));
+
+const shouldSendDay = (day) =>
+  !!day.moduleId ||
+  !!day.date ||
+  !!String(day.label || "").trim() ||
+  day.rows.some((r) => !isBlankRow(r));
+
+// For new modules, also drop the empty default rows
+const rowsForApi = (module) =>
+  module.moduleId ? module.rows : module.rows.filter((r) => !isBlankRow(r));
+
   const buildEstimateModules = () =>
-    estimates.map((estimate, idx) => ({
-      id: estimate.moduleId || null,
-      moduleType: MODULE_TYPE_ESTIMATE,
-      displayOrder: idx + 1,
-      discountPercent: Number(estimate.discountPercent || 0.0),
-      cgstPercent: Number(estimate.cgstPercent ?? 2.5),
-      sgstPercent: Number(estimate.sgstPercent ?? 2.5),
-      igstPercent: Number(estimate.igstPercent ?? 0.0),
-      tdsPercent: Number(tdsPercent || 0.0),
-      roundOff: Number(estimate.roundOff || 0),
-      scopeDate: "",
-      scopeLabel: estimate.tag || estimate.title,
-      items: rowsToItems(estimate.rows),
-    }));
+  estimates.filter(shouldSendEstimate).map((estimate, idx) => ({
+    id: estimate.moduleId || null,
+    moduleType: MODULE_TYPE_ESTIMATE,
+    displayOrder: idx + 1,
+    discountPercent: Number(estimate.discountPercent || 0.0),
+    cgstPercent: Number(estimate.cgstPercent ?? 2.5),
+    sgstPercent: Number(estimate.sgstPercent ?? 2.5),
+    igstPercent: Number(estimate.igstPercent ?? 0.0),
+    tdsPercent: Number(estimate.tdsPercent || 0.0), 
+    roundOff: Number(estimate.roundOff || 0),
+    scopeDate: "",
+    // scopeLabel: estimate.tag || estimate.title,
+    items: rowsToItems(rowsForApi(estimate)),
+  }));
 
-  const buildOtherModules = () =>
-    days.map((day, idx) => ({
-      id: day.moduleId || null,
-      moduleType: MODULE_TYPE_OTHER,
-      displayOrder: idx + 1,
-      discountPercent: 0.0,
-      cgstPercent: 0.0,
-      sgstPercent: 0.0,
-      igstPercent: 0.0,
-      tdsPercent: 0.0,
-      roundOff: 0.0,
-      scopeDate: day.date || "",
-      scopeLabel: day.label || "",
-      items: rowsToItems(day.rows),
-    }));
+const buildOtherModules = () =>
+  days.filter(shouldSendDay).map((day, idx) => ({
+    id: day.moduleId || null,
+    moduleType: MODULE_TYPE_OTHER,
+    displayOrder: idx + 1,
+    discountPercent: 0.0,
+    cgstPercent: 0.0,
+    sgstPercent: 0.0,
+    igstPercent: 0.0,
+    tdsPercent: 0.0,
+    roundOff: 0.0,
+    scopeDate: day.date || "",
+    scopeLabel: day.label || "",
+    items: rowsToItems(rowsForApi(day)),
+  }));
 
-  const buildPayload = () => {
-    console.log("[buildPayload] paymentsMain:", paymentsMain); // ← ADD THIS
-    console.log("[buildPayload] paymentsFinal:", paymentsFinal); // ← ADD THIS
-    console.log("[buildPayload] mapped ESTIMATE payments:", paymentsMain.map(toApiPayment)); // ← ADD THIS
-    console.log("[buildPayload] mapped OTHER payments:", paymentsFinal.map(toApiPayment)); // ← ADD THIS
+  const buildPayload = (overrides = {}) => {
+  const extra = overrides.extraGroup ?? extraGroup;
 
     return {
       billingname: billingName,
@@ -986,32 +1099,72 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
           id: otherGroupId || null,
           groupType: GROUP_TYPE_OTHER,
           discountPercent: 0.0,
-          gstPercent: 18,
+          gstPercent: 0,
           tdsPercent: 0.0,
           modules: buildOtherModules(),
           payments: paymentsFinal.map(toApiPayment),
         },
         {
-          id: extraGroup.id || null,
-          groupType: GROUP_TYPE_EXTRA,
-          discountPercent: extraGroup.discountPercent,
-          gstPercent: extraGroup.gstPercent,
-          tdsPercent: extraGroup.tdsPercent,
-          modules: extraGroup.modules,
-          payments: extraGroup.payments,
-        },
+        id: extra.id || null,
+        groupType: GROUP_TYPE_EXTRA,
+        discountPercent: extra.discountPercent,
+        gstPercent: extra.gstPercent,
+        tdsPercent: extra.tdsPercent,
+        modules: extra.modules,
+        payments: extra.payments,
+      },
       ],
     };
   };
 
-  // ---- Save / Update the quotation itself ----
- const handleSaveQuotation = async () => {
-    if (!eventId) {
-       console.error("Event ID missing.");
-      return;
-    }
+  const currentSig = JSON.stringify(buildPayload());
+  const isDirty = baseline !== null && baseline !== currentSig;
 
-  const payload = buildPayload();
+  useEffect(() => {
+    if (justLoaded) {
+      setBaseline(currentSig);
+      setJustLoaded(false);
+    }
+  }, [justLoaded, currentSig]);
+
+const useApi = !!apiSummary && baseline !== null && !isDirty;
+
+// ---- Estimates ----
+const estimateTotals = estimates.map(getEstimateTotals);
+const combinedSubtotal = estimateTotals.reduce((s, t) => s + t.subtotal, 0);
+const combinedGST = estimateTotals.reduce((s, t) => s + t.cgst + t.sgst + t.igst, 0);
+const combinedDiscount = estimateTotals.reduce((s, t) => s + t.discount, 0);
+const combinedAfterDiscount = estimateTotals.reduce((s, t) => s + t.amountAfterDiscount, 0);
+const combinedTDS = estimateTotals.reduce((s, t) => s + t.tds, 0);
+const combinedGrandTotal = estimateTotals.reduce((s, t) => s + t.grandTotal, 0);
+const combinedTotalWithGST = combinedAfterDiscount + combinedGST;
+const totalPaidMain = useApi
+  ? Number(apiSummary.estimatePaid || 0)
+  : paymentsMain.reduce((s, p) => s + Number(p.amount || 0), 0);
+const remainingMain = useApi
+  ? Number(apiSummary.estimateRemaining || 0)
+  : combinedGrandTotal - totalPaidMain;
+
+// ---- Other only (no GST) ----
+const localOtherSub = days.reduce(
+  (sum, d) => sum + d.rows.reduce((s, r) => s + Number(r.qty || 0) * Number(r.rate || 0), 0),
+  0
+);
+const otherSub = useApi ? Number(apiSummary.otherSub || 0) : localOtherSub;
+const otherGrand = otherSub; // no GST, so grand total = subtotal
+
+const totalPaidFinal = useApi
+  ? Number(apiSummary.otherPaid || 0)
+  : paymentsFinal.reduce((s, p) => s + Number(p.amount || 0), 0);
+const remainingFinal = otherGrand - totalPaidFinal;
+
+const handleSaveQuotation = async (overrides = {}) => {
+  if (!eventId) {
+    console.error("Event ID missing.");
+    return;
+  }
+
+  const payload = buildPayload(overrides);
     console.log("[handleSaveQuotation] full payload sent to API:", JSON.stringify(payload, null, 2));
 
     setSaving(true);
@@ -1030,6 +1183,7 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
 
          if (savedId) setQuotationId(savedId);
          await fetchExistingQuotation();
+          return true; 
        } else {
         console.error(message);
         Swal.fire({
@@ -1037,6 +1191,7 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
           title: "Failed",
           text: message,
         });
+          return false;
       }
     } catch (err) {
       console.error("Error saving exhibition quotation:", err);
@@ -1045,21 +1200,45 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
         title: "Error",
         text: err?.response?.data?.msg || err?.message || "Something went wrong while saving.",
       });
+       return false; 
     } finally {
       setSaving(false);
     }
   };
 
   // ---- Lock / Unlock the quotation ----
-  const handleToggleLock = async () => {
-    if (!quotationId) {
-      Swal.fire({
-        icon: "warning",
-        title: "Nothing to lock yet",
-        text: "Save the quotation first before locking it.",
-      });
-      return;
-    }
+const handleToggleLock = async () => {
+  if (!quotationId) {
+    Swal.fire({ icon: "warning", title: "Nothing to lock yet", text: "Save the quotation first before locking it." });
+    return;
+  }
+
+  const action = isLocked ? "unlock" : "lock";
+
+  if (isDirty) {
+    const r = await Swal.fire({
+      icon: "warning",
+      title: "Unsaved changes",
+      text: `You have unsaved changes. Save them before you ${action}?`,
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: "Save first",
+      denyButtonText: `${isLocked ? "Unlock" : "Lock"} without saving`,
+      cancelButtonText: "Cancel",
+    });
+    if (r.isDismissed) return;
+    if (r.isConfirmed && !(await handleSaveQuotation())) return;
+  }
+
+  const confirm = await Swal.fire({
+    icon: "question",
+    title: `Are you sure you want to ${action} this quotation?`,
+    showCancelButton: true,
+    confirmButtonText: `Yes, ${action}`,
+    cancelButtonText: "Cancel",
+  });
+  if (!confirm.isConfirmed) return;
+
 
     setLockToggling(true);
     try {
@@ -1097,13 +1276,17 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
   };
   return (
     <div className="min-h-screen font-sans text-slate-800">
-      <ExtraQuotationModal
-        open={isExtraQuotationOpen}
-        onClose={() => setIsExtraQuotationOpen(false)}
-        group={extraGroup}
-        sectionLabel={eventNameDisplay}
-        onSave={setExtraGroup}
-      />
+     <ExtraQuotationModal
+  open={isExtraQuotationOpen}
+  onClose={() => setIsExtraQuotationOpen(false)}
+  group={extraGroup}
+  sectionLabel={eventNameDisplay}
+  onSave={async (group) => {
+    setExtraGroup(group);
+    return await handleSaveQuotation({ extraGroup: group });
+  }}
+  onServerDelete={handleExtraServerDelete}
+/>
       <SetupModal
         open={isSetupOpen}
         onClose={() => setIsSetupOpen(false)}
@@ -1299,32 +1482,37 @@ const remainingFinal = finalGrandTotal - totalPaidFinal;
 
         {/* Section 01 */}
 <SectionHeader
-  no="01"
-  title="Estimates Breakdown"
+  // no="01"
+  title="Estimates"
   open={openSections.s1}
   onToggle={() => toggleSection("s1")}
-  right={
-    <div className="flex items-center gap-2 text-[12px]">
-      <span className="text-slate-500 font-medium">
-        {estimates.length} {estimates.length === 1 ? "Estimate" : "Estimates"} Active
-      </span>
-    
-    </div>
-  }
+ right={
+  <div className="flex items-center gap-3 text-[12px]">
+    <span className="text-slate-500 font-medium">
+      {estimates.length} {estimates.length === 1 ? "Estimate" : "Estimates"} Active
+    </span>
+    <button
+      onClick={addEstimate}
+      className="border border-dashed border-slate-300 bg-white rounded-lg px-3 py-1.5 text-[12px] text-primary font-semibold flex items-center gap-1.5 hover:bg-slate-50"
+    >
+      <Plus size={13} /> Add Estimate
+    </button>
+  </div>
+}
 />
 
 <div className={openSections.s1 ? "" : "hidden"}>
-  {estimates.map((estimate) => (
-    <EstimateTable
-      key={estimate.id}
+{estimates.map((estimate, i) => (
+     <EstimateTable key={estimate.id} totals={estimateTotals[i]}
       title={estimate.title}
       tag={estimate.tag}
       rows={estimate.rows}
       setRows={(newRows) => updateEstimateRows(estimate.id, newRows)}
       canDelete={estimates.length > 1}
   onDeleteRow={(rowId) => deleteEstimateRow(estimate, rowId)}
-onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
-      onTdsPercentChange={setTdsPercent}
+onDeleteEstimate={() => deleteEstimate(estimate)}
+tdsPercent={estimate.tdsPercent ?? 0}
+onTdsPercentChange={(val) => updateEstimateField(estimate.id, "tdsPercent", val)}
       discountPercent={estimate.discountPercent ?? 0.0}
       onDiscountPercentChange={(val) => updateEstimateField(estimate.id, "discountPercent", val)}
       cgstPercent={estimate.cgstPercent ?? 2.5}
@@ -1339,51 +1527,48 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
   ))}
 
   {/* Shared notes for Section 01 as a whole, instead of repeating per estimate */}
-  <div className="border border-slate-200 rounded-lg p-3 text-[11.5px] leading-relaxed text-slate-500 mt-2.5">
-    <div className="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">
-      TAX &amp; STATUTORY NOTES
-    </div>
-    <textarea
-      value={notes}
-      onChange={(e) => setNotes(e.target.value)}
-      rows={3}
-      placeholder="Add tax & statutory notes..."
-      className="w-full resize-y border border-slate-200 rounded-lg px-2.5 py-2 text-[11.5px] leading-relaxed text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-    />
-  </div>
+  
 
     <button onClick={addEstimate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-primary font-semibold mt-2.5 flex items-center justify-center gap-2">
     <Calendar size={15} /> Add Estimate
   </button>
-</div>
 
-        {/* Section 02 */}
+
+        
        {/* Section 02 */}
-<SectionHeader
-  no="02"
-  title="Overall Estimate Summary & Payment Settlement"
-  open={openSections.s2}
-  onToggle={() => toggleSection("s2")}
-/>
-<div className={`border border-blue-100 rounded-lg p-3 ${openSections.s2 ? "" : "hidden"}`}>
-  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
-    <div className="flex justify-between py-1.5 text-[13.5px]">
-      <span>Combined Subtotal</span>
-      <span>{money(combinedSubtotal)}</span>
-    </div>
-    <div className="flex justify-between py-1.5 text-[13.5px]">
-      <span>Total GST (CGST + SGST + IGST)</span>
-      <span>{money(combinedGST)}</span>
-    </div>
-    <div className="flex justify-between py-1.5 text-[13.5px] text-red-600">
-      <span>Total Statutory TDS Deduction</span>
-      <span>-{money(combinedTDS)}</span>
-    </div>
-    <div className="flex justify-between py-2 mt-0.5 border-t border-slate-200 font-bold text-lg text-blue-700">
-      <span>Combined Grand Total</span>
-      <span>{money(combinedGrandTotal)}</span>
-    </div>
+
+<div className="border border-blue-100 rounded-lg p-3 mt-4">
+    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5">
+  <div className="flex justify-between py-1.5 text-[13.5px]">
+    <span>Combined Subtotal</span>
+    <span>{money(combinedSubtotal)}</span>
   </div>
+  <div className="flex justify-between py-1.5 text-[13.5px] text-red-500">
+    <span>Discount Total</span>
+    <span>-{money(combinedDiscount)}</span>
+  </div>
+  <div className="flex justify-between py-1.5 text-[13.5px] font-semibold bg-blue-50 rounded-lg px-2">
+    <span>After Discount</span>
+    <span>{money(combinedAfterDiscount)}</span>
+  </div>
+  <div className="flex justify-between py-1.5 text-[13.5px]">
+    <span>Total GST (CGST + SGST + IGST)</span>
+    <span>{money(combinedGST)}</span>
+  </div>
+    <div className="flex justify-between py-1.5 text-[13.5px] font-semibold bg-blue-50 rounded-lg px-2">
+    <span>Grand Total with GST</span>
+    <span>{money(combinedTotalWithGST)}</span>
+  </div>
+
+  <div className="flex justify-between py-1.5 text-[13.5px] text-red-600">
+    <span>Total Statutory TDS Deduction</span>
+    <span>{money(combinedTDS)}</span>
+  </div>
+  <div className="flex justify-between py-2 mt-0.5 border-t border-slate-200 font-bold text-lg text-blue-700">
+    <span>Combined Grand Total</span>
+    <span>{money(combinedGrandTotal)}</span>
+  </div>
+</div>
 </div>
 
         {/* Payment Details — Section 02's own advance payments, against the
@@ -1432,7 +1617,7 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
                     value={p.mode}
                     onChange={(e) => mainPayments.update(p.id, "mode", e.target.value)}
                   >
-                    <option>Bank Transfer (RTGS/NEFT)</option>
+                    <option>Bank Transfer</option>
                     <option>UPI</option>
                     <option>Cash</option>
                     <option>Cheque</option>
@@ -1498,12 +1683,25 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
           </div>
           <span className="font-bold text-red-600 text-[15px]">{money(remainingMain)}</span>
         </div>
+        <div className="border border-slate-200 rounded-lg p-3 text-[11.5px] leading-relaxed text-slate-500 mt-2.5">
+    <div className="text-[11px] font-semibold text-slate-400 tracking-wide mb-2">
+      NOTES
+    </div>
+    <textarea
+      value={notes}
+      onChange={(e) => setNotes(e.target.value)}
+      rows={3}
+      placeholder="Addnotes..."
+      className="w-full resize-y border border-slate-200 rounded-lg px-2.5 py-2 text-[11.5px] leading-relaxed text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+    />
+  </div>
 </div>
+
 
        {/* Section 03 */}
 <SectionHeader
   no="03"
-  title="Estimate Amount (Other)"
+  title="Other"
   open={openSections.s3}
   onToggle={() => toggleSection("s3")}
   right={
@@ -1514,51 +1712,51 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
   }
 />
 
-<div className={`border m-3 border-blue-100 rounded-lg p-3 ${openSections.s3 ? "" : "hidden"}`}>
-  {days.length === 0 && (
+<div className={`border mt-1 border-blue-100 rounded-lg p-3 ${openSections.s3 ? "" : "hidden"}`}>
+    {days.length === 0 && (
     <div className="text-center text-slate-400 text-[12.5px] py-4">
       No dates added yet — use the button below to add one.
     </div>
   )}
   {days.map((day) => (
-    <DayCard
-      key={day.id}
-      day={day}
-      onToggle={toggleDay}
-      onUpdateRow={updateDayRow}
-      onDeleteRow={deleteDayRow}
-      onAddRow={addDayRow}
-      onUpdateField={updateDayField}
-    />
+   <DayCard
+  key={day.id}
+  day={day}
+  onToggle={toggleDay}
+  onUpdateRow={updateDayRow}
+  onDeleteRow={deleteDayRow}
+  onDeleteDay={deleteDay}
+  onAddRow={addDayRow}
+  onUpdateField={updateDayField}
+/>
   ))}
   <button onClick={addDate} className="w-full border border-dashed border-slate-300 bg-white rounded-lg py-3 text-[13px] text-primary font-semibold mt-2.5 flex items-center justify-center gap-2">
     <Calendar size={15} /> Add Date Particulars Scope
   </button>
-</div>
+
+
       {/* Section 04 */}
 
-  <div className="flex justify-between items-center flex-wrap gap-2 pb-3 mb-3 border-b border-slate-100">
+  <div className="flex justify-between items-center flex-wrap gap-2 p-3 pb-3 mb-3 border-b border-slate-100">
     <button type="button" onClick={() => toggleSection("s4")} className="flex items-center gap-2 text-left">
       <ChevronDown size={16} className={`text-slate-500 transition-transform ${openSections.s4 ? "" : "-rotate-90"}`} />
       <span className="text-[13px] font-extrabold text-blue-800 tracking-tight">
-        SECTION 04
         <span className="mx-2 text-slate-300">•</span>
-        <span className="text-[13px] font-bold text-black">Estimate Amount (Other) — Grand Total</span>
+        <span className="text-[14px] font-bold text-black">Grand Total</span>
       </span>
     </button>
-    <span className="bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-medium px-2.5 py-1 rounded-full">
-      {estimates.length === 1 ? "Estimate A" : `All ${estimates.length} Estimates`} + Date-wise Scope Aggregated
-    </span>
-  </div>
- <div className={openSections.s4 ? "" : "hidden"}>  
-  {/* Combined Grand Total */}
-  <div className="flex m-3 justify-between items-center bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3">
-    <span className="text-[13px] font-semibold text-blue-800">Combined Grand Total</span>
-    <span className="text-lg font-bold text-blue-700">{money(finalGrandTotal)}</span>
+    
   </div>
 
-  {/* Payment Details — Section 04's own advance payments, against the
-      final combined grand total (Section 01 + Section 03) */}
+<div className={openSections.s4 ? "mt-4" : "hidden"}>
+  {/* Section 3 summary */}
+ {/* Other total */}
+<div className="flex m-3 justify-between items-center bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-3">
+  <span className="text-[13px] font-semibold text-blue-800">Other Grand Total</span>
+  <span className="text-lg font-bold text-blue-700">{money(otherGrand)}</span>
+</div>
+
+  {/* Payment Details */}
   <div className="bg-white border border-slate-200 rounded-xl m-2 p-3.5 mt-3">
     <div className="flex justify-between items-center mb-3">
       <div>
@@ -1566,7 +1764,7 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
           <Wallet size={15} />
           Payment Details
         </div>
-        <div className="text-[10.5px] text-slate-400 mt-0.5 ml-5">Advance against the final combined grand total</div>
+        <div className="text-[10.5px] text-slate-400 mt-0.5 ml-5">Advance against the Section 3 grand total</div>
       </div>
       <button
         onClick={finalPayments.add}
@@ -1665,14 +1863,16 @@ onDeleteEstimate={() => deleteEstimate(estimate)}      tdsPercent={tdsPercent}
       <div>
         <div className="text-[13.5px] font-semibold text-red-600">Remaining Payment Due</div>
         <div className="text-[11px] text-slate-500">
-          Grand Total ({money(finalGrandTotal)}) minus Advance Paid ({money(totalPaidFinal)})
+          Grand Total ({money(otherGrand)}) minus Advance Paid ({money(totalPaidFinal)})
         </div>
       </div>
     </div>
     <span className="font-bold text-red-600 text-lg">{money(remainingFinal)}</span>
-  </div>      
-  </div>        
-</div>          
-    
+  </div>
+ </div>  
+
+      </div> 
+    </div>     
+    </div>
   );
 }

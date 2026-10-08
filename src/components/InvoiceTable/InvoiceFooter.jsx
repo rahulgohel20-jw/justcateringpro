@@ -8,6 +8,7 @@ import {
 import { Button, Select, Radio, Input } from "antd";
 import { Download } from "lucide-react";
 import { FormattedMessage, useIntl } from "react-intl";
+    import { useModuleAccess } from "../../hooks/useModuleAccess";
 
 const { TextArea } = Input;
 
@@ -22,6 +23,12 @@ const InvoiceFooter = ({
   bankDetails,
   permissionInvoice,
    extraTaxTotal = 0,
+  remainingAmount = 0,
+  totalAdvance = 0,
+  showGenerateButton = false,
+  onGenerateMultiple,
+  showDeleteButton = false,
+  onDelete,
 }) => {
   const [notes, setNotes] = useState("");
   const [cgst, setCgst] = useState(0);
@@ -41,7 +48,8 @@ const [isDiscountPercentage, setIsDiscountPercentage] = useState(false);
 const [discountPercentage, setDiscountPercentage] = useState(0);
   console.log("permisiion", permissionInvoice);
   const initializedRef = useRef(false);
-
+ const { hasModuleAccess } = useModuleAccess();
+        const canAccessgeneratemultipleinvoice = hasModuleAccess("Generate multiple invoices");
   const intl = useIntl();
 
   // Calculate subtotal from rows
@@ -510,17 +518,17 @@ const handleToggleDiscountMode = () => {
             </div>
 
             {/* Grand Total */}
-            <div className="flex justify-between pt-2 font-semibold">
-              <span className="text-base text-primary">
-                <FormattedMessage
-                  id="COMMON.GRAND_TOTAL"
-                  defaultMessage="Grand Total"
-                />
-              </span>
-              <span className="text-lg text-primary font-bold">
-                ₹{grandTotal.toFixed(2)}
-              </span>
-            </div>
+            <div className="flex items-center justify-between">
+  <span className="text-lg font-semibold text-primary">Grand Total</span>
+
+  <div className="flex items-center gap-6">
+    <span className="text-xl font-bold text-primary">
+      ₹{Number(grandTotal).toFixed(2)}
+    </span>
+
+    
+  </div>
+</div>
             {extraTaxTotal > 0 && (
   <div className="text-xs text-gray-500 text-right -mt-1">
     (incl. ₹{Number(extraTaxTotal).toFixed(2)} Food/Service/VAT Tax)
@@ -593,13 +601,36 @@ const handleToggleDiscountMode = () => {
           {/* <button className="btn btn-light">
             <FormattedMessage id="COMMON.CANCEL" defaultMessage="Cancel" />
           </button> */}
-        {permissionInvoice.view  && (
-        <button className="btn btn-primary" onClick={onSave}>
-          <i className="ki-outline ki-paper-plane"></i>
-
-          <FormattedMessage id="COMMON.SAVE_AND_SEND" defaultMessage="Save " />
-        </button>
+             <div className="flex flex-wrap items-center justify-end gap-2">
+        {showDeleteButton && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="btn text-white btn-danger"
+          >
+            <i className="ki-filled ki-trash"></i>
+            Delete Invoice
+          </button>
         )}
+
+        {canAccessgeneratemultipleinvoice && showGenerateButton && (
+          <button
+            type="button"
+            onClick={onGenerateMultiple}
+            className="btn text-white btn-primary"
+          >
+            <i className="ki-filled ki-plus"></i>
+            Generate Multiple Invoice
+          </button>
+        )}
+
+        {permissionInvoice.view && (
+          <button className="btn btn-primary" onClick={onSave}>
+            <i className="ki-outline ki-paper-plane"></i>
+            <FormattedMessage id="COMMON.SAVE_AND_SEND" defaultMessage="Save " />
+          </button>
+        )}
+      </div>
       </div>
     </>
   );

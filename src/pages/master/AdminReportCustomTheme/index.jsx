@@ -434,7 +434,7 @@ const AdminReportCustomThem = () => {
                   </div>
 
                   {/* PDF View Button - Only show for themes with PDF - Highest z-index to be above everything */}
-                  {theme.dummyPdf && (
+                  {/* {theme.dummyPdf && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -463,10 +463,10 @@ const AdminReportCustomThem = () => {
                         />
                       </svg>
                     </button>
-                  )}
+                  )} */}
 
                   {/* Pay Button Overlay - Only show for locked themes on hover - Center positioned */}
-                  {!theme.isDefault && !theme.ispayment && (
+                  {/* {!theme.isDefault && !theme.ispayment && (
                     <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <button
                         onClick={(e) => {
@@ -494,7 +494,7 @@ const AdminReportCustomThem = () => {
                         />
                       </button>
                     </div>
-                  )}
+                  )} */}
 
                   <div className="h-[250px] w-full overflow-hidden bg-gray-100 relative">
                     {/* Display namePlateBg for nameplates, frontPage for themes */}

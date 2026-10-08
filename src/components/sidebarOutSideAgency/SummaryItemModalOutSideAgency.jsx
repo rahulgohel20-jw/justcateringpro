@@ -144,24 +144,39 @@ export default function SummaryItemModalOutsideAgency({
     return () => window.removeEventListener("keydown", handleEscape);
   }, [open, onClose]);
 
-  useEffect(() => {
-    if (!open) return;
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await GetOutsideSummary(eventFunctionId, eventId, type);
-        const menuAllocationDetails = response.data.data["Menu Allocation Details"];
-        if (menuAllocationDetails?.length > 0) setApiData(menuAllocationDetails);
-      } catch (error) {
-        console.error("Error fetching summary data:", error);
-        setError("Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [open, eventFunctionId, eventId, type]);
+useEffect(() => {
+  if (!open) return;
+
+  let cancelled = false;
+
+  setApiData(null);
+  setExpandedItems({});
+  setError(null);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const response = await GetOutsideSummary(eventFunctionId, eventId, type);
+      if (cancelled) return;
+
+      const details = response?.data?.data?.["Menu Allocation Details"];
+      setApiData(Array.isArray(details) && details.length > 0 ? details : []);
+    } catch (err) {
+      if (cancelled) return;
+      console.error("Error fetching summary data:", err);
+      setApiData([]);
+      setError("Failed to load data");
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
+
+  fetchData();
+
+  return () => {
+    cancelled = true;
+  };
+}, [open, eventFunctionId, eventId, type]);
 
   const getFunctionVenue = (eventFunction) => {
   if (!eventFunction) return "N/A";
@@ -272,6 +287,7 @@ const singleFunctionInfo =
  formData.append("withVendor",0);
  formData.append("isAllItemTogether",0);
  formData.append("isShowRoomDetails",0);
+ formData.append("isShowFunctionDetails",0);
  formData.append("isShowFunctionImg",0);
   formData.append("showAddOnLabel",0);
   formData.append("showLastPage",0);
@@ -288,6 +304,7 @@ const singleFunctionInfo =
   formData.append("isShowEventRemarks", 0);
   formData.append("showAdditional", 0);
   formData.append("isAgencyNextPage", 0);
+  formData.append("isItemShow",1);
   formData.append("storeIssueWise" , 0);
   formData.append("isAddStoreIssue",0);
   formData.append("is5Column" , 0);

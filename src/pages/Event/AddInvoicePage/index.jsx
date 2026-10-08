@@ -12,6 +12,8 @@ import {
   GetQuotation,
   CashAccountGetAll,
     AddLogs,
+      deleteinvoicebyid, 
+       deleteinvoiceitemid,  
 } from "@/services/apiServices";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -25,18 +27,42 @@ import { FormattedMessage, useIntl } from "react-intl";
 import InvoiceTheme from "./InvoiceTheme";
 import { GetbankdetailsbyuserId } from "../../../services/apiServices";
 import { usePermission } from "../../../hooks/usePermission";
+    import { useModuleAccess } from "../../../hooks/useModuleAccess";
+
 dayjs.extend(customParseFormat);
 
 const { TextArea } = Input;
 
-const AddInvoicePage = () => {
+const AddInvoicePage = ({
+  isAdditional = false,
+    invoiceId = null,  
+  instanceNo = 1,
+  showGenerateButton = true,
+  onGenerateMultiple,
+  onRemove, 
+  groupId,           
+  onGroupIdChange,
+}) => {
+  const getUserHsn = () => {
+  try {
+    const authStorage = localStorage.getItem("auth-storage");
+    if (!authStorage) return "";
+    const parsed = JSON.parse(authStorage);
+    return String(parsed?.state?.user?.hsnNumber ?? "");
+  } catch {
+    return "";
+  }
+};
   const [invoiceCode, setInvoiceCode] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
   const intl = useIntl();
 const initializedRef = useRef(false);
+ const { hasModuleAccess } = useModuleAccess();
+        const canAccessgeneratemultipleinvoice = hasModuleAccess("Generate multiple invoices");
    const OFFER_RATE_USER_IDS = ["501"]; 
- 
+ const [selectedBankId, setSelectedBankId] = useState("");
+const [hsnSac, setHsnSac] = useState(() => getUserHsn());
 const [foodTax, setFoodTax] = useState("0");
 const [foodTaxAmount, setFoodTaxAmount] = useState("0");
 const [foodTaxTotalAmount, setFoodTaxTotalAmount] = useState("0");
@@ -58,7 +84,9 @@ const hideTaxColumns = HIDE_TAX_COLUMNS_USER_IDS.includes(String(invoiceUserId))
     const isVatUser = VAT_USER.includes(String(invoiceUserId));
   
 const isTaxUser = TAX_USER.includes(String(invoiceUserId));
-  
+  const REMAINING_USER_IDS = ["757"];
+const showRemaining = REMAINING_USER_IDS.includes(String(invoiceUserId));
+const [savedRemaining, setSavedRemaining] = useState(null);
   const getUserRoleId = () => {
   try {
     const authStorage = localStorage.getItem("auth-storage");
@@ -261,7 +289,7 @@ const buildInvoiceChangeSummary = (prevSnapshot, current) => {
   const [bankDetails, setBankDetails] = useState([]);
   const [payments, setPayments] = useState([]);
   const [footerData, setFooterData] = useState({
-    notes: "Thanks for your Business...",
+    notes: "",
     gst: 0,
     cgst: 0,
     sgst: 0,
@@ -358,7 +386,7 @@ const initialInvoiceSnapshotRef = useRef(null);
   (parseFloat(serviceTaxTotalAmount) || 0) +
   (parseFloat(vatTaxTotalAmount) || 0);
 
-const finalGrandTotal = footerData.grandTotal || 0;
+const finalGrandTotal = (footerData.grandTotal || 0) + extraTaxTotal;
 const finalRemainingAmount = finalGrandTotal - totalAdvancePaid;
 
   useEffect(() => {
@@ -407,7 +435,15 @@ const fetchInvoiceCode = async () => {
   };
 
   const primaryBank = bankDetails.find((b) => b.isPrimary) || bankDetails[0];
+const selectedBank =
+  bankDetails.find((b) => String(b.id) === String(selectedBankId)) ||
+  primaryBank;
 
+useEffect(() => {
+  if (!selectedBankId && primaryBank) {
+    setSelectedBankId(String(primaryBank.id));
+  }
+}, [bankDetails]);
   useEffect(() => {
     if (invoiceData?.createdAt) {
       setInvoiceDate(invoiceData.createdAt.split("T")[0]);
@@ -425,15 +461,20 @@ const fetchInvoiceCode = async () => {
       });
     }
   }, [invoiceData]);
-  useEffect(() => {
-    if (!eventId) return;
 
-    if (fromQuotation) {
-      fetchFromQuotation();
-    } else {
-      fetchInvoiceData();
-    }
-  }, [eventId]);
+ useEffect(() => {
+  if (!eventId) return;
+
+  if (invoiceId) {
+    fetchInvoiceData(invoiceId);          // existing invoice (main or additional)
+  } else if (isAdditional) {
+    fetchBlankInvoice();                  // newly added, unsaved
+  } else if (fromQuotation) {
+    fetchFromQuotation();
+  } else {
+    fetchInvoiceData();
+  }
+}, [eventId]);
 
 
   // FOOD TAX
@@ -492,11 +533,66 @@ const handleVatTaxAmountChange = (value) => {
   const total = (base * pct) / 100;
   setVatTaxTotalAmount(total % 1 === 0 ? total.toString() : total.toFixed(2));
 };
+const fetchBlankInvoice = async () => {
+  try {
+    setLoading(true);
 
-
-  const fetchFromQuotation = async () => {
+    // only read the event info (party, venue, event name, dates)
+    let eventInfo = null;
     try {
-      setLoading(true);
+      const res = await GetInvoiceByEventId(eventId);
+      eventInfo = res?.data?.data?.["Event Invoice Details"]?.[0]?.event || null;
+    } catch (e) {}
+
+    if (!eventInfo) {
+      try {
+        const q = await GetQuotation(eventId, 1, isDecorFromState ?? false);
+        eventInfo =
+          q?.data?.data?.["Event Functions Quotation Details"]?.[0]?.event || null;
+      } catch (e) {}
+    }
+
+    setInvoiceData({
+      id: null, // always a new invoice
+      billingname: "",
+      billingaddress: "",
+      shipname: "",
+      shipaddress: "",
+      gstnumber: "",
+      notes: "",
+      duedate: "",
+      createdAt: new Date().toISOString(),
+      event: eventInfo || {},
+    });
+
+    setRows([
+      {
+        key: `1-${Math.random()}`,
+        name: "",
+        date: "",
+        person: "",
+        extra: 0,
+        rate: 0,
+        offeredRate: 0,
+        amount: 0,
+        isCustom: true,
+        isEventFunction: false,
+        id: 0,
+        isNewRow: true,
+      },
+    ]);
+    setPayments([]);
+    setDueDate(null);
+    setInvoiceDate(dayjs().format("YYYY-MM-DD"));
+    initialInvoiceSnapshotRef.current = null;
+  } finally {
+    setLoading(false);
+  }
+};
+
+ const fetchFromQuotation = async () => {
+  try {
+    setLoading(true);
 const res = await GetQuotation(eventId, 1, isDecorFromState ?? false);
       // copyToInvoice = 1
       const apiData = res?.data?.data?.["Event Functions Quotation Details"];
@@ -584,7 +680,15 @@ isExtraCharges: item.isExtraCharges === true,
 
       setRows(mappedRows);
       setOriginalRows(mappedRows); 
-
+if (showRemaining) {
+  const qRemaining =
+    (parseFloat(qInfo.chequePayment) || 0) +
+    (parseFloat(qInfo.cgstAmnt) || 0) +
+    (parseFloat(qInfo.cgstAmntDecor) || 0) +
+    (parseFloat(qInfo.sgstAmnt) || 0) +
+    (parseFloat(qInfo.sgstAmntDecor) || 0);
+  setSavedRemaining(qRemaining);
+}
      const prevExtraTax =
   (parseFloat(qInfo.foodTaxTotalAmount) || 0) +
   (parseFloat(qInfo.serviceTaxTotalAmount) || 0) +
@@ -693,6 +797,7 @@ setVatTaxTotalAmount(formatAmount(qInfo.vatTaxTotalAmount || 0));
         shipaddress: qInfo.shipaddress || "",
         gstnumber: qInfo.gstnumber || "",
         invoiceCode: invoiceCode || "",
+ 
         invoiceDate: dayjs().format("YYYY-MM-DD"),
         dueDate: qInfo.duedate || "",
         notes: qInfo.notes || "",
@@ -726,19 +831,40 @@ setVatTaxTotalAmount(formatAmount(qInfo.vatTaxTotalAmount || 0));
     }
   };
 
-  const fetchInvoiceData = async () => {
-    try {
-      setLoading(true);
-      const response = await GetInvoiceByEventId(eventId);
+const fetchInvoiceData = async (targetInvoiceId = null, silent = false) => {
+  try {
+if (!silent) setLoading(true); 
+    const response = await GetInvoiceByEventId(eventId);
 
-      if (response.status === 200 && response.data.data) {
-        const invoiceDetailsArray =
-          response?.data?.data?.["Event Invoice Details"];
+    if (response.status === 200 && response.data.data) {
+      const invoiceDetailsArray =
+        response?.data?.data?.["Event Invoice Details"];
 
-        if (invoiceDetailsArray && invoiceDetailsArray.length > 0) {
-          const invoiceDetails = invoiceDetailsArray[0];
-          setInvoiceData(invoiceDetails);
+      if (invoiceDetailsArray && invoiceDetailsArray.length > 0) {
+        // additional invoice → match by its own id, main invoice → isMainInvoice
+        const invoiceDetails = targetInvoiceId
+          ? invoiceDetailsArray.find(
+              (inv) => String(inv.id) === String(targetInvoiceId),
+            )
+          : invoiceDetailsArray.find((inv) => inv.isMainInvoice) ||
+            invoiceDetailsArray[0];
 
+        if (!invoiceDetails) {
+          message.warning("Invoice not found");
+          return;
+        }
+
+        setInvoiceData(invoiceDetails);
+       if (showRemaining) {
+  setSavedRemaining(
+    parseFloat(response?.data?.data?.remainingAmnt) || 0,
+  );
+} 
+        if (!isAdditional && invoiceDetails.invoiceGroupId) {
+  onGroupIdChange?.(invoiceDetails.invoiceGroupId);
+}
+        if (invoiceDetails.bankId) setSelectedBankId(String(invoiceDetails.bankId));
+setHsnSac(invoiceDetails.hsnSac || getUserHsn());
 if (invoiceDetails.invoiceCode) {
   setInvoiceCode(invoiceDetails.invoiceCode);
 }
@@ -937,12 +1063,14 @@ isDiscountPercent: inferredIsPercent,
     } catch (error) {
       console.error("Error fetching invoice data:", error);
       message.error("Failed to load invoice data");
-    } finally {
-      setLoading(false);
-    }
+    }  finally {
+  if (!silent) setLoading(false);
+}
   };
 
  const handleInputChange = (index, field, value) => {
+    const row = rows[index];
+
   setIsEdited(true);
   const updatedRows = rows.map((row, i) =>
     i === index ? { ...row, [field]: value } : row,
@@ -1000,10 +1128,46 @@ isDiscountPercent: inferredIsPercent,
   }
 };
 
-  const handleDeleteRow = (key) => {
-    setIsEdited(true);
-    setRows(rows.filter((row) => row.key !== key));
-  };
+ const handleDeleteRow = async (key) => {
+    if (!canAccessgeneratemultipleinvoice) {
+    message.warning("You don't have permission to delete functions");
+    return;
+  }
+  const row = rows.find((r) => r.key === key);
+
+  // saved item (has a real id) → delete on the server first
+  if (row?.id && row.id > 0) {
+    const result = await Swal.fire({
+      title: "Delete this item?",
+      text: "This item is already saved and will be permanently deleted.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete",
+      confirmButtonColor: "#d33",
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+      setIsSaving(true);
+      const res = await deleteinvoiceitemid(row.id);
+      if (res?.data?.success !== true) {
+        message.error(res?.data?.msg || "Failed to delete item");
+        return;
+      }
+      message.success("Item deleted");
+    } catch (error) {
+      console.error("Delete invoice item error:", error);
+      message.error("Something went wrong while deleting the item");
+      return;
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  // unsaved row (id 0) or server delete done → remove from the table
+  setIsEdited(true);
+  setRows((prev) => prev.filter((r) => r.key !== key));
+};
 
   const handleAddRow = () => {
     setIsEdited(true);
@@ -1084,8 +1248,25 @@ isDiscountPercent: inferredIsPercent,
       </Container>
     );
   }
-
+// helper (put above handleSaveInvoice, or at the top of the component)
+const extractSavedId = (res) => {
+  const d = res?.data?.data;
+  if (d && typeof d === "object") return d.id ?? d.invoiceId ?? null;
+  if (typeof d === "number" || typeof d === "string") return d; // API returns just the id
+  return res?.data?.id ?? null;
+};
+// 👇 add this right below it
+const getApiError = (err, fallback) =>
+  err?.response?.data?.msg ||
+  err?.response?.data?.message ||
+  err?.response?.data?.error ||
+  err?.message ||
+  fallback;
   const handleSaveInvoice = async (silent = false) => {
+    if (isAdditional && !groupId) {
+  message.warning("Please save the main invoice first");
+ return false;  
+}
     const UserId = localStorage.getItem("userId");
 
     try {
@@ -1163,7 +1344,13 @@ const combinedGrandTotal =
   vatTaxTotalAmt;
 const combinedRemaining = combinedGrandTotal - totalAdvancePaid;
 
+const effectiveGroupId = isAdditional
+  ? groupId || ""
+  : invoiceData?.invoiceGroupId || "";
+
       const payload = {
+        bankId: Number(selectedBankId) || null,
+hsnSac: hsnSac || "",
         billingaddress: tempValues.billingaddress || "",
         billingname: tempValues.billingname || "",
         cgst: String(footerData.cgst),
@@ -1187,6 +1374,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
         cashAccountId: p.paymentMode === "Cash" ? Number(p.cashAccountId) || null : null,
         id: p.id || 0,
         vendorCode: p.vendorCode || "",
+     
       }))
     : [
         {
@@ -1215,6 +1403,9 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
         gstnumber: tempValues.gstnumber || "",
         igst: String(footerData.igst),
         invoiceCode : invoiceCode,
+       invoiceGroupId: "",
+        isMainInvoice: !isAdditional,
+        
         igstAmnt: footerData.igstAmnt,
         invoiceFunctionItems: rows.map((r) => ({
           amount: Number(r.amount) || 0,
@@ -1247,10 +1438,10 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
 
       const invId = invoiceData?.id || -1;
       const response = await UpdateInvoice(invId, payload);
+      console.log("UpdateInvoice response:", response?.data);  
 
        if (response?.data?.success === true) {
         const isUpdate = !!invoiceData?.id;
-
         try {
           const changeSummary = buildInvoiceChangeSummary(
             initialInvoiceSnapshotRef.current,
@@ -1312,56 +1503,140 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
           console.error("Invoice log failed (non-blocking):", logErr);
         }
 
-        setIsEdited(false);
+           setIsEdited(false);
         setRows((prevRows) =>
           prevRows.map((row) => ({ ...row, isNewRow: false, isCustom: true })),
         );
-        await fetchInvoiceData();
-        message.success("Invoice saved successfully!");
 
-        if (silent) {
-          setIsInvoiceThemeOpen(true); // ✅ Only open modal when called from print
+        // 1) show the message from the API right away (so it always appears)
+        message.success(
+          response?.data?.msg ||
+            response?.data?.message ||
+            "Invoice saved successfully!",
+        );
+         // 2) reload from the GET API
+        try {
+          if (isAdditional) {
+            let targetId = extractSavedId(response) || invoiceData?.id;
+
+            if (!targetId) {
+              const res = await GetInvoiceByEventId(eventId);
+              const list = res?.data?.data?.["Event Invoice Details"] || [];
+              targetId = list
+                .filter((i) => !i.isMainInvoice)
+                .sort((a, b) => b.id - a.id)[0]?.id;
+            }
+
+            if (targetId) {
+              setInvoiceData((prev) => ({ ...prev, id: targetId }));
+              await fetchInvoiceData(targetId, true);
+            } else {
+              console.warn("Saved, but the new invoice is not in the GET list");
+            }
+          } else {
+            await fetchInvoiceData(null, true);
+          }
+        } catch (reloadErr) {
+          console.error("Reload after save failed:", reloadErr);
         }
+
+        return true;
       } else {
-        message.error(response?.data?.msg || "Failed to save invoice");
+        // API replied success:false → show its message
+        message.error(
+          response?.data?.msg ||
+            response?.data?.message ||
+            "Failed to save invoice",
+        );
+        return false;
       }
     } catch (error) {
       console.error("Full error:", error);
-      message.error("Something went wrong while saving");
+      message.error(getApiError(error, "Something went wrong while saving"));
+      return false;
     } finally {
       setIsSaving(false);
       setLoadingPdf(false);
     }
   };
+  const handleDeleteInvoice = async () => {
+  const result = await Swal.fire({
+    title: "Delete this invoice?",
+    text: invoiceData?.id
+      ? "This invoice is already saved and will be permanently deleted."
+      : "This unsaved invoice will be removed.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Yes, delete",
+    confirmButtonColor: "#d33",
+  });
+  if (!result.isConfirmed) return;
 
-  const handlePrintClick = async () => {
-    setLoadingPdf(true);
-    try {
-      await handleSaveInvoice(true);
-    } catch (error) {
-      message.error("Failed to save invoice before printing");
-    } finally {
-      setLoadingPdf(false);
+  try {
+    setIsSaving(true);
+
+    if (invoiceData?.id) {
+      const res = await   deleteinvoicebyid(invoiceData.id);
+      if (res?.data?.success !== true) {
+        message.error(res?.data?.msg || "Failed to delete invoice");
+        return;
+      }
     }
-  };
+
+    message.success("Invoice deleted");
+    onRemove?.();
+  } catch (error) {
+    console.error("Delete invoice error:", error);
+    message.error("Something went wrong while deleting");
+  } finally {
+    setIsSaving(false);
+  }
+};
+ const handlePrintClick = async () => {
+  setLoadingPdf(true);
+  try {
+    const ok = await handleSaveInvoice(true);
+    if (ok) setIsInvoiceThemeOpen(true);            // 👈 open the theme/print modal
+  } catch (error) {
+    message.error("Failed to save invoice before printing");
+  } finally {
+    setLoadingPdf(false);
+  }
+};
   return (
     <Fragment>
       <style>{responsiveStyles}</style>
       <Container>
-        <div className="gap-2 mb-3">
-          <Breadcrumbs
-            items={[
-              {
-                title: (
-                  <FormattedMessage
-                    id="INVOICE.TAX_INVOICE"
-                    defaultMessage="Tax Invoice"
-                  />
-                ),
-              },
-            ]}
-          />
-        </div>
+      <div className="flex items-center justify-between mb-3">
+  {/* Left */}
+  {!isAdditional && (
+    <h2 className="text-xl font-semibold text-gray-900">
+      <FormattedMessage
+        id="INVOICE.TAX_INVOICE"
+        defaultMessage="Tax Invoice"
+      />
+    </h2>
+  )}
+
+  {/* Right */}
+  {showRemaining && !isAdditional && (
+    <div className="flex justify-end">
+      <div className="inline-flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-2 shadow-sm">
+        <span className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
+          Remaining Amount
+        </span>
+
+        <span className="text-xl font-bold text-red-600">
+          ₹
+          {Number(savedRemaining ?? 0).toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </span>
+      </div>
+    </div>
+  )}
+</div>
 
         <div className="flex flex-col bg-gray-100 rounded mb-7">
           <div className="flex flex-col bg-white rounded ">
@@ -1428,6 +1703,17 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
         />
       )}
     </button>
+
+    {canAccessgeneratemultipleinvoice  && showGenerateButton && (
+  <button
+    type="button"
+    onClick={onGenerateMultiple}
+    className="btn  btn-primary text-white w-full sm:w-auto"
+  >
+    <i className="ki-filled ki-plus"></i>
+    Generate Multiple Invoice
+  </button>
+)}
   </div>
 </div>
 
@@ -1613,7 +1899,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
                   ) : (
                     <p className="text-sm text-gray-700">
                       {invoiceData?.billingaddress || (
-                        <FormattedMessage id="COMMON.NA" />
+                        <FormattedMessage id="COMMON.NA" defaultMessage="-" />
                       )}
                       <br />
                     </p>
@@ -1757,7 +2043,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
                     ) : (
                       <span className="text-sm text-gray-700">
                         {tempValues.billingname || (
-                          <FormattedMessage id="COMMON.NA" />
+                          <FormattedMessage id="COMMON.NA"  defaultMessage="-"/>
                         )}
                       </span>
                     )}
@@ -1819,7 +2105,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
                     ) : (
                       <span className="text-sm text-gray-700">
                         {tempValues.gstnumber || (
-                          <FormattedMessage id="COMMON.NA" />
+                          <FormattedMessage id="COMMON.NA" defaultMessage="-" />
                         )}
                       </span>
                     )}
@@ -1827,6 +2113,64 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
                 </div>
               </div>
             </div>
+            {canAccessgeneratemultipleinvoice && (
+<div className="border rounded-xl mb-5 p-4">
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div>
+      <label className="text-xs font-semibold text-gray-500 mb-1 block">
+        Bank Account
+      </label>
+      <select
+        className="input w-full"
+        value={selectedBankId}
+        onChange={(e) => {
+          setSelectedBankId(e.target.value);
+          setIsEdited(true);
+        }}
+      >
+        <option value="">Select Bank</option>
+        {bankDetails.map((bank) => (
+          <option key={bank.id} value={bank.id}>
+            {bank.bankName || bank.accountHolderName || bank.name || `Bank ${bank.id}`}
+            {bank.isPrimary ? " (Primary)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <div>
+      <label className="text-xs font-semibold text-gray-500 mb-1 block">
+        HSN / SAC
+      </label>
+      <Input
+        value={hsnSac}
+        onChange={(e) => {
+          setHsnSac(e.target.value);
+          setIsEdited(true);
+        }}
+        placeholder="Enter HSN / SAC code"
+      />
+    </div>
+  </div>
+</div> )}
+{/* {showRemaining && !isAdditional && (
+  <div className="flex justify-end mb-3">
+    <div className="inline-flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-2 shadow-sm">
+     
+      <span className="text-sm font-semibold text-orange-700 uppercase tracking-wide">
+        Remaining Amount
+      </span>
+      <span className="text-xl font-bold text-red-600">
+        ₹{Number(savedRemaining ?? 0).toLocaleString("en-IN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}
+      </span>
+    </div>
+  </div>
+)} */}
+
+
 
             <ItemTable
   rows={rows}
@@ -1836,6 +2180,9 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
   isOfferRateUser={isOfferRateUser}
   onRateBlur={handleRateBlur}
   hideTaxColumns={hideTaxColumns}
+  canEditFunction={canAccessgeneratemultipleinvoice}     // 👈 new
+  canDeleteFunction={canAccessgeneratemultipleinvoice}
+  remainingAmount={showRemaining && !isAdditional ? (savedRemaining ?? 0) : null}
 />
             {/* Advance Payments Section */}
             <div className="border rounded-xl mb-5 p-4">
@@ -2104,28 +2451,34 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
 
             <InvoiceFooter
   invoiceData={invoiceData}
+remainingAmount={showRemaining ? (savedRemaining ?? finalRemainingAmount) : finalRemainingAmount}  totalAdvance={totalAdvancePaid}
   rows={rows}
   permissionInvoice={permissionInvoice}
   footerData={footerData}
   onFooterDataChange={handleFooterDataChange}
   onSave={() => handleSaveInvoice(false)}
   isEdited={isEdited}
-  bankDetails={primaryBank}
+bankDetails={selectedBank}
   extraTaxTotal={extraTaxTotal}
+  showGenerateButton={showGenerateButton}
+  onGenerateMultiple={onGenerateMultiple}
+  showDeleteButton={isAdditional && !!onRemove}
+  onDelete={handleDeleteInvoice}
 />
 
           
           </div>
         </div>
       </Container>
-      <InvoiceTheme
-        open={isInvoiceThemeOpen}
-        onClose={() => setIsInvoiceThemeOpen(false)}
-        eventId={eventId}
-        isinvoice={0}
-         mobileNumber={invoiceData?.event?.mobileno || invoiceData?.event?.party?.mobileno}
+   <InvoiceTheme
+  open={isInvoiceThemeOpen}
+  onClose={() => setIsInvoiceThemeOpen(false)}
+  eventId={eventId}
+  isinvoice={0}
+  invoiceId={invoiceData?.isMainInvoice ? 0 : (invoiceData?.id || 0)}   // 👈 changed
+  mobileNumber={invoiceData?.event?.mobileno || invoiceData?.event?.party?.mobileno}
   partyName={invoiceData?.event?.party?.nameEnglish}
-      />
+/>
       {isSaving && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <img
@@ -2139,4 +2492,108 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
   );
 };
 
-export default AddInvoicePage;
+const makeGroupId = () =>
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `grp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const AddInvoiceMultiple = () => {
+  const location = useLocation();
+  const { eventId, fromQuotation } = location.state || {};
+
+  const nextId = useRef(1);
+  const [invoices, setInvoices] = useState([]);
+  const [groupId, setGroupId] = useState("");
+  const [ready, setReady] = useState(!eventId || !!fromQuotation);
+  const lastRef = useRef(null);
+  const justAdded = useRef(false);
+
+  // load every saved invoice for this event
+  useEffect(() => {
+    if (!eventId || fromQuotation) {
+      setInvoices([{ uid: nextId.current++, invoiceId: null }]);
+      return;
+    }
+
+    (async () => {
+      try {
+        const res = await GetInvoiceByEventId(eventId);
+        const list = res?.data?.data?.["Event Invoice Details"] || [];
+
+        if (list.length) {
+          const main = list.find((i) => i.isMainInvoice) || list[0];
+          const others = list.filter((i) => i.id !== main.id);
+          if (main.invoiceGroupId) setGroupId(main.invoiceGroupId);
+
+          setInvoices(
+            [main, ...others].map((inv) => ({
+              uid: nextId.current++,
+              invoiceId: inv.id,
+            })),
+          );
+        } else {
+          setInvoices([{ uid: nextId.current++, invoiceId: null }]);
+        }
+      } catch (e) {
+        setInvoices([{ uid: nextId.current++, invoiceId: null }]);
+      } finally {
+        setReady(true);
+      }
+    })();
+  }, [eventId]);
+
+  const addInvoice = () => {
+    justAdded.current = true;
+    setInvoices((prev) => [...prev, { uid: nextId.current++, invoiceId: null }]);
+  };
+
+  const removeInvoice = (uid) => {
+    setInvoices((prev) => prev.filter((inv) => inv.uid !== uid));
+  };
+
+  useEffect(() => {
+    if (justAdded.current) {
+      justAdded.current = false;
+      lastRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [invoices]);
+
+  if (!ready) {
+    return (
+      <Container>
+        <div className="flex justify-center items-center h-96">
+          <Spin size="large" />
+        </div>
+      </Container>
+    );
+  }
+
+  return (
+    <Fragment>
+      {invoices.map(({ uid, invoiceId }, i) => (
+        <div
+          key={uid}
+          ref={i === invoices.length - 1 ? lastRef : null}
+          className={i > 0 ? "mt-8 pt-6 border-t-4 border-primary" : ""}
+        >
+          {i > 0 && (
+            <div className="px-5 pb-2 text-lg font-bold text-primary">
+              Invoice #{i + 1}
+            </div>
+          )}
+          <AddInvoicePage
+            isAdditional={i > 0}
+            invoiceId={invoiceId}
+            instanceNo={i + 1}
+            showGenerateButton={i === invoices.length - 1}
+            onGenerateMultiple={addInvoice}
+            onRemove={i > 0 ? () => removeInvoice(uid) : undefined}
+            groupId={groupId}
+            onGroupIdChange={setGroupId}
+          />
+        </div>
+      ))}
+    </Fragment>
+  );
+};
+export default AddInvoiceMultiple;

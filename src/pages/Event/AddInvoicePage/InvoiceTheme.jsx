@@ -19,6 +19,12 @@ import {
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { useReportPermission } from "@/hooks/useReportPermission";
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.js?url"; 
+
+
+
+
+
 
 const EXCLUSIVE_MODULE_NAMES = ["Exclusive Theme", "Back Office Theme"];
 
@@ -233,6 +239,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
             isShowEventRemarks: config.isShowEventRemarks,
             showAdditional:config.showAdditional,
             isAgencyNextPage:config.isAgencyNextPage,
+            isItemShow:config.isItemShow,
             storeIssueWise:config.storeIssueWise, 
             isAddStoreIssue:config.isAddStoreIssue,
             is5Column:config.is5Column,
@@ -243,6 +250,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
             withOutBg: config.withOutBg,
             isAllItemTogether: config.isAllItemTogether ,
             isShowRoomDetails: canShowRoomDetails && config.isShowRoomDetails,
+            isShowFunctionDetails: config.isShowFunctionDetails,
             isShowFunctionImg: config.isShowFunctionImg,
             withVendor: config.withVendor,
             isNotes : config.isNotes,
@@ -284,6 +292,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
               isShowEventRemarks: config.isShowEventRemarks === 1,
               showAdditional:config.showAdditional === 0 ,
               isAgencyNextPage:config.isAgencyNextPage === 0 ,
+              isItemShow:config.isItemShow === 0,
               storeIssueWise:config.storeIssueWise === 0, 
               isAddStoreIssue:config.isAddStoreIssue === 0,
               is5Column:config.is5Column === 0 ,
@@ -294,6 +303,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
               withOutBg: config.withOutBg === 0,
               isAllItemTogether: config.isAllItemTogether === 0,
 isShowRoomDetails: canShowRoomDetails && config.isShowRoomDetails === 0,  
+isShowFunctionDetails: config.isShowFunctionDetails === 1,
             isShowFunctionImg: config.isShowFunctionImg == 0,
               withVendor: config.withVendor === 0,
               isNotes: config.isNotes === 0,
@@ -698,7 +708,7 @@ const getCompanyAuthInfo = () => {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobileNumber, partyName }) => {
+const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobileNumber, partyName ,invoiceId = null, }) => {
   const [selectedThemes, setSelectedThemes] = useState({}); // { [moduleId]: themeId }
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -712,8 +722,7 @@ const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobi
   const [pdfUrl, setPdfUrl] = useState("");
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);  // ✅ added
-  const pdfPlugin = defaultLayoutPlugin();
-  const userId = localStorage.getItem("userId");
+const pdfPlugin = defaultLayoutPlugin({ sidebarTabs: () => [] });  const userId = localStorage.getItem("userId");
   
   const lang = localStorage.getItem("lang");
   const language =
@@ -909,6 +918,7 @@ const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobi
           backOfficeId, 
             showLastPage,
             isSignature,
+isinvoice === 0 ? (invoiceId ?? 0) : 0,
         ),
       ),
     );
@@ -1007,6 +1017,7 @@ isAdvancedPay:opts.isAdvancedPay ?? false,
           withOutBg: opts.withOutBg === 0,
           isAllItemTogether: opts.isAllItemTogether ?? false,
           isShowRoomDetails: opts.isShowRoomDetails ?? false,
+          isShowFunctionDetails: opts.isShowFunctionDetails ?? false,
           isShowFunctionImg: opts.isShowFunctionImg ?? false,
           withVendor: opts.withVendor === 0,
           isNotes:opts.isNotes ?? false,
@@ -1017,6 +1028,7 @@ isAdvancedPay:opts.isAdvancedPay ?? false,
  showLastPage: String(userId) === "376" ? 0 : 1, 
   showAdditional:opts.showAdditional ?? false,
   isAgencyNextPage:opts.isAgencyNextPage ?? false,
+  isItemShow:opts.isItemShow ?? false,
   storeIssueWise:opts.storeIssueWise ?? false, 
   isAddStoreIssue:opts.isAddStoreIssue ?? false,
   is5Column:opts.is5Column ?? false,
@@ -1052,26 +1064,45 @@ isAdvancedPay:opts.isAdvancedPay ?? false,
     return results.filter((r) => r.status === "fulfilled").map((r) => r.value);
   };
 
-  // Merge multiple PDF URLs into one blob URL using pdf-lib
-  const mergePdfUrls = async (urls) => {
-    if (urls.length === 1) return urls[0];
 
-    const merged = await PDFDocument.create();
-    for (const url of urls) {
-      try {
-        const res = await fetch(url);
-        const bytes = await res.arrayBuffer();
-        const pdf = await PDFDocument.load(bytes);
-        const pages = await merged.copyPages(pdf, pdf.getPageIndices());
-        pages.forEach((p) => merged.addPage(p));
-      } catch (e) {
-        console.warn("Failed to merge PDF:", url, e);
-      }
-    }
-    const mergedBytes = await merged.save();
-    const blob = new Blob([mergedBytes], { type: "application/pdf" });
-    return URL.createObjectURL(blob);
-  };
+const mergePdfUrls = async (urls) => {
+  if (urls.length === 1) return urls[0];
+
+  console.time("1-download");
+  const buffers = await Promise.all(urls.map(async (url) => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.arrayBuffer();
+  }));
+  console.timeEnd("1-download");
+
+  console.time("2-parse");
+  const docs = await Promise.all(
+    buffers.map((b) => PDFDocument.load(b, { updateMetadata: false })),
+  );
+  console.timeEnd("2-parse");
+
+  console.time("3-copy+save");
+  const merged = await PDFDocument.create();
+  for (const doc of docs) {
+    const pages = await merged.copyPages(doc, doc.getPageIndices());
+    pages.forEach((p) => merged.addPage(p));
+  }
+  const bytes = await merged.save({ useObjectStreams: false });
+  console.timeEnd("3-copy+save");
+
+  return URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+};
+
+
+const closePdfModal = () => {
+  setIsPdfModalVisible(false);
+  setPdfUrl((prev) => {
+    if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+    return "";
+  });
+};
+
 
 const handleConfigGenerate = async (configData) => {
   setGeneratingPdf(true);
@@ -1098,6 +1129,7 @@ const handleConfigGenerate = async (configData) => {
     const withVendor = nonExclusiveConfig?.withVendor === 0 ? 0 : 1;
     const isAllItemTogether = nonExclusiveConfig?.isAllItemTogether ? 1 : 0;
     const isShowRoomDetails = nonExclusiveConfig?.isShowRoomDetails ? 1 :0;
+    const isShowFunctionDetails = nonExclusiveConfig?.isShowFunctionDetails ? 1 :0;
    const isSignature = nonExclusiveConfig?.isSignature ? 1 : 0;
    const isShowFunctionImg =  nonExclusiveConfig?.isShowFunctionImg ? 1 : 0;
     
@@ -1505,10 +1537,7 @@ const handleWhatsAppClick = () => {
           />
         }
         open={isPdfModalVisible}
-        onCancel={() => {
-          setIsPdfModalVisible(false);
-          setPdfUrl("");
-        }}
+         onCancel={closePdfModal}
         width="70%"
         style={{ top: 20, maxWidth: "1200px" }}
         footer={
@@ -1525,10 +1554,7 @@ const handleWhatsAppClick = () => {
             </button>
             <button
               className="btn btn-light w-full sm:w-auto"
-              onClick={() => {
-                setIsPdfModalVisible(false);
-                setPdfUrl("");
-              }}
+             onClick={closePdfModal}
             >
               <FormattedMessage id="COMMON.CLOSE" defaultMessage="Close" />
             </button>
@@ -1537,7 +1563,7 @@ const handleWhatsAppClick = () => {
       >
         <div style={{ height: "70vh" }}>
           {pdfUrl && (
-            <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
+            <Worker workerUrl={workerUrl}>              
               <Viewer
                 fileUrl={pdfUrl}
                 plugins={[pdfPlugin]}
