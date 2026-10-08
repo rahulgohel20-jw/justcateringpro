@@ -186,11 +186,21 @@ const handleAuthSuccess = async (response) => {
 
   const logout = async () => {
     const email = currentUser?.email;
+    const currentUserId = localStorage.getItem("userId");
     try {
       if (email) await LoginOutUser(email, "logout");
     } catch (err) {
       console.error("Logout notification failed:", err);
     }
+
+    if (currentUserId) {
+      sessionStorage.removeItem(`calendar_selected_month_${currentUserId}`);
+      sessionStorage.removeItem(`calendar_selected_year_${currentUserId}`);
+    }
+    sessionStorage.removeItem("calendar_selected_month");
+    sessionStorage.removeItem("calendar_selected_year");
+    localStorage.removeItem("calendar_selected_month");
+    localStorage.removeItem("calendar_selected_year");
 
     localStorage.removeItem("userToken");
     localStorage.removeItem("userId");
