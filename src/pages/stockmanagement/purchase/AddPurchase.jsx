@@ -58,8 +58,13 @@ const EditableCell = ({
   />
 );
 
-// ── GST-aware total calculation ───────────────────────────────────────────────
-// total = (qty × price) + other_charges + GST on (qty × price)
+// state keeps yyyy-mm-dd (for <input type="date">), API gets dd/mm/yyyy like podate
+const toApiDate = (d) => (d ? d.split("-").reverse().join("/") : "");
+const fromApiDate = (d) => {
+  if (!d) return "";
+  if (d.includes("/")) return d.split("/").reverse().join("-"); // dd/mm/yyyy
+  return d.slice(0, 10); // yyyy-mm-dd or ISO with time
+};
 const calcTotal = (qty, price, other, cgst, sgst, igst, cess) => {
   const base = (parseFloat(qty) || 0) * (parseFloat(price) || 0);
   const otherAmt = parseFloat(other) || 0;
@@ -177,6 +182,7 @@ const focusSearchInput = useCallback(() => {
     stock_type_id: "",
     priceUpdateMaster: false,
     grn_number: "",
+      batch_no: "",
   });
 
   const navigate = useNavigate();
@@ -185,6 +191,8 @@ const focusSearchInput = useCallback(() => {
   const [transportation, setTransportation] = useState(0);
   const [saving, setSaving] = useState(false);
   const userId = localStorage.getItem("userId");
+  const BATCH_WISE_USER_ID = [233 , 376]; //amoncar 376
+const canUseBatch = BATCH_WISE_USER_ID.find((id) => id === Number(userId));
 
   const backDatePermission = usePermission("Lock Back Date Entry");
 const isBackDateLocked = backDatePermission.add || backDatePermission.edit;
@@ -291,6 +299,7 @@ const todayStr = new Date().toISOString().split("T")[0];
       remark: editData.remarks || "",
       stock_type_id: editData.stockTypeId || "",
        priceUpdateMaster: editData.priceUpdateMaster ?? true,
+       batch_no: editData.batchNo || "",
     });
     setDiscount(editData.discountper || 0);
     setAdjustment(editData.adjustamount || 0);
@@ -313,6 +322,7 @@ const todayStr = new Date().toISOString().split("T")[0];
         total_price: String(d.total || 0),
         originalQty: d.qty || 0,
         isAddInStock: d.isAddInStock ?? true,
+        expiryDate: fromApiDate(d.expiryDate),
       })),
     );
   }, [editData]);
@@ -486,6 +496,20 @@ const finalAmount =
   // ── Save ────────────────────────────────────────────────────────────────────
  // ── Save ────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
+    if (canUseBatch && form.batch_no.trim()) {
+  const missingExpiry = items.find((it) => !it.expiryDate);
+  if (missingExpiry) {
+    Swal.fire({
+      icon: "warning",
+      title: "Validation",
+      text: `Expiry date is required for all items when a batch number is entered${
+        missingExpiry.item_name ? ` (missing for "${missingExpiry.item_name}")` : ""
+      }.`,
+      confirmButtonColor: "#3085d6",
+    });
+    return;
+  }
+}
     if (!form.supplier_id) {
       Swal.fire({
         icon: "warning",
@@ -553,6 +577,7 @@ const finalAmount =
       remarks: form.remark,
       subamount: totalAmount,
       grnNumber: form.grn_number,
+      batchNo: form.batch_no.trim(),
       discountper:
         discountType === "percent" ? parseFloat(discount) || 0 : 0,
       discountval: discountAmount,
@@ -562,6 +587,7 @@ const finalAmount =
       stockTypeId: form.stock_type_id || 0,
       priceUpdateMaster: form.priceUpdateMaster,
       details: items.map((item) => ({
+        expiryDate: toApiDate(item.expiryDate),
         sotPoDetailId: item.sotPoDetailId || 0,
         rawMaterialId: item.rawMaterialId || 0,
         unitId: item.unitId || 0,
@@ -587,6 +613,7 @@ const finalAmount =
       podate: form.date ? form.date.split("-").reverse().join("/") : "",
       billno: form.bill_no,
       grnNumber: form.grn_number,
+      batchNo: form.batch_no.trim(),
       supplierId: form.supplier_id,
       invoicetype: form.invoice_type,
       remarks: form.remark,
@@ -599,7 +626,8 @@ const finalAmount =
       stockTypeId: form.stock_type_id || 0,
       priceUpdateMaster: form.priceUpdateMaster,
       details: items.map((item) => ({
-        rawMaterialId: item.rawMaterialId || 0,
+         expiryDate: toApiDate(item.expiryDate),
+  rawMaterialId: item.rawMaterialId || 0,
         unitId: item.unitId || 0,
         hsccode: item.hsc_sac || "",
         cgst: parseFloat(item.cgst) || 0,
@@ -895,21 +923,33 @@ const finalAmount =
     />
   </div>
 </div>
-            <div className="col-span-3">
-              <label className={labelClass}>
-                <AlignLeft size={16} />{" "}
-                <FormattedMessage id="COMMON.REMARK" defaultMessage="Remark" />
-              </label>
-              <input
-                name="remark"
-                value={form.remark}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, remark: e.target.value }))
-                }
-                placeholder="Optional remark…"
-                className={fieldClass}
-              />
-            </div>
+          <div className="col-span-2">
+  <label className={labelClass}>
+    <AlignLeft size={16} />{" "}
+    <FormattedMessage id="COMMON.REMARK" defaultMessage="Remark" />
+  </label>
+  <input
+    name="remark"
+    value={form.remark}
+    onChange={(e) => setForm((p) => ({ ...p, remark: e.target.value }))}
+    placeholder="Optional remark…"
+    className={fieldClass}
+  />
+</div>
+{canUseBatch && (
+  <div>
+    <label className={labelClass}>
+      <Hash size={16} /> Batch No.
+    </label>
+    <input
+      name="batch_no"
+      value={form.batch_no}
+      onChange={(e) => setForm((p) => ({ ...p, batch_no: e.target.value }))}
+      placeholder="Enter batch number"
+      className={fieldClass}
+    />
+  </div>
+)}
           </div>
         </div>
 
@@ -1021,29 +1061,36 @@ const finalAmount =
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                 {[
-  <FormattedMessage id="COMMON.SR_NO" defaultMessage="#" />,
-  <FormattedMessage id="PURCHASE.ADD_TO_STOCK" defaultMessage="Add to Stock" />,
-  <FormattedMessage id="PURCHASE.ITEM_NAME" defaultMessage="Item Name" />,
-  "HSC/SAC",
-  "CGST%",
-  "SGST%",
-  "IGST%",
-  "CESS%",
-  <FormattedMessage id="COMMON.QTY" defaultMessage="Qty" />,
-  <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />,
-  <FormattedMessage id="PURCHASE.PRICE_PER_UNIT" defaultMessage="Price/Unit" />,
-  <FormattedMessage id="PURCHASE.OTHER_CHARGES" defaultMessage="Other ₹" />,
-  <FormattedMessage id="PURCHASE.GST_AMOUNT" defaultMessage="GST Amt" />,
-  <FormattedMessage id="COMMON.TOTAL" defaultMessage="Total" />,
-  
-  "",
-].map((h) => (
-  <th key={h} className="px-3 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-    {h}
-  </th>
-))}
-                </tr>
+  {[
+    { key: "sr", label: <FormattedMessage id="COMMON.SR_NO" defaultMessage="#" /> },
+    { key: "addToStock", label: <FormattedMessage id="PURCHASE.ADD_TO_STOCK" defaultMessage="Add to Stock" /> },
+    { key: "itemName", label: <FormattedMessage id="PURCHASE.ITEM_NAME" defaultMessage="Item Name" /> },
+    { key: "hsn", label: "HSC/SAC" },
+    { key: "cgst", label: "CGST%" },
+    { key: "sgst", label: "SGST%" },
+    { key: "igst", label: "IGST%" },
+    { key: "cess", label: "CESS%" },
+    { key: "qty", label: <FormattedMessage id="COMMON.QTY" defaultMessage="Qty" /> },
+    { key: "unit", label: <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" /> },
+    { key: "price", label: <FormattedMessage id="PURCHASE.PRICE_PER_UNIT" defaultMessage="Price/Unit" /> },
+
+    ...(canUseBatch
+      ? [{ key: "expireDate", label: <FormattedMessage id="PURCHASE.EXPIRE_DATE" defaultMessage="Expire Date" /> }]
+      : []),
+
+    { key: "otherCharges", label: <FormattedMessage id="PURCHASE.OTHER_CHARGES" defaultMessage="Other ₹" /> },
+    { key: "gstAmt", label: <FormattedMessage id="PURCHASE.GST_AMOUNT" defaultMessage="GST Amt" /> },
+    { key: "total", label: <FormattedMessage id="COMMON.TOTAL" defaultMessage="Total" /> },
+    { key: "actions", label: "" },
+  ].map((h) => (
+    <th
+      key={h.key}
+      className="px-3 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap"
+    >
+      {h.label}
+    </th>
+  ))}
+</tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
@@ -1200,6 +1247,22 @@ const finalAmount =
     }`}
   />
 </td>
+{/* Expiry Date */}
+{canUseBatch && (
+  <td className="px-1 py-2 w-36">
+    <input
+      type="date"
+      value={item.expiryDate || ""}
+      onChange={(e) => updateItem(i, "expiryDate", e.target.value)}
+      className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
+      ${
+        form.batch_no.trim() && !item.expiryDate
+          ? "border-red-300 bg-red-50 text-red-700 focus:border-red-400 focus:ring-red-300"
+          : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"
+      }`}
+    />
+  </td>
+)}
 
                         {/* Other Charges */}
                         <td className="px-1 py-2 w-24">

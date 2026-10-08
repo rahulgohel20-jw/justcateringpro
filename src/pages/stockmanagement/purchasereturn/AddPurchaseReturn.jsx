@@ -33,7 +33,11 @@ import DatePicker from "react-datepicker";
 
 
 
-
+const showDate = (d) => {
+  if (!d) return "—";
+  const s = String(d).slice(0, 10); // yyyy-mm-dd
+  return s.includes("-") ? s.split("-").reverse().join("/") : d;
+};
 const getUserEmail = () => {
   try {
     const authStorage = localStorage.getItem("auth-storage");
@@ -127,6 +131,7 @@ useEffect(() => {
     remark: "",
     stock_type_id: "",
   stock_type_name: "",
+  batch_no: "",
   });
 
   const navigate = useNavigate();
@@ -154,6 +159,7 @@ useEffect(() => {
     maxQty: (detail.remainingQty ?? 0) + (detail.returnedQty ?? 0),
     unit: detail.unitName || "",
     price_per_unit: detail.price ?? 0,
+    expiryDate: detail.expiryDate || "",
     total_price: ((detail.returnedQty ?? 0) * (detail.price ?? 0)).toFixed(2),
   });
 
@@ -180,6 +186,7 @@ useEffect(() => {
         remark: data.remarks || "",
         stock_type_id: data.stockTypeId || "",
          stock_type_name: data.stockTypeName || "",
+         batch_no: data.batchNo || "",
       });
 
       setDiscount(data.discountper ?? 0);
@@ -207,9 +214,21 @@ useEffect(() => {
             unit: detail.unitName || "",
             price_per_unit: detail.price ?? 0,
             total_price: (1 * (detail.price ?? 0)).toFixed(2),
+            expiryDate: detail.expiryDate || "",
           }));
 
           setAvailableItems(allPOItems);
+          setForm((p) => ({ ...p, batch_no: poData.batchNo || "" }));
+const expiryMap = {};
+poData.details.forEach((d) => {
+  expiryMap[d.rawMaterialId] = d.expiryDate || "";
+});
+setItems((prev) =>
+  prev.map((it) => ({
+    ...it,
+    expiryDate: it.expiryDate || expiryMap[it.rawMaterialId] || "",
+  })),
+);
         }
       }
     } catch (error) {
@@ -348,6 +367,7 @@ useEffect(() => {
       date: null,
       stock_type_id: "",    
       stock_type_name: "", 
+      batch_no: "",
     }));
     setDiscount(0);
     setAdjustment(0);
@@ -371,6 +391,7 @@ useEffect(() => {
       date: data.podate ? new Date(data.podate) : null,
       stock_type_id: data.stockTypeId || "",    
       stock_type_name: data.stockTypeName || "", 
+      batch_no: data.batchNo || "",
     }));
 
       const mapped = (data.details || []).map((detail) => ({
@@ -387,6 +408,7 @@ useEffect(() => {
         maxQty: detail.remainingQty ?? 0,
         unit: detail.unitName || "",
         price_per_unit: detail.price ?? 0,
+        expiryDate: detail.expiryDate || "",
         total_price: (1 * (detail.price ?? 0)).toFixed(2),
       }));
 
@@ -423,6 +445,7 @@ useEffect(() => {
         maxQty: sel.maxQty,
         unit: sel.unit,
         price_per_unit: sel.price_per_unit,
+        expiryDate: sel.expiryDate || "",
         total_price: (sel.remainingQty * sel.price_per_unit).toFixed(2),
       }));
 
@@ -1014,6 +1037,7 @@ useEffect(() => {
                       id="price.unit"
                       defaultMessage="Price/Unit"
                     />,
+                    <FormattedMessage id="PURCHASE.EXPIRY_DATE" defaultMessage="Expiry Date" />,
                     <FormattedMessage
                       id="total.price"
                       defaultMessage="Total Price"
@@ -1117,6 +1141,11 @@ useEffect(() => {
                       <td className="px-4 py-3 text-slate-600">
                         ₹ {item.price_per_unit}
                       </td>
+                      
+  <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+    {showDate(item.expiryDate)}
+  </td>
+
                       <td className="px-4 py-3 font-bold text-primary whitespace-nowrap">
                         ₹ {item.total_price}
                       </td>
