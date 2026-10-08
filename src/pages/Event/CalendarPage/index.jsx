@@ -41,6 +41,7 @@ const [selectedBanquet, setSelectedBanquet] = useState(-1);
 
   let Id = localStorage.getItem("userId");
   const normalizedLocalUserId = Number(Id ?? 0);
+  const isAgencyUser = normalizedLocalUserId === 233;
 
   const getStorageKeys = (userId) => ({
     monthKey: userId ? `calendar_selected_month_${userId}` : "calendar_selected_month",
