@@ -2,6 +2,16 @@ import React, { useEffect, useRef, useState } from "react";
 import { Mic, Square } from "lucide-react";
 import RichTextEditable from "@/components/form-inputs/RichTextEditable";
 
+const LANG_MAP = {
+  en: "en-IN",
+  hi: "hi-IN",
+  gu: "gu-IN",
+  ta: "ta-IN",
+  te: "te-IN",
+  mr: "mr-IN",
+  ml: "ml-IN",
+};
+
 const SpeechToText = ({
   name,
   placeholder,
@@ -16,20 +26,36 @@ const SpeechToText = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const recognitionRef = useRef(null);
   const silenceTimeoutRef = useRef(null);
+  const valueRef = useRef(value);
+  const onChangeRef = useRef(onChange);
+
   useEffect(() => {
-    if (
-      !("webkitSpeechRecognition" in window || "SpeechRecognition" in window)
-    ) {
-      alert("Speech Recognition not supported in this browser.");
-      return;
-    }
+    valueRef.current = value;
+  }, [value]);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  const resolvedLang = LANG_MAP[lang] || (lang?.length === 2 ? `${lang}-IN` : lang) || "en-IN";
+
+  useEffect(() => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      return;
+    }
+
     const recog = new SpeechRecognition();
     recog.continuous = true;
     recog.interimResults = true;
-    recog.lang = lang;
-    recog.onstart = () => setIsListening(true);
+    recog.lang = resolvedLang;
+
+    recog.onstart = () => {
+      setIsListening(true);
+    };
+
     recog.onresult = (event) => {
       let finalText = "";
       let speakingNow = false;
@@ -43,10 +69,12 @@ const SpeechToText = ({
         }
       }
       if (finalText.trim()) {
-        onChange({
+        const prevVal = valueRef.current || "";
+        const newVal = prevVal ? `${prevVal} ${finalText.trim()}` : finalText.trim();
+        onChangeRef.current?.({
           target: {
             name,
-            value: (value + " " + finalText).trim(),
+            value: newVal,
           },
         });
       }
@@ -55,30 +83,89 @@ const SpeechToText = ({
         resetSilenceTimeout();
       }
     };
+
+    recog.onerror = (event) => {
+      console.warn("Speech Recognition Error:", event.error);
+      setIsListening(false);
+      setIsSpeaking(false);
+      if (event.error === "not-allowed") {
+        alert("Microphone permission denied. Please allow microphone access in your browser settings (click the lock/tune icon in the address bar).");
+      } else if (event.error === "network") {
+        alert("Speech recognition network error. Please check your internet connection (Chrome requires internet for speech-to-text).");
+      }
+    };
+
     recog.onend = () => {
       setIsListening(false);
       setIsSpeaking(false);
       clearTimeout(silenceTimeoutRef.current);
     };
+
     recognitionRef.current = recog;
+
     return () => {
-      recog.abort();
+      try {
+        recog.abort();
+      } catch {
+        // ignore
+      }
       clearTimeout(silenceTimeoutRef.current);
     };
-  }, [name, value, onChange]);
+  }, [name, resolvedLang]);
+
   const resetSilenceTimeout = () => {
     clearTimeout(silenceTimeoutRef.current);
     silenceTimeoutRef.current = setTimeout(() => {
-      recognitionRef.current?.stop();
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        // ignore
+      }
     }, 3000);
   };
-  const toggleMic = () => {
+
+  const toggleMic = async () => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Speech Recognition not supported in this browser. Please use Google Chrome or Microsoft Edge.");
+      return;
+    }
+
     if (isListening) {
-      recognitionRef.current?.stop();
-    } else {
+      try {
+        recognitionRef.current?.stop();
+      } catch (err) {
+        console.error("Mic stop error:", err);
+      }
+      return;
+    }
+
+    // Try requesting permission with getUserMedia to trigger the browser prompt if not yet granted
+    if (navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (err) {
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          alert("Microphone permission is blocked.\n\nTo allow it:\n1. Click 'Site settings' in the popup on your screen\n2. Change 'Microphone' to 'Allow'\n3. Refresh this page.");
+          return;
+        }
+      }
+    }
+
+    try {
       recognitionRef.current?.start();
+    } catch (err) {
+      console.error("Mic toggle error:", err);
+      try {
+        recognitionRef.current?.abort();
+        setTimeout(() => recognitionRef.current?.start(), 100);
+      } catch {}
     }
   };
+
   const renderField = () => {
     if (enableFormatting) {
       return (
@@ -86,7 +173,7 @@ const SpeechToText = ({
           name={name}
           placeholder={placeholder}
           value={value}
-          onChange={(val) => onChange({ target: { name, value: val } })}
+          onChange={(val) => onChange?.({ target: { name, value: val } })}
           minHeight={type === "textarea" ? "min-h-[100px]" : "min-h-[42px]"}
           className="flex-1"
         />
@@ -106,22 +193,21 @@ const SpeechToText = ({
       <input type="text" {...commonProps} />
     );
   };
+
   return (
     <div className="sg__inner flex items-center gap-1 relative">
       {renderField()}
       <button
         type="button"
+        title={isListening ? "Stop listening" : "Click to speak"}
         onClick={toggleMic}
-        // className="sga__btn me-1.5 btn btn-success flex items-center justify-center rounded-full p-0 w-8 h-8"
-        className="sga__btn me-1 btn btn-primary flex items-center justify-center rounded-full p-0 w-8 h-8"
+        className={`sga__btn me-1 btn flex items-center justify-center rounded-full p-0 w-8 h-8 flex-shrink-0 transition-colors ${
+          isListening
+            ? "btn-danger bg-red-500 text-white animate-pulse"
+            : "btn-primary"
+        }`}
       >
-        {
-          isListening && isSpeaking && ""
-          // <span className="absolute w-full h-full rounded-full bg-purple-400 opacity-30 animate-ping z-0"></span>
-        }
-        {/* <span className="me-1.5 btn btn-light flex items-center justify-center rounded-full p-0 w-8 h-8"> */}
-        {isListening ? <Square size={18} /> : <Mic size={18} />}
-        {/* </span> */}
+        {isListening ? <Square size={16} /> : <Mic size={18} />}
       </button>
     </div>
   );

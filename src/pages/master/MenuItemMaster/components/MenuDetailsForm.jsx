@@ -74,6 +74,7 @@ const { hasModuleAccess } = useModuleAccess();
 const canAccessgenratewithaislogan = hasModuleAccess("Generate with Ai Solgan");
   const canAccesscaptainRecipe = hasModuleAccess("Captain Recipe");
 const { getCategories, getSubCategories } = useMenuApi(userId);
+  const [finishUnitOptions, setFinishUnitOptions] = useState([]);
 
   const [fileList, setFileList] = useState([]);
   const [menuCategory, setMenuCategory] = useState([]);
@@ -151,6 +152,10 @@ const [nameHindi, setNameHindi] = useState("");
 const [instructionGujarati, setInstructionGujarati] = useState("");
 const [instructionHindi, setInstructionHindi] = useState("");
   const instructionTimerRef = useRef(null);
+  const [englishKitchenInstruction, setEnglishKitchenInstruction] = useState("");
+  const [kitchenInstructionGujarati, setKitchenInstructionGujarati] = useState("");
+  const [kitchenInstructionHindi, setKitchenInstructionHindi] = useState("");
+  const kitchenInstructionTimerRef = useRef(null);
   const hasLoadedEditData = useRef(false);
 
 
@@ -253,9 +258,10 @@ const [isCopyCaptainRecipe, setIsCopyCaptainRecipe] = useState(false);
     const loadInitial = async () => {
       setRawMaterialLoading(true);
       try {
-        const [catRes, godownRes] = await Promise.all([
+        const [catRes, godownRes, unitRes] = await Promise.all([
        getCategories(),
        GETallGodown(userId),
+       Getunit(userId),
      ]);
 
     
@@ -267,6 +273,13 @@ const [isCopyCaptainRecipe, setIsCopyCaptainRecipe] = useState(false);
             menuName: item.nameEnglish,
           })) || [];
         setMenuCategory(catData);
+
+        const unitData =
+          unitRes?.data?.data?.["Unit Details"]?.map((item) => ({
+            value: Number(item.id),
+            label: item.nameEnglish,
+          })) || [];
+        setFinishUnitOptions(unitData);
 
         const godownData = [
           { value: 0, label: "At Venue" },
@@ -356,6 +369,9 @@ setNameHindi(editData.nameHindi || "");
 setEnglishInstruction(editData.instructionEnglish || "");
 setInstructionGujarati(editData.instructionGujarati || ""); 
 setInstructionHindi(editData.instructionHindi || ""); 
+setEnglishKitchenInstruction(editData.kitchenInstructionEnglish || "");
+setKitchenInstructionGujarati(editData.kitchenInstructionGujarati || "");
+setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
     form.setFieldsValue({
       nameEnglish: editData.nameEnglish,
       nameGujarati: editData.nameGujarati,
@@ -366,10 +382,16 @@ setInstructionHindi(editData.instructionHindi || "");
       sequence: editData.sequence,
       category: Number(editData.menuCategory?.id),
       subCategory: editData.menuSubCategory?.id,
+      finishRate: editData.finishRate != null ? editData.finishRate : undefined,
+      finishUnitId: editData.finishUnitId ? Number(editData.finishUnitId) : editData.finishUnit?.id ? Number(editData.finishUnit?.id) : undefined,
+      finishWeight: editData.finishWeight != null ? editData.finishWeight : undefined,
       remarks: editData.remarks,
       instructionEnglish: editData.instructionEnglish || "",
       instructionGujarati: editData.instructionGujarati || "",
       instructionHindi: editData.instructionHindi || "",
+      kitchenInstructionEnglish: editData.kitchenInstructionEnglish || "",
+      kitchenInstructionGujarati: editData.kitchenInstructionGujarati || "",
+      kitchenInstructionHindi: editData.kitchenInstructionHindi || "",
       imageUrl: editData.url || "",
     });
     setEnglishInstruction(editData.instructionEnglish || "");
@@ -686,6 +708,25 @@ setInstructionHindi(editData.instructionHindi || "");
     message.error("Instruction translation failed");
   }
 };
+  const handleTranslateKitchenInstruction = async (value) => {
+    if (!value?.trim()) {
+      form.setFieldsValue({ kitchenInstructionGujarati: "", kitchenInstructionHindi: "" });
+      setKitchenInstructionGujarati("");
+      setKitchenInstructionHindi("");
+      return;
+    }
+    try {
+      const res = await Translateapi(value);
+      const data = res?.data;
+      const guj = data?.[langConfig.apiKey] || "";
+      const hin = data?.hindi || "";
+      form.setFieldsValue({ kitchenInstructionGujarati: guj, kitchenInstructionHindi: hin });
+      setKitchenInstructionGujarati(guj);
+      setKitchenInstructionHindi(hin);
+    } catch (error) {
+      message.error("Kitchen instruction translation failed");
+    }
+  };
   const handleCategoryChange = async (value) => {
     form.setFieldsValue({ subCategory: undefined });
     try {
@@ -1191,6 +1232,60 @@ setInstructionHindi(editData.instructionHindi || "");
             </div>
           </Form.Item>
         </div>
+
+        {/* Finish Rate, Finish Unit, Finish Weight */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Form.Item
+            label={
+              <span className="text-[#6A7C94] text-base font-medium">
+                Finish Rate
+              </span>
+            }
+            name="finishRate"
+          >
+            <InputNumber
+              min={0}
+              className="w-full bg-[#F8FAFC] h-10 hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
+              controls={false}
+              placeholder="Enter finish rate"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label={
+              <span className="text-[#6A7C94] text-base font-medium">
+                Finish Unit
+              </span>
+            }
+            name="finishUnitId"
+          >
+            <Select
+              showSearch
+              allowClear
+              optionFilterProp="label"
+              placeholder="Select finish unit"
+              options={finishUnitOptions}
+              className="w-full bg-[#F8FAFC] h-10 hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label={
+              <span className="text-[#6A7C94] text-base font-medium">
+                Finish Weight
+              </span>
+            }
+            name="finishWeight"
+          >
+            <InputNumber
+              min={0}
+              className="w-full bg-[#F8FAFC] h-10 hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
+              controls={false}
+              placeholder="Enter finish weight"
+            />
+          </Form.Item>
+        </div>
+
         {/* Remarks */}
         <Form.Item
           label={
@@ -1246,6 +1341,55 @@ setInstructionHindi(editData.instructionHindi || "");
       english: "instructionEnglish",
       regional: "instructionGujarati",
       hindi: "instructionHindi",
+    }}
+  />
+</div>
+
+{/* Kitchen Instructions */}
+<div className="mb-4">
+  <MultiLangInputBox
+    label="Kitchen Instruction"
+    type="textarea"
+    inputProps={{ rows: 3 }}
+    formData={{
+      kitchenInstructionEnglish: englishKitchenInstruction,
+      kitchenInstructionGujarati: kitchenInstructionGujarati,
+      kitchenInstructionHindi: kitchenInstructionHindi,
+    }}
+    setFormData={(updated) => {
+      const englishChanged =
+        updated.kitchenInstructionEnglish !== englishKitchenInstruction;
+      setEnglishKitchenInstruction(updated.kitchenInstructionEnglish);
+      setKitchenInstructionGujarati(updated.kitchenInstructionGujarati);
+      setKitchenInstructionHindi(updated.kitchenInstructionHindi);
+      form.setFieldsValue({
+        kitchenInstructionEnglish: updated.kitchenInstructionEnglish,
+        kitchenInstructionGujarati: updated.kitchenInstructionGujarati,
+        kitchenInstructionHindi: updated.kitchenInstructionHindi,
+      });
+      if (englishChanged) {
+        clearTimeout(kitchenInstructionTimerRef.current);
+        if (!updated.kitchenInstructionEnglish.trim()) {
+          setKitchenInstructionGujarati("");
+          setKitchenInstructionHindi("");
+          form.setFieldsValue({
+            kitchenInstructionGujarati: "",
+            kitchenInstructionHindi: "",
+          });
+          return;
+        }
+        kitchenInstructionTimerRef.current = setTimeout(() => {
+          handleTranslateKitchenInstruction(
+            updated.kitchenInstructionEnglish,
+          );
+        }, 600);
+      }
+    }}
+    cols={3}
+    keys={{
+      english: "kitchenInstructionEnglish",
+      regional: "kitchenInstructionGujarati",
+      hindi: "kitchenInstructionHindi",
     }}
   />
 </div>
