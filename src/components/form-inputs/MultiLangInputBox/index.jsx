@@ -1,5 +1,6 @@
 import { useRef, useEffect } from "react";
 import InputToTextLang from "../InputToTextLang";
+import SpeechToText from "../SpeechToText";
 import RichTextEditable, {
   trimPayloadWhitespace,
   payloadToDisplayHtml,
@@ -100,15 +101,19 @@ const MultiLangInputBox = ({
                 )}
               </label>
 
-              <RichTextEditable
+              <SpeechToText
                 name={item.key}
+                placeholder={label}
                 value={formData[item.key] || ""}
-                onChange={(html) =>
+                onChange={(e) =>
                   setFormData({
                     ...formData,
-                    [item.key]: html,
+                    [item.key]: e.target.value,
                   })
                 }
+                type="textarea"
+                lang={item.lang}
+                enableFormatting={true}
               />
 
               {index === 0 && error && (
@@ -133,19 +138,19 @@ const MultiLangInputBox = ({
                 )}
               </label>
 
-              <textarea
+              <SpeechToText
                 name={item.key}
                 placeholder={label}
-                rows={3}
                 value={formData[item.key] || ""}
-                onKeyDown={handleTextareaKeyDown}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     [item.key]: e.target.value,
                   })
                 }
-                className="w-full resize-none rounded-lg border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                type="textarea"
+                lang={item.lang}
+                enableFormatting={false}
               />
 
               {index === 0 && error && (

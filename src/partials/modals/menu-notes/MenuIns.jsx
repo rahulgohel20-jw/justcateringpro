@@ -269,10 +269,9 @@ const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslati
           <MultiLangInputBox
             formData={formData}
             setFormData={setFormData}
-            enableFormatting={true}
+            enableFormatting={mode === "decor"}
             label="Instruction"
             cols={1}
-            type="textarea"
             keys={{ english: "english", regional: "gujarati", hindi: "hindi" }}
           />
         </div>
