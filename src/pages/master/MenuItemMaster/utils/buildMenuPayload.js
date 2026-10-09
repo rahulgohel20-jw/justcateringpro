@@ -21,8 +21,27 @@ export const buildPayload = (details, allocation = {}) => {
   formData.append("url", details.imageUrl || "");
   formData.append("userId", userId);
   formData.append("instructionEnglish", details.instructionEnglish || "");
-formData.append("instructionGujarati", details.instructionGujarati || "");
-formData.append("instructionHindi", details.instructionHindi || "");
+  formData.append("instructionGujarati", details.instructionGujarati || "");
+  formData.append("instructionHindi", details.instructionHindi || "");
+
+  // Finish fields
+  formData.append(
+    "finishRate",
+    details.finishRate != null && details.finishRate !== "" ? details.finishRate : 0,
+  );
+  formData.append(
+    "finishUnitId",
+    details.finishUnitId != null && details.finishUnitId !== "" ? Number(details.finishUnitId) : 0,
+  );
+  formData.append(
+    "finishWeight",
+    details.finishWeight != null && details.finishWeight !== "" ? details.finishWeight : 0,
+  );
+
+  // Kitchen instruction fields in 3 languages
+  formData.append("kitchenInstructionEnglish", details.kitchenInstructionEnglish || "");
+  formData.append("kitchenInstructionGujarati", details.kitchenInstructionGujarati || "");
+  formData.append("kitchenInstructionHindi", details.kitchenInstructionHindi || "");
 
   // File upload
   if (details.file) {
