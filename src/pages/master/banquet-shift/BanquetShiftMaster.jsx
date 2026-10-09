@@ -27,10 +27,17 @@ const BanquetShiftMaster = () => {
   // ─── Format raw API data into table rows ───────────────────────────────────
   const formatShiftData = (shifts) =>
     shifts.map((shift, index) => ({
+      ...shift,
       sr_no: index + 1,
       shift_name: shift.shiftName || "-",
       start_time: shift.startTime || "-",
       end_time: shift.endTime || "-",
+      sortorder:
+        shift.sortorder !== undefined && shift.sortorder !== null
+          ? shift.sortorder
+          : shift.sortOrder !== undefined && shift.sortOrder !== null
+          ? shift.sortOrder
+          : "-",
       isActive: shift.isActive !== undefined ? shift.isActive : true,
       id: shift.id,
     }));
@@ -69,7 +76,14 @@ const BanquetShiftMaster = () => {
             shift.shiftName.toLowerCase().includes(searchLower)) ||
           (shift.startTime &&
             shift.startTime.toLowerCase().includes(searchLower)) ||
-          (shift.endTime && shift.endTime.toLowerCase().includes(searchLower))
+          (shift.endTime &&
+            shift.endTime.toLowerCase().includes(searchLower)) ||
+          (shift.sortorder !== undefined &&
+            shift.sortorder !== null &&
+            shift.sortorder.toString().includes(searchLower)) ||
+          (shift.sortOrder !== undefined &&
+            shift.sortOrder !== null &&
+            shift.sortOrder.toString().includes(searchLower))
       );
 
       setTableData(formatShiftData(filtered));

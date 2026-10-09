@@ -6,11 +6,31 @@ import {
   Phone,
   Mail,
   ArrowRight,
+  LogOut,
 } from "lucide-react";
+import { useAuthContext } from "@/auth";
+import { useNavigate } from "react-router-dom";
 
-const ApprovalPendingPage = ({ phone, email }) => {
+const ApprovalPendingPage = ({ phone = "8866889580", email = "info.justcatering@gmail.com" }) => {
+  const { logout } = useAuthContext();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      if (logout) {
+        await logout();
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      localStorage.removeItem("userToken");
+      localStorage.removeItem("userId");
+      navigate("/auth/login", { replace: true });
+    }
+  };
+
   return (
-    <div className=" w-full bg-gradient-to-br from-[#f8f9fc] via-[#f3f4f6] to-[#eef2ff] flex flex-col">
+    <div className="w-full min-h-screen bg-gradient-to-br from-[#f8f9fc] via-[#f3f4f6] to-[#eef2ff] flex flex-col">
       {/* Top Hero Section */}
       <div className="bg-primary w-full px-4 md:px-16 py-4 md:py-18">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10">
@@ -39,43 +59,54 @@ const ApprovalPendingPage = ({ phone, email }) => {
           </div>
 
           {/* Right Status Steps */}
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 md:p-8 w-full md:w-[420px]">
-            <div className="flex items-center justify-between">
-              {/* Registered */}
-              <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center shadow">
-                  <Check className="text-green-600 w-6 h-6" />
+          <div className="flex flex-col items-end gap-3 w-full md:w-[420px]">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-white/90 hover:text-white bg-white/15 hover:bg-white/25 border border-white/20 px-4 py-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-sm"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Log Out</span>
+            </button>
+
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 md:p-8 w-full">
+              <div className="flex items-center justify-between">
+                {/* Registered */}
+                <div className="flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center shadow">
+                    <Check className="text-green-600 w-6 h-6" />
+                  </div>
+
+                  <span className="mt-3 text-sm text-white font-medium">
+                    Registered
+                  </span>
                 </div>
 
-                <span className="mt-3 text-sm text-white font-medium">
-                  Registered
-                </span>
-              </div>
+                <div className="flex-1 h-[2px] bg-yellow-300 mx-3" />
 
-              <div className="flex-1 h-[2px] bg-yellow-300 mx-3" />
+                {/* Review */}
+                <div className="flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center shadow animate-pulse">
+                    <Clock3 className="text-yellow-500 w-6 h-6" />
+                  </div>
 
-              {/* Review */}
-              <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center shadow animate-pulse">
-                  <Clock3 className="text-yellow-500 w-6 h-6" />
+                  <span className="mt-3 text-sm text-yellow-200 font-semibold">
+                    Review
+                  </span>
                 </div>
 
-                <span className="mt-3 text-sm text-yellow-200 font-semibold">
-                  Review
-                </span>
-              </div>
+                <div className="flex-1 h-[2px] bg-white/20 mx-3" />
 
-              <div className="flex-1 h-[2px] bg-white/20 mx-3" />
+                {/* Activated */}
+                <div className="flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center shadow">
+                    <Rocket className="text-gray-400 w-6 h-6" />
+                  </div>
 
-              {/* Activated */}
-              <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center shadow">
-                  <Rocket className="text-gray-400 w-6 h-6" />
+                  <span className="mt-3 text-sm text-white/60 font-medium">
+                    Activated
+                  </span>
                 </div>
-
-                <span className="mt-3 text-sm text-white/60 font-medium">
-                  Activated
-                </span>
               </div>
             </div>
           </div>
@@ -170,6 +201,21 @@ const ApprovalPendingPage = ({ phone, email }) => {
               </a>
             </div>
           </div>
+        </div>
+
+        {/* Logout Section */}
+        <div className="max-w-7xl mx-auto mt-10 flex flex-col items-center justify-center">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-2xl bg-white border border-gray-200 text-gray-700 hover:text-red-600 hover:border-red-200 hover:bg-red-50/60 shadow-sm hover:shadow-md transition-all duration-200 font-semibold text-base cursor-pointer group"
+          >
+            <LogOut className="w-5 h-5 text-gray-500 group-hover:text-red-600 transition-colors" />
+            <span>Log Out</span>
+          </button>
+          <p className="text-gray-400 text-sm mt-3 text-center">
+            Want to use a different account? Click above to return to login.
+          </p>
         </div>
       </div>
     </div>

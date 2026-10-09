@@ -6,11 +6,31 @@ import {
   Phone,
   Mail,
   ArrowRight,
+  LogOut,
 } from "lucide-react";
- 
-const ApprovalPendingPage = ({ phone, email }) => {
+import { useAuthContext } from "@/auth";
+import { useNavigate } from "react-router-dom";
+
+const ApprovalPendingPage = ({ phone = "8866889580", email = "info.justcatering@gmail.com" }) => {
+  const { logout } = useAuthContext();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      if (logout) {
+        await logout();
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      localStorage.removeItem("userToken");
+      localStorage.removeItem("userId");
+      navigate("/auth/login", { replace: true });
+    }
+  };
+
   return (
-    <div className=" w-full bg-gradient-to-br from-[#f8f9fc] via-[#f3f4f6] to-[#eef2ff] flex flex-col">
+    <div className="w-full min-h-screen bg-gradient-to-br from-[#f8f9fc] via-[#f3f4f6] to-[#eef2ff] flex flex-col">
       {/* Top Hero Section */}
       <div className="bg-primary w-full px-4 md:px-16 py-4 md:py-18">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10">
@@ -20,68 +40,79 @@ const ApprovalPendingPage = ({ phone, email }) => {
               <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-lg">
                 <ShieldCheck className="text-white w-10 h-10" />
               </div>
- 
+
               <div>
                 <p className="text-white/70 uppercase tracking-[0.25em] text-sm font-semibold">
                   Account Status
                 </p>
- 
+
                 <h1 className="text-white text-2xl md:text-4xl font-bold leading-tight">
                   Pending Approval
                 </h1>
               </div>
             </div>
- 
+
             <p className="text-white/80 px-6 md:px-12 lg:px-24 text-base md:text-md leading-relaxed max-w-2xl">
               Your account has been successfully created and is currently under
               verification by our administration team.
             </p>
           </div>
- 
+
           {/* Right Status Steps */}
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 md:p-8 w-full md:w-[420px]">
-            <div className="flex items-center justify-between">
-              {/* Registered */}
-              <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center shadow">
-                  <Check className="text-green-600 w-6 h-6" />
+          <div className="flex flex-col items-end gap-3 w-full md:w-[420px]">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-white/90 hover:text-white bg-white/15 hover:bg-white/25 border border-white/20 px-4 py-1.5 rounded-full transition-all duration-200 cursor-pointer shadow-sm"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Log Out</span>
+            </button>
+
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 md:p-8 w-full">
+              <div className="flex items-center justify-between">
+                {/* Registered */}
+                <div className="flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center shadow">
+                    <Check className="text-green-600 w-6 h-6" />
+                  </div>
+
+                  <span className="mt-3 text-sm text-white font-medium">
+                    Registered
+                  </span>
                 </div>
- 
-                <span className="mt-3 text-sm text-white font-medium">
-                  Registered
-                </span>
-              </div>
- 
-              <div className="flex-1 h-[2px] bg-yellow-300 mx-3" />
- 
-              {/* Review */}
-              <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center shadow animate-pulse">
-                  <Clock3 className="text-yellow-500 w-6 h-6" />
+
+                <div className="flex-1 h-[2px] bg-yellow-300 mx-3" />
+
+                {/* Review */}
+                <div className="flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-full bg-yellow-100 flex items-center justify-center shadow animate-pulse">
+                    <Clock3 className="text-yellow-500 w-6 h-6" />
+                  </div>
+
+                  <span className="mt-3 text-sm text-yellow-200 font-semibold">
+                    Review
+                  </span>
                 </div>
- 
-                <span className="mt-3 text-sm text-yellow-200 font-semibold">
-                  Review
-                </span>
-              </div>
- 
-              <div className="flex-1 h-[2px] bg-white/20 mx-3" />
- 
-              {/* Activated */}
-              <div className="flex flex-col items-center">
-                <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center shadow">
-                  <Rocket className="text-gray-400 w-6 h-6" />
+
+                <div className="flex-1 h-[2px] bg-white/20 mx-3" />
+
+                {/* Activated */}
+                <div className="flex flex-col items-center">
+                  <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center shadow">
+                    <Rocket className="text-gray-400 w-6 h-6" />
+                  </div>
+
+                  <span className="mt-3 text-sm text-white/60 font-medium">
+                    Activated
+                  </span>
                 </div>
- 
-                <span className="mt-3 text-sm text-white/60 font-medium">
-                  Activated
-                </span>
               </div>
             </div>
           </div>
         </div>
       </div>
- 
+
       {/* Main Content */}
       <div className="flex-1 w-full px-6 md:px-16 py-12">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -91,25 +122,25 @@ const ApprovalPendingPage = ({ phone, email }) => {
               <h2 className="text-3xl font-bold text-gray-900 mb-4">
                 Verification In Progress
               </h2>
- 
+
               <p className="text-gray-600 leading-relaxed text-base md:text-lg">
                 Our team is currently reviewing your account information. Once
                 approved, you'll gain complete access to all platform features
                 and services.
               </p>
             </div>
- 
+
             <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
                   <Clock3 className="text-yellow-600 w-6 h-6" />
                 </div>
- 
+
                 <div>
                   <h3 className="text-lg font-semibold text-yellow-800 mb-2">
                     Approval Timeline
                   </h3>
- 
+
                   <p className="text-yellow-700 leading-relaxed">
                     Approval usually takes less than 24 hours.
                   </p>
@@ -117,65 +148,78 @@ const ApprovalPendingPage = ({ phone, email }) => {
               </div>
             </div>
           </div>
- 
+
           {/* Contact Section */}
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 md:p-10">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
               Need Assistance?
             </h2>
- 
+
             <p className="text-gray-500 mb-8">
               Our support team is here to help you anytime.
             </p>
- 
+
             <div className="space-y-5">
               {/* Phone */}
               <a
-                href={`tel:${ 8866889580}`}
+                href={`tel:${phone}`}
                 className="group flex items-center gap-5 rounded-2xl border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-100 p-5 transition-all duration-300"
               >
                 <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition-colors">
                   <Phone className="text-blue-600 w-6 h-6" />
                 </div>
- 
+
                 <div>
-                  <p className="text-sm text-gray-900">Phone Number</p>
- 
+                  <p className="text-sm text-gray-400">Phone Number</p>
+
                   <p className="text-lg font-semibold text-gray-800">
                     8866889580
                   </p>
                 </div>
- 
+
                 <ArrowRight className="ml-auto text-gray-300 group-hover:text-blue-500 transition-colors" />
               </a>
- 
+
               {/* Email */}
               <a
-                href={`mailto:$info.justcatering@gmail.com`}
+                href={`mailto:${email}`}
                 className="group flex items-center gap-5 rounded-2xl border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-100 p-5 transition-all duration-300"
               >
                 <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center shrink-0 group-hover:bg-blue-200 transition-colors">
                   <Mail className="text-blue-600 w-6 h-6" />
                 </div>
- 
+
                 <div>
-                  <p className="text-sm text-gray-900">Email Address</p>
- 
+                  <p className="text-sm text-gray-400">Email Address</p>
+
                   <p className="text-md font-semibold text-gray-800 break-all">
                     info.justcatering@gmail.com
                   </p>
                 </div>
- 
+
                 <ArrowRight className="ml-auto text-gray-300 group-hover:text-blue-500 transition-colors" />
               </a>
             </div>
           </div>
         </div>
+
+        {/* Logout Section */}
+        <div className="max-w-7xl mx-auto mt-10 flex flex-col items-center justify-center">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-2xl bg-white border border-gray-200 text-gray-700 hover:text-red-600 hover:border-red-200 hover:bg-red-50/60 shadow-sm hover:shadow-md transition-all duration-200 font-semibold text-base cursor-pointer group"
+          >
+            <LogOut className="w-5 h-5 text-gray-500 group-hover:text-red-600 transition-colors" />
+            <span>Log Out</span>
+          </button>
+          <p className="text-gray-400 text-sm mt-3 text-center">
+            Want to use a different account? Click above to return to login.
+          </p>
+        </div>
       </div>
     </div>
   );
 };
- 
+
 export default ApprovalPendingPage;
- 
- 
