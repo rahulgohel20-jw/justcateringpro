@@ -13,6 +13,7 @@ const AddBanquetShiftModal = ({ isOpen, onClose, shiftData, refreshData }) => {
     shiftName: "",
     startTime: "",
     endTime: "",
+    sortorder: "",
     isActive: true,
   };
 
@@ -67,6 +68,33 @@ const AddBanquetShiftModal = ({ isOpen, onClose, shiftData, refreshData }) => {
           return endTime > startTime;
         }
       ),
+
+    sortorder: Yup.number()
+      .typeError(
+        intl.formatMessage({
+          id: "BANQUET_SHIFT.SORT_ORDER_NUMBER",
+          defaultMessage: "Sequence must be a number",
+        })
+      )
+      .min(
+        0,
+        intl.formatMessage({
+          id: "BANQUET_SHIFT.SORT_ORDER_NON_NEGATIVE",
+          defaultMessage: "Sequence cannot be negative",
+        })
+      )
+      .integer(
+        intl.formatMessage({
+          id: "BANQUET_SHIFT.SORT_ORDER_INTEGER",
+          defaultMessage: "Sequence must be an integer",
+        })
+      )
+      .required(
+        intl.formatMessage({
+          id: "BANQUET_SHIFT.SORT_ORDER_REQUIRED",
+          defaultMessage: "Sequence is required",
+        })
+      ),
   });
 
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
@@ -84,6 +112,7 @@ const AddBanquetShiftModal = ({ isOpen, onClose, shiftData, refreshData }) => {
         shiftName: values.shiftName.trim(),
         startTime: values.startTime,
         endTime: values.endTime,
+        sortorder: Number(values.sortorder),
         isActive: values.isActive,
         userId: Number(userId),
       };
@@ -163,9 +192,19 @@ const AddBanquetShiftModal = ({ isOpen, onClose, shiftData, refreshData }) => {
           initialValues={
             shiftData
               ? {
-                  shiftName: shiftData.shift_name || "",
-                  startTime: shiftData.start_time || "",
-                  endTime: shiftData.end_time || "",
+                  shiftName: shiftData.shift_name || shiftData.shiftName || "",
+                  startTime: shiftData.start_time || shiftData.startTime || "",
+                  endTime: shiftData.end_time || shiftData.endTime || "",
+                  sortorder:
+                    shiftData.sortorder !== undefined &&
+                    shiftData.sortorder !== null &&
+                    shiftData.sortorder !== "-"
+                      ? shiftData.sortorder
+                      : shiftData.sortOrder !== undefined &&
+                        shiftData.sortOrder !== null &&
+                        shiftData.sortOrder !== "-"
+                      ? shiftData.sortOrder
+                      : "",
                   isActive: shiftData.isActive ?? true,
                 }
               : initialFormState
@@ -207,6 +246,31 @@ const AddBanquetShiftModal = ({ isOpen, onClose, shiftData, refreshData }) => {
                   })}
                   value={values.endTime}
                   setFieldValue={setFieldValue}
+                />
+
+                <InputWithFormik
+                  label={intl.formatMessage({
+                    id: "COMMON.SEQUENCE",
+                    defaultMessage: "Sequence",
+                  })}
+                  name="sortorder"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder={intl.formatMessage({
+                    id: "BANQUET_SHIFT.SORT_ORDER_PLACEHOLDER",
+                    defaultMessage: "e.g. 1",
+                  })}
+                  onKeyDown={(e) => {
+                    // Disallow negative sign, plus sign, exponent, and decimal point
+                    if (["-", "+", "e", "E", "."].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e, form) => {
+                    const cleanVal = e.target.value.replace(/\D/g, "");
+                    form.setFieldValue("sortorder", cleanVal);
+                  }}
                 />
 
                 <div className="flex items-center gap-3">
@@ -253,15 +317,38 @@ const AddBanquetShiftModal = ({ isOpen, onClose, shiftData, refreshData }) => {
   );
 };
 
-const InputWithFormik = ({ label, name, type = "text", placeholder = "" }) => (
+const InputWithFormik = ({
+  label,
+  name,
+  type = "text",
+  placeholder = "",
+  min,
+  step,
+  onKeyDown,
+  onChange,
+}) => (
   <div className="flex flex-col">
     <label className="text-gray-600 mb-1">{label}</label>
-    <Field
-      type={type}
-      name={name}
-      placeholder={placeholder || label}
-      className="border border-gray-300 rounded-lg p-2 w-full"
-    />
+    <Field name={name}>
+      {({ field, form }) => (
+        <input
+          {...field}
+          type={type}
+          placeholder={placeholder || label}
+          className="border border-gray-300 rounded-lg p-2 w-full"
+          {...(min !== undefined ? { min } : {})}
+          {...(step !== undefined ? { step } : {})}
+          onKeyDown={onKeyDown}
+          onChange={(e) => {
+            if (onChange) {
+              onChange(e, form);
+            } else {
+              field.onChange(e);
+            }
+          }}
+        />
+      )}
+    </Field>
     <ErrorMessage name={name} component="div" className="text-red-500 text-sm mt-1" />
   </div>
 );
