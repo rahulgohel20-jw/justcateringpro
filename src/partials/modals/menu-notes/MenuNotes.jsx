@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
 import { Mic, RefreshCw } from "lucide-react";
 import Swal from "sweetalert2";
 import { GetSloganByMenuId } from "@/services/apiServices";
-
+import { useState, useEffect, useRef } from "react";
+import useSpeechRecognition from "@/hooks/useSpeechRecognition";
 const MenuNotes = ({ isOpen, onClose, itemId, notes = "", onSave }) => {
   const [itemSlogan, setItemSlogan] = useState("");
   const [syncing, setSyncing] = useState(false);
@@ -135,39 +135,68 @@ const JainToggle = ({ checked, onChange, disabled }) => (
     </button>
   </label>
 );
-const InputWithIcon = ({ label, value, onChange, onSync, syncing }) => (
-  <div className="relative w-full">
-    <div className="flex items-center justify-between mb-1">
-      <label className="block text-gray-600">{label}</label>
+const InputWithIcon = ({ label, value, onChange, onSync, syncing }) => {
+  const baseRef = useRef("");
+
+  const { isListening, toggle, stop } = useSpeechRecognition({
+    onResult: (text) => {
+      const spoken = (text || "").trim();
+      const base = baseRef.current;
+      // the slogan is a plain textarea, so no HTML escaping is needed
+      onChange({
+        target: { value: `${base}${base && spoken ? " " : ""}${spoken}` },
+      });
+    },
+  });
+
+  // stop the mic when the modal closes (this component unmounts then)
+  useEffect(() => () => stop?.(), []);
+
+  const handleMicClick = () => {
+    if (!isListening) {
+      // speech is appended after whatever is already typed
+      baseRef.current = (value || "").trimEnd();
+    }
+    toggle();
+  };
+
+  return (
+    <div className="relative w-full">
+      <div className="flex items-center justify-between mb-1">
+        <label className="block text-gray-600">{label}</label>
+
+        <button
+          type="button"
+          onClick={onSync}
+          disabled={syncing}
+          title="Sync slogan from master"
+          className="flex items-center gap-1.5 text-xs font-semibold text-primary border border-primary rounded-full px-2.5 py-1 hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <RefreshCw size={12} className={syncing ? "animate-spin" : ""} />
+          {syncing ? "Syncing..." : "Sync Slogan"}
+        </button>
+      </div>
+
+      <textarea
+        rows={5}
+        className="border border-gray-300 rounded-lg p-3 pr-12 w-full resize-none"
+        placeholder={isListening ? "Listening…" : label}
+        value={value}
+        onChange={onChange}
+      />
 
       <button
         type="button"
-        onClick={onSync}
-        disabled={syncing}
-        title="Sync slogan from master"
-        className="flex items-center gap-1.5 text-xs font-semibold text-primary border border-primary rounded-full px-2.5 py-1 hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+        onClick={handleMicClick}
+        onMouseDown={(e) => e.preventDefault()}
+        title={isListening ? "Stop listening" : "Speak"}
+        className={`sga__btn me-1 btn flex items-center justify-center rounded-full p-0 w-8 h-8 absolute bottom-3 right-2 ${
+          isListening ? "bg-red-500 text-white animate-pulse" : "btn-primary"
+        }`}
       >
-        <RefreshCw size={12} className={syncing ? "animate-spin" : ""} />
-        {syncing ? "Syncing..." : "Sync Slogan"}
+        <Mic size={18} />
       </button>
     </div>
-
-    <textarea
-      rows={5}
-      className="border border-gray-300 rounded-lg p-3 pr-12 w-full resize-none"
-      placeholder={label}
-      value={value}
-      onChange={onChange}
-    />
-
-    <button
-      type="button"
-      onClick={() => console.log("Mic clicked")}
-      title="Mic"
-      className="sga__btn me-1 btn btn-primary flex items-center justify-center rounded-full p-0 w-8 h-8 absolute bottom-3 right-2"
-    >
-      <Mic size={18} />
-    </button>
-  </div>
-);
+  );
+};
 export default MenuNotes;

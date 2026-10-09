@@ -3,7 +3,8 @@ import { Translateapi } from "../../../services/apiServices";
 import { extractTranslations } from "../../../utils/langConfig";
 import MultiLangInputBox from "../../../components/form-inputs/MultiLangInputbox";
 import { displayHtmlToPayload, sanitizeToAllowedTags } from "../../../components/form-inputs/RichTextEditable/index"
-
+import { Mic } from "lucide-react";
+import useSpeechRecognition from "@/hooks/useSpeechRecognition";
 const MenuIns = ({ isOpen, onClose, notes = "", onSave, itemId, initialTranslating = false, mode = "menu"  }) => {
   const [formData, setFormData] = useState({ english: "", gujarati: "", hindi: "" });
   const [translating, setTranslating] = useState(false);
