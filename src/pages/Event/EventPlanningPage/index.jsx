@@ -368,14 +368,6 @@ const SearchWithCategorySuggestions = ({
   const dropdownRef = useRef(null);
   const itemRefs = useRef([]);
 
-  const { isListening, toggle: toggleMic, stop: stopMic } = useSpeechRecognition({
-    onResult: (text) => {
-      onChange(text);
-      setShowDropdown(true);
-      setActiveIdx(-1);
-    },
-  });
-
   useEffect(() => {
     const fetchCats = async () => {
       if (!userId) return;
@@ -433,7 +425,6 @@ const SearchWithCategorySuggestions = ({
   };
 
   const handleSelect = (cat) => {
-    stopMic();
     onCategoryChange(cat.nameEnglish, cat.id, cat);
     onChange("");
     setShowDropdown(false);
@@ -450,7 +441,6 @@ const SearchWithCategorySuggestions = ({
       e.preventDefault();
       setActiveIdx((p) => Math.max(p - 1, -1));
     } else if (e.key === "Enter" && activeIdx === 0) {
-      stopMic();
       onCategoryChange("All", 0, {
         id: 0,
         nameEnglish: "All",
@@ -461,7 +451,6 @@ const SearchWithCategorySuggestions = ({
       setShowDropdown(false);
       setActiveIdx(-1);
     } else if (e.key === "Enter" && activeIdx > 0) {
-      stopMic();
       handleSelect(filtered[activeIdx - 1]);
     } else if (e.key === "Escape") {
       setShowDropdown(false);
@@ -475,8 +464,8 @@ const SearchWithCategorySuggestions = ({
         <div className="relative flex-1">
           <input
             type="text"
-            className="input input-md w-full pr-14"
-            placeholder={isListening ? "Listening…" : "Search items by categories"}
+            className="input input-md w-full pr-7"
+            placeholder="Search items by categories"
             value={value}
             autoComplete="off"
             disabled={isDisabled}
@@ -489,22 +478,6 @@ const SearchWithCategorySuggestions = ({
             onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
             onKeyDown={handleKeyDown}
           />
-          <button
-            type="button"
-            title={isListening ? "Stop listening" : "Search by voice"}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={toggleMic}
-            disabled={isDisabled}
-            className={`absolute top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full transition-colors ${
-              value ? "right-8" : "right-2"
-            } ${
-              isListening
-                ? "bg-red-500 text-white animate-pulse"
-                : "bg-primary/10 text-primary hover:bg-primary hover:text-white"
-            }`}
-          >
-            <Mic size={18} />
-          </button>
           {value && (
             <button
               type="button"
@@ -540,7 +513,6 @@ const SearchWithCategorySuggestions = ({
             ref={(el) => (itemRefs.current[0] = el)}
             onMouseDown={(e) => {
               e.preventDefault();
-              stopMic();
               onCategoryChange("All", 0, {
                 id: 0,
                 nameEnglish: "All",
@@ -673,14 +645,6 @@ const SearchWithSubCategorySuggestions = ({
   const dropdownRef = useRef(null);
   const itemRefs = useRef([]);
 
-  const { isListening, toggle: toggleMic, stop: stopMic } = useSpeechRecognition({
-    onResult: (text) => {
-      onChange(text);
-      setShowDropdown(true);
-      setActiveIdx(-1);
-    },
-  });
-
   const noParentSelected = !selectedCategoryId || selectedCategoryId === 0;
 
   // Fetch sub-categories whenever the parent category changes
@@ -750,7 +714,6 @@ const SearchWithSubCategorySuggestions = ({
   };
 
   const handleSelect = (sc) => {
-    stopMic();
     onSubCategoryChange(sc.nameEnglish, sc.id, sc);
     onChange("");
     setShowDropdown(false);
@@ -758,7 +721,6 @@ const SearchWithSubCategorySuggestions = ({
   };
 
   const handleClearSubCategory = () => {
-    stopMic();
     onSubCategoryChange("All", 0, {
       id: 0,
       nameEnglish: "All",
@@ -782,7 +744,6 @@ const SearchWithSubCategorySuggestions = ({
     } else if (e.key === "Enter" && activeIdx === 0) {
       handleClearSubCategory();
     } else if (e.key === "Enter" && activeIdx > 0) {
-      stopMic();
       handleSelect(filtered[activeIdx - 1]);
     } else if (e.key === "Escape") {
       setShowDropdown(false);
@@ -795,13 +756,9 @@ const SearchWithSubCategorySuggestions = ({
         <div className="relative flex-1">
           <input
             type="text"
-            className="input input-md w-full pr-14"
+            className="input input-md w-full pr-7"
             placeholder={
-              isListening
-                ? "Listening…"
-                : noParentSelected
-                ? "Select a category first"
-                : "Search items by sub categories"
+              noParentSelected ? "Select a category first" : "Search items by sub categories"
             }
             value={value}
             autoComplete="off"
@@ -817,24 +774,6 @@ const SearchWithSubCategorySuggestions = ({
             onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
             onKeyDown={handleKeyDown}
           />
-          {!noParentSelected && (
-            <button
-              type="button"
-              title={isListening ? "Stop listening" : "Search by voice"}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={toggleMic}
-              disabled={isDisabled}
-              className={`absolute top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full transition-colors ${
-                value ? "right-8" : "right-2"
-              } ${
-                isListening
-                  ? "bg-red-500 text-white animate-pulse"
-                  : "bg-primary/10 text-primary hover:bg-primary hover:text-white"
-              }`}
-            >
-              <Mic size={18} />
-            </button>
-          )}
           {value && (
             <button
               type="button"
@@ -859,7 +798,6 @@ const SearchWithSubCategorySuggestions = ({
             ref={(el) => (itemRefs.current[0] = el)}
             onMouseDown={(e) => {
               e.preventDefault();
-              stopMic();
               handleClearSubCategory();
             }}
             onMouseEnter={() => setActiveIdx(0)}

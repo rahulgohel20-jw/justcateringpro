@@ -57,9 +57,10 @@
     const isOfferRateUser = OFFER_RATE_USER_IDS.includes(String(userId));
     const DECOR_GST_USER_IDS = ["757"];
   const isDecorGstUser = DECOR_GST_USER_IDS.includes(String(userId));
-  const LOCK_REPORT_USER_IDS = ["233", "299", "298"];
-const canViewLockReport = LOCK_REPORT_USER_IDS.includes(String(userId));
-const isFinalBillingFeatureUser = ["233", "299", "289"]
+const LOCK_REPORT_USER_IDS = ["233", "299", "298"]; //bhandhari
+const canViewLockReport = LOCK_REPORT_USER_IDS.includes(String(userId));                        
+const FINAL_BILLING_USER_IDS = ["233", "299", "298"]; //bhandhari
+const isFinalBillingFeatureUser = FINAL_BILLING_USER_IDS.includes(String(userId));
 const [billingView, setBillingView] = useState("BEFORE");
 const [isLockReportLoading, setIsLockReportLoading] = useState(false);
       const [quotationId, setQuotationId] = useState(null);

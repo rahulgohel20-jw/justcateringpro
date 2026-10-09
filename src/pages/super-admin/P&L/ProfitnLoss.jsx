@@ -11,7 +11,7 @@ import {
   saveclosedate,
 } from "@/services/apiServices";
 import { useCloseDateAll, useSaveCloseDate } from "@/hooks/useCloseDate"; 
-
+import Swal from "sweetalert2";
 const MONTH_NAMES = [
   "January",
   "February",
@@ -109,6 +109,7 @@ const detectActiveMonthFromMap = (monthCloseDates) => {
 };
 
 const CloseDatePanel = ({
+  userId,
   selectedYear,
   selectedMonth,
   savedCloseStart,
@@ -192,7 +193,7 @@ const CloseDatePanel = ({
             onApply={(dmy_start, dmy_end) => {
               setShowPicker(false);
               setSaving(true);
-              saveclosedate(dmy_start, dmy_end)
+              saveclosedate(dmy_start, dmy_end , userId)
                 .then((res) => {
                   if (res?.data?.success) {
                     setLocalCloseStart(dmy_start);
@@ -620,12 +621,10 @@ const ProfitnLoss = () => {
   const now = new Date();
 
 
-  const [userId, setUserId] = useState(null);
-  useEffect(() => {
-    const id = localStorage.getItem("userId");
-    if (id) setUserId(Number(id));
-  }, []);
-
+ const [userId] = useState(() => {
+  const id = localStorage.getItem("mainId") || localStorage.getItem("userId");
+  return id ? Number(id) : null;
+});
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); 
   const [showYearPicker, setShowYearPicker] = useState(false);
@@ -793,13 +792,14 @@ const ProfitnLoss = () => {
 />
             </Toolbar>
           </div>
-          <CloseDatePanel
-            selectedYear={selectedYear}
-            selectedMonth={selectedMonth}
-            savedCloseStart={savedCloseStart}
-            savedCloseEnd={savedCloseEnd}
-            onSave={handleCloseDateSave}
-          />
+         <CloseDatePanel
+  userId={userId}
+  selectedYear={selectedYear}
+  selectedMonth={selectedMonth}
+  savedCloseStart={savedCloseStart}
+  savedCloseEnd={savedCloseEnd}
+  onSave={handleCloseDateSave}
+/>
         </div>
 
         {/* ── Year + Month grid ── */}

@@ -74,6 +74,8 @@ const { hasModuleAccess } = useModuleAccess();
 const canAccessgenratewithaislogan = hasModuleAccess("Generate with Ai Solgan");
   const canAccesscaptainRecipe = hasModuleAccess("Captain Recipe");
 const { getCategories, getSubCategories } = useMenuApi(userId);
+const FINISH_FIELDS_USER_IDS = [233, 103];
+const showFinishFields = FINISH_FIELDS_USER_IDS.includes(Number(userId));
   const [finishUnitOptions, setFinishUnitOptions] = useState([]);
 
   const [fileList, setFileList] = useState([]);
@@ -1234,6 +1236,7 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
         </div>
 
         {/* Finish Rate, Finish Unit, Finish Weight */}
+        {showFinishFields && (
         <div className="grid gap-4 md:grid-cols-3">
           <Form.Item
             label={
@@ -1285,7 +1288,7 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
             />
           </Form.Item>
         </div>
-
+        )}
         {/* Remarks */}
         <Form.Item
           label={
@@ -1346,6 +1349,7 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
 </div>
 
 {/* Kitchen Instructions */}
+{showFinishFields && (
 <div className="mb-4">
   <MultiLangInputBox
     label="Kitchen Instruction"
@@ -1393,6 +1397,7 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
     }}
   />
 </div>
+)}
         {/* Image Upload */}
         <Form.Item
           label={
