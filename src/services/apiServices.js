@@ -4257,3 +4257,7 @@ export const qutationlockreport = (eventId, isDecor, isInvoice, userId) => {
 export const purchasereportvendorwise = (startDate , endDate , uerId)=> {
   return GET(`purchaseorder/purchaseReportPdf?startDate=${startDate}&endDate=${endDate}&userId=${uerId}`);
 };
+
+export const getlabourheplerpdf = ( laborHelperId , userId) => {
+  return GET(`/laborhelper/pdf?laborHelperId=${laborHelperId}&userId=${userId}`);
+};
