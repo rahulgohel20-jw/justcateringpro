@@ -32,8 +32,8 @@ export const columns = (onEdit, onDelete, onStatusChange, permissions = {}) => [
       />
     ),
     meta: {
-      headerClassName: "w-[20%]",
-      cellClassName: "w-[20%]",
+      headerClassName: "w-[15%]",
+      cellClassName: "w-[15%]",
     },
   },
   {
@@ -45,8 +45,21 @@ export const columns = (onEdit, onDelete, onStatusChange, permissions = {}) => [
       />
     ),
     meta: {
-      headerClassName: "w-[20%]",
-      cellClassName: "w-[20%]",
+      headerClassName: "w-[15%]",
+      cellClassName: "w-[15%]",
+    },
+  },
+  {
+    accessorKey: "sortorder",
+    header: (
+      <FormattedMessage
+        id="COMMON.SEQUENCE"
+        defaultMessage="Sequence"
+      />
+    ),
+    meta: {
+      headerClassName: "w-[10%]",
+      cellClassName: "w-[10%]",
     },
   },
   {
