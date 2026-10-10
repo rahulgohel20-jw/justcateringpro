@@ -5,7 +5,8 @@ import { columns } from "./constant";
 import {
   getalllabourhelperbyuserid,
   GetAllContactCategory,
-  deletelabourhelperbyid
+  deletelabourhelperbyid,
+  getlabourheplerpdf,
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -146,6 +147,32 @@ const handleDelete = (id) => {
     setSelectedRow(null);
   };
 
+  const handlePrint = async (row) => {
+  // open the tab first (inside the click) so the popup blocker allows it
+  const newTab = window.open("", "_blank");
+  try {
+    const res = await getlabourheplerpdf(row.id, Id);
+    const data = res?.data;
+
+    let url = null;
+    if (data instanceof Blob) {
+      url = URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+    } else if (typeof data === "string" && /^https?:\/\//.test(data)) {
+      url = data;
+    } else if (typeof data?.data === "string" && /^https?:\/\//.test(data.data)) {
+      url = data.data;
+    }
+
+    if (!url) throw new Error("PDF not received");
+
+    newTab.location.href = url;
+  } catch (error) {
+    newTab?.close();
+    console.error("Error printing labour helper:", error);
+    Swal.fire("Error", "Failed to load PDF", "error");
+  }
+};
+
   return (
     <Fragment>
       <Container>
@@ -203,7 +230,7 @@ const handleDelete = (id) => {
         />
 
         <TableComponent
-          columns={columns(handleEdit, handleDelete, permissions)}
+          columns={columns(handleEdit, handleDelete, permissions ,handlePrint)}
           data={tableData}
           paginationSize={10}
         />

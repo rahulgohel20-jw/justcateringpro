@@ -772,7 +772,8 @@ const calculateItemPrice = (item, matchingRow) => {
     </div>
   );
 };
-
+const RATE_COLUMNS_USER_ID = [103, 233];
+const canSeeRateColumns = () => RATE_COLUMNS_USER_ID.includes(Number(localStorage.getItem("userId")));
 const TableHeader = ({
   onChefCheckAll,
   onOutsourceCheckAll,
@@ -838,7 +839,8 @@ const TableHeader = ({
     <div className="w-[80px] shrink-0 text-center">
       <FormattedMessage id="COMMON.PERSON" defaultMessage="Person" />
     </div>
-
+{showRateColumns && (
+      <>
     <div className="w-[90px] shrink-0 text-center">
       <FormattedMessage id="COMMON.WEIGHT" defaultMessage="Weight" />
     </div>
@@ -851,7 +853,8 @@ const TableHeader = ({
     <div className="w-[100px] shrink-0 text-center">
       <FormattedMessage id="COMMON.TOTAL_RATE" defaultMessage="Total Rate" />
     </div>
-
+ </>
+    )}
     <div className="w-[160px] shrink-0 text-center">
       <FormattedMessage id="COMMON.PLACE" defaultMessage="Place" />
     </div>
@@ -862,7 +865,7 @@ const TableHeader = ({
   </div>
 );
 };
-
+ const showRateColumns = canSeeRateColumns();
 const stripHtmlTags = (str) => (str || "").replace(/<\/?[^>]+(>|$)/g, "");
 const toNum = (v) => {
   if (v === "" || v == null) return 0;
@@ -942,11 +945,11 @@ const calcTotalRate = (row, overrides = {}) => {
 
   const selectedFactor = getUnitFactor(unitId, hierarchy, unitName);
   const baseFactor = getUnitFactor(baseUnitId, hierarchy, baseUnitName);
-
-  const hiddenWeight = weight * (selectedFactor / baseFactor);
-  return String(Number((hiddenWeight * rate).toFixed(2)));
+const hiddenWeight = weight * (selectedFactor / baseFactor);
+return String(Number((hiddenWeight * rate).toFixed(2)));
 };
 const TableRow = ({ row, onChange, disabled, placeOptions = [], unitOptions = [] }) => {  
+  const showRateColumns = canSeeRateColumns();
   const [localPersonCount, setLocalPersonCount] = useState(row.personCount);
   const [hasError, setHasError] = useState(false);
   const [isTranslateOpen, setIsTranslateOpen] = useState(false);
@@ -1080,35 +1083,44 @@ const TableRow = ({ row, onChange, disabled, placeOptions = [], unitOptions = []
     });
   };
 
-  const handlePersonCountChange = (e) => {
-    setLocalPersonCount(Number(e.target.value) || 0);
-    setHasError(false);
-  };
 
-  const handlePersonCountBlur = () => {
-    const value = Number(localPersonCount);
-    if (value === 0) {
-      setHasError(true);
-      message.error("Value cannot be zero");
-      return;
-    }
-    if (isNaN(value) || value < 0) {
-      setHasError(true);
-      message.error("Invalid person value");
-      return;
-    }
-    if (value !== row.personCount)
-  onChange(
-    {
-      ...row,
-      personCount: value,
-      ...(row.weight !== "" && row.weight != null
-        ? { totalRate: calcTotalRate(value, row.weight) }
-        : {}),
-    },
-    true,
-  );
-  };
+const handlePersonCountChange = (e) => {
+  setLocalPersonCount(Number(e.target.value) || 0);
+  setHasError(false);
+};
+
+const handlePersonCountBlur = () => {
+  const value = Number(localPersonCount);
+  if (value === 0) {
+    setHasError(true);
+    message.error("Value cannot be zero");
+    return;
+  }
+  if (isNaN(value) || value < 0) {
+    setHasError(true);
+    message.error("Invalid person value");
+    return;
+  }
+  if (value !== row.personCount) {
+    const oldTotal = parseFloat(row.totalRate);
+    const canScale = !isNaN(oldTotal) && Number(row.personCount) > 0;
+
+    onChange(
+      {
+        ...row,
+        personCount: value,
+        ...(canScale
+          ? {
+              totalRate: String(
+                Number(((oldTotal * value) / row.personCount).toFixed(2)),
+              ),
+            }
+          : {}),
+      },
+      true,
+    );
+  }
+};
 
 const handleInstructionChange = (e) => {
   const rawVal = e.target.value;
@@ -1204,7 +1216,8 @@ const handleInstructionChange = (e) => {
       className="w-14 text-center text-sm p-1"
     />
   </div>
-
+{showRateColumns && (
+  <>
   {/* Weight */}
   <div className="w-[90px] shrink-0">
    <Input
@@ -1277,7 +1290,7 @@ const handleInstructionChange = (e) => {
       className="text-center text-sm"
     />
   </div>
-
+</>)}
   {/* Place */}
   <div className="w-[160px] shrink-0">
     <select
