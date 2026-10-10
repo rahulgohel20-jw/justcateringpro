@@ -9,7 +9,7 @@ import {
 import { Container } from "@/components/container";
 import SidebarChefModal from "../../../components/sidebarchefmodal/SidebarChefModal";
 import Swal from "sweetalert2";
-import { Input, Checkbox, Card, Badge, Tooltip, Spin } from "antd";
+import { Input, Checkbox, Card, Badge, Tooltip, Spin , Select } from "antd";
 import SidebarModal from "../../../components/SidebarModal/SidebarModal";
 import CategorySidebarModal from "../CategorySidebar/CategorySidebarModal";
 import SidebarInsideModal from "../../../components/SidebarInsidemodal/SidebarInsideModal ";
@@ -32,6 +32,7 @@ import {
   FetchCalc,
   Deletesyncmenuallocationandrawmaterial,
   SyncItemWiseRawMaterial,
+  Getunit ,
 } from "@/services/apiServices";
 import { useParams, useNavigate, useBlocker } from "react-router-dom";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -805,85 +806,167 @@ const TableHeader = ({
   };
 
   return (
-    <div
-      className="grid grid-cols-12 items-center gap-2 border-b border-gray-200 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 bg-gray-50 sticky z-10 rounded-t-xl"
-      style={{ top: "220px" }}
-    >
-      {/* Name — col 1-3 */}
-      <div className="col-span-3 text-left">
-        <FormattedMessage id="COMMON.NAME" defaultMessage="Name" />
-      </div>
+  <div
+    className="flex items-center gap-2 border-b border-gray-200 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 bg-gray-50 sticky z-10 rounded-t-xl"
+    style={{ top: 0 }}
+  >
+    <div className="w-[260px] shrink-0 text-left">
+      <FormattedMessage id="COMMON.NAME" defaultMessage="Name" />
+    </div>
 
-      {/* Chef — col 4 */}
-      <div className="col-span-1 text-center">
-        <div className="flex flex-col items-center gap-1">
-          <span>
-            <FormattedMessage id="COMMON.CHEF_LABOUR" defaultMessage="Chef" />
-          </span>
-          <Checkbox
-            checked={allChefChecked}
-            onChange={(e) => handleChefCheck(e.target.checked)}
-          />
-        </div>
-      </div>
-
-      {/* Outsource — col 5 */}
-      <div className="col-span-1 text-center">
-        <div className="flex flex-col items-center gap-1">
-          <span>
-            <FormattedMessage id="COMMON.OUTSIDE" defaultMessage="Outsource" />
-          </span>
-          <Checkbox
-            checked={allOutsourceChecked}
-            onChange={(e) => handleOutsourceCheck(e.target.checked)}
-          />
-        </div>
-      </div>
-
-      {/* Inside — col 6 */}
-      <div className="col-span-1 text-center">
-        <div className="flex flex-col items-center gap-1">
-          <span>
-            <FormattedMessage id="COMMON.INSIDE" defaultMessage="Inside" />
-          </span>
-          <Checkbox
-            checked={allInsideChecked}
-            onChange={(e) => handleInsideCheck(e.target.checked)}
-          />
-        </div>
-      </div>
-
-      {/* Person — col 7 */}
-      <div className="col-span-1 text-center">
-        <FormattedMessage id="COMMON.PERSON" defaultMessage="Person" />
-      </div>
-
-      {/* Place — col 8-9 */}
-      <div className="col-span-2 text-center">
-        <FormattedMessage id="COMMON.PLACE" defaultMessage="Place" />
-      </div>
-
-      {/* Total Price — col 10 */}
-      <div className="col-span-1 text-center" style={{display:"none"}}>
-        <FormattedMessage id="COMMON.TOTAL_PRICE" defaultMessage="Total Price" />
-      </div>
-
-      {/* Instructions — col 11-12 */}
-      <div className="col-span-2 text-left">
-        <FormattedMessage id="COMMON.INSTRUCTIONS" defaultMessage="Instructions" />
+    <div className="w-[80px] shrink-0 text-center">
+      <div className="flex flex-col items-center gap-1">
+        <span><FormattedMessage id="COMMON.CHEF_LABOUR" defaultMessage="Chef" /></span>
+        <Checkbox checked={allChefChecked} onChange={(e) => handleChefCheck(e.target.checked)} />
       </div>
     </div>
-  );
+
+    <div className="w-[90px] shrink-0 text-center">
+      <div className="flex flex-col items-center gap-1">
+        <span><FormattedMessage id="COMMON.OUTSIDE" defaultMessage="Outsource" /></span>
+        <Checkbox checked={allOutsourceChecked} onChange={(e) => handleOutsourceCheck(e.target.checked)} />
+      </div>
+    </div>
+
+    <div className="w-[80px] shrink-0 text-center">
+      <div className="flex flex-col items-center gap-1">
+        <span><FormattedMessage id="COMMON.INSIDE" defaultMessage="Inside" /></span>
+        <Checkbox checked={allInsideChecked} onChange={(e) => handleInsideCheck(e.target.checked)} />
+      </div>
+    </div>
+
+    <div className="w-[80px] shrink-0 text-center">
+      <FormattedMessage id="COMMON.PERSON" defaultMessage="Person" />
+    </div>
+
+    <div className="w-[90px] shrink-0 text-center">
+      <FormattedMessage id="COMMON.WEIGHT" defaultMessage="Weight" />
+    </div>
+    <div className="w-[90px] shrink-0 text-center">
+      <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />
+    </div>
+    <div className="w-[90px] shrink-0 text-center">
+  <FormattedMessage id="COMMON.RATE" defaultMessage="Rate" />
+</div>
+    <div className="w-[100px] shrink-0 text-center">
+      <FormattedMessage id="COMMON.TOTAL_RATE" defaultMessage="Total Rate" />
+    </div>
+
+    <div className="w-[160px] shrink-0 text-center">
+      <FormattedMessage id="COMMON.PLACE" defaultMessage="Place" />
+    </div>
+
+    <div className="w-[240px] shrink-0 text-left">
+      <FormattedMessage id="COMMON.INSTRUCTIONS" defaultMessage="Instructions" />
+    </div>
+  </div>
+);
 };
 
 const stripHtmlTags = (str) => (str || "").replace(/<\/?[^>]+(>|$)/g, "");
+const toNum = (v) => {
+  if (v === "" || v == null) return 0;
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
 
-const TableRow = ({ row, onChange, disabled, placeOptions = [] }) => {
+const buildUnitOptions = (hierarchy) => {
+  if (!hierarchy) return [];
+  const opts = [];
+  const seen = new Set();
+
+  const add = (u) => {
+    const id = Number(u?.unitId ?? u?.id);
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    opts.push({
+      value: id,
+      label: u.nameEnglish || u.symbolEnglish || String(id),
+    });
+    const kids = u.children || u.childUnits || u.childrens || [];
+    kids.forEach(add);
+  };
+
+  add(hierarchy);
+  return opts;
+};
+
+// Fallback factors by unit name, relative to the smallest unit (gram / ml / piece)
+const UNIT_NAME_FACTORS = {
+  GRAM: 1, GM: 1, G: 1, GRAMS: 1,
+  KILO: 1000, KG: 1000, KILOGRAM: 1000,
+  MILLILITER: 1, ML: 1, MILLILITRE: 1,
+  LITER: 1000, LITRE: 1000, LTR: 1000, L: 1000,
+};
+
+// Walk the hierarchy and return { unitId: { name, ratio } }
+// ratio = how many of this unit make 1 parent unit (field name may differ in your API)
+const flattenHierarchy = (hierarchy) => {
+  const map = {};
+  const walk = (u, parentId = null) => {
+    const id = Number(u?.unitId ?? u?.id);
+    if (!id) return;
+    map[id] = {
+      name: (u.nameEnglish || u.symbolEnglish || "").toUpperCase().trim(),
+      parentId,
+      // <-- adjust to your real field names
+      ratio: Number(u.conversionFactor ?? u.conversion ?? u.quantity ?? 0) || 0,
+    };
+    (u.children || u.childUnits || u.childrens || []).forEach((k) => walk(k, id));
+  };
+  walk(hierarchy);
+  return map;
+};
+
+// How many "smallest units" is 1 of this unit
+const getUnitFactor = (unitId, hierarchy, unitName = "") => {
+  const map = flattenHierarchy(hierarchy);
+  const node = map[Number(unitId)];
+  const name = (node?.name || unitName || "").toUpperCase().trim();
+  return UNIT_NAME_FACTORS[name] ?? 1;
+};
+
+// weight is what the user sees. rate is per BASE unit.
+const calcTotalRate = (row, overrides = {}) => {
+  const weight = parseFloat(overrides.weight ?? row.weight);
+  const rate = parseFloat(overrides.rate ?? row.rate);
+  if (isNaN(weight) || isNaN(rate)) return "";
+
+  const unitId = overrides.unitId ?? row.unitId;
+  const unitName = overrides.unitName ?? row.unitName;
+  const hierarchy = row.unitHierarchy;
+
+  // base unit = the unit the rate is quoted in (root of the hierarchy)
+  const baseUnitId = row.baseUnitId || hierarchy?.unitId || row.unitId;
+  const baseUnitName = row.baseUnitName || hierarchy?.nameEnglish || row.unitName;
+
+  const selectedFactor = getUnitFactor(unitId, hierarchy, unitName);
+  const baseFactor = getUnitFactor(baseUnitId, hierarchy, baseUnitName);
+
+  const hiddenWeight = weight * (selectedFactor / baseFactor);
+  return String(Number((hiddenWeight * rate).toFixed(2)));
+};
+const TableRow = ({ row, onChange, disabled, placeOptions = [], unitOptions = [] }) => {  
   const [localPersonCount, setLocalPersonCount] = useState(row.personCount);
   const [hasError, setHasError] = useState(false);
   const [isTranslateOpen, setIsTranslateOpen] = useState(false);
 
   const translateTimer = useRef(null);
+
+  const rowUnitOptions = useMemo(() => {
+  const opts = buildUnitOptions(row.unitHierarchy);
+  if (opts.length === 0) return unitOptions; // no hierarchy: use the global list
+
+  // keep a saved unit selectable even if it isn't in the hierarchy
+  if (row.unitId && !opts.some((o) => o.value === Number(row.unitId))) {
+    opts.push({
+      value: Number(row.unitId),
+      label: row.unitName || String(row.unitId),
+    });
+  }
+  return opts;
+}, [row.unitHierarchy, row.unitId, row.unitName, unitOptions]);
+
   const rowTotalPrice = useMemo(() => {
   const allocs = row.eventFunctionMenuAllocations || [];
 
@@ -1015,7 +1098,16 @@ const TableRow = ({ row, onChange, disabled, placeOptions = [] }) => {
       return;
     }
     if (value !== row.personCount)
-      onChange({ ...row, personCount: value }, true);
+  onChange(
+    {
+      ...row,
+      personCount: value,
+      ...(row.weight !== "" && row.weight != null
+        ? { totalRate: calcTotalRate(value, row.weight) }
+        : {}),
+    },
+    true,
+  );
   };
 
 const handleInstructionChange = (e) => {
@@ -1060,9 +1152,9 @@ const handleInstructionChange = (e) => {
   valueGujarati={row.instructionsGujarati}
   onChange={(fields) => onChange({ ...row, ...fields })}
 />
-<div className="grid grid-cols-12 items-center gap-2 border-b border-gray-100 px-4 py-3 text-sm hover:bg-blue-50/40 transition-colors group">
-  {/* Name — col-span-3 */}
-  <div className="col-span-3 font-medium text-gray-800">
+<div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3 text-sm hover:bg-blue-50/40 transition-colors group">
+  {/* Name */}
+  <div className="w-[260px] shrink-0 font-medium text-gray-800">
     <div className="flex flex-col gap-0.5">
       <span className="text-[10px] text-gray-400 uppercase tracking-wide">
         {getDisplayName(row, "categoryName")}
@@ -1073,8 +1165,8 @@ const handleInstructionChange = (e) => {
     </div>
   </div>
 
-  {/* Chef — col-span-1 */}
-  <div className="col-span-1 flex justify-center items-center">
+  {/* Chef */}
+  <div className="w-[80px] shrink-0 flex justify-center items-center">
     <Checkbox
       checked={row.chefLabour}
       disabled={disabled}
@@ -1082,8 +1174,8 @@ const handleInstructionChange = (e) => {
     />
   </div>
 
-  {/* Outside — col-span-1 */}
-  <div className="col-span-1 flex justify-center items-center">
+  {/* Outside */}
+  <div className="w-[90px] shrink-0 flex justify-center items-center">
     <Checkbox
       checked={row.outside}
       disabled={disabled}
@@ -1091,8 +1183,8 @@ const handleInstructionChange = (e) => {
     />
   </div>
 
-  {/* Inside — col-span-1 */}
-  <div className="col-span-1 flex justify-center items-center">
+  {/* Inside */}
+  <div className="w-[80px] shrink-0 flex justify-center items-center">
     <Checkbox
       checked={row.inside}
       disabled={disabled}
@@ -1100,8 +1192,8 @@ const handleInstructionChange = (e) => {
     />
   </div>
 
-  {/* Person — col-span-1 */}
-  <div className="col-span-1 flex justify-center">
+  {/* Person */}
+  <div className="w-[80px] shrink-0 flex justify-center">
     <Input
       min={0}
       type="text"
@@ -1113,8 +1205,81 @@ const handleInstructionChange = (e) => {
     />
   </div>
 
+  {/* Weight */}
+  <div className="w-[90px] shrink-0">
+   <Input
+  size="small"
+  placeholder="Weight"
+  value={row.weight ?? ""}
+  onChange={(e) => {
+    const v = e.target.value;
+    if (/^\d*\.?\d*$/.test(v))
+      onChange({
+        ...row,
+        weight: v,
+        totalRate: calcTotalRate(row, { weight: v }),
+      });
+  }}
+  className="text-center text-sm"
+/>
+  </div>
 
-<div className="col-span-2">
+  {/* Unit */}
+  <div className="w-[90px] shrink-0">
+    <Select
+      size="small"
+      showSearch
+      allowClear
+      optionFilterProp="label"
+      placeholder="Unit"
+      value={row.unitId || undefined}
+       options={rowUnitOptions} 
+      onChange={(value, option) =>
+  onChange({
+    ...row,
+    unitId: value ?? 0,
+    unitName: option?.label ?? "",
+    totalRate: calcTotalRate(row, { unitId: value ?? 0, unitName: option?.label ?? "" }),
+  })
+}
+
+      className="w-full"
+      popupMatchSelectWidth={false}
+    />
+  </div>
+<div className="w-[90px] shrink-0">
+  <Input
+    size="small"
+    placeholder="Rate"
+    value={row.rate ?? ""}
+    onChange={(e) => {
+      const v = e.target.value;
+      if (/^\d*\.?\d*$/.test(v))
+        onChange({
+          ...row,
+          rate: v,
+          totalRate: calcTotalRate(row, { rate: v }),
+        });
+    }}
+    className="text-center text-sm"
+  />
+</div>
+  {/* Total Rate */}
+  <div className="w-[100px] shrink-0">
+    <Input
+      size="small"
+      placeholder="Rate"
+      value={row.totalRate ?? ""}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (/^\d*\.?\d*$/.test(v)) onChange({ ...row, totalRate: v });
+      }}
+      className="text-center text-sm"
+    />
+  </div>
+
+  {/* Place */}
+  <div className="w-[160px] shrink-0">
     <select
       value={row.place || "0"}
       onChange={(e) => onChange({ ...row, place: e.target.value })}
@@ -1128,31 +1293,25 @@ const handleInstructionChange = (e) => {
     </select>
   </div>
 
-  {/* Total Price — col-span-1 */}
-  <div className="col-span-1 text-center d-none" style={{display:"none"}}>
-    <span className={`text-sm font-semibold ${rowTotalPrice > 0 ? "text-primary" : "text-gray-400"}`}>
-      ₹{rowTotalPrice.toFixed(2)}
-    </span>
+  {/* Instructions */}
+  <div className="w-[240px] shrink-0 flex items-center gap-1">
+    <Input
+      size="small"
+      placeholder="Add note..."
+      value={stripHtmlTags(row.instructions)}
+      onChange={handleInstructionChange}
+      className="w-full text-sm"
+      onDoubleClick={() => setIsTranslateOpen(true)}
+    />
+    <button
+      type="button"
+      onClick={() => setIsTranslateOpen(true)}
+      className="flex-shrink-0 p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500 transition-colors"
+      title="View/edit translations"
+    >
+      <Languages size={16} />
+    </button>
   </div>
-
-<div className="col-span-2 flex items-center gap-1">
- <Input
-  size="small"
-  placeholder="Add note..."
-  value={stripHtmlTags(row.instructions)}
-  onChange={handleInstructionChange}
-  className="w-full text-sm"
-  onDoubleClick={() => setIsTranslateOpen(true)}
-/>
-  <button
-    type="button"
-    onClick={() => setIsTranslateOpen(true)}
-    className="flex-shrink-0 p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500 transition-colors"
-    title="View/edit translations"
-  >
-    <Languages size={16} />
-  </button>
-</div>
 </div>
 </>
   );
@@ -1272,6 +1431,7 @@ const syncCooldownTimerRef = useRef(null);
   const isSubmittingRef = useRef(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [unitOptions, setUnitOptions] = useState([]);
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname,
@@ -1294,7 +1454,18 @@ useEffect(() => {
   };
 }, []);
   
- 
+ useEffect(() => {
+  const userId = localStorage.getItem("userId");
+  if (!userId || userId === "undefined" || userId === "null") return;
+  Getunit(userId)
+    .then((res) => {
+      const list = res?.data?.data?.["Unit Details"] || [];
+      setUnitOptions(
+        list.map((u) => ({ value: Number(u.id), label: u.nameEnglish })),
+      );
+    })
+    .catch((err) => console.error("Error fetching units:", err));
+}, []);
   const changedPaxRowsRef = useRef(new Set());
 
   const fetchMenuForHMModule = async () => {
@@ -1632,6 +1803,23 @@ const resolveReportingTime = (alloc, row) =>
         inside: item.inside || false,
         outside: item.outside || false,
         personCount: item.personCount || 0,
+     weight: (() => {
+  const w = Number(item.weight) || Number(item.itemWeight) || 0;
+  return w ? String(w) : "";
+})(),
+rate: (() => {
+  const r = Number(item.rate) || Number(item.itemRate) || 0;
+  return r ? String(r) : "";
+})(),
+unitId: Number(item.unitId) || Number(item.unitHierarchy?.unitId) || 0,
+unitName: item.unitName || item.unitHierarchy?.nameEnglish || item.units?.nameEnglish || "",
+baseUnitId: Number(item.unitHierarchy?.unitId) || Number(item.unitId) || 0,
+baseUnitName: item.unitHierarchy?.nameEnglish || item.unitName || item.units?.nameEnglish || "",
+unitHierarchy: item.unitHierarchy || null,
+totalRate:
+  item.totalRate !== null && item.totalRate !== undefined
+    ? String(item.totalRate)
+    : "",
        place: (() => {
   const placeNum = Number(item.place);
   if (!placeNum || isNaN(placeNum)) return "0";
@@ -2858,6 +3046,10 @@ const buildMenuExecutionChangeSummary = (prevRows, currentRows) => {
     userId: Number(Id) || 0,
     itemSortorder: r.itemSortorder ?? null,
     menuSortorder: r.menuSortorder ?? null,
+weight: toNum(r.weight),
+unitId: toNum(r.unitId),
+rate: toNum(r.rate),
+totalRate: toNum(r.totalRate),
   };
 });
 
@@ -3081,6 +3273,10 @@ rows.forEach((r, i) => {
     userId: Number(Id) || 0,
     itemSortorder: r.itemSortorder ?? null,
     menuSortorder: r.menuSortorder ?? null,
+  weight: toNum(r.weight),
+unitId: toNum(r.unitId),
+rate: toNum(r.rate),
+totalRate: toNum(r.totalRate),
   };
 });
 
@@ -3670,7 +3866,7 @@ rows.forEach((r, i) => {
               />
             </div>
             <div
-              className="sticky z-10 bg-white pb-2 rounded-lg shadow-sm mb-3"
+              className="sticky z-20 bg-white pb-2 rounded-lg shadow-sm mb-3"
               style={{ top: "70px" }}
             >
               <div className="flex flex-row gap-4 p-4 border-b border-gray-200">
@@ -3848,7 +4044,10 @@ rows.forEach((r, i) => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+           <div
+  className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-auto"
+style={{ maxHeight: "calc(100vh - 260px)", minHeight: 300 }}>
+   <div style={{ minWidth: "max-content" }}>
               <TableHeader
                 onChefCheckAll={handleChefCheckAll}
                 onOutsourceCheckAll={handleOutsourceCheckAll}
@@ -3876,16 +4075,18 @@ rows.forEach((r, i) => {
                     </div>
                   ) : (
                     currentFunctionRows.map((row, index) => (
-                      <TableRow
-                        key={`${row.menuItemId}-${row.menuCategoryId}-${index}`}
-                        row={row}
-                        onChange={updateRow}
-                        placeOptions={placeOptions}
-                      />
+                     <TableRow
+  key={`${row.menuItemId}-${row.menuCategoryId}-${index}`}
+  row={row}
+  onChange={updateRow}
+  placeOptions={placeOptions}
+  unitOptions={unitOptions}
+/>
                     ))
                   );
                 })()
               )}
+            </div>
             </div>
           </div>
 

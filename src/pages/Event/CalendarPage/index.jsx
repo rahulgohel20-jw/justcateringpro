@@ -38,11 +38,24 @@ const [venueList, setVenueList] = useState([]);
 const [banquetList, setBanquetList] = useState([]);
 const [selectedVenue, setSelectedVenue] = useState(-1);
 const [selectedBanquet, setSelectedBanquet] = useState(-1);
+
+  let Id = localStorage.getItem("userId");
+  const normalizedLocalUserId = Number(Id ?? 0);
+  const isAgencyUser = normalizedLocalUserId === 233;
+
+  const getStorageKeys = (userId) => ({
+    monthKey: userId ? `calendar_selected_month_${userId}` : "calendar_selected_month",
+    yearKey: userId ? `calendar_selected_year_${userId}` : "calendar_selected_year",
+  });
+
   const getSavedMonth = () => {
     try {
-      const saved =
-        sessionStorage.getItem("calendar_selected_month") ||
-        localStorage.getItem("calendar_selected_month");
+      // Clean up legacy global localStorage keys that leaked month across all users and clients
+      localStorage.removeItem("calendar_selected_month");
+      localStorage.removeItem("calendar_selected_year");
+
+      const { monthKey } = getStorageKeys(Id);
+      const saved = sessionStorage.getItem(monthKey);
       if (saved && !isNaN(Number(saved)) && Number(saved) >= 1 && Number(saved) <= 12) {
         return String(saved).padStart(2, "0");
       }
@@ -53,9 +66,8 @@ const [selectedBanquet, setSelectedBanquet] = useState(-1);
 
   const getSavedYear = () => {
     try {
-      const saved =
-        sessionStorage.getItem("calendar_selected_year") ||
-        localStorage.getItem("calendar_selected_year");
+      const { yearKey } = getStorageKeys(Id);
+      const saved = sessionStorage.getItem(yearKey);
       if (saved && !isNaN(Number(saved)) && Number(saved) >= 2000) {
         return String(saved);
       }
@@ -70,7 +82,7 @@ const [selectedBanquet, setSelectedBanquet] = useState(-1);
     const m = Number(getSavedMonth()) - 1;
     const y = Number(getSavedYear());
     return new Date(y, m, 1);
-  }, []);
+  }, [Id]);
 const [loadingEvents, setLoadingEvents] = useState(false);
 
   const openEvent = (data) => {
@@ -78,9 +90,6 @@ const [loadingEvents, setLoadingEvents] = useState(false);
     setIsModalOpen(true);
   };
 
-  let Id = localStorage.getItem("userId");
-  const normalizedLocalUserId = Number(Id ?? 0);
-const isAgencyUser = normalizedLocalUserId === 376 ;
   const isFunctionDateUser = (eventItem) => {
     const eventOwnerId = Number(
       eventItem?.userId ?? eventItem?.managerId ?? eventItem?.createdBy ?? 0,
@@ -286,10 +295,9 @@ const { isHallAllowed } = useBanquetPermission()
     setCurrentMonth(month);
     setCurrentYear(year);
     try {
-      sessionStorage.setItem("calendar_selected_month", month);
-      sessionStorage.setItem("calendar_selected_year", year);
-      localStorage.setItem("calendar_selected_month", month);
-      localStorage.setItem("calendar_selected_year", year);
+      const { monthKey, yearKey } = getStorageKeys(Id);
+      sessionStorage.setItem(monthKey, month);
+      sessionStorage.setItem(yearKey, year);
     } catch (e) {}
   };
 

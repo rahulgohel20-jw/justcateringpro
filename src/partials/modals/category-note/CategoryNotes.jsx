@@ -2,7 +2,7 @@ import { useState, useEffect,useRef } from "react";
 import { Mic } from "lucide-react";
 import { Translateapi } from "@/services/apiServices";
 import { getLangConfig, extractTranslations } from "@/utils/langConfig";
-
+import useSpeechRecognition from "@/hooks/useSpeechRecognition";
 const CategoryNotes = ({ isOpen, onClose, notes, onSave }) => {
   const langConfig = getLangConfig();
   const [debounceTimer, setDebounceTimer] = useState(null);
@@ -107,36 +107,35 @@ setLocalNotes((prev) => ({
         {/* Notes */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <InputWithIcon
-            label="Category Notes (English)"
-            value={localNotes.categoryNotesEnglish}
-            onChange={(e) =>
-              handleChange("categoryNotesEnglish", e.target.value)
-            }
-            onMicClick={() => triggerTranslate(localNotes.categoryNotesEnglish)}
-          />
+  label="Category Notes (English)"
+  lang="en"
+  value={localNotes.categoryNotesEnglish}
+  onChange={(e) => handleChange("categoryNotesEnglish", e.target.value)}
+/>
 <InputWithIcon
   label={`Category Notes (${langConfig.script})`}
+  lang={langConfig.lang}
   value={localNotes.categoryNotesGujarati}
   onChange={(e) => handleChange("categoryNotesGujarati", e.target.value)}
 />
 
-
           <InputWithIcon
-            label="Category Notes (हिंदी)"
-            value={localNotes.categoryNotesHindi}
-            onChange={(e) => handleChange("categoryNotesHindi", e.target.value)}
-          />
-
+  label="Category Notes (हिंदी)"
+  lang="hi"
+  value={localNotes.categoryNotesHindi}
+  onChange={(e) => handleChange("categoryNotesHindi", e.target.value)}
+/>
           
         </div>
 
         {/* Slogan */}
         <div className="mt-4">
-          <InputWithIcon
-            label="Category Slogan"
-            value={localNotes.categorySlogan}
-            onChange={(e) => handleChange("categorySlogan", e.target.value)}
-          />
+        <InputWithIcon
+  label="Category Slogan"
+  lang="en"
+  value={localNotes.categorySlogan}
+  onChange={(e) => handleChange("categorySlogan", e.target.value)}
+/>
         </div>
 
         {/* Footer */}
@@ -160,29 +159,56 @@ setLocalNotes((prev) => ({
 };
 
 /* ------------------ INPUT COMPONENT ------------------ */
-const InputWithIcon = ({ label, value, onChange, onMicClick }) => (
-  <div className="relative w-full">
-    <label className="block text-gray-600 mb-1">{label}</label>
+const InputWithIcon = ({ label, value, onChange, lang = "en" }) => {
+  const baseRef = useRef("");
 
-    <input
-      type="text"
-      className="border border-gray-300 rounded-lg p-2 pr-10 w-full"
-      placeholder={label}
-      value={value}
-      onChange={onChange}
-    />
+  const { isListening, toggle, stop } = useSpeechRecognition({
+    lang: `${lang}-IN`, // en-IN, hi-IN, gu-IN
+    onResult: (text) => {
+      const spoken = (text || "").trim();
+      const base = baseRef.current;
+      onChange({
+        target: { value: `${base}${base && spoken ? " " : ""}${spoken}` },
+      });
+    },
+  });
 
-    {onMicClick && (
+  // stop the mic when the modal closes
+  useEffect(() => () => stop?.(), []);
+
+  const handleMicClick = () => {
+    if (!isListening) {
+      // speech is appended after whatever is already typed
+      baseRef.current = (value || "").trimEnd();
+    }
+    toggle();
+  };
+
+  return (
+    <div className="relative w-full">
+      <label className="block text-gray-600 mb-1">{label}</label>
+
+      <input
+        type="text"
+        className="border border-gray-300 rounded-lg p-2 pr-12 w-full"
+        placeholder={isListening ? "Listening…" : label}
+        value={value}
+        onChange={onChange}
+      />
+
       <button
         type="button"
-        onClick={onMicClick}
-        title="Translate"
-        className="absolute top-[70%] right-2 transform -translate-y-1/2 bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center"
+        onClick={handleMicClick}
+        onMouseDown={(e) => e.preventDefault()}
+        title={isListening ? "Stop listening" : "Speak"}
+        className={`absolute top-[70%] right-2 transform -translate-y-1/2 rounded-full w-8 h-8 flex items-center justify-center text-white ${
+          isListening ? "bg-red-500 animate-pulse" : "bg-primary"
+        }`}
       >
         <Mic size={18} />
       </button>
-    )}
-  </div>
-);
+    </div>
+  );
+};
 
 export default CategoryNotes;

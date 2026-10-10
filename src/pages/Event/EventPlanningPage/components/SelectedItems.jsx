@@ -28,7 +28,7 @@ import RenameItemCat from "../../../../partials/modals/menu-notes/RenameItemscat
 import VendorPickerModal from "./VendorPickerModal";
 import RichTextEditor from "../../../../partials/modals/menu-report/RichTextEditor";
 import RichTextEditable from "../../../../components/form-inputs/RichTextEditable";
-
+  import { useModuleAccess } from "@/hooks/useModuleAccess";
 
 
 const getStatusClasses = (status, kind = "category") => {
@@ -1226,12 +1226,10 @@ const [itemInstructions, setItemInstructions] = useState({});
 const [itemImageUploading, setItemImageUploading] = useState(false);
 const [headingCatModal, setHeadingCatModal] = useState(null);
 const [stationItemsModal, setStationItemsModal] = useState(null);
-const isSpecialStationUser = Number(localStorage.getItem("userId")) === 545; //smari lakhani 545
+// const isSpecialStationUser = Number(localStorage.getItem("userId")) === 545; //smari lakhani 545
 
-
-
-
-
+const { hasModuleAccess } = useModuleAccess();
+const canAccessCaptainRecipe = hasModuleAccess("Multi Images Selection");
 useEffect(() => {
   const map = {};
   Object.keys(categories).forEach((catName) => {
@@ -1691,7 +1689,7 @@ if (loading) {
   />
 )}
 
-           {stationItemsModal && isSpecialStationUser && (
+           {stationItemsModal && canAccessCaptainRecipe && (
         <StationItemsModal
           title={stationItemsModal.catName}
           items={stationItemsModal.items || []}
@@ -1831,10 +1829,10 @@ return (
                                   </button>
                                 )}
 
-                                {isSpecialStationUser && (
+                                {canAccessCaptainRecipe  && (
                                   <button
                                     type="button"
-                                    title="Station Items"
+                                    title="Multiple selecion of images in Items"
                                     className="p-1 rounded hover:bg-gray-100"
                                     onClick={(e) => {
                                       e.stopPropagation();
