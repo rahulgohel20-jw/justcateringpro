@@ -7,8 +7,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router";
 import { useEffect } from "react";
 import { Info, Printer } from "lucide-react";
-import { Tooltip } from "antd";
-
+import { Tooltip, Select } from "antd";
 import {
   GetAllPurchase,
   DeletePurchase,
@@ -18,6 +17,7 @@ import {
   purchasorderexcel,
   WhatsAppPdf,
   purchasereportvendorwise,
+  OutsideContactName
 } from "../../../services/apiServices";
 import { usePermission } from "../../../hooks/usePermission";
 import Swal from "sweetalert2";
@@ -67,7 +67,7 @@ const Purchase = () => {
   const permissions = usePermission("Purchase");
 const [searchQuery, setSearchQuery] = useState("");
 const [debouncedSearch, setDebouncedSearch] = useState("");
-
+const [supplier, setSupplier] = useState([]);
   const [tableData, setTableData] = useState([]);
   const [originalData, setOriginalData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,13 +78,14 @@ const [debouncedSearch, setDebouncedSearch] = useState("");
   totalPages: 0,
 });
   const [reportModal, setReportModal] = useState({
-    open: false,
-    startDate: null,
-    endDate: null,
-    isCompanyDetails: true,
-    isPrice: true,
-    submitting: false,
-  });
+  open: false,
+  startDate: null,
+  endDate: null,
+  supplierId: null,
+  isCompanyDetails: true,
+  isPrice: true,
+  submitting: false,
+});
 const [vendorModal, setVendorModal] = useState({
   open: false,
   startDate: null,
@@ -99,6 +100,17 @@ const [vendorModal, setVendorModal] = useState({
 };
 
   const userId = localStorage.getItem("userId");
+  useEffect(() => {
+  const fetchSupplier = async () => {
+    try {
+      const data = await OutsideContactName(3, userId);
+      setSupplier(data?.data?.data?.["Party Details"] || []);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  fetchSupplier();
+}, [userId]);
 useEffect(() => {
   const timer = setTimeout(() => setDebouncedSearch(searchQuery), 400);
   return () => clearTimeout(timer);
@@ -172,54 +184,62 @@ const handlePageChange = (newPage, newSize) => {
 };
 
   const handleDelete = (purchaseid) => {
-    const targetItem = tableData.find((i) => i.purchaseid === purchaseid) || {};
+  const targetItem = tableData.find((i) => i.purchaseid === purchaseid) || {};
 
-    Swal.fire({
-      title: "Are you sure?",
-      text: "This purchase entry will be deleted.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          await DeletePurchase(purchaseid);
+  Swal.fire({
+    title: "Are you sure?",
+    text: "This purchase entry will be deleted.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#3085d6",
+    confirmButtonText: "Yes, delete it!",
+  }).then(async (result) => {
+    if (!result.isConfirmed) return;
 
-          // ✅ Log delete success
-          await sendLog("DELETE_SUCCESS", targetItem);
+    try {
+      const res = await DeletePurchase(purchaseid);
+      const data = res?.data;
 
-          const removeAndReindex = (prev) =>
-            prev
-              .filter((item) => item.id !== purchaseid)
-              .map((item, index) => ({ ...item, sr_no: index + 1 }));
-
-          setTableData(removeAndReindex);
-          setOriginalData(removeAndReindex);
-
-          Swal.fire({
-            icon: "success",
-            title: "Deleted!",
-            text: "Purchase entry deleted.",
-            confirmButtonColor: "#16a34a",
-          });
-        } catch (error) {
-          console.error("Delete failed:", error);
-
-          // ✅ Log delete error
-          await sendLog("DELETE_ERROR", targetItem);
-
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: "Failed to delete purchase. Please try again.",
-            confirmButtonColor: "#d33",
-          });
-        }
+      // Backend rejected the delete (e.g. Purchase Return / Store Issue exists)
+      if (data?.success === false) {
+        await sendLog("DELETE_ERROR", targetItem);
+        await Swal.fire({
+          icon: "error",
+          title: "Cannot Delete",
+          text: data?.msg || "Failed to delete purchase.",
+          confirmButtonColor: "#d33",
+        });
+        fetchPurchase(); // refresh list
+        return;
       }
-    });
-  };
+
+      await sendLog("DELETE_SUCCESS", targetItem);
+
+      await Swal.fire({
+        icon: "success",
+        title: "Deleted!",
+        text: data?.msg || "Purchase entry deleted.",
+        confirmButtonColor: "#16a34a",
+      });
+      fetchPurchase(); // refresh list
+    } catch (error) {
+      console.error("Delete failed:", error);
+      await sendLog("DELETE_ERROR", targetItem);
+
+      // If the API returns the message with a 4xx status, axios throws and it ends up here
+      await Swal.fire({
+        icon: "error",
+        title: "Cannot Delete",
+        text:
+          error?.response?.data?.msg ||
+          "Failed to delete purchase. Please try again.",
+        confirmButtonColor: "#d33",
+      });
+      fetchPurchase(); // refresh list
+    }
+  });
+};
 
   const handleEdit = (item) => {
     navigate("/stock-management/purchase/add", { state: { editData: item } });
@@ -466,14 +486,15 @@ const handlePrint = async (item) => {
 
   const openReportModal = () => {
     const today = new Date();
-    setReportModal({
-      open: true,
-      startDate: today,
-      endDate: today,
-      isCompanyDetails: true,
-      isPrice: true,
-      submitting: false,
-    });
+   setReportModal({
+  open: true,
+  startDate: today,
+  endDate: today,
+  supplierId: null,
+  isCompanyDetails: true,
+  isPrice: true,
+  submitting: false,
+});
   };
 
   const closeReportModal = () => {
@@ -490,7 +511,7 @@ const handlePrint = async (item) => {
   };
 
   const handleGenerateReport = async () => {
-    const { startDate, endDate, isCompanyDetails, isPrice } = reportModal;
+    const { startDate, endDate, isCompanyDetails, isPrice ,supplierId } = reportModal;
 
     if (!startDate || !endDate) {
       Swal.fire({
@@ -520,6 +541,7 @@ const handlePrint = async (item) => {
         isCompanyDetails ? 1 : 0,
         isPrice ? 1 : 0,
         userId,
+         supplierId || -1,
       );
       const fileUrl = res?.data?.report_path;
 
@@ -653,6 +675,7 @@ const handleGenerateVendorReport = async () => {
       <Info size={16} />
     </button>
   </Tooltip>
+
   <Tooltip title="Print vendor-wise purchase report">
   <button className="btn btn-light" onClick={openVendorModal}>
     <Printer size={16} /> Vendor Report
@@ -772,7 +795,29 @@ const handleGenerateVendorReport = async () => {
                 />
               </label>
             </div>
-
+<div className="flex flex-col mt-4 gap-1">
+  <label className="text-sm font-medium text-gray-700">
+    Supplier <span className="text-gray-400 font-normal">(optional)</span>
+  </label>
+  <Select
+    showSearch
+    allowClear
+    placeholder="All suppliers"
+    style={{ width: "100%", height: "38px" }}
+    value={reportModal.supplierId || undefined}
+    onChange={(val) =>
+      setReportModal((prev) => ({ ...prev, supplierId: val || null }))
+    }
+    getPopupContainer={(trigger) => trigger.parentElement}
+    filterOption={(input, option) =>
+      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+    }
+    options={supplier.map((s) => ({
+      value: s.id,
+      label: s.nameEnglish,
+    }))}
+  />
+</div>
             <div className="flex justify-end gap-2 mt-6">
               <button
                 type="button"

@@ -24,13 +24,11 @@ import {
   addOrUpdateBatchWisestoreissue,
   GetSIRById,
   GetStockTypeByUserId,
-  AddLogs
+  AddLogs,
 } from "../../../services/apiServices";
 import Swal from "sweetalert2";
 import DatePicker from "react-datepicker";
 import { FormattedMessage, useIntl } from "react-intl";
-
-
 
 const getUserEmail = () => {
   try {
@@ -44,7 +42,9 @@ const getUserEmail = () => {
 };
 
 const getLogDescription = (status, form, items, isEdit, sirId) => {
-  const action = isEdit ? "Store Issue Return Updated" : "Store Issue Return Saved";
+  const action = isEdit
+    ? "Store Issue Return Updated"
+    : "Store Issue Return Saved";
   const party = form.party_name || "-";
   const voucher = form.voucher_no || "-";
   const totalQty = items.reduce((sum, i) => sum + (Number(i.qty) || 0), 0);
@@ -106,8 +106,8 @@ const AddStorePOReturn = () => {
   const [loadingPO, setLoadingPO] = useState(false);
   const [loading, setLoading] = useState(false);
   const [poDate, setPoDate] = useState(null);
-const [expandedItemIndex, setExpandedItemIndex] = useState(null);
-const [batchAddSelection, setBatchAddSelection] = useState({});
+  const [expandedItemIndex, setExpandedItemIndex] = useState(null);
+  const [batchAddSelection, setBatchAddSelection] = useState({});
   const [form, setForm] = useState({
     voucher_no: "",
     date: null,
@@ -118,13 +118,13 @@ const [batchAddSelection, setBatchAddSelection] = useState({});
     event_id: "",
     remark: "",
   });
-const getPODetails = (data) =>
-  data?.isBatchWise ? data.batchWiseDetails || [] : data?.details || [];
+  const getPODetails = (data) =>
+    data?.isBatchWise ? data.batchWiseDetails || [] : data?.details || [];
   const navigate = useNavigate();
   const userId = localStorage.getItem("userId");
   const currentUserId = Number(userId || 0);
-  const BATCH_ACCESS_USER_IDS = [233, 376];
-const isBatchAccessUser = BATCH_ACCESS_USER_IDS.includes(currentUserId);
+  const BATCH_ACCESS_USER_IDS = [233, 376 , 3];
+  const isBatchAccessUser = BATCH_ACCESS_USER_IDS.includes(currentUserId);
   const isBatchWisePO = (po) => {
     if (!po) return false;
 
@@ -146,32 +146,38 @@ const isBatchAccessUser = BATCH_ACCESS_USER_IDS.includes(currentUserId);
   };
 
   const sendLog = async (status, currentItems = [], sirId = 0) => {
-  try {
-    await AddLogs({
-      description: getLogDescription(status, form, currentItems, isEdit, sirId),
-      eventType: getEventType(status, isEdit),
-      id:  0,
-      eventId:0,
-      user: getUserEmail(),
-    });
-  } catch (logErr) {
-    console.error("Failed to save log:", logErr);
-  }
-};
+    try {
+      await AddLogs({
+        description: getLogDescription(
+          status,
+          form,
+          currentItems,
+          isEdit,
+          sirId,
+        ),
+        eventType: getEventType(status, isEdit),
+        id: 0,
+        eventId: 0,
+        user: getUserEmail(),
+      });
+    } catch (logErr) {
+      console.error("Failed to save log:", logErr);
+    }
+  };
 
   // ── Fetch stock types ──
- useEffect(() => {
-  GetStockTypeByUserId(JSON.parse(userId), '')
-    .then((res) => {
-      const data = Array.isArray(res?.data?.data)
-        ? res.data.data
-        : Array.isArray(res?.data)
-          ? res.data
-          : [];
-      setStockTypes(data);
-    })
-    .catch((err) => console.error("Failed to fetch stock types:", err));
-}, []);
+  useEffect(() => {
+    GetStockTypeByUserId(JSON.parse(userId), "")
+      .then((res) => {
+        const data = Array.isArray(res?.data?.data)
+          ? res.data.data
+          : Array.isArray(res?.data)
+            ? res.data
+            : [];
+        setStockTypes(data);
+      })
+      .catch((err) => console.error("Failed to fetch stock types:", err));
+  }, []);
   // ── Fetch PO codes ──
   useEffect(() => {
     const fetchPOCode = async () => {
@@ -205,7 +211,7 @@ const isBatchAccessUser = BATCH_ACCESS_USER_IDS.includes(currentUserId);
     qty: detail.returnedQty ?? 0,
     returnedQty: detail.returnedQty ?? 0,
     remainingQty: detail.remainingQty ?? 0,
-    maxQty: (detail.remainingQty ?? 0) + (detail.returnedQty ?? 0),
+    maxQty:  (detail.returnedQty ?? 0),
     unit: detail.unitName || "",
     price_per_unit: detail.price ?? 0,
     total_price: ((detail.returnedQty ?? 0) * (detail.price ?? 0)).toFixed(2),
@@ -215,142 +221,142 @@ const isBatchAccessUser = BATCH_ACCESS_USER_IDS.includes(currentUserId);
     try {
       setLoading(true);
       const res = await GetSIRById(id);
-    const raw = res?.data?.data;
-const data = Array.isArray(raw)
-  ? raw.find((r) => Number(r.id) === Number(id))
-  : raw;
-if (!data) return;
+      const raw = res?.data?.data;
+      const data = Array.isArray(raw)
+        ? raw.find((r) => Number(r.id) === Number(id))
+        : raw;
+      if (!data) return;
 
-setForm({
-  voucher_no: data.voucher || data.sircode || "",
-  date: data.returndate
-    ? (() => {
-        if (data.returndate.includes("/")) {
-          const [day, month, year] = data.returndate.split("/");
-          return new Date(`${year}-${month}-${day}T00:00:00`);
+      setForm({
+        voucher_no: data.voucher || data.sircode || "",
+        date: data.returndate
+          ? (() => {
+              if (data.returndate.includes("/")) {
+                const [day, month, year] = data.returndate.split("/");
+                return new Date(`${year}-${month}-${day}T00:00:00`);
+              }
+              return new Date(data.returndate + "T00:00:00");
+            })()
+          : null,
+        poId: data.storeIssueId || "",
+        stock_type_id: data.stockTypeId || "",
+        party_id: data.partyId || "",
+        party_name: data.partyName || "",
+        event_id: data.eventId || "",
+        remark: data.remarks || "",
+      });
+
+      const batchSource = data.batchDetails ?? data.batchWiseDetails ?? [];
+      const isBatch = !!data.isBatchWise || batchSource.length > 0;
+      const issuedDetails = isBatch ? batchSource : (data.details ?? []);
+
+      const returnedItems = issuedDetails.map((detail) => {
+        const batchList = detail.batchList || [];
+
+        let detailRows = [];
+        if (isBatch) {
+          const withReturn = batchList.filter((b) => Number(b.returnedQty) > 0);
+          if (withReturn.length > 0) {
+            detailRows = withReturn.map((b) => ({
+              batchNo: b.batchNo || "",
+              date: b.expiryDate || "",
+              qty: String(b.returnedQty),
+                 availableQty: Number(b.availableQty ?? 0), 
+              maxQty: Number(b.returnedQty || 0),
+            }));
+          } else if (batchList.length === 1 && Number(detail.returnedQty) > 0) {
+            // only one batch, so the whole returned qty belongs to it
+            const b = batchList[0];
+            detailRows = [
+              {
+                batchNo: b.batchNo || "",
+                date: b.expiryDate || "",
+                qty: String(detail.returnedQty),
+             availableQty: Number(b.availableQty ?? b.remainingQty ?? detail.remainingQty ?? 0),
+      maxQty: Number(b.remainingQty ?? b.availableQty ?? detail.remainingQty ?? 0),
+      unit: b.unitName || detail.unitName || "",
+              },
+            ];
+          }
         }
-        return new Date(data.returndate + "T00:00:00");
-      })()
-    : null,
-  poId: data.storeIssueId || "",
-  stock_type_id: data.stockTypeId || "",
-  party_id: data.partyId || "",
-  party_name: data.partyName || "",
-  event_id: data.eventId || "",
-  remark: data.remarks || "",
-});
 
-const batchSource = data.batchDetails ?? data.batchWiseDetails ?? [];
-const isBatch = !!data.isBatchWise || batchSource.length > 0;
-const issuedDetails = isBatch ? batchSource : (data.details ?? []);
-
-const returnedItems = issuedDetails.map((detail) => {
-  const batchList = detail.batchList || [];
-
-  let detailRows = [];
-  if (isBatch) {
-    const withReturn = batchList.filter((b) => Number(b.returnedQty) > 0);
-    if (withReturn.length > 0) {
-      detailRows = withReturn.map((b) => ({
-        batchNo: b.batchNo || "",
-        date: b.expiryDate || "",
-        qty: String(b.returnedQty),
-        maxQty: Number(b.qty || 0) + Number(b.returnedQty || 0),
-      }));
-    } else if (batchList.length === 1 && Number(detail.returnedQty) > 0) {
-      // only one batch, so the whole returned qty belongs to it
-      const b = batchList[0];
-      detailRows = [
-        {
-          batchNo: b.batchNo || "",
-          date: b.expiryDate || "",
-          qty: String(detail.returnedQty),
-          maxQty: Number(b.qty || 0) + Number(detail.returnedQty || 0),
-        },
-      ];
-    }
-  }
-
-  return {
-    rawMaterialId: detail.rawMaterialId,
-    item_name: detail.rawMaterialName || "",
-    hsc_sac: "",
-    cgst: 0,
-    sgst: 0,
-    igst: 0,
-    totalqty: detail.qty ?? 0,
-    qty: isBatch ? sumRowsQty(detailRows) : (detail.returnedQty ?? 0),
-    returnedQty: detail.returnedQty ?? 0,
-    remainingQty: detail.remainingQty ?? 0,
-    maxQty: (detail.remainingQty ?? 0) + (detail.returnedQty ?? 0),
-    unit: detail.unitName || "",
-    price_per_unit: 0,
-    total_price: "0.00",
-    isBatchWise: isBatch,
-    batchList,
-    detailRows,
-  };
-});
-setItems(returnedItems);
+        return {
+          rawMaterialId: detail.rawMaterialId,
+          item_name: detail.rawMaterialName || "",
+          hsc_sac: "",
+          cgst: 0,
+          sgst: 0,
+          igst: 0,
+          totalqty: detail.qty ?? 0,
+          qty: isBatch ? sumRowsQty(detailRows) : (detail.returnedQty ?? 0),
+          returnedQty: detail.returnedQty ?? 0,
+          remainingQty: detail.remainingQty ?? 0,
+          maxQty:  (detail.returnedQty ?? 0),
+          unit: detail.unitName || "",
+          price_per_unit: 0,
+          total_price: "0.00",
+          isBatchWise: isBatch,
+          batchList,
+          detailRows,
+        };
+      });
+      setItems(returnedItems);
       setItems(returnedItems);
 
-  const poCode = data.storeIssuePocode || data.pocode;
-if (poCode) {
-  const poRes = await GetIssueDetailbyPOCode(poCode, userId);
-  const poData = poRes?.data?.data;
-  const poDetails = getPODetails(poData);
+      const poCode = data.storeIssuePocode || data.pocode;
+      if (poCode) {
+        const poRes = await GetIssueDetailbyPOCode(poCode, userId);
+        const poData = poRes?.data?.data;
+        const poDetails = getPODetails(poData);
 
-  if (poDetails.length > 0) {
-    const allPOItems = poDetails.map((detail) => ({
-      rawMaterialId: detail.rawMaterialId,
-      item_name: detail.rawMaterialName || "",
-      hsc_sac: "",
-      cgst: 0,
-      sgst: 0,
-      igst: 0,
-      totalqty: detail.qty ?? 0,
-      qty: detail.remainingQty ?? 0,
-      returnedQty: detail.returnedQty ?? 0,
-      remainingQty: detail.remainingQty ?? 0,
-      maxQty: (detail.remainingQty ?? 0) + (detail.returnedQty ?? 0),
-      unit: detail.unitName || "",
-      price_per_unit: 0,
-      total_price: "0.00",
-      isBatchWise: !!poData.isBatchWise,
-      batchList: detail.batchList || [],
-    }));
-    setAvailableItems(allPOItems);
+        if (poDetails.length > 0) {
+          const allPOItems = poDetails.map((detail) => ({
+            rawMaterialId: detail.rawMaterialId,
+            item_name: detail.rawMaterialName || "",
+            hsc_sac: "",
+            cgst: 0,
+            sgst: 0,
+            igst: 0,
+            totalqty: detail.qty ?? 0,
+            qty: detail.remainingQty ?? 0,
+            returnedQty: detail.returnedQty ?? 0,
+            remainingQty: detail.remainingQty ?? 0,
+            maxQty:  (detail.returnedQty ?? 0),
+            unit: detail.unitName || "",
+            price_per_unit: 0,
+            total_price: "0.00",
+            isBatchWise: !!poData.isBatchWise,
+            batchList: detail.batchList || [],
+          }));
+          setAvailableItems(allPOItems);
 
-    // give edit items the full batch list from the PO
-    setItems((prev) =>
-      prev.map((it) => {
-        if (!it.isBatchWise) return it;
-        const po = allPOItems.find((p) => p.rawMaterialId === it.rawMaterialId);
-        const merged = [...(po?.batchList || [])];
-        (it.batchList || []).forEach((b) => {
-          if (!merged.some((m) => m.batchNo === b.batchNo)) merged.push(b);
-        });
-        return {
-          ...it,
-          batchList: merged,
-          detailRows: (it.detailRows || []).map((r) => {
-            const src = merged.find((m) => m.batchNo === r.batchNo);
-            return src
-              ? { ...r, maxQty: Number(src.qty || 0) + Number(r.qty || 0) }
-              : r;
-          }),
-        };
-      }),
-    );
-  }
-}
-
+          // give edit items the full batch list from the PO
+          setItems((prev) =>
+            prev.map((it) => {
+              if (!it.isBatchWise) return it;
+              const po = allPOItems.find(
+                (p) => p.rawMaterialId === it.rawMaterialId,
+              );
+              const merged = [...(po?.batchList || [])];
+              (it.batchList || []).forEach((b) => {
+                if (!merged.some((m) => m.batchNo === b.batchNo))
+                  merged.push(b);
+              });
+              return {
+                ...it,
+                batchList: merged,
+              detailRows: it.detailRows || [],
+              };
+            }),
+          );
+        }
+      }
     } catch (error) {
       console.error("fetchEditData error:", error);
     } finally {
       setLoading(false);
     }
-  };  
+  };
 
   const handlePOSelect = async (pocode) => {
     if (!pocode) {
@@ -397,27 +403,28 @@ if (poCode) {
       }));
 
       const mapped = getPODetails(data).map((detail) => ({
-        
-  rawMaterialId: detail.rawMaterialId,
-  item_name: detail.rawMaterialName || "",
-  hsc_sac: detail.hsccode || "",
-  cgst: detail.cgst ?? 0,
-  sgst: detail.sgst ?? 0,
-  igst: detail.igst ?? 0,
-  totalqty: detail.qty ?? 0,
-  qty: detail.remainingQty ?? 0,
-  returnedQty: detail.returnedQty ?? 0,
-  remainingQty: detail.remainingQty ?? 0,
-  maxQty: detail.remainingQty ?? 0,
-  unit: detail.unitName || "",
-  price_per_unit: detail.price ?? 0,
-  total_price: ((detail.remainingQty ?? 0) * (detail.price ?? 0)).toFixed(2),
-  isBatchWise: !!data.isBatchWise,
-  batchList: detail.batchList || [],
-}));
-console.log("mapped:", mapped);
+        rawMaterialId: detail.rawMaterialId,
+        item_name: detail.rawMaterialName || "",
+        hsc_sac: detail.hsccode || "",
+        cgst: detail.cgst ?? 0,
+        sgst: detail.sgst ?? 0,
+        igst: detail.igst ?? 0,
+        totalqty: detail.qty ?? 0,
+        qty: detail.remainingQty ?? 0,
+        returnedQty: detail.returnedQty ?? 0,
+        remainingQty: detail.remainingQty ?? 0,
+        maxQty: detail.remainingQty ?? 0,
+        unit: detail.unitName || "",
+        price_per_unit: detail.price ?? 0,
+        total_price: ((detail.remainingQty ?? 0) * (detail.price ?? 0)).toFixed(
+          2,
+        ),
+        isBatchWise: !!data.isBatchWise,
+        batchList: detail.batchList || [],
+      }));
+      console.log("mapped:", mapped);
       const filtered = mapped.filter((item) => item.remainingQty > 0);
-      console.log("filtered:", filtered);   
+      console.log("filtered:", filtered);
       setAvailableItems(filtered);
       setItems([]);
       setSelectedItems([]);
@@ -430,9 +437,11 @@ console.log("mapped:", mapped);
   const handleAddItems = () => {
     if (selectedItems.length === 0) return;
 
-   const newItems = selectedItems
-  .filter((sel) => !items.some((i) => i.rawMaterialId === sel.rawMaterialId))
-  .map(buildNewItem);
+    const newItems = selectedItems
+      .filter(
+        (sel) => !items.some((i) => i.rawMaterialId === sel.rawMaterialId),
+      )
+      .map(buildNewItem);
 
     if (newItems.length === 0) {
       Swal.fire({
@@ -504,66 +513,57 @@ console.log("mapped:", mapped);
       prev.filter((i) => i.rawMaterialId !== removed.rawMaterialId),
     );
   };
-const addBatchRows = (index, batchNos = []) => {
-  if (!Array.isArray(batchNos) || batchNos.length === 0) return;
-  setItems((prev) =>
-    prev.map((it, i) => {
-      if (i !== index) return it;
-      const rows = it.detailRows || [];
-      const already = new Set(rows.map((r) => r.batchNo));
-      const newRows = batchNos
-        .filter((no) => !already.has(no))
-        .map((no) => {
-          const src = (it.batchList || []).find((b) => b.batchNo === no) || {};
-          return {
-            batchNo: no,
-            date: src.expiryDate || "",
-            qty: "",
-            maxQty: Number(src.qty) || 0, // available
-            unit: src.unitName || it.unit || "",
-          };
-        });
-      const next = [...rows, ...newRows];
-      return { ...it, detailRows: next, qty: sumRowsQty(next) };
-    }),
-  );
-  setBatchAddSelection((p) => ({ ...p, [index]: [] }));
-};
+  const addBatchRows = (index, batchNos = []) => {
+    if (!Array.isArray(batchNos) || batchNos.length === 0) return;
+    setItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== index) return it;
+        const rows = it.detailRows || [];
+        const already = new Set(rows.map((r) => r.batchNo));
+        const newRows = batchNos
+          .filter((no) => !already.has(no))
+          .map((no) => {
+            const src =
+              (it.batchList || []).find((b) => b.batchNo === no) || {};
+            return {
+              batchNo: no,
+              date: src.expiryDate || "",
+              qty: "",
+ availableQty: Number(src.availableQty ?? src.qty) || 0,
+  maxQty: Number(src.availableQty ?? src.qty) || 0,
+              unit: src.unitName || it.unit || "",
+            };
+          });
+        const next = [...rows, ...newRows];
+        return { ...it, detailRows: next, qty: sumRowsQty(next) };
+      }),
+    );
+    setBatchAddSelection((p) => ({ ...p, [index]: [] }));
+  };
 
-const updateBatchRowQty = (itemIdx, rowIdx, value) => {
-  if (!/^\d*\.?\d*$/.test(value)) return;
-  const row = items[itemIdx]?.detailRows?.[rowIdx];
-  const parsed = parseFloat(value);
-  if (row && !isNaN(parsed) && parsed > row.maxQty) {
-    Swal.fire({
-      icon: "warning",
-      title: "Quantity Exceeded",
-      text: `Max allowed qty for this batch is ${row.maxQty}`,
-      timer: 2000,
-      showConfirmButton: false,
-    });
-    return;
-  }
-  setItems((prev) =>
-    prev.map((it, i) => {
-      if (i !== itemIdx) return it;
-      const rows = it.detailRows.map((r, idx) =>
-        idx === rowIdx ? { ...r, qty: value } : r,
-      );
-      return { ...it, detailRows: rows, qty: sumRowsQty(rows) };
-    }),
-  );
-};
+  const updateBatchRowQty = (itemIdx, rowIdx, value) => {
+    if (!/^\d*\.?\d*$/.test(value)) return;
+    
+    setItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== itemIdx) return it;
+        const rows = it.detailRows.map((r, idx) =>
+          idx === rowIdx ? { ...r, qty: value } : r,
+        );
+        return { ...it, detailRows: rows, qty: sumRowsQty(rows) };
+      }),
+    );
+  };
 
-const removeBatchRow = (itemIdx, rowIdx) => {
-  setItems((prev) =>
-    prev.map((it, i) => {
-      if (i !== itemIdx) return it;
-      const rows = it.detailRows.filter((_, idx) => idx !== rowIdx);
-      return { ...it, detailRows: rows, qty: sumRowsQty(rows) };
-    }),
-  );
-};
+  const removeBatchRow = (itemIdx, rowIdx) => {
+    setItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== itemIdx) return it;
+        const rows = it.detailRows.filter((_, idx) => idx !== rowIdx);
+        return { ...it, detailRows: rows, qty: sumRowsQty(rows) };
+      }),
+    );
+  };
   const formatDate = (date) => {
     if (!date) return "";
     const day = String(date.getDate()).padStart(2, "0");
@@ -592,7 +592,9 @@ const removeBatchRow = (itemIdx, rowIdx) => {
 
     const shouldUseBatchSave =
       isBatchAccessUser &&
-      (Array.isArray(items) ? items.some((item) => Boolean(item.isBatchWise)) : false);
+      (Array.isArray(items)
+        ? items.some((item) => Boolean(item.isBatchWise))
+        : false);
 
     if (shouldUseBatchSave) {
       const invalidBatchItem = items.find(
@@ -613,100 +615,100 @@ const removeBatchRow = (itemIdx, rowIdx) => {
       }
     }
 
-   try {
-  const details = items.map((item) => ({
-    rawMaterialId: item.rawMaterialId || 0,
-    hsccode: item.hsc_sac || "",
-    cgst: Number(item.cgst) || 0,
-    sgst: Number(item.sgst) || 0,
-    igst: Number(item.igst) || 0,
-    qty: Number(item.qty) || 0,
-    price: Number(item.price_per_unit) || 0,
-    othercharge: 0,
-    total: Number(item.total_price) || 0,
-  }));
-
-  const batchPayload = {
-    id: isEdit ? Number(editData.id) : 0,
-    storeIssueId: form.poId,
-    stockTypeId: Number(form.stock_type_id) || null,
-    voucher: form.voucher_no || "",
-    invoicetype: "",
-    partyId: form.party_id || null,
-    eventId: form.event_id || null,
-    remarks: form.remark || "",
-    returndate: formatDate(form.date),
-    userId: Number(userId),
-    details: items
-      .filter((item) => Boolean(item.isBatchWise) || isBatchWisePO(item))
-      .map((item) => ({
+    try {
+      const details = items.map((item) => ({
         rawMaterialId: item.rawMaterialId || 0,
+        hsccode: item.hsc_sac || "",
+        cgst: Number(item.cgst) || 0,
+        sgst: Number(item.sgst) || 0,
+        igst: Number(item.igst) || 0,
         qty: Number(item.qty) || 0,
-        batchList: (item.detailRows || [])
-          .filter((row) => row.batchNo && Number(row.qty || 0) > 0)
-          .map((row) => ({
-            batchNo: row.batchNo,
-            qty: Number(row.qty || 0),
-          })),
-      }))
-      .filter((item) => item.batchList.length > 0),
-  };
+        price: Number(item.price_per_unit) || 0,
+        othercharge: 0,
+        total: Number(item.total_price) || 0,
+      }));
 
-  const payload = {
-    id: isEdit ? Number(editData.id) : -1,
-    storeIssueId: form.poId,
-    stockTypeId: Number(form.stock_type_id) || null,
-    voucher: form.voucher_no || "",
-    invoicetype: "",
-    partyId: form.party_id || null,
-    eventId: form.event_id || null,
-    remarks: form.remark || "",
-    returndate: formatDate(form.date),
-    userId: Number(userId),
-    details: items.map((item) => ({
-      rawMaterialId: item.rawMaterialId || 0,
-      qty: Number(item.qty) || 0,
-    })),
-  };
+      const batchPayload = {
+        id: isEdit ? Number(editData.id) : 0,
+        storeIssueId: form.poId,
+        stockTypeId: Number(form.stock_type_id) || null,
+        voucher: form.voucher_no || "",
+        invoicetype: "",
+        partyId: form.party_id || null,
+        eventId: form.event_id || null,
+        remarks: form.remark || "",
+        returndate: formatDate(form.date),
+        userId: Number(userId),
+        details: items
+          .filter((item) => Boolean(item.isBatchWise) || isBatchWisePO(item))
+          .map((item) => ({
+            rawMaterialId: item.rawMaterialId || 0,
+            qty: Number(item.qty) || 0,
+            batchList: (item.detailRows || [])
+              .filter((row) => row.batchNo && Number(row.qty || 0) > 0)
+              .map((row) => ({
+                batchNo: row.batchNo,
+                qty: Number(row.qty || 0),
+              })),
+          }))
+          .filter((item) => item.batchList.length > 0),
+      };
 
-  const response = shouldUseBatchSave
-    ? await addOrUpdateBatchWisestoreissue(batchPayload)
-    : await AddStoreIssueReturn(payload);
+      const payload = {
+        id: isEdit ? Number(editData.id) : -1,
+        storeIssueId: form.poId,
+        stockTypeId: Number(form.stock_type_id) || null,
+        voucher: form.voucher_no || "",
+        invoicetype: "",
+        partyId: form.party_id || null,
+        eventId: form.event_id || null,
+        remarks: form.remark || "",
+        returndate: formatDate(form.date),
+        userId: Number(userId),
+        details: items.map((item) => ({
+          rawMaterialId: item.rawMaterialId || 0,
+          qty: Number(item.qty) || 0,
+        })),
+      };
 
-  if (response?.data?.success) {
-  const savedSirId = isEdit ? editData.id : (response?.data?.data?.id || 0);
-  await sendLog("SAVE_SUCCESS", items, savedSirId);
+      const response = shouldUseBatchSave
+        ? await addOrUpdateBatchWisestoreissue(batchPayload)
+        : await AddStoreIssueReturn(payload);
 
-  Swal.fire({
-    icon: "success",
-    title: "Success",
-    text: isEdit
-      ? "Store Issue Return Updated Successfully"
-      : "Store Issue Return Saved Successfully",
-    timer: 2000,
-    showConfirmButton: false,
-  });
-  setTimeout(() => navigate("/stock-management/store-po-return"), 2000);
-} else {
-  await sendLog("SAVE_ERROR", items, isEdit ? editData.id : 0);
+      if (response?.data?.success) {
+        const savedSirId = isEdit ? editData.id : response?.data?.data?.id || 0;
+        await sendLog("SAVE_SUCCESS", items, savedSirId);
 
-  Swal.fire({
-    icon: "error",
-    title: "Error",
-    text: response?.data?.msg || "Something went wrong",
-  });
-}
-} catch (error) {
-  console.error("Save Error:", error);
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: isEdit
+            ? "Store Issue Return Updated Successfully"
+            : "Store Issue Return Saved Successfully",
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        setTimeout(() => navigate("/stock-management/store-po-return"), 2000);
+      } else {
+        await sendLog("SAVE_ERROR", items, isEdit ? editData.id : 0);
 
-   await sendLog("SAVE_ERROR", items, isEdit ? editData?.id : 0);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: response?.data?.msg || "Something went wrong",
+        });
+      }
+    } catch (error) {
+      console.error("Save Error:", error);
 
-  Swal.fire({
-    icon: "error",
-    title: "Error",
-    text: "Failed to save. Please try again.",
-  });
-}
+      await sendLog("SAVE_ERROR", items, isEdit ? editData?.id : 0);
+
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to save. Please try again.",
+      });
+    }
   };
 
   const handleFormChange = (e) =>
@@ -835,7 +837,7 @@ const removeBatchRow = (itemIdx, rowIdx) => {
               <label className={labelClass}>
                 <Calendar size={16} /> Return Date
               </label>
-             <DatePicker
+              <DatePicker
                 selected={form.date}
                 onChange={(date) => setForm((prev) => ({ ...prev, date }))}
                 dateFormat="dd/MM/yyyy"
@@ -969,7 +971,7 @@ const removeBatchRow = (itemIdx, rowIdx) => {
                                   (i) => i.rawMaterialId === sel.rawMaterialId,
                                 ),
                             )
-                           .map(buildNewItem);
+                            .map(buildNewItem);
 
                           if (newItems.length > 0) {
                             setItems((prev) => [...prev, ...newItems]);
@@ -1092,163 +1094,240 @@ const removeBatchRow = (itemIdx, rowIdx) => {
                     </td>
                   </tr>
                 ) : (
-                items.map((item, i) => {
-  const detailRows = item.detailRows || [];
+                  items.map((item, i) => {
+                    const detailRows = item.detailRows || [];
+                    return (
+                      <Fragment key={item.rawMaterialId}>
+                        <tr className="border-b border-slate-50 hover:bg-blue-50/30 transition-colors group">
+                          <td className="px-4 py-3 text-slate-400 text-xs">
+                            {i + 1}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">
+                            {item.item_name}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-orange-50 text-orange-600 whitespace-nowrap">
+                              {item.totalqty} Qty
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-orange-50 text-orange-600 whitespace-nowrap">
+                              {item.returnedQty} returned
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              readOnly={item.isBatchWise}
+                              value={item.qty}
+                              onChange={(e) =>
+                                handleQtyChange(i, e.target.value)
+                              }
+                              onBlur={() => {
+                                if (item.isBatchWise) return; // batch items: qty comes from batch rows
+                                const parsed = parseFloat(item.qty);
+                                if (
+                                  item.qty === "" ||
+                                  item.qty === "." ||
+                                  isNaN(parsed) ||
+                                  parsed <= 0
+                                ) {
+                                  setItems((prev) =>
+                                    prev.map((it, idx) =>
+                                      idx === i
+                                        ? {
+                                            ...it,
+                                            qty: 1,
+                                            total_price: (
+                                              1 * it.price_per_unit
+                                            ).toFixed(2),
+                                          }
+                                        : it,
+                                    ),
+                                  );
+                                } else if (String(item.qty).endsWith(".")) {
+                                  setItems((prev) =>
+                                    prev.map((it, idx) =>
+                                      idx === i
+                                        ? {
+                                            ...it,
+                                            qty: parsed,
+                                            total_price: (
+                                              parsed * it.price_per_unit
+                                            ).toFixed(2),
+                                          }
+                                        : it,
+                                    ),
+                                  );
+                                }
+                              }}
+                              className={`w-[100px] text-center px-1 py-1 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 ${item.isBatchWise ? "bg-slate-50" : ""}`}
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-slate-500">
+                            {item.unit}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-2">
+                              {item.isBatchWise && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setExpandedItemIndex((p) =>
+                                      p === i ? null : i,
+                                    )
+                                  }
+                                  className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 flex items-center justify-center"
+                                  title={
+                                    expandedItemIndex === i
+                                      ? "Hide batch details"
+                                      : "View batch details"
+                                  }
+                                >
+                                  {expandedItemIndex === i ? (
+                                    <ChevronUp size={13} />
+                                  ) : (
+                                    <ChevronDown size={13} />
+                                  )}
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteItem(i)}
+                                className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors"
+                              >
+                                <Trash2 size={13} className="text-red-500" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {item.isBatchWise && expandedItemIndex === i && (
+                          <tr className="bg-blue-50/40">
+                            <td colSpan={7} className="px-4 py-4">
+                              <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-blue-150 to-blue-50 p-3 shadow-inner">
+                                <div className="flex items-center justify-between gap-3 mb-3">
+                                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-700">
+                                    Batch Details
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <Select
+                                      mode="multiple"
+                                      showSearch
+                                      allowClear
+                                      maxTagCount="responsive"
+                                      placeholder="Select batches"
+                                      value={batchAddSelection[i] || []}
+                                      onChange={(vals) =>
+                                        setBatchAddSelection((p) => ({
+                                          ...p,
+                                          [i]: vals,
+                                        }))
+                                      }
+                                      style={{ width: 360 }}
+                                      options={(item.batchList || []).map(
+                                        (b) => {
+                                          const used = detailRows.some(
+                                            (r) => r.batchNo === b.batchNo,
+                                          );
+                                          const text = `${b.batchNo}${b.expiryDate ? ` (${b.expiryDate})` : ""} • Qty: ${b.qty ?? 0}`;
+                                          return {
+                                            value: b.batchNo,
+                                            searchLabel: text,
+                                            disabled: used,
+                                            label: (
+                                              <div className="flex justify-between items-center">
+                                                <span
+                                                  className={
+                                                    used ? "text-gray-400" : ""
+                                                  }
+                                                >
+                                                  {text}
+                                                </span>
+                                                {used && (
+                                                  <span className="text-xs text-green-600 font-semibold">
+                                                    Added
+                                                  </span>
+                                                )}
+                                              </div>
+                                            ),
+                                          };
+                                        },
+                                      )}
+                                      filterOption={(input, option) =>
+                                        (option?.searchLabel ?? "")
+                                          .toLowerCase()
+                                          .includes(input.toLowerCase())
+                                      }
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        addBatchRows(i, batchAddSelection[i])
+                                      }
+                                      disabled={!batchAddSelection[i]?.length}
+                                      className="px-2.5 py-1.5 rounded-lg border border-blue-300 bg-white text-[10px] font-bold uppercase tracking-wide text-blue-700 shadow-sm hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      + Add{" "}
+                                      {batchAddSelection[i]?.length > 1
+                                        ? `(${batchAddSelection[i].length})`
+                                        : "Row"}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <div className="grid grid-cols-[minmax(0,1fr)_100px_110px_110px_120px_36px] gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-blue-700">
+                                    <div className="px-2">Batch Number</div>
+                                    <div className="px-2">Unit</div>
+                                     <div className="px-2">Available</div>
+  <div className="px-2">Returned</div>
+                                    <div className="px-2">Return Qty</div>
+                                    <div />
+                                  </div>
+
+                                  {detailRows.length === 0 && (
+                                    <div className="text-xs text-slate-400 px-2 py-2">
+                                      Select batches above and click "+ Add
+                                      Row".
+                                    </div>
+                                  )}
+
+        {detailRows.map((row, rowIdx) => {
+  const src = (item.batchList || []).find((b) => b.batchNo === row.batchNo);
+  const available = src?.availableQty ?? row.availableQty ?? row.maxQty ?? "—";
+  const returned = src?.returnedQty ?? row.returnedQty ?? 0;
+
   return (
-    <Fragment key={item.rawMaterialId}>
-      <tr className="border-b border-slate-50 hover:bg-blue-50/30 transition-colors group">
-        <td className="px-4 py-3 text-slate-400 text-xs">{i + 1}</td>
-        <td className="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">
-          {item.item_name}
-        </td>
-        <td className="px-4 py-3">
-          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-orange-50 text-orange-600 whitespace-nowrap">
-            {item.totalqty} Qty
-          </span>
-        </td>
-        <td className="px-4 py-3">
-          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full bg-orange-50 text-orange-600 whitespace-nowrap">
-            {item.returnedQty} returned
-          </span>
-        </td>
-        <td className="px-4 py-3">
-          <input
-            type="text"
-            inputMode="decimal"
-            readOnly={item.isBatchWise}
-            value={item.qty}
-            onChange={(e) => handleQtyChange(i, e.target.value)}
-            onBlur={() => {
-              if (item.isBatchWise) return; // batch items: qty comes from batch rows
-              const parsed = parseFloat(item.qty);
-              if (item.qty === "" || item.qty === "." || isNaN(parsed) || parsed <= 0) {
-                setItems((prev) =>
-                  prev.map((it, idx) =>
-                    idx === i
-                      ? { ...it, qty: 1, total_price: (1 * it.price_per_unit).toFixed(2) }
-                      : it,
-                  ),
-                );
-              } else if (String(item.qty).endsWith(".")) {
-                setItems((prev) =>
-                  prev.map((it, idx) =>
-                    idx === i
-                      ? { ...it, qty: parsed, total_price: (parsed * it.price_per_unit).toFixed(2) }
-                      : it,
-                  ),
-                );
-              }
-            }}
-            className={`w-[100px] text-center px-1 py-1 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 ${item.isBatchWise ? "bg-slate-50" : ""}`}
-          />
-        </td>
-        <td className="px-4 py-3 text-slate-500">{item.unit}</td>
-        <td className="px-4 py-3">
-          <div className="flex items-center justify-end gap-2">
-            {item.isBatchWise && (
-              <button
-                type="button"
-                onClick={() => setExpandedItemIndex((p) => (p === i ? null : i))}
-                className="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 flex items-center justify-center"
-                title={expandedItemIndex === i ? "Hide batch details" : "View batch details"}
-              >
-                {expandedItemIndex === i ? <ChevronUp size={13} /> : <ChevronDown  size={13} />}
-              </button>
-            )}
-            <button
-              onClick={() => handleDeleteItem(i)}
-              className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors"
-            >
-              <Trash2 size={13} className="text-red-500" />
-            </button>
-          </div>
-        </td>
-      </tr>
-
-      {item.isBatchWise && expandedItemIndex === i && (
-        <tr className="bg-blue-50/40">
-          <td colSpan={7} className="px-4 py-4">
-            <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-blue-150 to-blue-50 p-3 shadow-inner">
-            <div className="flex items-center justify-between gap-3 mb-3">
-  <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-700">
-    Batch Details
-  </span>
-  <div className="flex items-center gap-2">
-    <Select
-      mode="multiple"
-      showSearch
-      allowClear
-      maxTagCount="responsive"
-      placeholder="Select batches"
-      value={batchAddSelection[i] || []}
-      onChange={(vals) => setBatchAddSelection((p) => ({ ...p, [i]: vals }))}
-      style={{ width: 360 }}
-      options={(item.batchList || []).map((b) => {
-        const used = detailRows.some((r) => r.batchNo === b.batchNo);
-        const text = `${b.batchNo}${b.expiryDate ? ` (${b.expiryDate})` : ""} • Qty: ${b.qty ?? 0}`;
-        return {
-          value: b.batchNo,
-          searchLabel: text,
-          disabled: used,
-          label: (
-            <div className="flex justify-between items-center">
-              <span className={used ? "text-gray-400" : ""}>{text}</span>
-              {used && <span className="text-xs text-green-600 font-semibold">Added</span>}
-            </div>
-          ),
-        };
-      })}
-      filterOption={(input, option) =>
-        (option?.searchLabel ?? "").toLowerCase().includes(input.toLowerCase())
-      }
-    />
-    <button
-      type="button"
-      onClick={() => addBatchRows(i, batchAddSelection[i])}
-      disabled={!batchAddSelection[i]?.length}
-      className="px-2.5 py-1.5 rounded-lg border border-blue-300 bg-white text-[10px] font-bold uppercase tracking-wide text-blue-700 shadow-sm hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed"
-    >
-      + Add {batchAddSelection[i]?.length > 1 ? `(${batchAddSelection[i].length})` : "Row"}
-    </button>
-  </div>
-</div>
-
-<div className="space-y-2">
-  <div className="grid grid-cols-[minmax(0,1fr)_100px_120px_120px_36px] gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-blue-700">
-    <div className="px-2">Batch Number</div>
-    <div className="px-2">Unit</div>
-    <div className="px-2">Available</div>
-    <div className="px-2">Return Qty</div>
-    <div />
-  </div>
-
-  {detailRows.length === 0 && (
-    <div className="text-xs text-slate-400 px-2 py-2">
-      Select batches above and click "+ Add Row".
-    </div>
-  )}
-
-  {detailRows.map((row, rowIdx) => (
     <div
       key={`${i}-${row.batchNo}-${rowIdx}`}
-      className="grid grid-cols-[minmax(0,1fr)_100px_120px_120px_36px] gap-2 items-center"
+      className="grid grid-cols-[minmax(0,1fr)_100px_110px_110px_120px_36px] gap-2 items-center"
     >
+      {/* Batch Number */}
       <div className="rounded-xl border border-blue-200 bg-slate-50 px-3 py-2 shadow-sm">
         <span className="text-xs font-medium text-slate-700">
           {`${row.batchNo}${row.date ? ` (${row.date})` : ""}`}
         </span>
       </div>
 
+      {/* Unit */}
       <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 cursor-not-allowed">
         <span className="text-xs font-medium text-slate-600">
           {row.unit || item.unit || "—"}
         </span>
       </div>
 
+      {/* Available */}
       <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 cursor-not-allowed">
-        <span className="text-xs font-semibold text-slate-600">{row.maxQty ?? "—"}</span>
+        <span className="text-xs font-semibold text-slate-600">{available}</span>
       </div>
 
+      {/* Returned (read-only) */}
+      <div className="rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 cursor-not-allowed">
+        <span className="text-xs font-semibold text-orange-600">{returned}</span>
+      </div>
+
+      {/* Return Qty (input) */}
       <div className="rounded-xl border border-blue-200 bg-white px-2 py-1.5 shadow-sm">
         <input
           type="text"
@@ -1260,6 +1339,7 @@ const removeBatchRow = (itemIdx, rowIdx) => {
         />
       </div>
 
+      {/* Delete */}
       <button
         type="button"
         onClick={() => removeBatchRow(i, rowIdx)}
@@ -1269,17 +1349,16 @@ const removeBatchRow = (itemIdx, rowIdx) => {
         <Trash2 size={13} className="text-red-500" />
       </button>
     </div>
-  ))}
-</div>
-
-             
-            </div>
-          </td>
-        </tr>
-      )}
-    </Fragment>
   );
-})
+})}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })
                 )}
               </tbody>
             </table>

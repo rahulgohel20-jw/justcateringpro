@@ -191,8 +191,9 @@ const focusSearchInput = useCallback(() => {
   const [transportation, setTransportation] = useState(0);
   const [saving, setSaving] = useState(false);
   const userId = localStorage.getItem("userId");
-  const BATCH_WISE_USER_ID = [233 , 376]; //amoncar 376
-const canUseBatch = BATCH_WISE_USER_ID.find((id) => id === Number(userId));
+  const BATCH_WISE_USER_ID = [233 , 376 , 3]; //amoncar
+const canUseBatch = BATCH_WISE_USER_ID.find((id) => id === Number(userId))
+;
 
   const backDatePermission = usePermission("Lock Back Date Entry");
 const isBackDateLocked = backDatePermission.add || backDatePermission.edit;
@@ -1061,36 +1062,30 @@ const finalAmount =
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-  {[
-    { key: "sr", label: <FormattedMessage id="COMMON.SR_NO" defaultMessage="#" /> },
-    { key: "addToStock", label: <FormattedMessage id="PURCHASE.ADD_TO_STOCK" defaultMessage="Add to Stock" /> },
-    { key: "itemName", label: <FormattedMessage id="PURCHASE.ITEM_NAME" defaultMessage="Item Name" /> },
-    { key: "hsn", label: "HSC/SAC" },
-    { key: "cgst", label: "CGST%" },
-    { key: "sgst", label: "SGST%" },
-    { key: "igst", label: "IGST%" },
-    { key: "cess", label: "CESS%" },
-    { key: "qty", label: <FormattedMessage id="COMMON.QTY" defaultMessage="Qty" /> },
-    { key: "unit", label: <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" /> },
-    { key: "price", label: <FormattedMessage id="PURCHASE.PRICE_PER_UNIT" defaultMessage="Price/Unit" /> },
-
-    ...(canUseBatch
-      ? [{ key: "expireDate", label: <FormattedMessage id="PURCHASE.EXPIRE_DATE" defaultMessage="Expire Date" /> }]
-      : []),
-
-    { key: "otherCharges", label: <FormattedMessage id="PURCHASE.OTHER_CHARGES" defaultMessage="Other ₹" /> },
-    { key: "gstAmt", label: <FormattedMessage id="PURCHASE.GST_AMOUNT" defaultMessage="GST Amt" /> },
-    { key: "total", label: <FormattedMessage id="COMMON.TOTAL" defaultMessage="Total" /> },
-    { key: "actions", label: "" },
-  ].map((h) => (
-    <th
-      key={h.key}
-      className="px-3 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap"
-    >
-      {h.label}
-    </th>
-  ))}
-</tr>
+                 {[
+  <FormattedMessage id="COMMON.SR_NO" defaultMessage="#" />,
+  <FormattedMessage id="PURCHASE.ADD_TO_STOCK" defaultMessage="Add to Stock" />,
+  <FormattedMessage id="PURCHASE.ITEM_NAME" defaultMessage="Item Name" />,
+  "HSC/SAC",
+  "CGST%",
+  "SGST%",
+  "IGST%",
+  "CESS%",
+  <FormattedMessage id="COMMON.QTY" defaultMessage="Qty" />,
+  <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />,
+  <FormattedMessage id="PURCHASE.PRICE_PER_UNIT" defaultMessage="Price/Unit" />,
+    <FormattedMessage id="PURCHASE.PRICE_PER_UNIT" defaultMessage="Expire Date" />,
+  <FormattedMessage id="PURCHASE.OTHER_CHARGES" defaultMessage="Other ₹" />,
+  <FormattedMessage id="PURCHASE.GST_AMOUNT" defaultMessage="GST Amt" />,
+  <FormattedMessage id="COMMON.TOTAL" defaultMessage="Total" />,
+  
+  "",
+].map((h) => (
+  <th key={h} className="px-3 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+    {h}
+  </th>
+))}
+                </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (

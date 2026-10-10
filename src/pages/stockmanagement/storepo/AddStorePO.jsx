@@ -348,8 +348,8 @@
 
     const navigate = useNavigate();
     const userId = localStorage.getItem("userId");
-    const BATCH_WISE_USER_ID = 233 ; //amoncar
-const canUseBatchMode = Number(userId) === BATCH_WISE_USER_ID;
+    const BATCH_WISE_USER_ID = [233 , 376 , 3] ; //amoncar
+const canUseBatchMode =  BATCH_WISE_USER_ID.find((id) => id === Number(userId));
     const authStorage = JSON.parse(localStorage.getItem("auth-storage") || "{}");
     const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
     const location = useLocation();
@@ -512,6 +512,8 @@ const canUseBatchMode = Number(userId) === BATCH_WISE_USER_ID;
           batchNo: b.batchNo || "",
           date: b.expiryDate || "",
           qty: b.qty ?? "",
+          availableQty : b.availableQty  ?? "",
+          
           unit: b.unitName || d.unitName || "",
         }));
 
@@ -526,6 +528,7 @@ const canUseBatchMode = Number(userId) === BATCH_WISE_USER_ID;
             batchNo: r.batchNo,
             expiryDate: r.date,
             qty: r.qty,
+            availableQty  : r.availableQty,
             unit: r.unit,
           })),
           detailRows: rows,
@@ -546,6 +549,7 @@ const canUseBatchMode = Number(userId) === BATCH_WISE_USER_ID;
     );
   }
   }, [editData, supplier, godownTypes, kitchenTypes]);
+
     const fetchSupplier = async () => {
       try {
         const res = await getpartywitheventforstock(userId);
@@ -722,7 +726,8 @@ const canUseBatchMode = Number(userId) === BATCH_WISE_USER_ID;
         ? rawItem.batchList.map((batch) => ({
             batchNo: batch.batchNo || "",
             expiryDate: batch.expiryDate || "",
-            qty: batch.qty ?? "",
+            qty:   batch.qty ?? batch.availableQty ??  "",
+            availableQty : batch.availableQty ?? batch.qty ?? "",
             unit: batch.unitName || batch.unit || "",
             unitId: batch.unitId || 0,
           }))
@@ -743,7 +748,10 @@ setItems((prev) => [
     item_name: rawItem.rawMaterialName || rawItem.nameEnglish || "",
     qty: "",
     unit: fallbackUnit,
-    closingStock: rawItem.closingStock ?? null,
+    // batch API returns total stock as `qty`; normal search API returns `closingStock`
+    closingStock: isBatchNoMode
+      ? (rawItem.qty ?? rawItem.closingStock ?? null)
+      : (rawItem.closingStock ?? null),
     isAddInStock: true,
     batchOptions,
     detailRows: initialRows,
@@ -1501,6 +1509,7 @@ try {
                     handleSelectItem(option.raw);
                     setSearchValue("");
                     setSearchQuery("");
+                    if (isBatchNoMode) fetchBatchRawMaterials("", 0, false); 
                   }}
                   notFoundContent={isBatchNoMode ? (loadingBatchMaterials ? "Loading..." : "No items found") : (loadingItems ? "Loading..." : "No items found")}
                   style={{ width: "100%", maxWidth: "400px" }}
@@ -1789,7 +1798,9 @@ ref={(el) => (qtyInputRefs.current[i] = el)}
           <div className="grid grid-cols-[minmax(0,1fr)_100px_120px_120px_36px] gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-blue-700">
             <div className="px-2">Batch Number</div>
             <div className="px-2">Unit</div>
-            <div className="px-2">Available</div>
+<div className="px-2">Available</div>
+            <div className="px-2">Return Qty</div>
+
             <div className="px-2">Qty</div>
             <div />
           </div>
@@ -1804,7 +1815,7 @@ ref={(el) => (qtyInputRefs.current[i] = el)}
             // unit and available come from this item's batch list
             const src = (item.batchOptions || []).find((b) => b.batchNo === row.batchNo);
             const unit = src?.unit || row.unit || item.unit || "—";
-            const available = src?.qty ?? null;
+            const available = src?.availableQty ?? null;
 
             return (
               <div
