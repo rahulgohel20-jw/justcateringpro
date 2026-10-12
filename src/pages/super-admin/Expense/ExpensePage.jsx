@@ -570,23 +570,20 @@ useEffect(() => {
     isLoading: closeDateLoading,
     saveCloseDate,
     isSaving,
+    refetch: refetchCloseDates, 
   } = useCloseDate(null, selectedYear, numericUserId);
-  useEffect(() => {
-    if (filterMode !== "month" || selectedMonth == null) return;
 
-    // ✅ Skip sync on initial load — let auto-select handle it
-    if (!autoSetDone.current) return;
+useEffect(() => {
+  if (filterMode !== "month" || selectedMonth == null) return;
+  if (!autoSetDone.current) return;
 
-    const entry = monthCloseDates[`${selectedYear}-${selectedMonth + 1}`];
-    if (entry?.startDate && entry?.closeDate) {
-      setStartDate(entry.startDate);
-      setCloseDate(entry.closeDate);
-    } else {
-      setStartDate(null);
-      setCloseDate(null);
-    }
-  }, [selectedMonth, selectedYear, monthCloseDates, filterMode]);
-
+  const entry = monthCloseDates[`${selectedYear}-${selectedMonth + 1}`];
+  if (entry?.startDate && entry?.closeDate) {
+    setStartDate(entry.startDate);
+    setCloseDate(entry.closeDate);
+  }
+  // no entry: keep the current dates instead of setting null
+}, [selectedMonth, selectedYear, monthCloseDates, filterMode]);
   // ── Auto-select active month ──────────────────────────────────────────────
   useEffect(() => {
     if (closeDateLoading) return;
@@ -639,29 +636,39 @@ useEffect(() => {
   };
 
   const handleCloseDateChange = (dmy_start, dmy_end) => {
-    saveCloseDate(
-      { startDate: dmy_start, endDate: dmy_end },
-      {
-        onSuccess: () => {
-          setStartDate(dmy_start);
-          setCloseDate(dmy_end);
+  saveCloseDate(
+    { startDate: dmy_start, endDate: dmy_end },
+    {
+      onSuccess: async (res) => {
+        // 1) try the save response itself
+        let entry = res?.data?.closeDate ?? null;
+        if (!(entry?.startDate && entry?.closeDate)) entry = null;
+
+        // 2) otherwise reload from the API and use what it returns
+        if (!entry) {
+          const result = await refetchCloseDates();
+          const map = result?.data ?? {};
+          entry =
+            Object.values(map).find((e) => e.isActive) ||
+            map[`${selectedYear}-${(selectedMonth ?? 0) + 1}`] ||
+            null;
+        }
+
+        if (entry) {
+          setSelectedYear(entry.year);
+          setSelectedMonth(entry.month - 1);
+          setStartDate(entry.startDate);   // from API
+          setCloseDate(entry.closeDate);   // from API
           setFilterMode("month");
-          Swal.fire({
-            title: "Updated!",
-            icon: "success",
-            timer: 2000,
-            showConfirmButton: false,
-          });
-        },
-        onError: () =>
-          Swal.fire({
-            title: "Failed!",
-            text: "Could not update the close date.",
-            icon: "error",
-          }),
+        }
+
+        Swal.fire({ title: "Updated!", icon: "success", timer: 2000, showConfirmButton: false });
       },
-    );
-  };
+      onError: () =>
+        Swal.fire({ title: "Failed!", text: "Could not update the close date.", icon: "error" }),
+    },
+  );
+};
 
   useEffect(() => {
     let cancelled = false;

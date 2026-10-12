@@ -6,6 +6,8 @@ import {
   GetRawMaterialcategory,
   DeleteRawMaterialcategory,
   updatestatusrawmatrialcat,
+  Getgenerateusermenuitemrawmaterialexcel,
+  
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import AddRawMaterial from "@/partials/modals/raw-material-category/AddRawMaterial";
@@ -22,6 +24,7 @@ const AddRawMaterialCategory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const intl = useIntl();
   const [rawOriginalData, setRawOriginalData] = useState([]);
+const [excelLoading, setExcelLoading] = useState(false);
 
   useEffect(() => {
     FetchRawMaterialCategory();
@@ -146,6 +149,47 @@ const AddRawMaterialCategory = () => {
     setIsContactModalOpen(true);
   };
 
+  const handleExcel = async () => {
+  try {
+    setExcelLoading(true);
+    const payload = {
+      isCaptainReceipe: false,
+      isCaptainReceipeRawMaterial: false,
+      isMenuCategory: false,
+      isMenuItem: false,
+      isMenuItemRawMaterial: false,
+      isRawMaterial: false,
+      isRawMaterialCat: true,
+      isUnit: false,
+    };
+
+    const res = await Getgenerateusermenuitemrawmaterialexcel(Id, payload);
+    const fileUrl =
+      res?.data?.fileUrl ||
+      res?.data?.report_path ||
+      (typeof res?.data?.data === "string" ? res.data.data : null);
+
+    if (fileUrl) {
+      window.open(fileUrl, "_blank", "noopener,noreferrer");
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: res?.data?.msg || "Failed to generate Excel file.",
+      });
+    }
+  } catch (error) {
+    console.error("Excel generation failed:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: error?.response?.data?.msg || "Failed to generate Excel file.",
+    });
+  } finally {
+    setExcelLoading(false);
+  }
+};
+
   return (
     <Fragment>
       <Container>
@@ -159,41 +203,54 @@ const AddRawMaterialCategory = () => {
           </h1>
         </div>
         {/* filters */}
-        <div className="filters flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className={`flex flex-wrap items-center gap-2 `}>
-            <div className="filItems relative">
-              <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
-              <input
-                className="input pl-8"
-                placeholder={intl.formatMessage({
-                  id: "USER.MASTER.RAW_MATERIAL_CATEGORY",
-                  defaultMessage: "Raw Material Category",
-                })}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-          {permissions.add && (
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  setSelectedRawMaterialCategory(null);
-                  setIsContactModalOpen(true);
-                }}
-                title="Add Contact Category"
-              >
-                <i className="ki-filled ki-plus"></i>{" "}
-                {intl.formatMessage({
-                  id: "USER.MASTER.ADD_CONTACT_CATEGORY",
-                  defaultMessage: "Create New ",
-                })}
-              </button>
-            </div>
-          )}
-        </div>
+       <div className="filters flex flex-wrap items-center justify-between gap-2 mb-3">
+  {/* Left: search */}
+  <div className="flex flex-wrap items-center gap-2">
+    <div className="filItems relative">
+      <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
+      <input
+        className="input pl-8"
+        placeholder={intl.formatMessage({
+          id: "USER.MASTER.RAW_MATERIAL_CATEGORY",
+          defaultMessage: "Raw Material Category",
+        })}
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+    </div>
+  </div>
+
+  {/* Right: Excel + Create New */}
+  <div className="ml-auto flex flex-wrap items-center gap-2">
+    <button
+      className="btn btn-light"
+      onClick={handleExcel}
+      disabled={excelLoading}
+      title="Download Excel"
+    >
+      <i className="ki-filled ki-file-down"></i>{" "}
+      {excelLoading ? "Generating..." : "Excel"}
+    </button>
+
+    {permissions.add && (
+      <button
+        className="btn btn-primary"
+        onClick={() => {
+          setSelectedRawMaterialCategory(null);
+          setIsContactModalOpen(true);
+        }}
+        title="Add Contact Category"
+      >
+        <i className="ki-filled ki-plus"></i>{" "}
+        {intl.formatMessage({
+          id: "USER.MASTER.ADD_CONTACT_CATEGORY",
+          defaultMessage: "Create New ",
+        })}
+      </button>
+    )}
+  </div>
+</div>
         <AddRawMaterial
           isOpen={isconatctModalOpen}
           onClose={setIsContactModalOpen}

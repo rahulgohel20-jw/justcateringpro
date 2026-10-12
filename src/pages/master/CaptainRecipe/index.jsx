@@ -7,11 +7,13 @@ import {
   getCaptainReceipeById,
   deletecaptainreceipe,
   getsynccaptainrecipe,
+  Getgenerateusermenuitemrawmaterialexcel
 } from "@/services/apiServices";
 import { columns } from "./constant";
 import Swal from "sweetalert2";
 import { usePermission } from "../../../hooks/usePermission";
 import { FormattedMessage, useIntl } from "react-intl";
+import { Modal, Switch, Button } from "antd";
 
 const CaptainRecipe = () => {
   const intl = useIntl();
@@ -22,6 +24,12 @@ const CaptainRecipe = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const userId = localStorage.getItem("userId");
   const [syncingAll, setSyncingAll] = useState(false);
+const [excelModalOpen, setExcelModalOpen] = useState(false);
+const [excelLoading, setExcelLoading] = useState(false);
+const [excelOptions, setExcelOptions] = useState({
+  isCaptainReceipe: true,
+  isCaptainReceipeRawMaterial: true,
+});
 
   const fetchData = () => {
     getallcaptainrecipe(userId, "")
@@ -51,6 +59,71 @@ const CaptainRecipe = () => {
       console.error("Error fetching recipe by id:", err);
     }
   };
+
+  const handleGenerateExcel = async () => {
+  if (!excelOptions.isCaptainReceipe && !excelOptions.isCaptainReceipeRawMaterial) {
+    Swal.fire("Select an option", "Turn on at least one toggle.", "info");
+    return;
+  }
+
+  const payload = {
+    isCaptainReceipe: excelOptions.isCaptainReceipe,
+    isCaptainReceipeRawMaterial: excelOptions.isCaptainReceipeRawMaterial,
+    isMenuCategory: false,
+    isMenuItem: false,
+    isMenuItemRawMaterial: false,
+    isRawMaterial: false,
+    isRawMaterialCat: false,
+    isUnit: false,
+  };
+
+  try {
+    setExcelLoading(true);
+    const res = await Getgenerateusermenuitemrawmaterialexcel(userId, payload);
+    const d = res?.data;
+
+    // API answered but reported a failure
+    if (d?.success === false) {
+      throw new Error(d?.msg || d?.message || "Failed to export Excel.");
+    }
+
+    const fileUrl =
+      d?.report_path ||
+      d?.data?.report_path ||
+      d?.excel_path ||
+      d?.data?.excel_path ||
+      d?.file_path ||
+      d?.data?.file_path ||
+      d?.url ||
+      (typeof d?.data === "string" ? d.data : null);
+
+    if (fileUrl) {
+      const a = document.createElement("a");
+      a.href = fileUrl;
+      a.download = "Captain_Recipe.xlsx";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setExcelModalOpen(false);
+    } else {
+      console.log("Export response:", d);
+      throw new Error(d?.msg || d?.message || "No file URL returned");
+    }
+  } catch (error) {
+    console.error("Export error:", error);
+    // show the message that came from the API first
+    const apiMsg =
+      error?.response?.data?.msg ||
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      "Failed to export Excel.";
+    Swal.fire({ title: "Error", text: apiMsg, icon: "error" });
+  } finally {
+    setExcelLoading(false);
+  }
+};
 
   const handleDelete = (id) => {
     Swal.fire({
@@ -153,6 +226,13 @@ const CaptainRecipe = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+    className="btn btn-light"
+    onClick={() => setExcelModalOpen(true)}
+  >
+    <i className="ki-filled ki-file-down" /> Excel
+  </button>
+
             {permissions.add && (
               <button
                 className="btn btn-primary"
@@ -204,6 +284,47 @@ const CaptainRecipe = () => {
             )}
           </div>
         </div>
+        <Modal
+  title="Export Excel"
+  open={excelModalOpen}
+  onCancel={() => setExcelModalOpen(false)}
+  zIndex={10000}
+  getContainer={() => document.body}
+  centered
+  footer={[
+    <Button key="cancel" onClick={() => setExcelModalOpen(false)}>
+      Cancel
+    </Button>,
+    <Button
+      key="generate"
+      type="primary"
+      loading={excelLoading}
+      onClick={handleGenerateExcel}
+    >
+      Generate
+    </Button>,
+  ]}
+  destroyOnClose
+>
+  <div className="flex flex-col gap-4 py-2">
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-700">Captain Recipe</span>
+      <Switch
+        checked={excelOptions.isCaptainReceipe}
+        onChange={(v) => setExcelOptions((p) => ({ ...p, isCaptainReceipe: v }))}
+      />
+    </div>
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-700">Captain Recipe Raw Material</span>
+      <Switch
+        checked={excelOptions.isCaptainReceipeRawMaterial}
+        onChange={(v) =>
+          setExcelOptions((p) => ({ ...p, isCaptainReceipeRawMaterial: v }))
+        }
+      />
+    </div>
+  </div>
+</Modal>
         <Addcaptaionmodal
           isModalOpen={isCategoryModalOpen}
           setIsModalOpen={setIsCategoryModalOpen}

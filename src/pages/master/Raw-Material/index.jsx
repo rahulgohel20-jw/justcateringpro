@@ -11,6 +11,7 @@ import {
   SearchRawMaterial,
   Getallgeneralfix,
     genratebarcode,
+    Getgenerateusermenuitemrawmaterialexcel
 } from "@/services/apiServices";
 import useStyle from "./style";
 import AddRawMaterial from "@/partials/modals/add-raw-material/AddRawMaterial";
@@ -49,6 +50,7 @@ const [barcodeLoading, setBarcodeLoading] = useState(false);
 const [printQty, setPrintQty] = useState(1);
 const [printLoading, setPrintLoading] = useState(false);
 const isBarcodeUser = Number(Id) === 376; //AMONCAR 
+const [excelLoading, setExcelLoading] = useState(false);
   const field = useMemo(() => {
   const languageMap = {
     en: "nameEnglish",
@@ -449,6 +451,46 @@ const handleGenerateBarcode = async () => {
     setBarcodeLoading(false);
   }
 };
+const handleExcel = async () => {
+  try {
+    setExcelLoading(true);
+    const payload = {
+      isCaptainReceipe: false,
+      isCaptainReceipeRawMaterial: false,
+      isMenuCategory: false,
+      isMenuItem: false,
+      isMenuItemRawMaterial: false,
+      isRawMaterial: true,
+      isRawMaterialCat: false,
+      isUnit: false,
+    };
+
+    const res = await Getgenerateusermenuitemrawmaterialexcel(Id, payload);
+    const fileUrl =
+      res?.data?.fileUrl ||
+      res?.data?.report_path ||
+      (typeof res?.data?.data === "string" ? res.data.data : null);
+
+    if (fileUrl) {
+      window.open(fileUrl, "_blank", "noopener,noreferrer");
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: res?.data?.msg || "Failed to generate Excel file.",
+      });
+    }
+  } catch (error) {
+    console.error("Excel generation failed:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: error?.response?.data?.msg || "Failed to generate Excel file.",
+    });
+  } finally {
+    setExcelLoading(false);
+  }
+};
 const tableColumns = columns(
   handleEdit,
   DeleteRawMaterial,
@@ -551,7 +593,15 @@ const tableColumns = columns(
         {printLoading ? "Generating..." : "Print"}
       </button>
     </>
-  )}
+  )} <button
+    className="btn btn-light"
+    onClick={handleExcel}
+    disabled={excelLoading}
+    title="Download Excel"
+  >
+    <i className="ki-filled ki-file-down"></i>{" "}
+    {excelLoading ? "Generating..." : "Excel"}
+  </button>
 
   {permissions.add && (
     <button
