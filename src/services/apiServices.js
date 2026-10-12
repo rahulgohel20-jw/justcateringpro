@@ -4260,3 +4260,7 @@ export const getlabourheplerpdf = ( laborHelperId , userId) => {
   return GET(`/laborhelper/pdf?laborHelperId=${laborHelperId}&userId=${userId}`);
 };
 
+
+export const EventLaborHelperPdf = (eventFunctionId, eventId,partyId) => {
+  return POST(`/eventlaborhelper/pdf?eventFunctionId=${eventFunctionId}&eventId=${eventId}&partyId=${partyId}`);
+};
