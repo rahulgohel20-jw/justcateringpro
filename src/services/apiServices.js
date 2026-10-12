@@ -2938,10 +2938,8 @@ export const reporteexcelforvendorparty = (type, userId) => {
 };
 
 
-
-
-export const Getgenerateusermenuitemrawmaterialexcel = (userId) => {
-  return POST(`/report/generate-user-menuitem-rawmaterial-excel?userId=${userId}`);
+export const Getgenerateusermenuitemrawmaterialexcel = (userId , data) => {
+  return POST(`/report/generate-user-menuitem-rawmaterial-excel?userId=${userId}`, data);
 };
 
 export const GetAllCrCodes = (userId) => {
@@ -4261,3 +4259,4 @@ export const purchasereportvendorwise = (startDate , endDate , uerId)=> {
 export const getlabourheplerpdf = ( laborHelperId , userId) => {
   return GET(`/laborhelper/pdf?laborHelperId=${laborHelperId}&userId=${userId}`);
 };
+

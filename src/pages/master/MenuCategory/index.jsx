@@ -9,6 +9,7 @@ import {
   GetAllCategory,
   DeleteCategoryId,
   UpdateStatus,
+  Getgenerateusermenuitemrawmaterialexcel
 } from "@/services/apiServices";
 import ViewMenuCategory from "../../../partials/modals/view-menu-category/ViewMenuCategory";
 import { FormattedMessage } from "react-intl";
@@ -25,7 +26,7 @@ const MenuCategory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [originalData, setOriginalData] = useState([]);
   const [loading, setLoading] = useState(false);
-
+const [isExporting, setIsExporting] = useState(false);
   const intl = useIntl();
 
   let Id = localStorage.getItem("userId");
@@ -181,6 +182,57 @@ useEffect(() => {
     setIsViewCategoryModalOpen(true);
   };
 
+  const handleExportExcel = async () => {
+  const payload = {
+    isCaptainReceipe: false,
+    isCaptainReceipeRawMaterial: false,
+    isMenuCategory: true, // only Menu Category
+    isMenuItem: false,
+    isMenuItemRawMaterial: false,
+    isRawMaterial: false,
+    isRawMaterialCat: false,
+    isUnit: false,
+  };
+
+  try {
+    setIsExporting(true);
+    const res = await Getgenerateusermenuitemrawmaterialexcel(Id, payload);
+
+    const d = res?.data;
+    const fileUrl =
+      d?.report_path ||
+      d?.data?.report_path ||
+      d?.excel_path ||
+      d?.data?.excel_path ||
+      d?.file_path ||
+      d?.data?.file_path ||
+      d?.url ||
+      (typeof d?.data === "string" ? d.data : null);
+
+    if (fileUrl) {
+      const a = document.createElement("a");
+      a.href = fileUrl;
+      a.download = "Menu_Category.xlsx";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } else {
+      console.log("Export response:", res?.data);
+      throw new Error("No file URL returned");
+    }
+  } catch (error) {
+    console.error("Export error:", error);
+    Swal.fire({
+      title: "Error!",
+      text: "Failed to export Excel.",
+      icon: "error",
+    });
+  } finally {
+    setIsExporting(false);
+  }
+};
+
   const refreshData = () => {
     FetchCategoryData();
   };
@@ -242,24 +294,33 @@ useEffect(() => {
             )}
           </div>
 
-          {permissions.add && (
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  setSelectedCategory(null);
-                  setIsCategoryModalOpen(true);
-                }}
-                title="Add Category"
-              >
-                <i className="ki-filled ki-plus"></i>{" "}
-                <FormattedMessage
-                  id="MENU_CATEGORY.ADD_CATEGORY_BUTTON"
-                  defaultMessage="Create New"
-                />
-              </button>
-            </div>
-          )}
+        <div className="flex flex-wrap items-center gap-2">
+  <button
+    className="btn btn-light"
+    onClick={handleExportExcel}
+    disabled={isExporting}
+  >
+    <i className="ki-filled ki-file-down"></i>{" "}
+    {isExporting ? "Exporting..." : "Excel"}
+  </button>
+
+  {permissions.add && (
+    <button
+      className="btn btn-primary"
+      onClick={() => {
+        setSelectedCategory(null);
+        setIsCategoryModalOpen(true);
+      }}
+      title="Add Category"
+    >
+      <i className="ki-filled ki-plus"></i>{" "}
+      <FormattedMessage
+        id="MENU_CATEGORY.ADD_CATEGORY_BUTTON"
+        defaultMessage="Create New"
+      />
+    </button>
+  )}
+</div>
         </div>
 
         <AddMenuCategory

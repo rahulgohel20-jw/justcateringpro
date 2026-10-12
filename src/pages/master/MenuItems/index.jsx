@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState, useCallback, useRef } from "react";
 import { Container } from "@/components/container";
-import { Select, Button, Spin } from "antd";
+import { Select, Button, Spin  , Modal, Switch} from "antd";
 import {
   GetAllMenuItems,
   DeleteMenuItem,
@@ -10,6 +10,7 @@ import {
   GetAllCategory,
   Getallsyncitems,
   syncallcaptainreceiperate,
+  Getgenerateusermenuitemrawmaterialexcel
 } from "@/services/apiServices";
 import { SyncOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
@@ -46,7 +47,12 @@ const MenuItems = () => {
   const [captainSyncLoading, setCaptainSyncLoading] = useState(false);
   const [isWithRecipe, setIsWithRecipe] = useState("");
   const [rawItems, setRawItems] = useState([]);
-
+const [excelModalOpen, setExcelModalOpen] = useState(false);
+const [excelLoading, setExcelLoading] = useState(false);
+const [excelOptions, setExcelOptions] = useState({
+  isMenuItem: true,
+  isMenuItemRawMaterial: true,
+});
   const [videoModal, setVideoModal] = useState({ open: false, url: "" });
 
 const openVideoModal = (url) => {
@@ -215,6 +221,59 @@ const getYoutubeEmbedUrl = (url) => {
   },
   [],
 );
+
+const handleGenerateExcel = async () => {
+  if (!excelOptions.isMenuItem && !excelOptions.isMenuItemRawMaterial) {
+    Swal.fire("Select an option", "Turn on at least one toggle.", "info");
+    return;
+  }
+
+  const payload = {
+    isCaptainReceipe: false,
+    isCaptainReceipeRawMaterial: false,
+    isMenuCategory: false,
+    isMenuItem: excelOptions.isMenuItem,
+    isMenuItemRawMaterial: excelOptions.isMenuItemRawMaterial,
+    isRawMaterial: false,
+    isRawMaterialCat: false,
+    isUnit: false,
+  };
+
+  try {
+    setExcelLoading(true);
+    const res = await Getgenerateusermenuitemrawmaterialexcel(Id, payload);
+
+    const d = res?.data;
+    const fileUrl =
+      d?.report_path ||
+      d?.data?.report_path ||
+      d?.excel_path ||
+      d?.data?.excel_path ||
+      d?.file_path ||
+      d?.data?.file_path ||
+      d?.url ||
+      (typeof d?.data === "string" ? d.data : null);
+
+    if (fileUrl) {
+      const a = document.createElement("a");
+      a.href = fileUrl;
+      a.download = "Menu_Items.xlsx";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setExcelModalOpen(false);
+    } else {
+      console.log("Export response:", res?.data);
+      throw new Error("No file URL returned");
+    }
+  } catch (error) {
+    console.error("Export error:", error);
+    Swal.fire("Error", "Failed to export Excel.", "error");
+  } finally {
+    setExcelLoading(false);
+  }
+};
 
   const fetchPage = useCallback(
     async (
@@ -618,6 +677,16 @@ useEffect(() => {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            <Button
+  size="medium"
+  icon={<i className="ki-filled ki-file-down text-xs" />}
+onClick={() => {
+  console.log("excel clicked");
+  setExcelModalOpen(true);
+}}  className="px-5 rounded-md text-xs"
+>
+  Excel
+</Button>
           {canAccessCaptainRecipe && permissions.add && (
            
               <Button
@@ -904,6 +973,47 @@ useEffect(() => {
     </div>
   </div>
 )}
+<Modal
+  title="Export Excel"
+  centered
+  open={excelModalOpen}
+  onCancel={() => setExcelModalOpen(false)}
+  footer={[
+    <Button key="cancel" onClick={() => setExcelModalOpen(false)}>
+      Cancel
+    </Button>,
+    <Button
+      key="generate"
+      type="primary"
+      loading={excelLoading}
+      onClick={handleGenerateExcel}
+    >
+      Generate
+    </Button>,
+  ]}
+  destroyOnClose
+>
+  <div className="flex flex-col gap-4 py-2">
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-700">Menu Item</span>
+      <Switch
+        checked={excelOptions.isMenuItem}
+        onChange={(v) =>
+          setExcelOptions((p) => ({ ...p, isMenuItem: v }))
+        }
+      />
+    </div>
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-700">Menu Item Raw Material</span>
+      <Switch
+        checked={excelOptions.isMenuItemRawMaterial}
+        onChange={(v) =>
+          setExcelOptions((p) => ({ ...p, isMenuItemRawMaterial: v }))
+        }
+      />
+    </div>
+  </div>
+</Modal>
       </Container>
     </Fragment>
   );

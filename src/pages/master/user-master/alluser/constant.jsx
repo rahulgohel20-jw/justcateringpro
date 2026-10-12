@@ -285,22 +285,15 @@ export const columns = (
                 <i className="ki-filled ki-note-2"></i>
               </button>
             </Tooltip>
-            {permissions.view && (
-              <Tooltip title="Download Excel">
-                <Button
-                  size="small"
-                  icon={
-                    excelLoadingId === row.original.id ? (
-                      <Spin size="small" />
-                    ) : (
-                      <DownloadOutlined />
-                    )
-                  }
-                  disabled={excelLoadingId === row.original.id}
-                  onClick={() => handleExcelDownload(row.original.id)}
-                ></Button>
-              </Tooltip>
-            )}
+         {permissions.view && (
+  <Tooltip title="Download Excel">
+    <Button
+      size="small"
+      icon={<DownloadOutlined />}
+      onClick={() => handleExcelDownload(row.original.id)}
+    />
+  </Tooltip>
+)}
             <Tooltip title="Assign Database">
               <button
                 className="btn btn-sm btn-icon btn-clear"
