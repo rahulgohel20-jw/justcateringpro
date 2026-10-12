@@ -53,28 +53,41 @@ const [sloganOptions, setSloganOptions] = useState([]);
 const [sloganLoading, setSloganLoading] = useState(false);
   const debounceRef = useRef(null);
   const userId = localStorage.getItem("userId");
+  const [isTranslating, setIsTranslating] = useState(false);
 
   // ── Translation ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+useEffect(() => {
+  if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (!formData.nameEnglish?.trim()) {
-      setFormData((prev) => ({ ...prev, nameGujarati: "", nameHindi: "" }));
-      return;
+  if (!formData.nameEnglish?.trim()) {
+    setFormData((prev) => ({ ...prev, nameGujarati: "", nameHindi: "" }));
+    setIsTranslating(false);
+    return;
+  }
+
+  let cancelled = false;
+  setIsTranslating(true); // disabled from the moment the user types
+
+  debounceRef.current = setTimeout(async () => {
+    try {
+      const res = await Translateapi(formData.nameEnglish);
+      if (cancelled) return; // a newer keystroke superseded this request
+      const { regional, hindi } = extractTranslations(res?.data?.data || res?.data || {});
+      setFormData((prev) => ({ ...prev, nameGujarati: regional, nameHindi: hindi }));
+    } catch (err) {
+      if (!cancelled) console.error("Translation error:", err);
+    } finally {
+      if (!cancelled) setIsTranslating(false);
     }
+  }, 500);
 
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const res = await Translateapi(formData.nameEnglish);
-        const { regional, hindi } = extractTranslations(res?.data?.data || res?.data || {});
-        setFormData((prev) => ({ ...prev, nameGujarati: regional, nameHindi: hindi }));
-      } catch (err) {
-        console.error("Translation error:", err);
-      }
-    }, 500);
+  return () => {
+    cancelled = true;
+    clearTimeout(debounceRef.current);
+  };
+}, [formData.nameEnglish]);
 
-    return () => clearTimeout(debounceRef.current);
-  }, [formData.nameEnglish]);
+
 useEffect(() => {
   if (isModalOpen) {
     fetchCategories();
@@ -113,14 +126,7 @@ useEffect(() => {
     }
   };
 
-  useEffect(() => {
-    if (isModalOpen) {
-      fetchCategories();
-      setFormData(initialFormData);
-      setErrors({});
-      setSubCategoryOptions([]);
-    }
-  }, [isModalOpen]);
+
 
   useEffect(() => {
     if (!isCategoryModalOpen && isModalOpen) fetchCategories();
@@ -189,6 +195,10 @@ const handleSelectSlogan = (slogan) => {
   message.success("Slogan selected");
 };
   const handleSave = async () => {
+     if (isTranslating) {
+    message.warning("Please wait for translation to finish");
+    return;
+  }
     if (!validate()) return;
 
     try {
@@ -232,9 +242,13 @@ const handleSelectSlogan = (slogan) => {
           <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
             Cancel
           </button>
-          <button className="btn btn-primary" onClick={handleSave}>
-            Save
-          </button>
+         <button
+  className="btn btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+  onClick={handleSave}
+  disabled={isTranslating}
+>
+  {isTranslating ? "Translating..." : "Save"}
+</button>
         </div>
       }
     >
