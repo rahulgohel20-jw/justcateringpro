@@ -41,7 +41,8 @@ const [selectedBanquet, setSelectedBanquet] = useState(-1);
 
   let Id = localStorage.getItem("userId");
   const normalizedLocalUserId = Number(Id ?? 0);
-  const isAgencyUser = normalizedLocalUserId === 233;
+  //  const isAgencyUser = normalizedLocalUserId === 233;
+  const isAgencyUser = normalizedLocalUserId === 376; // amoncar
 
   const getStorageKeys = (userId) => ({
     monthKey: userId ? `calendar_selected_month_${userId}` : "calendar_selected_month",
@@ -386,10 +387,10 @@ const FetchEventdetails = (
   if (isInquiryVisible) return true;
   return item.statusCode !== 0;
 })
-.filter((item) => {
-  if (isAgencyUser) return true;       // only user 233 sees "Completed Till Agency"
-  return item.statusCode !== 4;     // status 0 = Inquiry, hide it otherwise
-        });
+// .filter((item) => {
+//   // if (isAgencyUser) return true;       // only user 233 sees "Completed Till Agency"
+//   return item.statusCode !== 4;     // status 0 = Inquiry, hide it otherwise
+//         });
 
       setData(mappedEvents);
 

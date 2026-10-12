@@ -95,6 +95,10 @@ const AddRawMaterial = ({ isOpen, onClose, refreshData, rawmaterial }) => {
   const langConfig = getLangConfig();
   let id = localStorage.getItem("userId");
   const isLoadingExistingData = useRef(false);
+  const skipEnglishTranslateRef = useRef(false);
+const reverseTimerRef = useRef(null);
+const englishRef = useRef("");
+
 
   const parseDate = (dateStr) => {
   if (!dateStr) return null;
@@ -227,6 +231,8 @@ formData.append("cess", parseFloat(values.cess) || 0);
     },
   });
 
+  englishRef.current = formik.values.nameEnglish;
+
   // Handle image file selection
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -270,11 +276,44 @@ formData.append("cess", parseFloat(values.cess) || 0);
     setImagePreview(null);
   };
 
+ const isEnglishText = (s) => !!s && /^[\x00-\x7F]+$/.test(s.trim());
+
+const reverseTranslate = (text, editedField) => {
+  clearTimeout(reverseTimerRef.current);
+  if (!text?.trim()) return;
+
+  reverseTimerRef.current = setTimeout(async () => {
+    try {
+      const res = await Translateapi(text);
+      const d = res?.data?.data || res?.data || {};
+      const english = d.english || d.en || "";
+
+      // API echoed the Gujarati/Hindi input back → no real English result, change nothing
+      if (!isEnglishText(english)) return;
+
+      const { regional, hindi } = extractTranslations(res?.data || {});
+
+      if (english !== englishRef.current) {
+        skipEnglishTranslateRef.current = true;
+        formik.setFieldValue("nameEnglish", english);
+      }
+      if (editedField === "regional" && hindi) formik.setFieldValue("nameHindi", hindi);
+      if (editedField === "hindi" && regional) formik.setFieldValue("nameGujarati", regional);
+    } catch (err) {
+      console.error("Reverse translation error:", err);
+    }
+  }, 500);
+};
+
   useEffect(() => {
     const englishName = formik.values.nameEnglish?.trim();
 
     if (!englishName) return;
     if (isLoadingExistingData.current) return; // ⛔ skip if loading backend data
+    if (skipEnglishTranslateRef.current) {
+  skipEnglishTranslateRef.current = false;
+  return;
+}
 
     if (translationCache[englishName]) {
   formik.setFieldValue("nameGujarati", translationCache[englishName].gujarati || "");
@@ -301,11 +340,14 @@ formData.append("cess", parseFloat(values.cess) || 0);
     setDebounceTimer(timer);
   }, [formik.values.nameEnglish]);
 
+
+
+
   
 
   useEffect(() => {
     if (!isOpen) {
-      // modal closed → reset everything
+       clearTimeout(reverseTimerRef.current);
       formik.resetForm();
       setTableData([]);
       setEditingSupplier(null);
@@ -323,7 +365,7 @@ formData.append("cess", parseFloat(values.cess) || 0);
        console.log("raw material ", rawmaterial);
        
         formik.setValues({
-          nameEnglish: rawmaterial.raw_material_name || "",
+          nameEnglish: rawmaterial.nameEnglish || rawmaterial.raw_material_name || "",
           nameGujarati: rawmaterial.nameGujarati || "",
           nameHindi: rawmaterial.nameHindi || "",
           itemCode: rawmaterial.itemCode || "",
@@ -610,13 +652,23 @@ formData.append("cess", parseFloat(values.cess) || 0);
     nameHindi: formik.values.nameHindi,
   }}
   setFormData={(updated) => {
-    if (updated.nameEnglish !== formik.values.nameEnglish)
-      formik.setFieldValue("nameEnglish", updated.nameEnglish);
-    if (updated.nameGujarati !== formik.values.nameGujarati)
-      formik.setFieldValue("nameGujarati", updated.nameGujarati);
-    if (updated.nameHindi !== formik.values.nameHindi)
-      formik.setFieldValue("nameHindi", updated.nameHindi);
-  }}
+  const engChanged = updated.nameEnglish !== formik.values.nameEnglish;
+  const regChanged = updated.nameGujarati !== formik.values.nameGujarati;
+  const hinChanged = updated.nameHindi !== formik.values.nameHindi;
+
+  if (engChanged) formik.setFieldValue("nameEnglish", updated.nameEnglish);
+  if (regChanged) formik.setFieldValue("nameGujarati", updated.nameGujarati);
+  if (hinChanged) formik.setFieldValue("nameHindi", updated.nameHindi);
+
+  // user typed in Gujarati/Hindi (not English) → update English from it
+  if (!engChanged && regChanged) {
+    if (debounceTimer) clearTimeout(debounceTimer); // cancel pending English→others
+    reverseTranslate(updated.nameGujarati, "regional");
+  } else if (!engChanged && hinChanged) {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    reverseTranslate(updated.nameHindi, "hindi");
+  }
+}}
   cols={3}
   keys={{
     english: "nameEnglish",

@@ -158,6 +158,15 @@ const [instructionHindi, setInstructionHindi] = useState("");
   const [kitchenInstructionGujarati, setKitchenInstructionGujarati] = useState("");
   const [kitchenInstructionHindi, setKitchenInstructionHindi] = useState("");
   const kitchenInstructionTimerRef = useRef(null);
+  const [translating, setTranslating] = useState({
+  name: false,
+  instruction: false,
+  kitchen: false,
+});
+const translateReqRef = useRef({ name: 0, instruction: 0, kitchen: 0 });
+const setTranslatingFlag = (key, val) =>
+  setTranslating((p) => ({ ...p, [key]: val }));
+const isTranslating = Object.values(translating).some(Boolean);
   const hasLoadedEditData = useRef(false);
 
 
@@ -672,34 +681,43 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
   );
 };
 
- const handleTranslate = async (value) => {
+const handleTranslate = async (value) => {
+  const reqId = ++translateReqRef.current.name;
   if (!value?.trim()) {
     form.setFieldsValue({ nameGujarati: "", nameHindi: "" });
     setNameGujarati("");
     setNameHindi("");
+    setTranslatingFlag("name", false);
     return;
   }
   try {
     const res = await Translateapi(value);
+    if (reqId !== translateReqRef.current.name) return; // stale response
     const data = res?.data;
     const guj = data?.[langConfig.apiKey] || "";
     const hin = data?.hindi || "";
     form.setFieldsValue({ nameGujarati: guj, nameHindi: hin });
-    setNameGujarati(guj);  // ← triggers re-render
+    setNameGujarati(guj);
     setNameHindi(hin);
   } catch (error) {
-    message.error("Translation failed");
+    if (reqId === translateReqRef.current.name) message.error("Translation failed");
+  } finally {
+    if (reqId === translateReqRef.current.name) setTranslatingFlag("name", false);
   }
 };
-  const handleTranslateInstruction = async (value) => {
+
+const handleTranslateInstruction = async (value) => {
+  const reqId = ++translateReqRef.current.instruction;
   if (!value?.trim()) {
     form.setFieldsValue({ instructionGujarati: "", instructionHindi: "" });
     setInstructionGujarati("");
     setInstructionHindi("");
+    setTranslatingFlag("instruction", false);
     return;
   }
   try {
     const res = await Translateapi(value);
+    if (reqId !== translateReqRef.current.instruction) return;
     const data = res?.data;
     const guj = data?.[langConfig.apiKey] || "";
     const hin = data?.hindi || "";
@@ -707,28 +725,42 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
     setInstructionGujarati(guj);
     setInstructionHindi(hin);
   } catch (error) {
-    message.error("Instruction translation failed");
+    if (reqId === translateReqRef.current.instruction)
+      message.error("Instruction translation failed");
+  } finally {
+    if (reqId === translateReqRef.current.instruction)
+      setTranslatingFlag("instruction", false);
   }
 };
-  const handleTranslateKitchenInstruction = async (value) => {
-    if (!value?.trim()) {
-      form.setFieldsValue({ kitchenInstructionGujarati: "", kitchenInstructionHindi: "" });
-      setKitchenInstructionGujarati("");
-      setKitchenInstructionHindi("");
-      return;
-    }
-    try {
-      const res = await Translateapi(value);
-      const data = res?.data;
-      const guj = data?.[langConfig.apiKey] || "";
-      const hin = data?.hindi || "";
-      form.setFieldsValue({ kitchenInstructionGujarati: guj, kitchenInstructionHindi: hin });
-      setKitchenInstructionGujarati(guj);
-      setKitchenInstructionHindi(hin);
-    } catch (error) {
+
+const handleTranslateKitchenInstruction = async (value) => {
+  const reqId = ++translateReqRef.current.kitchen;
+  if (!value?.trim()) {
+    form.setFieldsValue({ kitchenInstructionGujarati: "", kitchenInstructionHindi: "" });
+    setKitchenInstructionGujarati("");
+    setKitchenInstructionHindi("");
+    setTranslatingFlag("kitchen", false);
+    return;
+  }
+  try {
+    const res = await Translateapi(value);
+    if (reqId !== translateReqRef.current.kitchen) return;
+    const data = res?.data;
+    const guj = data?.[langConfig.apiKey] || "";
+    const hin = data?.hindi || "";
+    form.setFieldsValue({ kitchenInstructionGujarati: guj, kitchenInstructionHindi: hin });
+    setKitchenInstructionGujarati(guj);
+    setKitchenInstructionHindi(hin);
+  } catch (error) {
+    if (reqId === translateReqRef.current.kitchen)
       message.error("Kitchen instruction translation failed");
-    }
-  };
+  } finally {
+    if (reqId === translateReqRef.current.kitchen)
+      setTranslatingFlag("kitchen", false);
+  }
+};
+
+
   const handleCategoryChange = async (value) => {
     form.setFieldsValue({ subCategory: undefined });
     try {
@@ -810,6 +842,7 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
 
   const handleNext = () => {
     // Collect data without validation
+     if (isTranslating) return;
     const newUpload = fileList.find((f) => f.originFileObj);
     const file = newUpload?.originFileObj || null;
     const shouldUploadImage = !!file;
@@ -833,6 +866,10 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
   };
 
   const onFinish = async (values) => {
+     if (isTranslating) {
+    message.warning("Please wait for translation to finish");
+    return;
+  }
     const newUpload = fileList.find((f) => f.originFileObj);
     const file = newUpload?.originFileObj || null;
     const shouldUploadImage = !!file;
@@ -1067,19 +1104,21 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
     nameGujarati: updated.nameGujarati,
     nameHindi: updated.nameHindi,
   });
-  if (englishChanged) {
-    clearTimeout(translateTimerRef.current);
-    if (!updated.nameEnglish.trim()) {
-      setNameGujarati("");
-      setNameHindi("");
-      form.setFieldsValue({ nameGujarati: "", nameHindi: "" });
-      return;
-    }
-    // ← DON'T clear gujarati/hindi here, let translation overwrite when ready
-    translateTimerRef.current = setTimeout(() => {
-      handleTranslate(updated.nameEnglish);
-    }, 600);
+ if (englishChanged) {
+  clearTimeout(translateTimerRef.current);
+  if (!updated.nameEnglish.trim()) {
+    translateReqRef.current.name++;          // invalidate any in-flight request
+    setTranslatingFlag("name", false);
+    setNameGujarati("");
+    setNameHindi("");
+    form.setFieldsValue({ nameGujarati: "", nameHindi: "" });
+    return;
   }
+  setTranslatingFlag("name", true);          // ← disable buttons from now
+  translateTimerRef.current = setTimeout(() => {
+    handleTranslate(updated.nameEnglish);
+  }, 600);
+}
 }}
     cols={3}
     keys={{
@@ -1326,18 +1365,21 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
     instructionGujarati: updated.instructionGujarati,
     instructionHindi: updated.instructionHindi,
   });
-  if (englishChanged) {
-    clearTimeout(instructionTimerRef.current);
-    if (!updated.instructionEnglish.trim()) {
-      setInstructionGujarati("");  // ← add
-      setInstructionHindi("");     // ← add
-      form.setFieldsValue({ instructionGujarati: "", instructionHindi: "" });
-      return;
-    }
-    instructionTimerRef.current = setTimeout(() => {
-      handleTranslateInstruction(updated.instructionEnglish);
-    }, 600);
+ if (englishChanged) {
+  clearTimeout(instructionTimerRef.current);
+  if (!updated.instructionEnglish.trim()) {
+    translateReqRef.current.instruction++;
+    setTranslatingFlag("instruction", false);
+    setInstructionGujarati("");
+    setInstructionHindi("");
+    form.setFieldsValue({ instructionGujarati: "", instructionHindi: "" });
+    return;
   }
+  setTranslatingFlag("instruction", true);
+  instructionTimerRef.current = setTimeout(() => {
+    handleTranslateInstruction(updated.instructionEnglish);
+  }, 600);
+}
 }}
     cols={3}
     keys={{
@@ -1371,23 +1413,24 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
         kitchenInstructionGujarati: updated.kitchenInstructionGujarati,
         kitchenInstructionHindi: updated.kitchenInstructionHindi,
       });
-      if (englishChanged) {
-        clearTimeout(kitchenInstructionTimerRef.current);
-        if (!updated.kitchenInstructionEnglish.trim()) {
-          setKitchenInstructionGujarati("");
-          setKitchenInstructionHindi("");
-          form.setFieldsValue({
-            kitchenInstructionGujarati: "",
-            kitchenInstructionHindi: "",
-          });
-          return;
-        }
-        kitchenInstructionTimerRef.current = setTimeout(() => {
-          handleTranslateKitchenInstruction(
-            updated.kitchenInstructionEnglish,
-          );
-        }, 600);
-      }
+     if (englishChanged) {
+  clearTimeout(kitchenInstructionTimerRef.current);
+  if (!updated.kitchenInstructionEnglish.trim()) {
+    translateReqRef.current.kitchen++;
+    setTranslatingFlag("kitchen", false);
+    setKitchenInstructionGujarati("");
+    setKitchenInstructionHindi("");
+    form.setFieldsValue({
+      kitchenInstructionGujarati: "",
+      kitchenInstructionHindi: "",
+    });
+    return;
+  }
+  setTranslatingFlag("kitchen", true);
+  kitchenInstructionTimerRef.current = setTimeout(() => {
+    handleTranslateKitchenInstruction(updated.kitchenInstructionEnglish);
+  }, 600);
+}
     }}
     cols={3}
     keys={{
@@ -1921,24 +1964,27 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
         </Button>
 
         <div className="flex gap-4">
-          <Button
-            type="primary"
-            onClick={handleNext}
-            className="bg-primary h-10 px-6 rounded-md hover:bg-primary"
-          >
-            Next
-          </Button>
+         <Button
+  type="primary"
+  onClick={handleNext}
+  disabled={isTranslating}
+  className="bg-primary h-10 px-6 rounded-md hover:bg-primary"
+>
+  Next
+</Button>
 
-          <Button
-            type="primary"
-            className="bg-primary h-10 px-6 rounded-md hover:bg-primary w-[120px]"
-            onClick={() => {
-              setIsSaveOnly(true);
-              form.submit();
-            }}
-          >
-            {isEdit ? "Update" : "Save"}
-          </Button>
+         <Button
+  type="primary"
+  disabled={isTranslating}
+  loading={isTranslating}
+  className="bg-primary h-10 px-6 rounded-md hover:bg-primary w-[120px]"
+  onClick={() => {
+    setIsSaveOnly(true);
+    form.submit();
+  }}
+>
+  {isEdit ? "Update" : "Save"}
+</Button>
         </div>
       </div>
 
