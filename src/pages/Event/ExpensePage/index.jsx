@@ -10,7 +10,6 @@ import AddExpenseModal from "../../../partials/modals/add-Expense-Modal/AddExpen
 import ViewExpenseDetailsModal from "@/partials/modals/view-expense-modal/ViewExpenseDetailsModal";
 import Swal from "sweetalert2";
 import { FormattedMessage } from "react-intl";
-
 import NoData from "../../../components/Nodata";
 import {
   GETExpenseBYUserType,
@@ -46,6 +45,7 @@ export default function ExpenseDetails() {
     totalGiven: 0,
     totalUsed: 0,
     remaining: 0,
+    totalReceived: 0,
   });
 
   // Add this derived value (no new state needed)
@@ -94,6 +94,7 @@ export default function ExpenseDetails() {
       totalGiven: 0,
       totalUsed: 0,
       remaining: 0,
+       totalReceived: 0,
     });
 
     setExpenses([]);
@@ -136,6 +137,7 @@ export default function ExpenseDetails() {
           initials: (managerName[0] || "U").toUpperCase(),
           bgColor: "bg-blue-100",
           textColor: "text-blue-700",
+            items: e.items || [],
         };
       });
 
@@ -146,12 +148,14 @@ export default function ExpenseDetails() {
           totalGiven: Number(apiData.total_given_amount) || 0,
           totalUsed: Number(apiData.total_used_amount) || 0,
           remaining: Number(apiData.remaining_amount) || 0,
+           totalReceived: Number(apiData.total_received_amount) || 0,
         });
       } else {
         setTotals({
           totalGiven: Number(apiData.total_given_amount) || 0,
           totalUsed: 0,
           remaining: 0,
+           totalReceived: Number(apiData.total_received_amount) || 0,
         });
       }
     } catch (err) {
@@ -387,6 +391,7 @@ export default function ExpenseDetails() {
                 }}
                 onView={handleView}
                 onDelete={handleDeleteExpense}
+                eventId={eventId}
               />
             )}
           </div>

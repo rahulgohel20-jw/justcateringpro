@@ -4264,3 +4264,6 @@ export const getlabourheplerpdf = ( laborHelperId , userId) => {
 export const EventLaborHelperPdf = (eventFunctionId, eventId,partyId) => {
   return POST(`/eventlaborhelper/pdf?eventFunctionId=${eventFunctionId}&eventId=${eventId}&partyId=${partyId}`);
 };
+export const eventexcelforallocation = (eventId , userId) => {
+  return GET(`/menuallocation/event-excel?eventId=${eventId}&userId=${userId}`);
+};
