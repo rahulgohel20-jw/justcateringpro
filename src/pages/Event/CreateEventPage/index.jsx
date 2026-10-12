@@ -25,6 +25,17 @@ import RoomDetailsStep from "../../../container/EventStepsContainer/RoomDetailsS
 import { useModuleAccess } from "../../../hooks/useModuleAccess";
 
 // const STEP_KEYS = ["basic_info", "client_info", "functions", "other"];
+const getChildUserId = () => {
+  try {
+    const authStorage = localStorage.getItem("auth-storage");
+    if (!authStorage) return 0;
+    const user = JSON.parse(authStorage)?.state?.user;
+    // not a child user -> 0, child user -> main id
+    return user?.ischilduser ? Number(user.clientId) || 0 : 0;
+  } catch {
+    return 0;
+  }
+};
 
 const getUserEmail = () => {
   try {
@@ -824,6 +835,7 @@ const sendLog = useCallback(
     const payload = {
       ...restFormData,
       userId,
+       childuserid: getChildUserId(),
       status: Number(formData.status) || 0,
       eventTypeId: formData.eventTypeId ? Number(formData.eventTypeId) : 0,
       managerId: formData.managerId ? Number(formData.managerId) : 0,

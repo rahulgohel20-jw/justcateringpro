@@ -1,5 +1,5 @@
 export default function ExpenseTabs({ activeTab, setActiveTab }) {
-  const tabs = ["manager", "supplier", "customer"];
+  const tabs = ["manager",  "customer"];
 
   return (
     <div className="bg-gradient-to-br to-slate-100 pb-3">

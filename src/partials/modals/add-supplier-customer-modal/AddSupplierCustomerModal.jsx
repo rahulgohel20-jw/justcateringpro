@@ -1,10 +1,36 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GetAllCustomer, AddExpensemanagement } from "@/services/apiServices";
+import {
+  GetAllCustomer,
+  Fetchmanager,
+  AddExpensemanagement,
+  fetchStatesByCountry,
+  fetchCitiesByState,
+} from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { FormattedMessage } from "react-intl";
 import { Select } from "antd";
 import { AddLogs } from "../../../services/apiServices";
+
+const getInitialForm = (type) => ({
+  type: type || "Supplier",
+  name: "",
+  amount: "",
+  countryCode: "+91",
+  mobile: "",
+  paymentType: "",
+  remarks: "",
+  gst: "",
+  address: "",
+  billFlat: "",
+  billArea: "",
+  billPincode: "",
+  stateId: "",
+  cityId: "",
+  sameShipping: false,
+  roleId: null,
+  image: null,
+});
 
 export default function AddSupplierCustomerModal({
   open,
@@ -15,6 +41,8 @@ export default function AddSupplierCustomerModal({
 }) {
   const [partyList, setPartyList] = useState([]);
   const [selectedParty, setSelectedParty] = useState("");
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
 
   const userEmail = (() => {
   try {
@@ -22,17 +50,7 @@ export default function AddSupplierCustomerModal({
   } catch { return ""; }
 })();
 
-  const [form, setForm] = useState({
-    type: type || "Supplier",
-    name: "",
-    amount: "",
-    countryCode: "+91",
-    mobile: "",
-    remarks: "",
-    gst: "",
-    address: "",
-    image: null, // ✅ ADD THIS
-  });
+  const [form, setForm] = useState(getInitialForm(type));
 
   const userId = Number(localStorage.getItem("userId"));
 
@@ -43,6 +61,16 @@ export default function AddSupplierCustomerModal({
   useEffect(() => {
     setForm((prev) => ({ ...prev, type }));
   }, [type]);
+
+  // Always start with a blank form when the modal is opened
+  useEffect(() => {
+    if (open) {
+      setForm(getInitialForm(type));
+      setSelectedParty("");
+      setShowGST(false);
+      setCities([]);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -56,35 +84,92 @@ export default function AddSupplierCustomerModal({
   };
 
   useEffect(() => {
+    const loadStates = async () => {
+      try {
+        const stateRes = await fetchStatesByCountry(1);
+        const stateArray = stateRes?.data?.data?.["state Details"];
+        setStates(Array.isArray(stateArray) ? stateArray : []);
+      } catch (err) {
+        console.error("Failed to load states:", err);
+        setStates([]);
+      }
+    };
+    loadStates();
+  }, []);
+
+  const handleStateChange = async (e) => {
+    const stateId = e.target.value;
+
+    setForm((prev) => ({ ...prev, stateId, cityId: "" }));
+
+    if (!stateId) {
+      setCities([]);
+      return;
+    }
+
+    try {
+      const res = await fetchCitiesByState(Number(stateId));
+      const cityArray = res?.data?.data?.["City Details"] || [];
+      setCities(Array.isArray(cityArray) ? cityArray : []);
+    } catch (err) {
+      console.error("Failed to load cities:", err);
+      setCities([]);
+    }
+  };
+
+  useEffect(() => {
     if (!open || !userId) return;
 
+    const resetSelection = (list) => {
+      setPartyList(list);
+      setSelectedParty(""); // reset selection when type changes
+      setForm((prev) => ({
+        ...prev,
+        name: "",
+        mobile: "",
+        gst: "",
+        address: "",
+      })); // reset prefilled fields
+    };
+
+    // Customer -> same API as the Manager Name dropdown (Fetchmanager)
+    if (form.type === "Customer") {
+      Fetchmanager(userId)
+        .then((res) => {
+          const users = res?.data?.data?.userDetails || [];
+          // map to the same shape the party dropdown already uses
+          const list = users.map((man) => ({
+            id: man.id,
+            nameEnglish: `${man.firstName || ""} ${man.lastName || ""}`.trim(),
+            mobileno: man.contactNo || "",
+            gst: man.userBasicDetails?.gstin || "",
+            addressEnglish: man.userBasicDetails?.address || "",
+            contact: {
+              contactType: { id: man.userBasicDetails?.role?.id || null },
+            },
+          }));
+          resetSelection(list);
+        })
+        .catch((err) => {
+          console.error("Failed to fetch customers", err);
+          resetSelection([]);
+        });
+      return;
+    }
+
+    // Supplier -> existing party API
     GetAllCustomer(userId)
       .then((res) => {
         const list = res?.data?.data?.["Party Details"] || [];
 
-        // Filter based on type
+        // exclude customers
         const filteredList = list.filter((cust) => {
           const typeName =
             cust.contact?.contactType?.nameEnglish?.toLowerCase();
-         
-
-          if (form.type === "Supplier") {
-            return typeName !== "customer"; // exclude customers
-          } else if (form.type === "Customer") {
-            return typeName === "customer"; // include only customers
-          }
-          return true;
+          return typeName !== "customer";
         });
 
-        setPartyList(filteredList);
-        setSelectedParty(""); // reset selection when type changes
-        setForm((prev) => ({
-          ...prev,
-          name: "",
-          mobile: "",
-          gst: "",
-          address: "",
-        })); // reset prefilled fields
+        resetSelection(filteredList);
       })
       .catch((err) => {
         console.error("Failed to fetch parties", err);
@@ -141,13 +226,21 @@ export default function AddSupplierCustomerModal({
       formData.append("mobileNo", form.mobile || "");
       formData.append("name", form.name || "");
       formData.append("expenseId", -1);
+      // The selected id is always sent as partyId (backend validates it).
+      // For the Customer tab the list comes from the manager API, so the same
+      // id is also sent as managerId.
+      const isManagerSelection = form.type === "Customer";
       formData.append("partyId", Number(selectedParty));
+      formData.append(
+        "managerId",
+        isManagerSelection ? Number(selectedParty) : 0,
+      );
 
       // ADDRESS
       formData.append("buildingAddress", form.billFlat || "");
       formData.append("area", form.billArea || "");
-      formData.append("city", form.billCity || "");
-      formData.append("state", form.billState || "");
+      formData.append("city", form.cityId || "");
+      formData.append("state", form.stateId || "");
       formData.append("pincode", form.billPincode || "");
       formData.append("countryCode", form.countryCode || "+91");
 
@@ -165,6 +258,20 @@ export default function AddSupplierCustomerModal({
       }
 
       const res = await AddExpensemanagement(formData); // ✅ PASS formData instead of payload
+
+      // API may reply { msg, success: false } without throwing
+      if (res?.data?.success === false) {
+        Swal.fire({
+          title: "Error!",
+          text:
+            res?.data?.msg ||
+            res?.data?.message ||
+            "Failed to add expense. Please try again.",
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
+        return;
+      }
 
      await Swal.fire({
   title: "Success!",
@@ -185,12 +292,18 @@ try {
   console.error("Log failed (non-blocking):", logErr);
 }
 
+setForm(getInitialForm(form.type));
+setSelectedParty("");
+setShowGST(false);
+setCities([]);
+
 onClose(res?.data?.data || null);
     } catch (err) {
       console.error("Failed to add supplier/customer expense", err);
       Swal.fire({
         title: "Error!",
         text:
+          err?.response?.data?.msg ||
           err?.response?.data?.message ||
           "Failed to add expense. Please try again.",
         icon: "error",
@@ -273,14 +386,27 @@ onClose(res?.data?.data || null);
 
                 <div>
                   <label className="text-sm font-medium text-gray-600">
-                    <FormattedMessage id="CONTACT.TYPE" defaultMessage="Type" />{" "}
-                    {form.type}
+                    {form.type === "Customer" ? (
+                      "Select Manager"
+                    ) : (
+                      <>
+                        <FormattedMessage
+                          id="CONTACT.TYPE"
+                          defaultMessage="Type"
+                        />{" "}
+                        {form.type}
+                      </>
+                    )}
                   </label>
 
                   <Select
                     className="w-full mt-1"
                     showSearch
-                    placeholder={`Select ${form.type}`}
+                    placeholder={
+                      form.type === "Customer"
+                        ? "Select Manager"
+                        : `Select ${form.type}`
+                    }
                     value={selectedParty || undefined}
                     optionFilterProp="label"
                     onChange={(value) =>
@@ -484,24 +610,41 @@ onClose(res?.data?.data || null);
                             placeholder="Pincode"
                             className="input w-full"
                           />
-                          <input
-                            type="text"
-                            name="billCity"
-                            value={form.billCity || ""}
-                            onChange={handleInput}
-                            placeholder="City"
-                            className="input w-full"
-                          />
+                          <div>
+                            <select
+                              value={form.stateId}
+                              onChange={handleStateChange}
+                              className="input w-full"
+                            >
+                              <option value="">Select State</option>
+                              {states.map((state) => (
+                                <option key={state.id} value={state.id}>
+                                  {state.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <select
+                              value={form.cityId}
+                              onChange={(e) =>
+                                setForm((prev) => ({
+                                  ...prev,
+                                  cityId: e.target.value,
+                                }))
+                              }
+                              disabled={!form.stateId}
+                              className="input w-full"
+                            >
+                              <option value="">Select City</option>
+                              {cities.map((city) => (
+                                <option key={city.id} value={city.id}>
+                                  {city.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
-
-                        <input
-                          type="text"
-                          name="billState"
-                          value={form.billState || ""}
-                          onChange={handleInput}
-                          placeholder="State"
-                          className="input mt-4 w-full"
-                        />
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -518,8 +661,8 @@ onClose(res?.data?.data || null);
                                     shipFlat: prev.billFlat,
                                     shipArea: prev.billArea,
                                     shipPincode: prev.billPincode,
-                                    shipCity: prev.billCity,
-                                    shipState: prev.billState,
+                                    shipCity: prev.cityId,
+                                    shipState: prev.stateId,
                                   }
                                 : {}),
                             }));

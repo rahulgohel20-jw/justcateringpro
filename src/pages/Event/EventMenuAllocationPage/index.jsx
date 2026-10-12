@@ -33,6 +33,7 @@ import {
   Deletesyncmenuallocationandrawmaterial,
   SyncItemWiseRawMaterial,
   Getunit ,
+  eventexcelforallocation,
 } from "@/services/apiServices";
 import { useParams, useNavigate, useBlocker } from "react-router-dom";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -773,7 +774,23 @@ const calculateItemPrice = (item, matchingRow) => {
   );
 };
 const RATE_COLUMNS_USER_ID = [103, 233];
-const canSeeRateColumns = () => RATE_COLUMNS_USER_ID.includes(Number(localStorage.getItem("userId")));
+const canSeeRateColumns = () =>
+  RATE_COLUMNS_USER_ID.includes(Number(localStorage.getItem("userId")));
+
+const getGridTemplate = (showRate) =>
+  [
+    170, // name
+    60,  // chef
+    80,  // outsource
+    60,  // inside
+    70,  // person
+    ...(showRate ? [96, 96, 96] : []),
+    120, // place
+    240, // instructions
+  ]
+    .map((w) => `${w}px`)
+    .join(" ");
+
 const TableHeader = ({
   onChefCheckAll,
   onOutsourceCheckAll,
@@ -805,64 +822,79 @@ const TableHeader = ({
     }
     onInsideCheckAll(checked);
   };
+const getGridTemplate = (showRate) =>
+  [
+    170, // name
+    60,  // chef
+    80,  // outsource
+    60,  // inside
+    70,  // person
+    ...(showRate ? [96, 96, 96] : []), // weight/unit, rate/total, L qty/L rate
+    120, // place
+    240, // instructions
+  ]
+    .map((w) => `${w}px`)
+    .join(" ");
 
   return (
-  <div
-    className="flex items-center gap-2 border-b border-gray-200 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 bg-gray-50 sticky z-10 rounded-t-xl"
-    style={{ top: 0 }}
-  >
-    <div className="w-[260px] shrink-0 text-left">
-      <FormattedMessage id="COMMON.NAME" defaultMessage="Name" />
-    </div>
+ 
+<div
+  className="grid items-center gap-2 border-b border-gray-200 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 bg-gray-50 sticky z-10 rounded-t-xl"
+  style={{ top: 0, gridTemplateColumns: getGridTemplate(showRateColumns) }}
+>
+  <div className="text-left">
+    <FormattedMessage id="COMMON.NAME" defaultMessage="Name" />
+  </div>
 
-    <div className="w-[80px] shrink-0 text-center">
-      <div className="flex flex-col items-center gap-1">
-        <span><FormattedMessage id="COMMON.CHEF_LABOUR" defaultMessage="Chef" /></span>
-        <Checkbox checked={allChefChecked} onChange={(e) => handleChefCheck(e.target.checked)} />
-      </div>
-    </div>
-
-    <div className="w-[90px] shrink-0 text-center">
-      <div className="flex flex-col items-center gap-1">
-        <span><FormattedMessage id="COMMON.OUTSIDE" defaultMessage="Outsource" /></span>
-        <Checkbox checked={allOutsourceChecked} onChange={(e) => handleOutsourceCheck(e.target.checked)} />
-      </div>
-    </div>
-
-    <div className="w-[80px] shrink-0 text-center">
-      <div className="flex flex-col items-center gap-1">
-        <span><FormattedMessage id="COMMON.INSIDE" defaultMessage="Inside" /></span>
-        <Checkbox checked={allInsideChecked} onChange={(e) => handleInsideCheck(e.target.checked)} />
-      </div>
-    </div>
-
-    <div className="w-[80px] shrink-0 text-center">
-      <FormattedMessage id="COMMON.PERSON" defaultMessage="Person" />
-    </div>
-{showRateColumns && (
-      <>
-    <div className="w-[90px] shrink-0 text-center">
-      <FormattedMessage id="COMMON.WEIGHT" defaultMessage="Weight" />
-    </div>
-    <div className="w-[90px] shrink-0 text-center">
-      <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />
-    </div>
-    <div className="w-[90px] shrink-0 text-center">
-  <FormattedMessage id="COMMON.RATE" defaultMessage="Rate" />
-</div>
-    <div className="w-[100px] shrink-0 text-center">
-      <FormattedMessage id="COMMON.TOTAL_RATE" defaultMessage="Total Rate" />
-    </div>
- </>
-    )}
-    <div className="w-[160px] shrink-0 text-center">
-      <FormattedMessage id="COMMON.PLACE" defaultMessage="Place" />
-    </div>
-
-    <div className="w-[240px] shrink-0 text-left">
-      <FormattedMessage id="COMMON.INSTRUCTIONS" defaultMessage="Instructions" />
+    <div className="text-center">
+    <div className="flex flex-col items-center gap-1">
+      <span><FormattedMessage id="COMMON.CHEF_LABOUR" defaultMessage="Chef" /></span>
+      <Checkbox checked={allChefChecked} onChange={(e) => handleChefCheck(e.target.checked)} />
     </div>
   </div>
+
+     <div className="text-center">
+    <div className="flex flex-col items-center gap-1">
+      <span><FormattedMessage id="COMMON.OUTSIDE" defaultMessage="Outsource" /></span>
+      <Checkbox checked={allOutsourceChecked} onChange={(e) => handleOutsourceCheck(e.target.checked)} />
+    </div>
+  </div>
+
+     <div className="text-center">
+    <div className="flex flex-col items-center gap-1">
+      <span><FormattedMessage id="COMMON.INSIDE" defaultMessage="Inside" /></span>
+      <Checkbox checked={allInsideChecked} onChange={(e) => handleInsideCheck(e.target.checked)} />
+    </div>
+  </div>
+
+  <div className="text-center">
+    <FormattedMessage id="COMMON.PERSON" defaultMessage="Person" />
+  </div>
+ {showRateColumns && (
+    <>
+      <div className="text-center leading-tight">
+        <FormattedMessage id="COMMON.WEIGHT" defaultMessage="Weight" />
+        <br />/ <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />
+      </div>
+      <div className="text-center leading-tight">
+        <FormattedMessage id="COMMON.RATE" defaultMessage="Rate" />
+        <br />/ <FormattedMessage id="COMMON.TOTAL_RATE" defaultMessage="Total Rate" />
+      </div>
+      <div className="text-center leading-tight">
+        <FormattedMessage id="COMMON.L_QTY" defaultMessage="L Qty" />
+        <br />/ <FormattedMessage id="COMMON.L_RATE" defaultMessage="L Rate" />
+      </div>
+    </>
+  )}
+
+  <div className="text-center">
+    <FormattedMessage id="COMMON.PLACE" defaultMessage="Place" />
+  </div>
+
+  <div className="text-left">
+    <FormattedMessage id="COMMON.INSTRUCTIONS" defaultMessage="Instructions" />
+  </div>
+</div>
 );
 };
  const showRateColumns = canSeeRateColumns();
@@ -1164,9 +1196,11 @@ const handleInstructionChange = (e) => {
   valueGujarati={row.instructionsGujarati}
   onChange={(fields) => onChange({ ...row, ...fields })}
 />
-<div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3 text-sm hover:bg-blue-50/40 transition-colors group">
-  {/* Name */}
-  <div className="w-[260px] shrink-0 font-medium text-gray-800">
+<div
+  className="grid items-center gap-2 border-b border-gray-100 px-3 py-3 text-sm hover:bg-blue-50/40 transition-colors group"
+  style={{ gridTemplateColumns: getGridTemplate(showRateColumns) }}
+>  {/* Name */}
+  <div className="min-w-0 font-medium text-gray-800">
     <div className="flex flex-col gap-0.5">
       <span className="text-[10px] text-gray-400 uppercase tracking-wide">
         {getDisplayName(row, "categoryName")}
@@ -1178,7 +1212,7 @@ const handleInstructionChange = (e) => {
   </div>
 
   {/* Chef */}
-  <div className="w-[80px] shrink-0 flex justify-center items-center">
+<div className="flex justify-center items-center">
     <Checkbox
       checked={row.chefLabour}
       disabled={disabled}
@@ -1187,7 +1221,7 @@ const handleInstructionChange = (e) => {
   </div>
 
   {/* Outside */}
-  <div className="w-[90px] shrink-0 flex justify-center items-center">
+ <div className="flex justify-center items-center">
     <Checkbox
       checked={row.outside}
       disabled={disabled}
@@ -1196,7 +1230,7 @@ const handleInstructionChange = (e) => {
   </div>
 
   {/* Inside */}
-  <div className="w-[80px] shrink-0 flex justify-center items-center">
+ <div className="flex justify-center items-center">
     <Checkbox
       checked={row.inside}
       disabled={disabled}
@@ -1205,7 +1239,7 @@ const handleInstructionChange = (e) => {
   </div>
 
   {/* Person */}
-  <div className="w-[80px] shrink-0 flex justify-center">
+    <div className="flex justify-center">
     <Input
       min={0}
       type="text"
@@ -1218,81 +1252,105 @@ const handleInstructionChange = (e) => {
   </div>
 {showRateColumns && (
   <>
-  {/* Weight */}
-  <div className="w-[90px] shrink-0">
-   <Input
-  size="small"
-  placeholder="Weight"
-  value={row.weight ?? ""}
-  onChange={(e) => {
-    const v = e.target.value;
-    if (/^\d*\.?\d*$/.test(v))
-      onChange({
-        ...row,
-        weight: v,
-        totalRate: calcTotalRate(row, { weight: v }),
-      });
-  }}
-  className="text-center text-sm"
-/>
-  </div>
+    {/* Weight / Unit */}
+    <div className="min-w-0 flex flex-col gap-1">
+      <Input
+        size="small"
+        placeholder="Weight"
+        value={row.weight ?? ""}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (/^\d*\.?\d*$/.test(v))
+            onChange({
+              ...row,
+              weight: v,
+              totalRate: calcTotalRate(row, { weight: v }),
+            });
+        }}
+        className="text-center text-sm"
+      />
+      <Select
+        size="small"
+        showSearch
+        allowClear
+        optionFilterProp="label"
+        placeholder="Unit"
+        value={row.unitId || undefined}
+        options={rowUnitOptions}
+        onChange={(value, option) =>
+          onChange({
+            ...row,
+            unitId: value ?? 0,
+            unitName: option?.label ?? "",
+            totalRate: calcTotalRate(row, {
+              unitId: value ?? 0,
+              unitName: option?.label ?? "",
+            }),
+          })
+        }
+        className="w-full"
+        popupMatchSelectWidth={false}
+      />
+    </div>
 
-  {/* Unit */}
-  <div className="w-[90px] shrink-0">
-    <Select
-      size="small"
-      showSearch
-      allowClear
-      optionFilterProp="label"
-      placeholder="Unit"
-      value={row.unitId || undefined}
-       options={rowUnitOptions} 
-      onChange={(value, option) =>
-  onChange({
-    ...row,
-    unitId: value ?? 0,
-    unitName: option?.label ?? "",
-    totalRate: calcTotalRate(row, { unitId: value ?? 0, unitName: option?.label ?? "" }),
-  })
-}
+    {/* Rate / Total Rate */}
+    <div className="min-w-0 flex flex-col gap-1">
+      <Input
+        size="small"
+        placeholder="Rate"
+        value={row.rate ?? ""}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (/^\d*\.?\d*$/.test(v))
+            onChange({
+              ...row,
+              rate: v,
+              totalRate: calcTotalRate(row, { rate: v }),
+            });
+        }}
+        className="text-center text-sm"
+      />
+      <Input
+        size="small"
+        placeholder="Total Rate"
+        value={row.totalRate ?? ""}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (/^\d*\.?\d*$/.test(v)) onChange({ ...row, totalRate: v });
+        }}
+        className="text-center text-sm"
+      />
+    </div>
 
-      className="w-full"
-      popupMatchSelectWidth={false}
-    />
-  </div>
-<div className="w-[90px] shrink-0">
-  <Input
-    size="small"
-    placeholder="Rate"
-    value={row.rate ?? ""}
-    onChange={(e) => {
-      const v = e.target.value;
-      if (/^\d*\.?\d*$/.test(v))
-        onChange({
-          ...row,
-          rate: v,
-          totalRate: calcTotalRate(row, { rate: v }),
-        });
-    }}
-    className="text-center text-sm"
-  />
-</div>
-  {/* Total Rate */}
-  <div className="w-[100px] shrink-0">
-    <Input
-      size="small"
-      placeholder="Rate"
-      value={row.totalRate ?? ""}
-      onChange={(e) => {
-        const v = e.target.value;
-        if (/^\d*\.?\d*$/.test(v)) onChange({ ...row, totalRate: v });
-      }}
-      className="text-center text-sm"
-    />
-  </div>
-</>)}
+    {/* L Qty / L Rate (labour, chef rows only) */}
+     <div className="min-w-0 flex flex-col gap-1">
+      <Input
+        size="small"
+        placeholder="L Qty"
+        
+        value={row.labourQty ?? ""}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (/^\d*\.?\d*$/.test(v)) onChange({ ...row, labourQty: v });
+        }}
+        className="text-center text-sm"
+      />
+      <Input
+        size="small"
+        placeholder="L Rate"
+        
+        value={row.labourRate ?? ""}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (/^\d*\.?\d*$/.test(v)) onChange({ ...row, labourRate: v });
+        }}
+        className="text-center text-sm"
+      />
+    </div>
+  </>
+)}
   {/* Place */}
-  <div className="w-[160px] shrink-0">
+  <div className="min-w-0">
     <select
       value={row.place || "0"}
       onChange={(e) => onChange({ ...row, place: e.target.value })}
@@ -1307,7 +1365,7 @@ const handleInstructionChange = (e) => {
   </div>
 
   {/* Instructions */}
-  <div className="w-[240px] shrink-0 flex items-center gap-1">
+ <div className="min-w-0 flex items-center gap-1">
     <Input
       size="small"
       placeholder="Add note..."
@@ -1408,7 +1466,7 @@ const EventMenuAllocationPage = ({ mode }) => {
   const [menuForHMTemplateId, setMenuForHMTemplateId] = useState(null);
   const [isGuestSignModalOpen, setIsGuestSignModalOpen] = useState(false);
 const [guestSignSaving, setGuestSignSaving] = useState(false);
-
+const [excelLoading, setExcelLoading] = useState(false);
   // ============= LANGUAGE STATE =============
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
   const lastSavedPersonRef = useRef({});
@@ -1833,6 +1891,14 @@ totalRate:
   item.totalRate !== null && item.totalRate !== undefined
     ? String(item.totalRate)
     : "",
+    labourQty: (() => {
+  const q = Number(item.labourQty) || 0;
+  return q ? String(q) : "";
+})(),
+labourRate: (() => {
+  const r = Number(item.labourRate) || 0;
+  return r ? String(r) : "";
+})(),
        place: (() => {
   const placeNum = Number(item.place);
   if (!placeNum || isNaN(placeNum)) return "0";
@@ -2094,7 +2160,13 @@ else if (matchingRow.chefLabour) {
         row.inside !== original.inside ||
         row.personCount !== original.personCount ||
         row.place !== original.place ||
-        row.instructions !== original.instructions
+        row.instructions !== original.instructions ||
+         row.weight !== original.weight ||
+  row.unitId !== original.unitId ||
+  row.rate !== original.rate ||
+  row.totalRate !== original.totalRate ||
+  row.labourQty !== original.labourQty ||
+  row.labourRate !== original.labourRate
       ) {
         return true;
       }
@@ -3063,6 +3135,8 @@ weight: toNum(r.weight),
 unitId: toNum(r.unitId),
 rate: toNum(r.rate),
 totalRate: toNum(r.totalRate),
+labourQty: toNum(r.labourQty),
+labourRate: toNum(r.labourRate),
   };
 });
 
@@ -3290,6 +3364,8 @@ rows.forEach((r, i) => {
 unitId: toNum(r.unitId),
 rate: toNum(r.rate),
 totalRate: toNum(r.totalRate),
+labourQty: r.chefLabour ? toNum(r.labourQty) : 0,
+labourRate: r.chefLabour ? toNum(r.labourRate) : 0,
   };
 });
 
@@ -3426,6 +3502,47 @@ totalRate: toNum(r.totalRate),
   }
 };
 
+
+const handleExcelReport = async () => {
+  if (excelLoading) return;
+
+  const userId = localStorage.getItem("userId");
+  if (!eventId || !userId) {
+    Swal.fire({
+      icon: "error",
+      title: "Missing data",
+      text: "Event or user information missing",
+      confirmButtonColor: "#d33",
+    });
+    return;
+  }
+
+  // Open the tab synchronously so the popup blocker doesn't stop it after the await
+  const newTab = window.open("", "_blank");
+
+  try {
+    setExcelLoading(true);
+    const res = await eventexcelforallocation(eventId, userId);
+    const fileUrl = res?.data?.fileUrl;
+
+    if (res?.data?.success && fileUrl) {
+      if (newTab) newTab.location.href = fileUrl;
+      else window.open(fileUrl, "_blank");
+    } else {
+      throw new Error(res?.data?.msg || "Failed to generate Excel");
+    }
+  } catch (error) {
+    if (newTab) newTab.close();
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: error.message || "Failed to generate Excel report",
+      confirmButtonColor: "#d33",
+    });
+  } finally {
+    setExcelLoading(false);
+  }
+};
   const handleDeleteSyncWithPasswordCheck = async () => {
     const { value: password, isConfirmed: passwordConfirmed } = await Swal.fire(
       {
@@ -3941,6 +4058,26 @@ totalRate: toNum(r.totalRate),
                         />
                       </button>
                     </Tooltip>
+{canSeeRateColumns() && (
+  <Tooltip title="Download the event menu allocation as an Excel file.">
+    <button
+      className="btn btn-sm btn-primary"
+      title="Excel"
+      onClick={handleExcelReport}
+      disabled={excelLoading || loading || tableLoading || menuLoading}
+    >
+      {excelLoading ? (
+        <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+      ) : (
+        <FormattedMessage
+          id="EVENT_MENU_ALLOCATION.EXCEL_REPORT"
+          defaultMessage="Excel Report"
+        />
+      )}
+    </button>
+  </Tooltip>
+)}
+
                   </div>
 
                   {/* <button
