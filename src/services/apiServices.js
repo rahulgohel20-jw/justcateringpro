@@ -4266,3 +4266,27 @@ export const EventLaborHelperPdf = (eventFunctionId, eventId,partyId) => {
 export const eventexcelforallocation = (eventId , userId) => {
   return GET(`/menuallocation/event-excel?eventId=${eventId}&userId=${userId}`);
 };
+
+
+export const AddNormalPO = (data) => {
+  return POST(`/normalpo/add-update`, data);
+};
+
+export const GetNormalPOById = (id ) => {
+  return GET(`/normalpo/getbyid?id=${id}`);
+};
+
+
+export const GetAllNormalPO = (id,size, page,searchName  ) => {
+  return GET(`/normalpo/getbyuser?userId=${id}&size=${size}&page=${page}&searchName=${encodeURIComponent(searchName)}`);
+};
+
+
+export const DeleteNormalPO = (id) => {
+  return DELETE(`/normalpo/delete/${id}`);
+};
+
+
+export const DeleteNormalPODetails = (detailsId) => {
+  return DELETE(`/normalpo/deletedetails/${detailsId}`);
+};``

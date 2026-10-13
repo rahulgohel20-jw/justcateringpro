@@ -200,18 +200,22 @@ function CategoryListpackage({
                             ${isActive ? "bg-primary" : isCurrent ? "bg-primary/8" : "hover:bg-gray-50"}`}
                         >
                           {cat.id !== "all" && (
-                            <div
-                              onClick={(e) => { e.stopPropagation(); onToggleCategory?.(cat.id); }}
-                              className={`flex-shrink-0 w-3.5 h-3.5 rounded border-2 flex items-center justify-center cursor-pointer transition-all
-                                ${isSelected ? "bg-primary border-primary" : isActive ? "border-white/60 bg-white/10" : "border-gray-300 hover:border-primary"}`}
-                            >
-                              {isSelected && (
-                                <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 12 12">
-                                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                              )}
-                            </div>
-                          )}
+  <div
+    onMouseDown={(e) => {
+      e.preventDefault();   // keep input focus so the dropdown doesn't close
+      e.stopPropagation();  // don't trigger the row's select-and-close
+      onToggleCategory?.(cat.id);
+    }}
+    className={`flex-shrink-0 w-3.5 h-3.5 rounded border-2 flex items-center justify-center cursor-pointer transition-all
+      ${isSelected ? "bg-primary border-primary" : isActive ? "border-white/60 bg-white/10" : "border-gray-300 hover:border-primary"}`}
+  >
+    {isSelected && (
+      <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 12 12">
+        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )}
+  </div>
+)}
                           {cat.id === "all" && <div className="w-3.5 flex-shrink-0" />}
                           <span className={`flex-1 text-sm truncate ${isActive ? "text-white font-medium" : isCurrent ? "text-primary font-semibold" : "text-gray-700"}`}>
                             {cat.nameEnglish}

@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { WhatsAppPdf } from "../../services/apiServices";
 import { Tooltip } from "antd";
 import dayjs from "dayjs";
+import { errorMsgPopup } from "../../underConstruction";
 
 
 
@@ -511,7 +512,7 @@ formData.append("isAddDecoration", 0);
 formData.append("isOnePage", 0);
 formData.append("isShowEventRemarks", 0);
 formData.append("showAdditional", 0);
- formData.append("isAgencyNextPage", );
+ formData.append("isAgencyNextPage", 1);
  formData.append("isItemShow",1);
  formData.append("storeIssueWise" , 0);
  formData.append("isAddStoreIssue",0);

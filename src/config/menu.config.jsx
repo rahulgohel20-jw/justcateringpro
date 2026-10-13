@@ -1192,6 +1192,18 @@ id="COMMON.ITEMRAWMATERIALUNITCHANGE"              defaultMessage="Item Raw Mate
           path: "/stock-management/stock-type",
           pageName: "Stock Type",
         },
+        
+
+        {
+          title: (
+            <FormattedMessage
+              id="COMMON.NORMAL_PO"
+              defaultMessage="Normal PO"
+            />
+          ),
+          path: "/stock-management/normal-po",
+          pageName: "Normal PO",
+        },
 
         {
           title: (
