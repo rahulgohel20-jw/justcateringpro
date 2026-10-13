@@ -3595,8 +3595,8 @@ export const IsInquiryVisible = (isVisible, userId) => {
   return PUT(`/user/isinquiryvisible?isVisible=${isVisible}&userId=${userId}`);
 };
 
-export const GeneratePurchaseDateWiseReport = (endDate, startDate, isCompanyDetails, isPrice, userId) => {
-  return POST(`/purchasereport/generate-datewise-puchase-report?endDate=${endDate}&startDate=${startDate}&isCompanyDetails=${isCompanyDetails}&isPrice=${isPrice}&userId=${userId}`);
+export const GeneratePurchaseDateWiseReport = (endDate, startDate, isCompanyDetails, isPrice, userId , supplierId) => {
+  return POST(`/purchasereport/generate-datewise-puchase-report?endDate=${endDate}&startDate=${startDate}&isCompanyDetails=${isCompanyDetails}&isPrice=${isPrice}&userId=${userId}&supplierId=${supplierId}`);
 };
 
 export const pdffordebitpaymentinaccount = (isCompanyDetails, isPayable, userId) => {
