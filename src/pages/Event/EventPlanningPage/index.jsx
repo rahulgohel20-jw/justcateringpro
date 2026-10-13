@@ -1020,6 +1020,21 @@ const EventPlanningPage = ({ mode = "menu" }) => {
   const shouldDisableNavButtons = canAccessMenuExtraFeature && !isComplete;
 
   const cfg = getPlanningConfig(mode);
+  const masterCatsRef = useRef({ mode: null, list: null });
+
+const getMasterCats = useCallback(async () => {
+  if (masterCatsRef.current.mode === mode && masterCatsRef.current.list) {
+    return masterCatsRef.current.list;
+  }
+  try {
+    const list = await cfg.api.getAllCategories(localStorage.getItem("userId"));
+    masterCatsRef.current = { mode, list: Array.isArray(list) ? list : [] };
+    return masterCatsRef.current.list;
+  } catch (e) {
+    console.error("Failed to load master categories", e);
+    return [];
+  }
+}, [mode, cfg]);
   const [showAdvancePayment, setShowAdvancePayment] = useState(false);
   const [showSelectedSheet, setShowSelectedSheet] = useState(false);
   const [permissionRawMaterials, setPermissionRawMaterials] = useState(null);
@@ -2118,10 +2133,10 @@ const EventPlanningPage = ({ mode = "menu" }) => {
     setIsPrepLoading(true);
 
     try {
+  const { rawItems, rawSelectedCats, prepMeta } =
+    await cfg.api.getItems(selectedFunction, "", 0, 1, 200, userIdLocal);
 
-      const { rawItems, rawSelectedCats, prepMeta } =
-        await cfg.api.getItems(selectedFunction, "", 0, 1, 200, userIdLocal);
-
+  const masterCats = await getMasterCats();
       // if (prepMeta?.permissionRawMaterials) {
       // setPermissionRawMaterials({
       // ...prepMeta.permissionRawMaterials,
@@ -2151,8 +2166,7 @@ const categoryMultiImageIdsMap = {};
       const categoryRenamesMap = {};
 
       rawSelectedCats.forEach((rawCat) => {
-        const norm = cfg.normaliseCategory(rawCat, allItemsForPrice, prepMeta);
-
+const norm = cfg.normaliseCategory(rawCat, allItemsForPrice, prepMeta, masterCats);
         // const isPackageCat = Number(rawCat.anyItem || 0) > 0;
         // if (norm.items.length === 0 && !isPackageCat) return;
 
@@ -2303,7 +2317,7 @@ categoryMultiImageIdsMap[norm.catName] = norm.multiImageMenuItemIds || [];
       setIsPrepLoading(false);
       loadSavedMenuPrepInFlightRef.current = null;
     }
-  }, [selectedFunction, cfg, eventId, mode]);
+  }, [selectedFunction, cfg, eventId, mode , getMasterCats]);
 
   useEffect(() => {
 
@@ -2751,10 +2765,19 @@ categoryMultiImageIdsMap[norm.catName] = norm.multiImageMenuItemIds || [];
           ? b.categoriesOrder
           : [...b.categoriesOrder, categoryName];
 
-        const updatedCategorySlogans = { ...(b.categorySlogans || {}) };
-        if (!updatedCategorySlogans[categoryName] && menuItem.categorySlogan) {
-          updatedCategorySlogans[categoryName] = menuItem.categorySlogan;
-        }
+       const updatedCategorySlogans = { ...(b.categorySlogans || {}) };
+if (!updatedCategorySlogans[categoryName]) {
+  const masterSlogan =
+    (selectedCategoryId !== 0 && selectedCategory !== "All"
+      ? selectedCategoryInfo?.menuSlogan
+      : "") ||
+    (masterCatsRef.current.list || []).find(
+      (m) => Number(m.id) === Number(categoryIdToUse),
+    )?.menuSlogan ||
+    menuItem.categorySlogan ||
+    "";
+  if (masterSlogan) updatedCategorySlogans[categoryName] = masterSlogan;
+}
 
         const updatedCategoryIds = { ...(b.categoryIds || {}) };
         Object.entries(cats).forEach(([cat, items]) => {

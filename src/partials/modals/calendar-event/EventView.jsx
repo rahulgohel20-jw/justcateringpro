@@ -59,6 +59,7 @@ const EventViewModal = ({
   const permissionExpense = usePermission("Expense Management");
   const permissionCrockeryCutlery = usePermission("Crockery Cutlery");
   const permissionRoomDetails = usePermission("Room Details");
+const permissionExhibitionSetup = usePermission("Exhibition setup");
   const navigate = useNavigate();
   const eventDataAll = eventData?.event?._def?.extendedProps || {};
   const eventFunctionId = 108;
@@ -275,11 +276,15 @@ const EventViewModal = ({
   };
 
   const formatCreatedDate = (ddmmyyyy) => {
-    if (!ddmmyyyy) return "N/A";
-    const [day, month, year] = ddmmyyyy.split("/");
-    if (!day || !month || !year) return ddmmyyyy;
-    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  };
+  if (!ddmmyyyy) return "N/A";
+  const [day, month, year] = ddmmyyyy.split("/");
+  if (!day || !month || !year) return ddmmyyyy;
+  return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+};
+const formatEventDate = (date) => {
+  if (!date || typeof date.toLocaleDateString !== "function") return "N/A";
+  return date.toLocaleDateString("en-GB"); // DD/MM/YYYY
+};
 
   const handleOpenEventHistory = async () => {
     if (!safeEventId) {
@@ -436,8 +441,7 @@ const EventViewModal = ({
         const customerName = eventData?.event?._def?.title || "N/A";
         const eventNo = eventDataAll?.eventNo || `#${eventId}`;
         const venueName = eventDataAll?.address || "N/A";
-        const eventDate =
-          eventData?.event?.start?.toLocaleDateString?.("en-CA") || "N/A";
+     const eventDate = formatEventDate(eventData?.event?.start);
         const statusMap = { 0: "Inquiry", 1: "Confirm", 2: "Cancel" };
         const currentStatus =
           statusMap[String(eventDataAll?.statusCode ?? statusId)] || "Unknown";
@@ -514,11 +518,9 @@ const EventViewModal = ({
                   defaultMessage="Client Name"
                 />
               </p>
-              <h3 className="font-semibold text-base mb-2">
-                {translatedTitle ||
-                  eventData?.event?._def?.title ||
-                  "Loading..."}
-              </h3>
+             <h3 className="font-semibold text-base mb-2">
+  {formatEventDate(eventData?.event?.start)}
+</h3>
               <p className="text-xs text-gray-400"></p>
 
               <p className="text-gray-600">
@@ -530,16 +532,15 @@ const EventViewModal = ({
               <h3 className="font-semibold text-base mb-2">
                 {eventDataAll?.mobile}
               </h3>
-
-              <p className="text-gray-600">
-                <FormattedMessage
-                  id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_VIEW_DETAILS_DATE"
-                  defaultMessage="Date"
-                />
-              </p>
-              <h3 className="font-semibold text-base mb-2">
-                {eventData?.event?.start?.toLocaleDateString?.("en-CA")}
-              </h3>
+<p className="text-gray-600">
+  <FormattedMessage
+    id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_VIEW_DETAILS_DATE"
+    defaultMessage="Date"
+  />
+</p>
+<h3 className="font-semibold text-base mb-2">
+  {formatEventDate(eventData?.event?.start)}
+</h3>
 
               <p className="text-gray-600">
                 {eventDataAll?.banquetHallName ? (
@@ -572,7 +573,7 @@ const EventViewModal = ({
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 space-y-2">
-              {canAccessExhibitionquotation && (
+             {permissionExhibitionSetup.view && canAccessExhibitionquotation && (
                 <button
                   onClick={() => navigate(`/exhibition-quotation/${safeEventId}`)}
                   className="w-full flex items-center justify-between bg-green-50 hover:bg-green-50 transition-all rounded-2xl px-2 py-1 group"

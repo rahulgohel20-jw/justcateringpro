@@ -147,8 +147,7 @@ export const allMenuItems = (navigate) => {
       ),
       icon: "  text-lg ki-filled ki-setting-4 text-primary",
       path: "/exhibition-setup",
-      pageName: "Exhibition Quotation",
-      moduleName: "Exhibition Quotation"
+      pageName: "Exhibition setup",
     },
 
     {
@@ -389,8 +388,8 @@ export const allMenuItems = (navigate) => {
           ),
           icon: "  text-lg ki-filled ki-people  text-primary",
           path: "/master/addlabourhelper",
-          pageName: "kyc",
-           moduleName: "kyc",
+          pageName: "labour helper",
+          
         },
 
     {
@@ -1677,18 +1676,18 @@ export const superAdminMenuItems = [
     path: "/vendors",
     pageName: "Vendors",
   },
-  {
-    title: (
-      <FormattedMessage
-        id="COMMON.EXHIBITION_SETUP"
-        defaultMessage="Exhibition Setup"
-      />
-    ),
-    icon: "ki-filled ki-setting-4 text-primary",
-    path: "/exhibition-setup",
-    pageName: "Exhibition Quotation",
-    moduleName:"Exhibition Quotation"
-  },
+  // {
+  //   title: (
+  //     <FormattedMessage
+  //       id="COMMON.EXHIBITION_SETUP"
+  //       defaultMessage="Exhibition Setup"
+  //     />
+  //   ),
+  //   icon: "ki-filled ki-setting-4 text-primary",
+  //   path: "/exhibition-setup",
+  //   pageName: "Exhibition setup",
+
+  // },
   // {
   //   title: (
   //     <FormattedMessage id="COMMON.MEMBER_LIST" defaultMessage="Expense" />

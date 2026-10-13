@@ -787,6 +787,7 @@ const getGridTemplate = (showRate) =>
     ...(showRate ? [96, 96, 96] : []),
     120, // place
     240, // instructions
+      ...(showRate ? [240] : []),
   ]
     .map((w) => `${w}px`)
     .join(" ");
@@ -894,6 +895,11 @@ const getGridTemplate = (showRate) =>
   <div className="text-left">
     <FormattedMessage id="COMMON.INSTRUCTIONS" defaultMessage="Instructions" />
   </div>
+  {showRateColumns && (
+  <div className="text-left">
+    <FormattedMessage id="COMMON.KITCHEN_INSTRUCTIONS" defaultMessage="Kitchen Instructions" />
+  </div>
+)}
 </div>
 );
 };
@@ -987,7 +993,9 @@ const TableRow = ({ row, onChange, disabled, placeOptions = [], unitOptions = []
   const [isTranslateOpen, setIsTranslateOpen] = useState(false);
 
   const translateTimer = useRef(null);
-
+const kitchenTimer = useRef(null);
+const rowRef = useRef(row);
+rowRef.current = row; // always the latest row, so the delayed translation doesn't overwrite newer edits
   const rowUnitOptions = useMemo(() => {
   const opts = buildUnitOptions(row.unitHierarchy);
   if (opts.length === 0) return unitOptions; // no hierarchy: use the global list
@@ -1185,6 +1193,39 @@ const handleInstructionChange = (e) => {
   }, 600);
 };
  
+const handleKitchenInstructionChange = (e) => {
+  const val = stripHtmlTags(e.target.value);
+
+  onChange({ ...rowRef.current, kitchenInstructionEnglish: val });
+
+  if (kitchenTimer.current) clearTimeout(kitchenTimer.current);
+
+  if (!val.trim()) {
+    onChange({
+      ...rowRef.current,
+      kitchenInstructionEnglish: "",
+      kitchenInstructionHindi: "",
+      kitchenInstructionGujarati: "",
+    });
+    return;
+  }
+
+  kitchenTimer.current = setTimeout(async () => {
+    try {
+      const { Translateapi } = await import("@/services/apiServices");
+      const res = await Translateapi(val);
+      const data = res?.data || {};
+      onChange({
+        ...rowRef.current,
+        kitchenInstructionEnglish: val,
+        kitchenInstructionHindi: data.hindi || "",
+        kitchenInstructionGujarati: data.gujarati || "",
+      });
+    } catch (err) {
+      console.error("Kitchen instruction translation error:", err);
+    }
+  }, 600);
+};
 
   return (
     <>
@@ -1383,6 +1424,17 @@ const handleInstructionChange = (e) => {
       <Languages size={16} />
     </button>
   </div>
+  {showRateColumns && (
+  <div className="min-w-0">
+    <Input
+      size="small"
+      placeholder="Kitchen instruction..."
+      value={row.kitchenInstructionEnglish ?? ""}
+      onChange={handleKitchenInstructionChange}
+      className="w-full text-sm"
+    />
+  </div>
+)}
 </div>
 </>
   );
@@ -1869,7 +1921,9 @@ const resolveReportingTime = (alloc, row) =>
         itemNameEn: item.menuItemName,
         itemNameGu: item.menuItemNameGujarati,
         itemNameHi: item.menuItemNameHindi,
-
+kitchenInstructionEnglish: stripHtmlTags(item.kitchenInstructionEnglish ?? item.kitchenInstruction) || "",
+kitchenInstructionHindi: stripHtmlTags(item.kitchenInstructionHindi) || "",
+kitchenInstructionGujarati: stripHtmlTags(item.kitchenInstructionGujarati) || "",
         chefLabour: item.chefLabour || false,
         inside: item.inside || false,
         outside: item.outside || false,
@@ -2166,7 +2220,8 @@ else if (matchingRow.chefLabour) {
   row.rate !== original.rate ||
   row.totalRate !== original.totalRate ||
   row.labourQty !== original.labourQty ||
-  row.labourRate !== original.labourRate
+  row.labourRate !== original.labourRate || 
+  row.kitchenInstructionEnglish !== original.kitchenInstructionEnglish 
       ) {
         return true;
       }
@@ -3120,6 +3175,9 @@ const buildMenuExecutionChangeSummary = (prevRows, currentRows) => {
     instructions: stripHtmlTags(r.instructions) || "",
     instructionsHindi: r.instructionsHindi || "",      
   instructionsGujarati: r.instructionsGujarati || "", 
+  kitchenInstructionEnglish: r.kitchenInstructionEnglish || "",
+kitchenInstructionHindi: r.kitchenInstructionHindi || "",
+kitchenInstructionGujarati: r.kitchenInstructionGujarati || "",
     isPaxChange: rowHadPaxChange,
     menuAllocationOrders,
     menuCategoryId: r.menuCategoryId || 0,

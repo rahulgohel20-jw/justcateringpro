@@ -38,7 +38,10 @@ import AddRawMaterial from "../../../partials/modals/add-raw-material/AddRawMate
 import DatePicker from "react-datepicker";
 import { usePermission } from "../../../hooks/usePermission";
 import { useStockTypePermission } from "../../../hooks/useStockTypePermission";
+// Only these users get the first Kitchen auto-selected
+const KITCHEN_DEFAULT_USER_IDS = [233, 501];
 
+const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
 // ─────────────────────────────────────────────
 // Status options
 // ─────────────────────────────────────────────
@@ -467,6 +470,7 @@ useEffect(() => {
     })),
   );
 }, [editData, supplier, godownTypes, kitchenTypes]);
+
   const fetchSupplier = async () => {
     try {
       const res = await getpartywitheventforstock(userId);
@@ -653,7 +657,16 @@ const handleSelectItem = useCallback(
   },
   [items],
 );
+// Auto-select first kitchen for specific users (new entries only)
+useEffect(() => {
+  if (isEdit) return;
+  if (!KITCHEN_DEFAULT_USER_IDS.includes(Number(userId))) return;
+  if (kitchenTypes.length === 0) return;
 
+  setSelectedKitchenType((prev) =>
+    prev !== undefined ? prev : getTypeValue(kitchenTypes[0]),
+  );
+}, [kitchenTypes, isEdit, userId]);
   const updateQty = useCallback((index, value) => {
     if (!/^\d*\.?\d*$/.test(value)) return;
 
@@ -1038,10 +1051,10 @@ const handleSelectItem = useCallback(
       onChange={(value) => {
         setSelectedKitchenType(value);
       }}
-      options={kitchenTypes.map((t) => ({
-    label: t.nameEnglish,
-    value: t.stocktypeid ?? t.stockTypeId ?? t.id,
-  }))}
+    options={kitchenTypes.map((t) => ({
+  label: t.nameEnglish,
+  value: getTypeValue(t),
+}))}
       filterOption={(input, option) =>
         (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
       }

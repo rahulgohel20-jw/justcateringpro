@@ -11,6 +11,7 @@ import {
 } from "@/services/apiServices";
 import AddExhibitionSetup from "./AddExhibitionSetup";
 import Swal from "sweetalert2";
+import { usePermission } from "@/hooks/usePermission";
 
 const ExhibitionSetup = () => {
   const intl = useIntl();
@@ -20,7 +21,7 @@ const ExhibitionSetup = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const permissions = usePermission("Exhibition setup");
   // Clear any previously stored local cache
   useEffect(() => {
     try {
@@ -302,6 +303,7 @@ const ExhibitionSetup = () => {
               />
             </div>
           </div>
+          {permissions.add && (
           <div className="flex flex-wrap items-center gap-2">
             <button
               className="btn btn-primary"
@@ -317,6 +319,7 @@ const ExhibitionSetup = () => {
               />
             </button>
           </div>
+          )}
         </div>
 
         {/* Add/Edit Modal */}
@@ -329,11 +332,11 @@ const ExhibitionSetup = () => {
         />
 
         {/* Table */}
-        <TableComponent
-          columns={columns(handleDelete, handleEdit, intl, handleToggleStatus)}
-          data={filteredData}
-          paginationSize={10}
-        />
+       <TableComponent
+  columns={columns(handleDelete, handleEdit, intl, handleToggleStatus, permissions)}
+  data={filteredData}
+  paginationSize={10}
+/>
       </Container>
     </Fragment>
   );
