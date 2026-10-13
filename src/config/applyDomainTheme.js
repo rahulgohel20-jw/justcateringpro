@@ -1,12 +1,23 @@
+import { domainThemes, softTypeThemes } from "./domainThemes";
 
-import { domainThemes } from "./domainThemes";
+export const getSoftType = () => {
+  try {
+    const raw = localStorage.getItem("auth-storage");
+    const softType = raw ? JSON.parse(raw)?.state?.user?.softType : null;
+    return softType ? String(softType).trim().toLowerCase() : null;
+  } catch {
+    return null;
+  }
+};
 
 export const applyDomainTheme = () => {
-  const hostname = window.location.hostname;
-  const theme = domainThemes[hostname] || domainThemes["default"];
+  const softType = getSoftType();
+  const theme =
+    softTypeThemes[softType] ||                       // 1. user's softType
+    domainThemes[window.location.hostname] ||         // 2. hostname
+    domainThemes.default;                             // 3. default
 
   const root = document.documentElement;
-
   root.style.setProperty("--tw-primary", theme.primary);
   root.style.setProperty("--tw-primary-active", theme.primaryActive);
   root.style.setProperty("--tw-primary-light", theme.primaryLight);

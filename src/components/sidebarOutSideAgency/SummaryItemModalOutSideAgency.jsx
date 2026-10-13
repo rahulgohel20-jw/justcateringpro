@@ -243,20 +243,17 @@ const singleFunctionInfo =
   };
 
   const buildFormData = async (item, lang) => {
-  const agencyId = item.agencyId || item.agency?.id || item.id || item.contactId || null;
+ const agencyId = item.contactId || item.agencyId || item.agency?.id || null;
 
-  let allItemIds = [];
-  if (agencyId) {
-    const itemsRes = await GetSelectedItemsForReportFilter(eventFunctionId, eventId, [agencyId]);
-    allItemIds = itemsRes?.data?.success && itemsRes?.data?.data
-      ? itemsRes.data.data.map((i) => i.id)
-      : [];
-  }
+let allItemIds = [];
+if (agencyId) {
+  const itemsRes = await GetSelectedItemsForReportFilter(eventFunctionId, eventId, [agencyId]);
+  allItemIds = itemsRes?.data?.data?.map((i) => i.id) || [];
+}
 
-  const categoryRes = await GetAllRawMaterialAllocationCategory(eventId);
-  const allCategoryIds = categoryRes?.data?.success && categoryRes?.data?.data
-    ? categoryRes.data.data["Raw Material Category Details"].map((c) => c.id)
-    : [];
+const categoryRes = await GetAllRawMaterialAllocationCategory(eventId);
+const allCategoryIds =
+  categoryRes?.data?.data?.["Raw Material Category Details"]?.map((c) => c.id) || [];
 
   const formData = new FormData();
   formData.append("eventId", eventId);
@@ -303,7 +300,7 @@ const singleFunctionInfo =
   formData.append("isOnePage", 0);
   formData.append("isShowEventRemarks", 0);
   formData.append("showAdditional", 0);
-  formData.append("isAgencyNextPage", 0);
+  formData.append("isAgencyNextPage", 1);
   formData.append("isItemShow",1);
   formData.append("storeIssueWise" , 0);
   formData.append("isAddStoreIssue",0);
@@ -406,7 +403,7 @@ const notifyWhatsApp = async (url) => {
   try {
     const formData = await buildFormData(item, lang);
     const data = await AddExclusiveReport(formData);
-
+    console.log("AddExclusiveReport:", data?.data);   // add this
     if (data?.data?.success) {
   item._cachedPdfUrl = data?.data?.report_path;
 
@@ -471,7 +468,7 @@ const notifyWhatsApp = async (url) => {
   errorMsgPopup(data?.data?.msg || "Failed to generate report");
 }
   } catch (err) {
-  console.error(err);
+  console.error("handleWhatsAppClick failed:", err, err?.response);
   setSuccessMessage(err?.response?.data?.msg || "Something went wrong");
 } finally {
     setGeneratingPdf(false);
