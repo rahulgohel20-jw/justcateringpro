@@ -80,7 +80,7 @@ export const DEFAULT_EXHIBITION_SETUP_ROWS = [
 import { Tooltip, Switch } from "antd";
 import { FormattedMessage } from "react-intl";
 
-export const columns = (onDelete, onEdit, intl, onStatus) => [
+export const columns = (onDelete, onEdit, intl, onStatus, permissions = {}) => [
   {
     accessorKey: "sr_no",
     header: <FormattedMessage id="COMMON.SR_NO" defaultMessage="Sr No" />,
@@ -171,13 +171,13 @@ export const columns = (onDelete, onEdit, intl, onStatus) => [
       const active = row.original.isActive ?? true;
       return (
         <div className="flex items-center gap-2">
-          <Switch
-            checked={active}
-            onChange={(checked) =>
-              onStatus &&
-              onStatus(row.original.id, checked, row.original)
-            }
-          />
+        <Switch
+  checked={active}
+  disabled={!permissions.edit}
+  onChange={(checked) =>
+    onStatus && onStatus(row.original.id, checked, row.original)
+  }
+/>
           <span
             className={`text-xs font-semibold ${
               active ? "text-green-600" : "text-gray-400"
@@ -201,29 +201,27 @@ export const columns = (onDelete, onEdit, intl, onStatus) => [
     accessorKey: "action",
     header: <FormattedMessage id="COMMON.ACTIONS" defaultMessage="Action" />,
     cell: ({ row }) => {
-      const rowData = row.original;
-      return (
-        <div className="flex items-center gap-1">
-          <Tooltip title={intl.formatMessage({ id: "USER_TERMS.EDIT_EVENT", defaultMessage: "Edit Event" })}>
-            <button
-              className="btn btn-sm btn-icon btn-clear"
-              onClick={() => onEdit(rowData)}
-            >
-              <i className="ki-filled ki-notepad-edit text-primary"></i>
-            </button>
-          </Tooltip>
+  const rowData = row.original;
+  return (
+    <div className="flex items-center gap-1">
+      {permissions.edit && (
+        <Tooltip title={intl.formatMessage({ id: "USER_TERMS.EDIT_EVENT", defaultMessage: "Edit Event" })}>
+          <button className="btn btn-sm btn-icon btn-clear" onClick={() => onEdit(rowData)}>
+            <i className="ki-filled ki-notepad-edit text-primary"></i>
+          </button>
+        </Tooltip>
+      )}
 
-          <Tooltip title={intl.formatMessage({ id: "COMMON.DELETE", defaultMessage: "Delete" })}>
-            <button
-              className="btn btn-sm btn-icon btn-clear"
-              onClick={() => onDelete(rowData.id, rowData)}
-            >
-              <i className="ki-filled ki-trash text-danger"></i>
-            </button>
-          </Tooltip>
-        </div>
-      );
-    },
+      {permissions.delete && (
+        <Tooltip title={intl.formatMessage({ id: "COMMON.DELETE", defaultMessage: "Delete" })}>
+          <button className="btn btn-sm btn-icon btn-clear" onClick={() => onDelete(rowData.id, rowData)}>
+            <i className="ki-filled ki-trash text-danger"></i>
+          </button>
+        </Tooltip>
+      )}
+    </div>
+  );
+},
     meta: {
       headerClassName: "w-[8%]",
       cellClassName: "w-[8%]",

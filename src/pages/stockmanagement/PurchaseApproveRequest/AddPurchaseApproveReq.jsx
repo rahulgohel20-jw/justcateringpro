@@ -32,7 +32,7 @@ const CATEGORY_SEARCH_DEBOUNCE_MS = 400;
 const ITEM_NAME_SEARCH_DEBOUNCE_MS = 400;
 const CATEGORY_TYPE_ID = 0; // TODO: confirm real categoryTypeId if this should be scoped (e.g. Food Category = 1)
 const CATEGORY_IS_ACTIVE = true;
-
+const ALL_CATEGORY_ID = -1;
 const ITEMS_PAGE_SIZE = 10;
 const DISPLAY_DATE_FORMAT = "DD/MM/YYYY";
 const API_DATE_FORMAT = "YYYY-MM-DD"; // TODO: confirm the backend's expected date format
@@ -42,21 +42,16 @@ const NEW_REQUEST_ID = -1; // sent as `id` for a request that hasn't been saved 
 const UNIT_ID_BY_NAME = { kg: 1, g: 2, L: 3, ml: 4, pcs: 5 };
 
 const AddPurchaseApproveReq = () => {
-  // userId lives in localStorage (Zustand auth state supplements it there per project convention)
   const userId = localStorage.getItem("userId");
   const mainId = localStorage.getItem("mainId");
 
-  // ── Header fields ────────────────────────────────────────────────────────
-  // requestCode is only ever populated from the server (edit/approve load).
-  // It's no longer auto-generated on Add, and the field isn't shown there.
+
   const [requestCode, setRequestCode] = useState(null);
-  // Default both to today so the filters are "ready" as soon as a category is picked
   const [startDate, setStartDate] = useState(() => dayjs());
   const [endDate, setEndDate] = useState(() => dayjs());
   const [status, setStatus] = useState("PENDING");
   const [remarks, setRemarks] = useState("");
 
-  // ── Category dropdown: search ────────────────────────────────────────────
   const [categorySearch, setCategorySearch] = useState("");
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [categoryLoading, setCategoryLoading] = useState(false);
@@ -252,7 +247,8 @@ const redirectPath = isApproveMode ? APPROVE_REDIRECT_PATH : ADD_EDIT_REDIRECT_P
           ITEMS_PAGE_SIZE,
           itemNameSearch, // TODO: confirm this is the correct param name/position for your API
           purchaseRequestId,
-          isAllData
+          isAllData,
+          userId
         );
 
         if (requestId !== itemsRequestIdRef.current) return;
@@ -294,7 +290,7 @@ const redirectPath = isApproveMode ? APPROVE_REDIRECT_PATH : ADD_EDIT_REDIRECT_P
         }
       }
     },
-    [startDate, endDate, selectedCategory, itemNameSearch, isApproveMode, isExistingRequest, existingRequestId]
+    [startDate, endDate, selectedCategory, itemNameSearch, isApproveMode, isExistingRequest, existingRequestId , userId]
   );
 
   useEffect(() => {
@@ -864,21 +860,25 @@ const handleSaveRequest = async () => {
               </div>
 
               <Select
-                style={{ width: 220, minHeight: 38 }}
-                placeholder="Filter by category"
-                value={selectedCategory}
-                onChange={setSelectedCategory}
-                allowClear
-                showSearch
-                filterOption={false}
-                onSearch={handleCategorySearch}
-                loading={categoryLoading}
-                notFoundContent={categoryLoading ? <Spin size="small" /> : "No categories found"}
-                options={categoryOptions.map((c) => ({
-                  value: c.id,
-                  label: c.nameEnglish,
-                }))}
-              />
+  style={{ width: 220, minHeight: 38 }}
+  placeholder="Filter by category"
+  value={selectedCategory}
+  onChange={(value) => setSelectedCategory(value ?? null)}
+  allowClear
+  showSearch
+  filterOption={false}
+  onSearch={handleCategorySearch}
+  loading={categoryLoading}
+  notFoundContent={categoryLoading ? <Spin size="small" /> : "No categories found"}
+  options={[
+    // hide "All" while the user is typing a search
+    ...(categorySearch ? [] : [{ value: ALL_CATEGORY_ID, label: "All Categories" }]),
+    ...categoryOptions.map((c) => ({
+      value: c.id,
+      label: c.nameEnglish,
+    })),
+  ]}
+/>
 
               <button
                 onClick={handleSave}
