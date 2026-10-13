@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "react-query";
 import { Closedate, saveclosedate } from "@/services/apiServices";
 
+const EMPTY = {};
+
 // ─── Always reads from localStorage ──────────────────────────────────────────
 const getStoredUserId = () => {
   const mainId = localStorage.getItem("mainId");
@@ -74,11 +76,11 @@ export const useCloseDateAll = (year, userId = undefined, options = {}) => {
   );
 
   return {
-    monthCloseDates: data ?? {},
-    isLoading,
-    isError,
-    refetch,
-  };
+  monthCloseDates: data ?? EMPTY,
+  isLoading,
+  isError,
+  refetch,
+};
 };
 
 // ─── useCloseDateSingle ───────────────────────────────────────────────────────

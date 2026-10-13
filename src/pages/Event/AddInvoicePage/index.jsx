@@ -42,6 +42,8 @@ const AddInvoicePage = ({
   onRemove, 
   groupId,           
   onGroupIdChange,
+   isDecor = false,          // new
+  onDecorChange,  
 }) => {
   const getUserHsn = () => {
   try {
@@ -59,6 +61,8 @@ const AddInvoicePage = ({
   const intl = useIntl();
 const initializedRef = useRef(false);
  const { hasModuleAccess } = useModuleAccess();
+       const canAccessDecor = hasModuleAccess("Decor");
+
         const canAccessgeneratemultipleinvoice = hasModuleAccess("Generate multiple invoices");
    const OFFER_RATE_USER_IDS = ["501"]; 
  const [selectedBankId, setSelectedBankId] = useState("");
@@ -462,20 +466,19 @@ useEffect(() => {
     }
   }, [invoiceData]);
 
- useEffect(() => {
+useEffect(() => {
   if (!eventId) return;
 
   if (invoiceId) {
-    fetchInvoiceData(invoiceId);          // existing invoice (main or additional)
+    fetchInvoiceData(invoiceId);
   } else if (isAdditional) {
-    fetchBlankInvoice();                  // newly added, unsaved
+    fetchBlankInvoice();
   } else if (fromQuotation) {
     fetchFromQuotation();
   } else {
     fetchInvoiceData();
   }
-}, [eventId]);
-
+}, [eventId, fromQuotation ? isDecor : null]);
 
   // FOOD TAX
 const handleFoodTaxChange = (value) => {
@@ -540,13 +543,13 @@ const fetchBlankInvoice = async () => {
     // only read the event info (party, venue, event name, dates)
     let eventInfo = null;
     try {
-      const res = await GetInvoiceByEventId(eventId);
+      const res = await GetInvoiceByEventId(eventId , isDecor);
       eventInfo = res?.data?.data?.["Event Invoice Details"]?.[0]?.event || null;
     } catch (e) {}
 
     if (!eventInfo) {
       try {
-        const q = await GetQuotation(eventId, 1, isDecorFromState ?? false);
+        const q = await GetQuotation(eventId, 1, isDecor);
         eventInfo =
           q?.data?.data?.["Event Functions Quotation Details"]?.[0]?.event || null;
       } catch (e) {}
@@ -593,7 +596,7 @@ const fetchBlankInvoice = async () => {
  const fetchFromQuotation = async () => {
   try {
     setLoading(true);
-const res = await GetQuotation(eventId, 1, isDecorFromState ?? false);
+const res = await GetQuotation(eventId, 1, isDecor);
       // copyToInvoice = 1
       const apiData = res?.data?.data?.["Event Functions Quotation Details"];
 
@@ -834,7 +837,7 @@ setVatTaxTotalAmount(formatAmount(qInfo.vatTaxTotalAmount || 0));
 const fetchInvoiceData = async (targetInvoiceId = null, silent = false) => {
   try {
 if (!silent) setLoading(true); 
-    const response = await GetInvoiceByEventId(eventId);
+    const response = await GetInvoiceByEventId(eventId , isDecor);
 
     if (response.status === 200 && response.data.data) {
       const invoiceDetailsArray =
@@ -848,11 +851,17 @@ if (!silent) setLoading(true);
             )
           : invoiceDetailsArray.find((inv) => inv.isMainInvoice) ||
             invoiceDetailsArray[0];
+console.log(
+  "looking for", targetInvoiceId,
+  "| isDecor", isDecor,
+  "| got ids", invoiceDetailsArray.map((i) => [i.id, i.isMainInvoice]),
+);
 
-        if (!invoiceDetails) {
-          message.warning("Invoice not found");
-          return;
-        }
+       if (!invoiceDetails) {
+  if (!targetInvoiceId) { await fetchBlankInvoice(); return; }  // no invoice in this mode yet
+  message.warning("Invoice not found");
+  return;
+}
 
         setInvoiceData(invoiceDetails);
        if (showRemaining) {
@@ -1405,7 +1414,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
         invoiceCode : invoiceCode,
        invoiceGroupId: "",
         isMainInvoice: !isAdditional,
-        
+        isDecor: isDecor,
         igstAmnt: footerData.igstAmnt,
         invoiceFunctionItems: rows.map((r) => ({
           amount: Number(r.amount) || 0,
@@ -1520,7 +1529,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
             let targetId = extractSavedId(response) || invoiceData?.id;
 
             if (!targetId) {
-              const res = await GetInvoiceByEventId(eventId);
+const res = await GetInvoiceByEventId(eventId, isDecor);
               const list = res?.data?.data?.["Event Invoice Details"] || [];
               targetId = list
                 .filter((i) => !i.isMainInvoice)
@@ -1603,6 +1612,21 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
     setLoadingPdf(false);
   }
 };
+
+const handleToggleDecor = async () => {
+  if (isEdited) {
+    const r = await Swal.fire({
+      title: "Unsaved changes",
+      text: "Switching Decor Planning reloads the invoice and discards unsaved changes.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Switch anyway",
+    });
+    if (!r.isConfirmed) return;
+  }
+  onDecorChange?.(!isDecor);
+};
+
   return (
     <Fragment>
       <style>{responsiveStyles}</style>
@@ -1652,6 +1676,12 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
       />
       : {invoiceData?.event?.eventType?.nameEnglish || "Sangeet"}
     </p>
+     {isDecor && (
+    <div className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-pink-600">
+      <i className="ki-filled ki-star text-sm"></i>
+      Decor Invoice
+    </div>
+  )}
   </div>
 
 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -1671,7 +1701,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
 
     <button
       onClick={() => navigate(`/menu-preparation/${eventId}`)}
-      className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors"
+      className="flex items-center gap-2 px-2 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors"
     >
       <i className="ki-filled ki-menu text-primary text-sm"></i>
       <FormattedMessage
@@ -1680,7 +1710,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
       />
     </button>
   <Link to={`/edit-event/${eventId}`}>
-  <button className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors">
+  <button className="flex items-center gap-2 px-2 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors">
     <i className="ki-filled ki-notepad-edit me-1"></i>
     <FormattedMessage
       id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_VIEW_DETAILS_EDIT_EVENT_BUTTON"
@@ -1688,6 +1718,20 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
     />
   </button>
 </Link>
+{!isAdditional && canAccessDecor  &&(
+  <button
+    type="button"
+    onClick={handleToggleDecor}
+    className={`flex items-center gap-2 px-2 py-2 rounded-lg border text-sm font-semibold transition-colors ${
+      isDecor
+        ? "bg-purple-800 border-purple-800 text-white shadow-md"
+        : "bg-white border-gray-300 text-gray-700 hover:border-gray-400"
+    }`}
+  >
+    <i className={`ki-filled ki-calendar-tick text-sm ${isDecor ? "text-white" : "text-primary"}`}></i>
+    Decor Planning
+  </button>
+)}
     <button
       className="btn btn-primary w-full sm:w-auto"
       onClick={handlePrintClick}
@@ -1714,6 +1758,7 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
     Generate Multiple Invoice
   </button>
 )}
+
   </div>
 </div>
 
@@ -2474,6 +2519,7 @@ bankDetails={selectedBank}
   open={isInvoiceThemeOpen}
   onClose={() => setIsInvoiceThemeOpen(false)}
   eventId={eventId}
+   isDecor={isDecor}
   isinvoice={0}
   invoiceId={invoiceData?.isMainInvoice ? 0 : (invoiceData?.id || 0)}   // 👈 changed
   mobileNumber={invoiceData?.event?.mobileno || invoiceData?.event?.party?.mobileno}
@@ -2499,8 +2545,8 @@ const makeGroupId = () =>
 
 const AddInvoiceMultiple = () => {
   const location = useLocation();
-  const { eventId, fromQuotation } = location.state || {};
-
+const { eventId, fromQuotation, isDecor: stateIsDecor } = location.state || {};
+const [isDecor, setIsDecor] = useState(!!stateIsDecor);
   const nextId = useRef(1);
   const [invoices, setInvoices] = useState([]);
   const [groupId, setGroupId] = useState("");
@@ -2508,39 +2554,41 @@ const AddInvoiceMultiple = () => {
   const lastRef = useRef(null);
   const justAdded = useRef(false);
 
-  // load every saved invoice for this event
-  useEffect(() => {
-    if (!eventId || fromQuotation) {
-      setInvoices([{ uid: nextId.current++, invoiceId: null }]);
-      return;
-    }
+useEffect(() => {
+  // a new uid remounts the page, so it re-fetches with the new isDecor
+  if (!eventId || fromQuotation) {
+    setInvoices([{ uid: nextId.current++, invoiceId: null }]);
+    return;
+  }
 
-    (async () => {
-      try {
-        const res = await GetInvoiceByEventId(eventId);
-        const list = res?.data?.data?.["Event Invoice Details"] || [];
+  let cancelled = false;
+  setReady(false);
+  (async () => {
+    try {
+      const res = await GetInvoiceByEventId(eventId, isDecor);
+      if (cancelled) return;
+      const list = res?.data?.data?.["Event Invoice Details"] || [];
 
-        if (list.length) {
-          const main = list.find((i) => i.isMainInvoice) || list[0];
-          const others = list.filter((i) => i.id !== main.id);
-          if (main.invoiceGroupId) setGroupId(main.invoiceGroupId);
-
-          setInvoices(
-            [main, ...others].map((inv) => ({
-              uid: nextId.current++,
-              invoiceId: inv.id,
-            })),
-          );
-        } else {
-          setInvoices([{ uid: nextId.current++, invoiceId: null }]);
-        }
-      } catch (e) {
+      if (list.length) {
+        const main = list.find((i) => i.isMainInvoice) || list[0];
+        const others = list.filter((i) => i.id !== main.id);
+        setGroupId(main.invoiceGroupId || "");
+        setInvoices(
+          [main, ...others].map((inv) => ({ uid: nextId.current++, invoiceId: inv.id })),
+        );
+      } else {
+        setGroupId("");
         setInvoices([{ uid: nextId.current++, invoiceId: null }]);
-      } finally {
-        setReady(true);
       }
-    })();
-  }, [eventId]);
+    } catch (e) {
+      if (!cancelled) setInvoices([{ uid: nextId.current++, invoiceId: null }]);
+    } finally {
+      if (!cancelled) setReady(true);
+    }
+  })();
+
+  return () => { cancelled = true; };
+}, [eventId, isDecor]);
 
   const addInvoice = () => {
     justAdded.current = true;
@@ -2590,6 +2638,8 @@ const AddInvoiceMultiple = () => {
             onRemove={i > 0 ? () => removeInvoice(uid) : undefined}
             groupId={groupId}
             onGroupIdChange={setGroupId}
+            isDecor={isDecor}
+  onDecorChange={setIsDecor}
           />
         </div>
       ))}

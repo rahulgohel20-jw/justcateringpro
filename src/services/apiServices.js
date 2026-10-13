@@ -1092,10 +1092,9 @@ export const UpdateCustomPackageStatusapi = (id, isActive) => {
   return PUT(`/custompackage/updatestatus?id=${id}&isActive=${isActive}`);
 };
 
-export const GetInvoiceByEventId = (eventId) => {
-  return GET(`/invoice/getbyeventid?eventId=${eventId}`);
+export const GetInvoiceByEventId = (eventId, isDecore = false) => {
+  return GET(`/invoice/getbyeventid?eventId=${eventId}&isDecore=${isDecore}`);
 };
-
 export const GetSendInvoice = (eventId, lang, userId) => {
   return GET(
     `/sendFile/sendQuotation?eventId=${eventId}&lang=${lang}&userId=${userId}`,
@@ -3890,8 +3889,8 @@ export const getpurchaseapprovalbyid = (purchaseRequestId) => {
 
 };
 
-export const getRawMaterialbyPurchaseRequestId = (endDate, rawMaterialCatId, startDate, page, size, rawMaterialName, purchaseRequestId, isAllData) => {
-  return GET(`/purchase-approval/getRawMaterial?endDate=${endDate}&rawMaterialCatId=${rawMaterialCatId}&startDate=${startDate}&page=${page}&size=${size}&rawMaterialName=${rawMaterialName}&purchaseRequestId=${purchaseRequestId}&isAllData=${isAllData}`);
+export const getRawMaterialbyPurchaseRequestId = (endDate, rawMaterialCatId, startDate, page, size, rawMaterialName, purchaseRequestId, isAllData , userId) => {
+  return GET(`/purchase-approval/getRawMaterial?endDate=${endDate}&rawMaterialCatId=${rawMaterialCatId}&startDate=${startDate}&page=${page}&size=${size}&rawMaterialName=${rawMaterialName}&purchaseRequestId=${purchaseRequestId}&isAllData=${isAllData}&userId=${userId}`);
 };
 
 // complate raw matt

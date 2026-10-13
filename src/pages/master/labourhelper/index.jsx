@@ -14,7 +14,7 @@ import { usePermission } from "../../../hooks/usePermission";
 import AddLabourhelper from "../../../partials/modals/add-labour-helper/AddLabourhelper";
 
 const Labourhelper = () => {
-  const permissions = usePermission("Guest");
+  const permissions = usePermission("labour helper");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
   const [originalData, setOriginalData] = useState([]);

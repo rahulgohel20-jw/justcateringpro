@@ -585,6 +585,39 @@ useEffect(() => {
   // no entry: keep the current dates instead of setting null
 }, [selectedMonth, selectedYear, monthCloseDates, filterMode]);
   // ── Auto-select active month ──────────────────────────────────────────────
+const calendarRange = (year, monthIndex) => {
+  const fmt = (d) =>
+    `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+  return {
+    start: fmt(new Date(year, monthIndex, 1)),
+    end: fmt(new Date(year, monthIndex + 1, 0)),
+  };
+};
+
+useEffect(() => {
+  if (closeDateLoading || autoSetDone.current) return;
+
+  const now = new Date();
+  const entries = monthCloseDates || {};
+  const entry =
+    Object.values(entries).find((e) => e.isActive) ||
+    entries[`${now.getFullYear()}-${now.getMonth() + 1}`];
+
+  if (entry?.startDate && entry?.closeDate) {
+    setSelectedYear(entry.year);
+    setSelectedMonth(entry.month - 1);
+    setStartDate(entry.startDate);
+    setCloseDate(entry.closeDate);
+  } else {
+    const { start, end } = calendarRange(selectedYear, selectedMonth);
+    setStartDate(start);
+    setCloseDate(end);
+  }
+
+  setFilterMode("month");
+  autoSetDone.current = true;
+}, [monthCloseDates, closeDateLoading]);
+
   useEffect(() => {
     if (closeDateLoading) return;
     if (autoSetDone.current) return;
@@ -1204,12 +1237,21 @@ const handleReport = () =>
                 selectedYear={selectedYear}
                 selectedMonth={selectedMonth}
                 onClose={() => setShowYearMonthPicker(false)}
-                onSelect={(m, y) => {
-                  setSelectedYear(y);
-                  setSelectedMonth(m);
-                  setFilterMode("month");
-                  setShowYearMonthPicker(false);
-                }}
+               onSelect={(m, y) => {
+  setSelectedYear(y);
+  setSelectedMonth(m);
+  setFilterMode("month");
+  const entry = monthCloseDates[`${y}-${m + 1}`];
+  if (entry?.startDate && entry?.closeDate) {
+    setStartDate(entry.startDate);
+    setCloseDate(entry.closeDate);
+  } else {
+    const { start, end } = calendarRange(y, m);
+    setStartDate(start);
+    setCloseDate(end);
+  }
+  setShowYearMonthPicker(false);
+}}
               />
             </>
           )}
