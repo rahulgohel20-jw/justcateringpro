@@ -122,6 +122,19 @@ const getEventType = (status, isEdit, isFromPO) => {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 const AddPurchase = () => {
+  const isDuplicateBatch = (list, index, batchNo) => {
+  const b = (batchNo || "").trim().toLowerCase();
+  if (!b) return false;
+  const rmId = list[index]?.rawMaterialId;
+  return list.some(
+    (it, i) =>
+      i !== index &&
+      it.rawMaterialId === rmId &&
+      (it.batchNo || "").trim().toLowerCase() === b,
+  );
+};
+
+const DUPLICATE_MSG = "Same raw material can't add with the same batch no. It already exists.";
   const intl = useIntl();
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
@@ -171,19 +184,19 @@ const focusSearchInput = useCallback(() => {
     setSearchQuery(value);
   };
 
-  const [form, setForm] = useState({
-    voucher_no: "",
-    date: "",
-    bill_no: "",
-    supplier_id: "",
-    account_name: "",
-    invoice_type: "Tax Invoice",
-    remark: "",
-    stock_type_id: "",
-    priceUpdateMaster: false,
-    grn_number: "",
-      batch_no: "",
-  });
+ const [form, setForm] = useState({
+  voucher_no: "",
+  date: "",
+  bill_no: "",
+  supplier_id: "",
+  account_name: "",
+  invoice_type: "Tax Invoice",
+  remark: "",
+  stock_type_id: "",
+  priceUpdateMaster: false,
+  grn_number: "",
+  isBatchWise: false,
+});
 
   const navigate = useNavigate();
   const [discount, setDiscount] = useState(0);
@@ -300,7 +313,9 @@ const todayStr = new Date().toISOString().split("T")[0];
       remark: editData.remarks || "",
       stock_type_id: editData.stockTypeId || "",
        priceUpdateMaster: editData.priceUpdateMaster ?? true,
-       batch_no: editData.batchNo || "",
+        isBatchWise:
+    editData.isBatchWise ??
+    (editData.details || []).some((d) => d.batchNo)
     });
     setDiscount(editData.discountper || 0);
     setAdjustment(editData.adjustamount || 0);
@@ -324,6 +339,7 @@ const todayStr = new Date().toISOString().split("T")[0];
         originalQty: d.qty || 0,
         isAddInStock: d.isAddInStock ?? true,
         expiryDate: fromApiDate(d.expiryDate),
+        batchNo: d.batchNo || "",
       })),
     );
   }, [editData]);
@@ -364,6 +380,8 @@ useEffect(() => {
         total_price: calcTotal(d.qty, price, other, cgst, sgst, igst, cess),
         originalQty: d.qty || 0,
         isAddInStock:  d.isAddInStock ?? true,
+        batchNo: "",
+expiryDate: "",
       };
     }),
   );
@@ -453,6 +471,8 @@ useEffect(() => {
       total_price: "0",
       unitId: rawItem.unitId || rawItem.unit?.id || 0,
       isAddInStock: true,
+      batchNo: "",
+expiryDate: "",
     };
     setItems((prev) => [newRow, ...prev]);
      setFocusQtyIndex(0);
@@ -497,14 +517,14 @@ const finalAmount =
   // ── Save ────────────────────────────────────────────────────────────────────
  // ── Save ────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
-    if (canUseBatch && form.batch_no.trim()) {
-  const missingExpiry = items.find((it) => !it.expiryDate);
-  if (missingExpiry) {
+   if (form.isBatchWise) {
+  const bad = items.find((it) => !it.batchNo?.trim() || !it.expiryDate);
+  if (bad) {
     Swal.fire({
       icon: "warning",
       title: "Validation",
-      text: `Expiry date is required for all items when a batch number is entered${
-        missingExpiry.item_name ? ` (missing for "${missingExpiry.item_name}")` : ""
+      text: `Batch number and expiry date are required for every item${
+        bad.item_name ? ` (missing for "${bad.item_name}")` : ""
       }.`,
       confirmButtonColor: "#3085d6",
     });
@@ -578,7 +598,7 @@ const finalAmount =
       remarks: form.remark,
       subamount: totalAmount,
       grnNumber: form.grn_number,
-      batchNo: form.batch_no.trim(),
+isBatchWise: form.isBatchWise,
       discountper:
         discountType === "percent" ? parseFloat(discount) || 0 : 0,
       discountval: discountAmount,
@@ -588,7 +608,8 @@ const finalAmount =
       stockTypeId: form.stock_type_id || 0,
       priceUpdateMaster: form.priceUpdateMaster,
       details: items.map((item) => ({
-        expiryDate: toApiDate(item.expiryDate),
+     batchNo: form.isBatchWise ? (item.batchNo || "").trim() : "",
+expiryDate: form.isBatchWise ? toApiDate(item.expiryDate) : "",
         sotPoDetailId: item.sotPoDetailId || 0,
         rawMaterialId: item.rawMaterialId || 0,
         unitId: item.unitId || 0,
@@ -614,7 +635,7 @@ const finalAmount =
       podate: form.date ? form.date.split("-").reverse().join("/") : "",
       billno: form.bill_no,
       grnNumber: form.grn_number,
-      batchNo: form.batch_no.trim(),
+     isBatchWise: form.isBatchWise,
       supplierId: form.supplier_id,
       invoicetype: form.invoice_type,
       remarks: form.remark,
@@ -627,7 +648,8 @@ const finalAmount =
       stockTypeId: form.stock_type_id || 0,
       priceUpdateMaster: form.priceUpdateMaster,
       details: items.map((item) => ({
-         expiryDate: toApiDate(item.expiryDate),
+        batchNo: form.isBatchWise ? (item.batchNo || "").trim() : "",
+expiryDate: form.isBatchWise ? toApiDate(item.expiryDate) : "",
   rawMaterialId: item.rawMaterialId || 0,
         unitId: item.unitId || 0,
         hsccode: item.hsc_sac || "",
@@ -684,18 +706,39 @@ const finalAmount =
   setSaving(false);
 }
   };
-
+const headers = [
+  { key: "sr", label: "#" },
+  { key: "stock", label: <FormattedMessage id="PURCHASE.ADD_TO_STOCK" defaultMessage="Stock" /> },
+  { key: "name", label: <FormattedMessage id="PURCHASE.ITEM_NAME" defaultMessage="Item Name" /> },
+  { key: "hsc", label: "HSC" },
+  { key: "cgst", label: "CGST%" },
+  { key: "sgst", label: "SGST%" },
+  { key: "igst", label: "IGST%" },
+  { key: "cess", label: "CESS%" },
+  { key: "qty", label: <FormattedMessage id="COMMON.QTY" defaultMessage="Qty" /> },
+  { key: "unit", label: <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" /> },
+  { key: "price", label: <FormattedMessage id="PURCHASE.PRICE_PER_UNIT" defaultMessage="Price" /> },
+  ...(form.isBatchWise
+    ? [
+        { key: "batch", label: "Batch No." },
+        { key: "expiry", label: "Expiry" },
+      ]
+    : []),
+  { key: "other", label: <FormattedMessage id="PURCHASE.OTHER_CHARGES" defaultMessage="Other ₹" /> },
+  { key: "gst", label: <FormattedMessage id="PURCHASE.GST_AMOUNT" defaultMessage="GST" /> },
+  { key: "total", label: <FormattedMessage id="COMMON.TOTAL" defaultMessage="Total" /> },
+  { key: "del", label: "" },
+];
   const fieldClass =
     "w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all";
   const labelClass =
     "text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5";
 
   return (
-    <div className="min-h-screen p-6 font-sans">
+    <div className="min-h-screen w-full overflow-x-hidden p-6 font-sans">
       <div className="mx-auto space-y-5">
         {/* ── Purchase Information Card ── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-visible">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+<div className="min-w-0 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-visible">          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-green-700">
                 <FileText size={17} className="text-white" />
@@ -940,23 +983,31 @@ const finalAmount =
 {canUseBatch && (
   <div>
     <label className={labelClass}>
-      <Hash size={16} /> Batch No.
+      <Hash size={16} /> Batch Wise
     </label>
-    <input
-      name="batch_no"
-      value={form.batch_no}
-      onChange={(e) => setForm((p) => ({ ...p, batch_no: e.target.value }))}
-      placeholder="Enter batch number"
-      className={fieldClass}
-    />
+    <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/60 h-[38px]">
+      <span className="text-xs text-slate-500 leading-snug">
+        {isEdit ? "Cannot be changed while editing" : "Track batch no. & expiry per item"}
+      </span>
+      <Switch
+        size="small"
+        checked={form.isBatchWise}
+        disabled={isEdit}
+        onChange={(checked) => {
+          setForm((p) => ({ ...p, isBatchWise: checked }));
+          if (!checked) {
+            setItems((prev) => prev.map((it) => ({ ...it, batchNo: "", expiryDate: "" })));
+          }
+        }}
+      />
+    </div>
   </div>
 )}
           </div>
         </div>
 
         {/* ── Purchase Details Card ── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+<div className="min-w-0 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary">
                 <ShoppingCart size={17} className="text-white" />
@@ -1059,34 +1110,16 @@ const finalAmount =
 
           {/* ── Table ── */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+<table className="w-full  text-sm">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                 {[
-  <FormattedMessage id="COMMON.SR_NO" defaultMessage="#" />,
-  <FormattedMessage id="PURCHASE.ADD_TO_STOCK" defaultMessage="Add to Stock" />,
-  <FormattedMessage id="PURCHASE.ITEM_NAME" defaultMessage="Item Name" />,
-  "HSC/SAC",
-  "CGST%",
-  "SGST%",
-  "IGST%",
-  "CESS%",
-  <FormattedMessage id="COMMON.QTY" defaultMessage="Qty" />,
-  <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />,
-  <FormattedMessage id="PURCHASE.PRICE_PER_UNIT" defaultMessage="Price/Unit" />,
-    <FormattedMessage id="PURCHASE.PRICE_PER_UNIT" defaultMessage="Expire Date" />,
-  <FormattedMessage id="PURCHASE.OTHER_CHARGES" defaultMessage="Other ₹" />,
-  <FormattedMessage id="PURCHASE.GST_AMOUNT" defaultMessage="GST Amt" />,
-  <FormattedMessage id="COMMON.TOTAL" defaultMessage="Total" />,
-  
-  "",
-].map((h) => (
-  <th key={h} className="px-3 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
-    {h}
-  </th>
-))}
-                </tr>
-              </thead>
+  <tr className="bg-slate-50 border-b border-slate-100">
+    {headers.map((h) => (
+      <th key={h.key} className="px-3 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+        {h.label}
+      </th>
+    ))}
+  </tr>
+</thead>
               <tbody>
                 {items.length === 0 ? (
                   <tr>
@@ -1242,21 +1275,46 @@ const finalAmount =
     }`}
   />
 </td>
-{/* Expiry Date */}
-{canUseBatch && (
-  <td className="px-1 py-2 w-36">
-    <input
-      type="date"
-      value={item.expiryDate || ""}
-      onChange={(e) => updateItem(i, "expiryDate", e.target.value)}
-      className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
-      ${
-        form.batch_no.trim() && !item.expiryDate
-          ? "border-red-300 bg-red-50 text-red-700 focus:border-red-400 focus:ring-red-300"
-          : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"
-      }`}
-    />
-  </td>
+{form.isBatchWise && (
+  <>
+    <td className="px-1 py-2 w-32">
+      <input
+        type="text"
+        value={item.batchNo || ""}
+        disabled={isEdit}
+     onChange={(e) => updateItem(i, "batchNo", e.target.value)}
+onBlur={(e) => {
+  if (isDuplicateBatch(items, i, e.target.value)) {
+    Swal.fire({
+      icon: "warning",
+      title: "Duplicate",
+      text: DUPLICATE_MSG,
+      confirmButtonColor: "#3085d6",
+    });
+    updateItem(i, "batchNo", ""); // clear the duplicate batch
+  }
+}}
+placeholder="Batch no."
+        className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
+        ${isEdit
+          ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+          : !item.batchNo
+            ? "border-red-300 bg-red-50 text-red-700 placeholder-red-300 focus:ring-red-300"
+            : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"}`}
+      />
+    </td>
+    <td className="px-1 py-2 w-36">
+      <input
+        type="date"
+        value={item.expiryDate || ""}
+        onChange={(e) => updateItem(i, "expiryDate", e.target.value)}
+        className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
+        ${!item.expiryDate
+          ? "border-red-300 bg-red-50 text-red-700 focus:ring-red-300"
+          : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"}`}
+      />
+    </td>
+  </>
 )}
 
                         {/* Other Charges */}

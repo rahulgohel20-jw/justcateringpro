@@ -14,9 +14,11 @@ import {
   ShoppingCart,
   Search,
   Activity,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
-import { Select } from "antd";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { Select, Switch } from "antd";
+import { useEffect, useState, useRef, useCallback, Fragment } from "react";
 import { FormattedMessage } from "react-intl";
 import {
   GetStockTypeByUserId,
@@ -30,6 +32,8 @@ import {
   GetMaterialByCrcode,
   GetAllStorePOCode,
   GetByPoCode,
+  getAllRawMaterialByUserId,
+  addOrUpdateBatchWisestore
 } from "@/services/apiServices";
 import { useLocation, useNavigate } from "react-router";
 import Swal from "sweetalert2";
@@ -346,6 +350,7 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
     const navigate = useNavigate();
     const userId = localStorage.getItem("userId");
     const BATCH_WISE_USER_ID = [233 , 376 , 3] ; //amoncar
+    const KITCHEN_DEFAULT_USER_IDS = [233]; // user IDs that should get the first kitchen auto-selected
 const canUseBatchMode =  BATCH_WISE_USER_ID.find((id) => id === Number(userId));
     const authStorage = JSON.parse(localStorage.getItem("auth-storage") || "{}");
     const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
