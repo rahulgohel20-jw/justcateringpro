@@ -35,7 +35,7 @@
   import AddContactName from "../../master/MenuItemMaster/components/AddContactName";
   import Swal from "sweetalert2";
   import AddRawMaterial from "../../../partials/modals/add-raw-material/AddRawMaterial";
-  import { Select, Switch } from "antd";
+  import { AutoComplete, Select, Switch } from "antd";
   import { usePermission } from "../../../hooks/usePermission";
   import { useStockTypePermission } from "../../../hooks/useStockTypePermission";
 
@@ -484,6 +484,7 @@ if (rawMaterialId && items.some((it) => it.rawMaterialId === rawMaterialId)) {
         isAddInStock: true,
         batchNo: "",
   expiryDate: "",
+    batches: rawItem.batches || [],
       };
       setItems((prev) => [newRow, ...prev]);
       setFocusQtyIndex(0);
@@ -1006,7 +1007,7 @@ if (rawMaterialId && items.some((it) => it.rawMaterialId === rawMaterialId)) {
       </label>
       <div className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/60 h-[38px]">
         <span className="text-xs text-slate-500 leading-snug">
-          {isEdit ? "Cannot be changed while editing" : "Track batch no. & expiry per item"}
+          {isEdit ? "Cannot be changed while editing" : " batch no. & expiry per item"}
         </span>
         <Switch
           size="small"
@@ -1295,46 +1296,46 @@ if (rawMaterialId && items.some((it) => it.rawMaterialId === rawMaterialId)) {
     />
   </td>
   {form.isBatchWise && (
-    <>
-      <td className="px-1 py-2 w-32">
-        <input
-          type="text"
-          value={item.batchNo || ""}
-          disabled={isEdit}
-      onChange={(e) => updateItem(i, "batchNo", e.target.value)}
-  onBlur={(e) => {
-    if (isDuplicateBatch(items, i, e.target.value)) {
-      Swal.fire({
-        icon: "warning",
-        title: "Duplicate",
-        text: DUPLICATE_MSG,
-        confirmButtonColor: "#3085d6",
-      });
-      updateItem(i, "batchNo", ""); // clear the duplicate batch
-    }
-  }}
-  placeholder="Batch no."
-          className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
-          ${isEdit
-            ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
-            : !item.batchNo
-              ? "border-red-300 bg-red-50 text-red-700 placeholder-red-300 focus:ring-red-300"
-              : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"}`}
-        />
-      </td>
-      <td className="px-1 py-2 w-36">
-        <input
-          type="date"
-          value={item.expiryDate || ""}
-          onChange={(e) => updateItem(i, "expiryDate", e.target.value)}
-          className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
-          ${!item.expiryDate
-            ? "border-red-300 bg-red-50 text-red-700 focus:ring-red-300"
-            : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"}`}
-        />
-      </td>
-    </>
-  )}
+  <>
+    <td className="px-1 py-2 w-40">
+      <AutoComplete
+        value={item.batchNo || ""}
+        disabled={isEdit}
+        placeholder="Select / type batch"
+        style={{ width: "100%" }}
+        status={!isEdit && !item.batchNo ? "error" : undefined}
+        popupMatchSelectWidth={false}
+        filterOption={false}   // always show ALL batches when clicked
+        options={(item.batches || []).map((b) => ({
+          value: b.batchNo,
+          label: (
+            <div className="flex items-center justify-between gap-4">
+              <span className="font-semibold">{b.batchNo}</span>
+              <span className="text-xs text-slate-400">Exp: {b.expiryDate}</span>
+            </div>
+          ),
+        }))}
+        onSelect={(val) => {
+          const picked = (item.batches || []).find((b) => b.batchNo === val);
+          updateItem(i, "batchNo", val);
+          updateItem(i, "expiryDate", picked ? fromApiDate(picked.expiryDate) : "");
+        }}
+        onChange={(val) => updateItem(i, "batchNo", val)}   // typing a new batch
+      />
+    </td>
+    <td className="px-1 py-2 w-36">
+      <input
+        type="date"
+        value={item.expiryDate || ""}
+        onChange={(e) => updateItem(i, "expiryDate", e.target.value)}
+        className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
+        ${!item.expiryDate
+          ? "border-red-300 bg-red-50 text-red-700 focus:ring-red-300"
+          : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"}`}
+      />
+    </td>
+  </>
+)}
 
                           {/* Other Charges */}
                           <td className="px-1 py-2 w-24">
