@@ -19,6 +19,7 @@ import {
   getpriceininfunctionadd,
   UpdateEventPax,
   Translateapi,
+  deleteFunction,
 } from "@/services/apiServices";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -296,6 +297,7 @@ const [notesModalIndex, setNotesModalIndex] = useState(null);
 const [banquetNotesModal, setBanquetNotesModal] = useState({ open: false, index: null });
 const currentUserId = localStorage.getItem("userId");
 const CAN_EDIT_RATE_WITH_PACKAGE = ["356", "757"].includes(String(currentUserId));
+const deletedAnyRef = useRef(false);
 
 
 
@@ -646,8 +648,101 @@ const handleBanquetNotesSave = (val) => {
 
   const handleAddRow = () => setRows((prev) => [...prev, createEmptyRow()]);
 
-  const handleRemoveRow = (index) => setRows((prev) => prev.filter((_, i) => i !== index));
+const handleRemoveRow = async (index) => {
+  const rowToRemove = rows[index];
+  if (!rowToRemove) return;
 
+  const removeFromState = () =>
+    setRows((prev) => prev.filter((r) => r._rowId !== rowToRemove._rowId));
+
+  const hasEventFuncId = rowToRemove.eventFuncId && rowToRemove.eventFuncId !== 0;
+
+  // New, unsaved row: just remove it locally
+  if (!hasEventFuncId) {
+    removeFromState();
+    return;
+  }
+
+  // Existing row: confirm, then call the delete API
+  const result = await Swal.fire({
+    title: "Are you sure?",
+    text: "Do you want to delete this function?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#005BA8",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Yes, delete it!",
+    cancelButtonText: "Cancel",
+    background: "#f5faff",
+    color: "#003f73",
+    customClass: {
+      popup: "rounded-2xl shadow-xl",
+      title: "text-2xl font-bold",
+      confirmButton: "px-6 py-2 text-white font-semibold rounded-lg",
+      cancelButton: "px-6 py-2 text-white font-semibold rounded-lg",
+    },
+  });
+  if (!result.isConfirmed) return;
+
+  try {
+    const response = await deleteFunction(rowToRemove.eventFuncId);
+    if (
+      response?.data?.msg?.toLowerCase().includes("success") ||
+      response?.data?.status === 200 ||
+      response?.status === 200
+    ) {
+      removeFromState();
+     deletedAnyRef.current = true;
+      Swal.fire({
+        title: "Deleted!",
+        text: "Function deleted successfully.",
+        icon: "success",
+        confirmButtonColor: "#005BA8",
+        background: "#f5faff",
+        color: "#003f73",
+        timer: 2000,
+        showConfirmButton: false,
+        customClass: { popup: "rounded-2xl shadow-xl" },
+      });
+    } else {
+      Swal.fire({
+        title: "Delete Failed!",
+        text: response?.data?.msg || "Failed to delete.",
+        icon: "error",
+        confirmButtonColor: "#005BA8",
+        background: "#f5faff",
+        color: "#003f73",
+        customClass: { popup: "rounded-2xl shadow-xl" },
+      });
+    }
+  } catch (err) {
+    console.error("Error deleting function:", err);
+    let errorMessage = "An error occurred.";
+    if (err.code === "ERR_NETWORK") errorMessage = "Network error.";
+    else if (err.response)
+      errorMessage = err.response?.data?.msg || `Server error: ${err.response.status}`;
+    else if (err.message) errorMessage = err.message;
+
+    Swal.fire({
+      title: "Delete Failed!",
+      text: errorMessage,
+      icon: "error",
+      confirmButtonColor: "#005BA8",
+      background: "#f5faff",
+      color: "#003f73",
+      customClass: { popup: "rounded-2xl shadow-xl" },
+    });
+  }
+};
+
+
+const handleClose = () => {
+  if (deletedAnyRef.current) {
+    deletedAnyRef.current = false;
+    onRefreshEvent?.();
+  }
+  onClose();
+};
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -682,7 +777,7 @@ const handleBanquetNotesSave = (val) => {
           banquentNotes: f.banquetNotes || "",
         };
       });
-
+      deletedAnyRef.current = false;
       await UpdateEventPax(eventId, payload);
       onRefreshEvent?.();
       onClose();
@@ -710,13 +805,12 @@ const handleBanquetNotesSave = (val) => {
 
   return (
     <CustomModal
-      open={isOpen}
-      onClose={onClose}
+       open={isOpen} onClose={handleClose}
       title="Function Details"
       width={1300}
       footer={[
         <div key="footer" className="flex gap-2 justify-end">
-          <Button onClick={onClose} className="bg-danger text-white" disabled={saving}>
+          <Button onClick={handleClose} className="bg-danger text-white" disabled={saving}>
             Close
           </Button>
           <Button onClick={handleSave} className="bg-primary text-white" loading={saving} disabled={loading}>
@@ -907,6 +1001,7 @@ const handleBanquetNotesSave = (val) => {
     )}
     <Tooltip title="Remove">
       <button
+      type="button"
         onClick={() => handleRemoveRow(index)}
         disabled={rows.length === 1}
         className={`btn btn-sm btn-icon btn-clear btn-danger ${rows.length === 1 ? "opacity-50 cursor-not-allowed" : ""}`}

@@ -1,48 +1,45 @@
-  import {
-    ArrowLeft,
-    Plus,
-    Save,
-    X,
-    Package,
-    FileText,
-    Hash,
-    Calendar,
-    User,
-    Tag,
-    AlignLeft,
-    Trash2,
-    ShoppingCart,
-    Search,
-    Activity,
-    ChevronDown,
-    ChevronUp,
-  } from "lucide-react";
-  import { Select, Switch } from "antd";
-  import { Fragment, useEffect, useState, useRef, useCallback } from "react";
-  import { FormattedMessage } from "react-intl";
-  import {
-    GetStockTypeByUserId,
-    GetAllRawMaterial,
-    getpartywitheventforstock,
-    AddStorePO as AddStorePOApi,
-    SearchRawMaterial,
-    AddLogs,
-    StatusStorePO,
-    GetAllCrCodes,
-    GetMaterialByCrcode,
-    GetAllStorePOCode,
-    GetByPoCode,
-    addOrUpdateBatchWisestore,
-    getAllRawMaterialByUserId,
-  } from "@/services/apiServices";
-  import { useLocation, useNavigate } from "react-router";
-  import Swal from "sweetalert2";
-  import AddContactName from "../../master/MenuItemMaster/components/AddContactName";
-  import AddRawMaterial from "../../../partials/modals/add-raw-material/AddRawMaterial";
-  import DatePicker from "react-datepicker";
-  import { usePermission } from "../../../hooks/usePermission";
-  import { useStockTypePermission } from "../../../hooks/useStockTypePermission";
+import {
+  ArrowLeft,
+  Plus,
+  Save,
+  X,
+  Package,
+  FileText,
+  Hash,
+  Calendar,
+  User,
+  Tag,
+  AlignLeft,
+  Trash2,
+  ShoppingCart,
+  Search,
+  Activity,
+} from "lucide-react";
+import { Select } from "antd";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { FormattedMessage } from "react-intl";
+import {
+  GetStockTypeByUserId,
+  GetAllRawMaterial,
+  getpartywitheventforstock,
+  AddStorePO as AddStorePOApi,
+  SearchRawMaterial,
+  AddLogs,
+  StatusStorePO,
+  GetAllCrCodes,
+  GetMaterialByCrcode,
+  GetAllStorePOCode,
+  GetByPoCode,
+} from "@/services/apiServices";
+import { useLocation, useNavigate } from "react-router";
+import Swal from "sweetalert2";
+import AddContactName from "../../master/MenuItemMaster/components/AddContactName";
+import AddRawMaterial from "../../../partials/modals/add-raw-material/AddRawMaterial";
+import DatePicker from "react-datepicker";
+import { usePermission } from "../../../hooks/usePermission";
+import { useStockTypePermission } from "../../../hooks/useStockTypePermission";
 
+const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
   // ─────────────────────────────────────────────
   // Status options
   // ─────────────────────────────────────────────
@@ -550,7 +547,8 @@ const canUseBatchMode =  BATCH_WISE_USER_ID.find((id) => id === Number(userId));
   }
   }, [editData, supplier, godownTypes, kitchenTypes]);
 
-    const fetchSupplier = async () => {
+  
+  const fetchSupplier = async () => {
       try {
         const res = await getpartywitheventforstock(userId);
         setSupplier(res?.data?.data || []);
@@ -763,7 +761,16 @@ if (isBatchNoMode) setExpandedItemIndex(0);
 },
 [items, isBatchNoMode],
 );
+// Auto-select first kitchen for specific users (new entries only)
+useEffect(() => {
+  if (isEdit) return;
+  if (!KITCHEN_DEFAULT_USER_IDS.includes(Number(userId))) return;
+  if (kitchenTypes.length === 0) return;
 
+  setSelectedKitchenType((prev) =>
+    prev !== undefined ? prev : getTypeValue(kitchenTypes[0]),
+  );
+}, [kitchenTypes, isEdit, userId]);
 const updateQty = useCallback((index, value) => {
       if (!/^\d*\.?\d*$/.test(value)) return;
 
@@ -1310,10 +1317,10 @@ try {
         onChange={(value) => {
           setSelectedKitchenType(value);
         }}
-        options={kitchenTypes.map((t) => ({
-      label: t.nameEnglish,
-      value: t.stocktypeid ?? t.stockTypeId ?? t.id,
-    }))}
+      options={kitchenTypes.map((t) => ({
+    label: t.nameEnglish,
+    value: getTypeValue(t),
+  }))}
         filterOption={(input, option) =>
           (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
         }

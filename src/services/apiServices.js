@@ -1092,10 +1092,9 @@ export const UpdateCustomPackageStatusapi = (id, isActive) => {
   return PUT(`/custompackage/updatestatus?id=${id}&isActive=${isActive}`);
 };
 
-export const GetInvoiceByEventId = (eventId) => {
-  return GET(`/invoice/getbyeventid?eventId=${eventId}`);
+export const GetInvoiceByEventId = (eventId, isDecore = false) => {
+  return GET(`/invoice/getbyeventid?eventId=${eventId}&isDecore=${isDecore}`);
 };
-
 export const GetSendInvoice = (eventId, lang, userId) => {
   return GET(
     `/sendFile/sendQuotation?eventId=${eventId}&lang=${lang}&userId=${userId}`,
@@ -2938,10 +2937,8 @@ export const reporteexcelforvendorparty = (type, userId) => {
 };
 
 
-
-
-export const Getgenerateusermenuitemrawmaterialexcel = (userId) => {
-  return POST(`/report/generate-user-menuitem-rawmaterial-excel?userId=${userId}`);
+export const Getgenerateusermenuitemrawmaterialexcel = (userId , data) => {
+  return POST(`/report/generate-user-menuitem-rawmaterial-excel?userId=${userId}`, data);
 };
 
 export const GetAllCrCodes = (userId) => {
@@ -3597,8 +3594,8 @@ export const IsInquiryVisible = (isVisible, userId) => {
   return PUT(`/user/isinquiryvisible?isVisible=${isVisible}&userId=${userId}`);
 };
 
-export const GeneratePurchaseDateWiseReport = (endDate, startDate, isCompanyDetails, isPrice, userId) => {
-  return POST(`/purchasereport/generate-datewise-puchase-report?endDate=${endDate}&startDate=${startDate}&isCompanyDetails=${isCompanyDetails}&isPrice=${isPrice}&userId=${userId}`);
+export const GeneratePurchaseDateWiseReport = (endDate, startDate, isCompanyDetails, isPrice, userId , supplierId) => {
+  return POST(`/purchasereport/generate-datewise-puchase-report?endDate=${endDate}&startDate=${startDate}&isCompanyDetails=${isCompanyDetails}&isPrice=${isPrice}&userId=${userId}&supplierId=${supplierId}`);
 };
 
 export const pdffordebitpaymentinaccount = (isCompanyDetails, isPayable, userId) => {
@@ -3892,8 +3889,8 @@ export const getpurchaseapprovalbyid = (purchaseRequestId) => {
 
 };
 
-export const getRawMaterialbyPurchaseRequestId = (endDate, rawMaterialCatId, startDate, page, size, rawMaterialName, purchaseRequestId, isAllData) => {
-  return GET(`/purchase-approval/getRawMaterial?endDate=${endDate}&rawMaterialCatId=${rawMaterialCatId}&startDate=${startDate}&page=${page}&size=${size}&rawMaterialName=${rawMaterialName}&purchaseRequestId=${purchaseRequestId}&isAllData=${isAllData}`);
+export const getRawMaterialbyPurchaseRequestId = (endDate, rawMaterialCatId, startDate, page, size, rawMaterialName, purchaseRequestId, isAllData , userId) => {
+  return GET(`/purchase-approval/getRawMaterial?endDate=${endDate}&rawMaterialCatId=${rawMaterialCatId}&startDate=${startDate}&page=${page}&size=${size}&rawMaterialName=${rawMaterialName}&purchaseRequestId=${purchaseRequestId}&isAllData=${isAllData}&userId=${userId}`);
 };
 
 // complate raw matt
@@ -4257,3 +4254,39 @@ export const qutationlockreport = (eventId, isDecor, isInvoice, userId) => {
 export const purchasereportvendorwise = (startDate , endDate , uerId)=> {
   return GET(`purchaseorder/purchaseReportPdf?startDate=${startDate}&endDate=${endDate}&userId=${uerId}`);
 };
+
+export const getlabourheplerpdf = ( laborHelperId , userId) => {
+  return GET(`/laborhelper/pdf?laborHelperId=${laborHelperId}&userId=${userId}`);
+};
+
+
+export const EventLaborHelperPdf = (eventFunctionId, eventId,partyId) => {
+  return POST(`/eventlaborhelper/pdf?eventFunctionId=${eventFunctionId}&eventId=${eventId}&partyId=${partyId}`);
+};
+export const eventexcelforallocation = (eventId , userId) => {
+  return GET(`/menuallocation/event-excel?eventId=${eventId}&userId=${userId}`);
+};
+
+
+export const AddNormalPO = (data) => {
+  return POST(`/normalpo/add-update`, data);
+};
+
+export const GetNormalPOById = (id ) => {
+  return GET(`/normalpo/getbyid?id=${id}`);
+};
+
+
+export const GetAllNormalPO = (id,size, page,searchName  ) => {
+  return GET(`/normalpo/getbyuser?userId=${id}&size=${size}&page=${page}&searchName=${encodeURIComponent(searchName)}`);
+};
+
+
+export const DeleteNormalPO = (id) => {
+  return DELETE(`/normalpo/delete/${id}`);
+};
+
+
+export const DeleteNormalPODetails = (detailsId) => {
+  return DELETE(`/normalpo/deletedetails/${detailsId}`);
+};``

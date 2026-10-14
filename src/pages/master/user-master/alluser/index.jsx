@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import AssignTheme from "../theme";
-import { message, Spin, Input, Select } from "antd";
+import { message, Spin, Input, Select, Modal, Switch, Button } from "antd";
 import { Link, useNavigate } from "react-router-dom";
 import { Container } from "@/components/container";
 import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
@@ -38,7 +38,33 @@ const AllUser = () => {
   const [extendPayload, setExtendPayload] = useState(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeUserId, setUpgradeUserId] = useState(null);
-  const [excelLoadingId, setExcelLoadingId] = useState(null);
+const [excelModalOpen, setExcelModalOpen] = useState(false);
+const [excelUserId, setExcelUserId] = useState(null);
+const [excelLoading, setExcelLoading] = useState(false);
+
+const EXCEL_OPTION_LABELS = [
+  { key: "isCaptainReceipe", label: "Captain Recipe" },
+  { key: "isCaptainReceipeRawMaterial", label: "Captain Recipe Raw Material" },
+  { key: "isMenuCategory", label: "Menu Category" },
+  { key: "isMenuItem", label: "Menu Item" },
+  { key: "isMenuItemRawMaterial", label: "Menu Item Raw Material" },
+  { key: "isRawMaterial", label: "Raw Material" },
+  { key: "isRawMaterialCat", label: "Raw Material Category" },
+  { key: "isUnit", label: "Unit" },
+];
+
+const ALL_ON = {
+  isCaptainReceipe: true,
+  isCaptainReceipeRawMaterial: true,
+  isMenuCategory: true,
+  isMenuItem: true,
+  isMenuItemRawMaterial: true,
+  isRawMaterial: true,
+  isRawMaterialCat: true,
+  isUnit: true,
+};
+
+const [excelOptions, setExcelOptions] = useState(ALL_ON);
   const formatUsers = (users) => {
     return users
       .sort((a, b) => b.id - a.id)
@@ -180,30 +206,67 @@ const AllUser = () => {
     setSelectedAssignRow(rowData);
     setIsAssignModalOpen(true);
   };
-  // Add this handler inside the component (alongside other handlers)
-  const handleExcelDownload = async (userId) => {
-    try {
-      setExcelLoadingId(userId); // ← start loader
-      const response = await Getgenerateusermenuitemrawmaterialexcel(userId);
+// opens the modal for a member (all toggles on)
+const handleExcelDownload = (userId) => {
+  setExcelUserId(userId);
+  setExcelOptions(ALL_ON);
+  setExcelModalOpen(true);
+};
 
-      if (response?.data?.success && response?.data?.report_path) {
-        const link = document.createElement("a");
-        link.href = response.data.report_path;
-        link.setAttribute("download", "");
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        message.success("Excel downloaded successfully!");
-      } else {
-        message.error(response?.data?.msg || "Failed to generate Excel.");
-      }
-    } catch (error) {
-      console.error("Excel download error:", error);
-      message.error("An error occurred while downloading Excel.");
-    } finally {
-      setExcelLoadingId(null); // ← stop loader
+const handleGenerateExcel = async () => {
+  if (!Object.values(excelOptions).some(Boolean)) {
+    message.warning("Turn on at least one toggle.");
+    return;
+  }
+
+  try {
+    setExcelLoading(true);
+    const response = await Getgenerateusermenuitemrawmaterialexcel(
+      excelUserId,
+      excelOptions,
+    );
+    const d = response?.data;
+
+    if (d?.success === false) {
+      throw new Error(d?.msg || d?.message || "Failed to generate Excel.");
     }
-  };
+
+    const fileUrl =
+      d?.report_path ||
+      d?.data?.report_path ||
+      d?.excel_path ||
+      d?.data?.excel_path ||
+      d?.file_path ||
+      d?.data?.file_path ||
+      d?.url ||
+      (typeof d?.data === "string" ? d.data : null);
+
+    if (fileUrl) {
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.setAttribute("download", "");
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      message.success("Excel downloaded successfully!");
+      setExcelModalOpen(false);
+    } else {
+      console.log("Export response:", d);
+      throw new Error(d?.msg || d?.message || "No file URL returned");
+    }
+  } catch (error) {
+    console.error("Excel download error:", error);
+    const apiMsg =
+      error?.response?.data?.msg ||
+      error?.response?.data?.message ||
+      error?.message ||
+      "An error occurred while downloading Excel.";
+    message.error(apiMsg);
+  } finally {
+    setExcelLoading(false);
+  }
+};
   const activeCount = tableData.filter((u) => u.isActive === true).length;
   const inactiveCount = tableData.filter((u) => u.isActive === false).length;
 
@@ -295,24 +358,23 @@ const AllUser = () => {
         </div>
       ) : (
         <div className="relative -webkit-overflow-scrolling-touch">
-          <TableComponent
-            columns={columns(
-              navigate,
-              handleThemeClick,
-              handleApproveOtp,
-              handleAssignUser,
-              handleExtendClick,
-              permissions,
-              handleUpgradeModule,
-              handleExcelDownload,
-              excelLoadingId,
-            )}
-            data={filteredData}
-            paginationSize={10}
-            rowClassName={(row) =>
-              row.dueAmount > 0 ? "bg-red-100 border-l-4 border-red-600" : ""
-            }
-          />
+         <TableComponent
+  columns={columns(
+    navigate,
+    handleThemeClick,
+    handleApproveOtp,
+    handleAssignUser,
+    handleExtendClick,
+    permissions,
+    handleUpgradeModule,
+    handleExcelDownload,
+  )}
+  data={filteredData}
+  paginationSize={10}
+  rowClassName={(row) =>
+    row.dueAmount > 0 ? "bg-red-100 border-l-4 border-red-600" : ""
+  }
+/>
         </div>
       )}
 
@@ -351,6 +413,40 @@ const AllUser = () => {
         setIsModalOpen={setIsUpgradeModalOpen}
         userId={selectedThemeUserId}
       />
+      <Modal
+  title="Export Excel"
+  open={excelModalOpen}
+  onCancel={() => setExcelModalOpen(false)}
+  zIndex={10000}
+  getContainer={() => document.body}
+  centered
+  destroyOnClose
+  footer={[
+    <Button key="cancel" onClick={() => setExcelModalOpen(false)}>
+      Cancel
+    </Button>,
+    <Button
+      key="generate"
+      type="primary"
+      loading={excelLoading}
+      onClick={handleGenerateExcel}
+    >
+      Generate
+    </Button>,
+  ]}
+>
+  <div className="flex flex-col gap-4 py-2">
+    {EXCEL_OPTION_LABELS.map(({ key, label }) => (
+      <div key={key} className="flex items-center justify-between">
+        <span className="text-sm text-gray-700">{label}</span>
+        <Switch
+          checked={excelOptions[key]}
+          onChange={(v) => setExcelOptions((p) => ({ ...p, [key]: v }))}
+        />
+      </div>
+    ))}
+  </div>
+</Modal>
     </Container>
   );
 };

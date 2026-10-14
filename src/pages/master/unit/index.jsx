@@ -10,6 +10,7 @@ import {
   SearchUnit,
   updateunit,
   GetUnitById,
+  Getgenerateusermenuitemrawmaterialexcel
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -23,7 +24,7 @@ const UnitMaster = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoadingUnit, setIsLoadingUnit] = useState(false);
   const intl = useIntl();
-
+const [isExporting, setIsExporting] = useState(false);
   const [lang, setLang] = useState(localStorage.getItem("lang") || "en");
 
   useEffect(() => {
@@ -201,6 +202,58 @@ const UnitMaster = () => {
     });
   };
 
+  const handleExportExcel = async () => {
+  const payload = {
+    isCaptainReceipe: false,
+    isCaptainReceipeRawMaterial: false,
+    isMenuCategory: false,
+    isMenuItem: false,
+    isMenuItemRawMaterial: false,
+    isRawMaterial: false,
+    isRawMaterialCat: false,
+    isUnit: true, // only Unit
+  };
+
+  try {
+    setIsExporting(true);
+    const res = await Getgenerateusermenuitemrawmaterialexcel(Id, payload);
+
+    // Pick up the file URL, whatever field the API uses
+    const d = res?.data;
+    const fileUrl =
+      d?.report_path ||
+      d?.data?.report_path ||
+      d?.excel_path ||
+      d?.data?.excel_path ||
+      d?.file_path ||
+      d?.data?.file_path ||
+      d?.url ||
+      (typeof d?.data === "string" ? d.data : null);
+
+    if (fileUrl) {
+      const a = document.createElement("a");
+      a.href = fileUrl;
+      a.download = "Unit_Master.xlsx";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } else {
+      console.log("Export response:", res?.data);
+      throw new Error("No file URL returned");
+    }
+  } catch (error) {
+    console.error("Export error:", error);
+    Swal.fire({
+      title: intl.formatMessage({ id: "USER.MASTER.ERROR", defaultMessage: "Error!" }),
+      text: "Failed to export Excel.",
+      icon: "error",
+    });
+  } finally {
+    setIsExporting(false);
+  }
+};
+
   // ✅ Fetch complete unit details by ID when editing
   const handleEdit = async (event) => {
     setIsLoadingUnit(true);
@@ -336,6 +389,15 @@ const UnitMaster = () => {
               />
             </div>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+           <button
+    className="btn btn-light"
+    onClick={handleExportExcel}
+    disabled={isExporting}
+  >
+    <i className="ki-filled ki-file-down"></i>{" "}
+    {isExporting ? "Exporting..." : "Excel"}
+  </button>
 
           {permissions.add && (
             <div className="flex flex-wrap items-center gap-2">
@@ -354,6 +416,7 @@ const UnitMaster = () => {
               </button>
             </div>
           )}
+          </div>
         </div>
 
         {/* Show loading indicator */}

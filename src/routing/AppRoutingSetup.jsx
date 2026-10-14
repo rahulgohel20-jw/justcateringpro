@@ -361,6 +361,8 @@ import AddPurchaseApproveReq from "../pages/stockmanagement/PurchaseApproveReque
 import PurchaseApprovalList from "../pages/stockmanagement/PurchaseApproveRequest/PurchaseApproveList.jsx";
 import ActiveUserGuard from "../auth/ActiveUserGuard";
 import ExhibitionQuotation from "../partials/modals/calendar-event/Exhibitionquotation/Exhibitionquotation.jsx";
+import NormalPO from "../pages/stockmanagement/normal-po/Normalpo.jsx";
+import AddNormalPO from "../pages/stockmanagement/normal-po/AddNormalPO.jsx";
 
 const AppRoutingSetup = () => {
   return (
@@ -671,6 +673,11 @@ const AppRoutingSetup = () => {
           <Route
             path="/stock-management/purchase/add"
             element={<AddPurchase />}
+          />
+          <Route path="/stock-management/normal-po" element={<NormalPO />} />
+          <Route
+            path="/stock-management/normal-po/add"
+            element={<AddNormalPO />}
           />
           <Route
             path="/stock-management/purchase-return"

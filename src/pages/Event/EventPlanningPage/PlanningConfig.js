@@ -174,9 +174,10 @@
   }
 
 
-  function normaliseCategory(rawCat, fields, flatItems = [], prepMeta = {}) {
+  function normaliseCategory(rawCat, fields, flatItems = [], prepMeta = {} , masterCats = []) {
     const categoryStatus = rawCat.categoryStatus || "NORMAL"; 
-
+  const catId = Number(rawCat[fields.categoryId] ?? 0);
+    const masterCat = masterCats.find((m) => Number(m.id) === catId);
   const savedItems = rawCat[fields.selectedItemsKey] || rawCat.selectedMenuPreparationItems || rawCat.selectedItems || [];
 
   const firstFlatItem = flatItems.find(
@@ -222,7 +223,7 @@
   const catName         = originalCatName;
     const catNameHindi    = originalCatNameHindi;
     const catNameGujarati = originalCatNameGujarati;
-    const catId           = Number(rawCat[fields.categoryId]     ?? 0);
+    // const catId           = Number(rawCat[fields.categoryId]     ?? 0);
 
     const rawEnglish  = rawCat[fields.categoryNotes]          || "";
     const rawHindi    = rawCat[fields.categoryNotesHindi]      || "";
@@ -237,7 +238,10 @@
       gujarati: isPollutedGujarati ? "" : rawGujarati,
     };
 
-    const slogan = rawCat[fields.categorySlogan] || rawCat.menuSlogan || "";
+  //  const masterCat = (masterCats || []).find((m) => Number(m.id) === catId);
+
+const savedSlogan = (rawCat[fields.categorySlogan] ?? rawCat.menuSlogan ?? "").toString().trim();
+const slogan = savedSlogan || (masterCat?.menuSlogan ?? "").toString().trim();
 
     const images = {
       bgImgId:  Number(rawCat.bgImgId  ?? 0),
@@ -790,8 +794,8 @@ const multiImageMenuItemIds = Array.from(
     normaliseItem: (rawItem, isPackage) => normaliseItem(rawItem, MENU_FIELDS, isPackage),
 
     /** Normalise a category group (with nested selectedItems) into generic shape */
-    normaliseCategory: (rawCat, flatItems, prepMeta) =>
-      normaliseCategory(rawCat, MENU_FIELDS, flatItems, prepMeta),
+normaliseCategory: (rawCat, flatItems, prepMeta, masterCats) =>
+  normaliseCategory(rawCat, MENU_FIELDS, flatItems, prepMeta, masterCats),
 
     /** Build the API payload from the current internal state */
     buildPayload: buildMenuPayload,

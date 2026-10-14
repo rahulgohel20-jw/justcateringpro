@@ -22,10 +22,14 @@ function CategoryListpackage({
   const dropdownRef = useRef(null);
   const itemRefs = useRef([]);
 
-  const displayCategories = useMemo(
-    () => [{ id: "all", nameEnglish: "All" }, ...categories],
-    [categories],
-  );
+ const displayCategories = useMemo(() => {
+  const isSel = (c) => selectedCategories.has(String(c.id));
+  return [
+    { id: "all", nameEnglish: "All" },
+    ...categories.filter(isSel),   // checked first, original relative order kept
+    ...categories.filter((c) => !isSel(c)),
+  ];
+}, [categories, selectedCategories]);
 
   // ── NEW: flatten all items from selected categories for dropdown ──────
   const allSelectedItems = useMemo(() => {
@@ -116,14 +120,18 @@ function CategoryListpackage({
 
   const handleDragStart = (e, index) => { setDraggedIndex(index); e.dataTransfer.effectAllowed = "move"; };
   const handleDragOver = (e, index) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
-    const newCategories = [...categories];
-    const draggedItem = newCategories.splice(draggedIndex, 1)[0];
-    newCategories.splice(index, 0, draggedItem);
-    setDraggedIndex(index);
-    onReorderCategories(newCategories);
-  };
+  e.preventDefault();
+  if (draggedIndex === null || draggedIndex === index) return;
+
+  const isSel = (i) => selectedCategories.has(String(categories[i]?.id));
+  if (isSel(draggedIndex) !== isSel(index)) return; // different group
+
+  const newCategories = [...categories];
+  const draggedItem = newCategories.splice(draggedIndex, 1)[0];
+  newCategories.splice(index, 0, draggedItem);
+  setDraggedIndex(index);
+  onReorderCategories(newCategories);
+};
   const handleDragEnd = () => setDraggedIndex(null);
 
   const checkedCount = selectedCategories.size;
@@ -192,18 +200,22 @@ function CategoryListpackage({
                             ${isActive ? "bg-primary" : isCurrent ? "bg-primary/8" : "hover:bg-gray-50"}`}
                         >
                           {cat.id !== "all" && (
-                            <div
-                              onClick={(e) => { e.stopPropagation(); onToggleCategory?.(cat.id); }}
-                              className={`flex-shrink-0 w-3.5 h-3.5 rounded border-2 flex items-center justify-center cursor-pointer transition-all
-                                ${isSelected ? "bg-primary border-primary" : isActive ? "border-white/60 bg-white/10" : "border-gray-300 hover:border-primary"}`}
-                            >
-                              {isSelected && (
-                                <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 12 12">
-                                  <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                              )}
-                            </div>
-                          )}
+  <div
+    onMouseDown={(e) => {
+      e.preventDefault();   // keep input focus so the dropdown doesn't close
+      e.stopPropagation();  // don't trigger the row's select-and-close
+      onToggleCategory?.(cat.id);
+    }}
+    className={`flex-shrink-0 w-3.5 h-3.5 rounded border-2 flex items-center justify-center cursor-pointer transition-all
+      ${isSelected ? "bg-primary border-primary" : isActive ? "border-white/60 bg-white/10" : "border-gray-300 hover:border-primary"}`}
+  >
+    {isSelected && (
+      <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 12 12">
+        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )}
+  </div>
+)}
                           {cat.id === "all" && <div className="w-3.5 flex-shrink-0" />}
                           <span className={`flex-1 text-sm truncate ${isActive ? "text-white font-medium" : isCurrent ? "text-primary font-semibold" : "text-gray-700"}`}>
                             {cat.nameEnglish}
@@ -282,7 +294,8 @@ function CategoryListpackage({
             const isActive = selectedCategory === cat.id;
             const countEntry = categoryItemCounts[cat.id];
             const count = typeof countEntry === "object" ? countEntry?.anyItem : countEntry;
-            const realIndex = index - 1;
+          const realIndex =
+  cat.id === "all" ? -1 : categories.findIndex((c) => c.id === cat.id);
 
             return (
               <div

@@ -1256,7 +1256,9 @@ const SuperAdminMemberEdit = () => {
     placeholder="Select soft type"
     options={[
       { label: "Jcx", value: "jcx" },
+      { label: "Jcx Plus", value: "jcxplus" },
       { label: "Jcx Pro", value: "jcxpro" },
+      { label: "Jcx Pro Plus", value: "jcxproplus" },
     ]}
   />
 </div>

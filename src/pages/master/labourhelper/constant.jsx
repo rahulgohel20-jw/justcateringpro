@@ -1,7 +1,8 @@
 import { FormattedMessage } from "react-intl";
 import { Tooltip } from "antd";
+import { Printer } from "lucide-react";
 
-export const columns = (onEdit, onDelete, permissions = {}) => [
+export const columns = (onEdit, onDelete, permissions = {} , handlePrint) => [
   {
     accessorKey: "sr_no",
     header: <FormattedMessage id="COMMON.SR_NO" defaultMessage="Sr No" />,
@@ -57,6 +58,16 @@ export const columns = (onEdit, onDelete, permissions = {}) => [
             </button>
           </Tooltip>
         )}
+         {permissions.edit && (
+         <button
+    type="button"
+    title="Print"
+    className="btn btn-sm btn-icon btn-clear btn-light"
+    onClick={() => handlePrint(row.original)}
+  >
+    <Printer size={16} />
+  </button>
+         )}
       </div>
     ),
     meta: { headerClassName: "w-[10%]", cellClassName: "w-[10%]" },
