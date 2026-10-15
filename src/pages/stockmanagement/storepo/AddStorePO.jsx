@@ -41,6 +41,7 @@ import AddContactName from "../../master/MenuItemMaster/components/AddContactNam
 import AddRawMaterial from "../../../partials/modals/add-raw-material/AddRawMaterial";
 import DatePicker from "react-datepicker";
 import { usePermission } from "../../../hooks/usePermission";
+import { useModuleAccess } from "../../../hooks/useModuleAccess";
 import { useStockTypePermission } from "../../../hooks/useStockTypePermission";
 
 const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
@@ -348,10 +349,10 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
     });
 
     const navigate = useNavigate();
+    const { hasModuleAccess } = useModuleAccess();
     const userId = localStorage.getItem("userId");
-    const BATCH_WISE_USER_ID = [233 , 376 , 3] ; //amoncar
     const KITCHEN_DEFAULT_USER_IDS = [233]; // user IDs that should get the first kitchen auto-selected
-const canUseBatchMode =  BATCH_WISE_USER_ID.find((id) => id === Number(userId));
+    const canAccessbatchwise = hasModuleAccess("BatchWise Purchase");
     const authStorage = JSON.parse(localStorage.getItem("auth-storage") || "{}");
     const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
     const location = useLocation();
@@ -1143,7 +1144,7 @@ try {
 
             <div className="p-6 grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-4">
            
-             {canUseBatchMode && (
+             {canAccessbatchwise && (
   <div className="col-span-1">
     <label className={labelClass}>
       <Hash size={16} /> Batch No
@@ -1811,7 +1812,7 @@ ref={(el) => (qtyInputRefs.current[i] = el)}
             <div className="px-2">Batch Number</div>
             <div className="px-2">Unit</div>
 <div className="px-2">Available</div>
-            <div className="px-2">Return Qty</div>
+            <div className="px-2"> Qty</div>
 
             <div className="px-2">Qty</div>
             <div />

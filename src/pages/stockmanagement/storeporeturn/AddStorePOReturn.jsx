@@ -29,6 +29,7 @@ import {
 import Swal from "sweetalert2";
 import DatePicker from "react-datepicker";
 import { FormattedMessage, useIntl } from "react-intl";
+import { useModuleAccess } from "../../../hooks/useModuleAccess";
 
 const getUserEmail = () => {
   try {
@@ -121,10 +122,9 @@ const AddStorePOReturn = () => {
   const getPODetails = (data) =>
     data?.isBatchWise ? data.batchWiseDetails || [] : data?.details || [];
   const navigate = useNavigate();
+  const { hasModuleAccess } = useModuleAccess();
   const userId = localStorage.getItem("userId");
-  const currentUserId = Number(userId || 0);
-  const BATCH_ACCESS_USER_IDS = [233, 376 , 3];
-  const isBatchAccessUser = BATCH_ACCESS_USER_IDS.includes(currentUserId);
+  const canAccessbatchwise = hasModuleAccess("BatchWise Purchase");
   const isBatchWisePO = (po) => {
     if (!po) return false;
 
@@ -591,7 +591,7 @@ const AddStorePOReturn = () => {
     }
 
     const shouldUseBatchSave =
-      isBatchAccessUser &&
+      canAccessbatchwise &&
       (Array.isArray(items)
         ? items.some((item) => Boolean(item.isBatchWise))
         : false);

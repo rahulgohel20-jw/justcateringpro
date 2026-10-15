@@ -37,6 +37,7 @@
   import AddRawMaterial from "../../../partials/modals/add-raw-material/AddRawMaterial";
   import { AutoComplete, Select, Switch } from "antd";
   import { usePermission } from "../../../hooks/usePermission";
+  import { useModuleAccess } from "../../../hooks/useModuleAccess";
   import { useStockTypePermission } from "../../../hooks/useStockTypePermission";
 
   const EditableCell = ({
@@ -203,10 +204,9 @@
     const [adjustment, setAdjustment] = useState(0);
     const [transportation, setTransportation] = useState(0);
     const [saving, setSaving] = useState(false);
+    const { hasModuleAccess } = useModuleAccess();
     const userId = localStorage.getItem("userId");
-    const BATCH_WISE_USER_ID = [233 , 376 , 3]; //amoncar
-  const canUseBatch = BATCH_WISE_USER_ID.find((id) => id === Number(userId))
-  ;
+    const canAccessbatchwise = hasModuleAccess("BatchWise Purchase");
 
     const backDatePermission = usePermission("Lock Back Date Entry");
   const isBackDateLocked = backDatePermission.add || backDatePermission.edit;
@@ -509,7 +509,9 @@ if (rawMaterialId && items.some((it) => it.rawMaterialId === rawMaterialId)) {
         }),
       );
     }, []);
-
+const isExistingBatch = (item) =>
+  !!item.batchNo &&
+  (item.batches || []).some((b) => b.batchNo === item.batchNo);
     const handleDeleteItem = useCallback((index) => {
       setItems((prev) => prev.filter((_, i) => i !== index));
     }, []);
@@ -597,6 +599,21 @@ if (rawMaterialId && items.some((it) => it.rawMaterialId === rawMaterialId)) {
       icon: "warning",
       title: "Validation",
       text: "Please add at least one item.",
+      confirmButtonColor: "#3085d6",
+    });
+    return;
+  }
+
+  const zeroQtyItem = items.find((it) => {
+    const qty = parseFloat(it.qty ?? 0);
+    return Number.isNaN(qty) || qty <= 0;
+  });
+
+  if (zeroQtyItem) {
+    Swal.fire({
+      icon: "warning",
+      title: "Validation",
+      text: `"${zeroQtyItem.item_name || "Selected raw material"}" qty cannot be 0 or less. Please enter a valid quantity.`,
       confirmButtonColor: "#3085d6",
     });
     return;
@@ -1000,7 +1017,7 @@ if (rawMaterialId && items.some((it) => it.rawMaterialId === rawMaterialId)) {
       className={fieldClass}
     />
   </div>
-  {canUseBatch && (
+  {canAccessbatchwise && (
     <div>
       <label className={labelClass}>
         <Hash size={16} /> Batch Wise
@@ -1301,11 +1318,12 @@ if (rawMaterialId && items.some((it) => it.rawMaterialId === rawMaterialId)) {
       <AutoComplete
         value={item.batchNo || ""}
         disabled={isEdit}
+        allowClear
         placeholder="Select / type batch"
         style={{ width: "100%" }}
         status={!isEdit && !item.batchNo ? "error" : undefined}
         popupMatchSelectWidth={false}
-        filterOption={false}   // always show ALL batches when clicked
+        filterOption={false}
         options={(item.batches || []).map((b) => ({
           value: b.batchNo,
           label: (
@@ -1320,18 +1338,25 @@ if (rawMaterialId && items.some((it) => it.rawMaterialId === rawMaterialId)) {
           updateItem(i, "batchNo", val);
           updateItem(i, "expiryDate", picked ? fromApiDate(picked.expiryDate) : "");
         }}
-        onChange={(val) => updateItem(i, "batchNo", val)}   // typing a new batch
+        onChange={(val) => updateItem(i, "batchNo", val || "")}
+        onClear={() => {
+          updateItem(i, "batchNo", "");
+          updateItem(i, "expiryDate", "");
+        }}
       />
     </td>
     <td className="px-1 py-2 w-36">
       <input
         type="date"
         value={item.expiryDate || ""}
+        disabled={isEdit || isExistingBatch(item)}
         onChange={(e) => updateItem(i, "expiryDate", e.target.value)}
         className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
-        ${!item.expiryDate
-          ? "border-red-300 bg-red-50 text-red-700 focus:ring-red-300"
-          : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"}`}
+        ${isEdit || isExistingBatch(item)
+          ? "border-slate-200 bg-slate-100 text-slate-500 cursor-not-allowed"
+          : !item.expiryDate
+            ? "border-red-300 bg-red-50 text-red-700 focus:ring-red-300"
+            : "border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50 focus:border-blue-400 focus:bg-white focus:ring-blue-300"}`}
       />
     </td>
   </>
