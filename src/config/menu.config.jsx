@@ -368,6 +368,19 @@ export const allMenuItems = (navigate) => {
     },
 
      {
+      title: (
+        <FormattedMessage
+          id="COMMON.NOTES_MANAGEMENT"
+          defaultMessage="Notes Management"
+        />
+      ),
+      icon: "text-lg ki-filled ki-note-2 text-primary", 
+      path: "/master/notes-management",
+      pageName: "Notes Management",
+      moduleName: "Notes Management",
+    },
+
+     {
           title: (
             <FormattedMessage
               id="COMMON.GUEST_MASTER"

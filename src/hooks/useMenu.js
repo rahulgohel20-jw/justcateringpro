@@ -22,7 +22,7 @@ const HEADER_OWNED_TITLES = [
 ];
 
 const applyUpgradedModules = (menuItems, upgradedModules, currentUser) => {
-  const GATED_MODULES = ["Account", "Stock", "CRM", "AI Menu", "Menu Share Link", "Banquet" , "Captain Recipe" , "Assign Manager", "Food Taste Festival", "Event Flow", "Decor", "Menu Extra Features" , "kyc" , "followup" , "Security Deposit" , "Purchase Approve" , "Guest Signature" , "Exhibition Quotation" , "Generate with Ai Solgan" , "Generate multiple invoices", "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Selection" , "Bank Selection Quotaion"];
+  const GATED_MODULES = ["Account", "Stock", "CRM", "AI Menu", "Menu Share Link", "Banquet" , "Captain Recipe" , "Assign Manager", "Food Taste Festival", "Event Flow", "Decor", "Menu Extra Features" , "kyc" , "followup" , "Security Deposit" , "Purchase Approve" , "Guest Signature" , "Exhibition Quotation" , "Generate with Ai Solgan" , "Generate multiple invoices", "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Selection" , "Bank Selection Quotaion","Notes Management"];
 
   const modules =
     upgradedModules?.length > 0
@@ -108,7 +108,7 @@ export const useMenu = () => {
     const isSuperSystem = roleId === 1 || clientId === 1;
     const isVisible = currentUser?.isVisible ?? true;
       const authStorage = JSON.parse(localStorage.getItem("auth-storage") || "{}");
-const isHeaderOwned = ["jcxpro", "justbanq"].includes(authStorage?.state?.user?.softType);
+const isHeaderOwned = ["jcxproo", "justbanq"].includes(authStorage?.state?.user?.softType);
 // const isHeaderOwned = ["jcx"].includes(authStorage?.state?.user?.softType);
     let baseMenu;
     if (isRecipeModule) {

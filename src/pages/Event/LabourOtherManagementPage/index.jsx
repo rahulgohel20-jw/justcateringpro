@@ -66,6 +66,12 @@ import FunctionCard from "../EventPlanningPage/components/FunctionCard";
 dayjs.extend(customParseFormat);
 
 const LABOUR_TYPE = "labour";
+const ALLOWED_CONTACT_TYPES = [
+  "labour",
+  "laundry",
+  "transportation",
+  "staff & indirect cost",
+];
 const CATEGORIES = ["Labour"];
 const SHIFTS = [];
 
@@ -841,13 +847,12 @@ const handleWebWhatsAppClick = useCallback(
 
       const allCategories = res?.data?.data?.["Contact Category Details"] || [];
 
-      const labour = allCategories.filter((cat) => {
-        const typeName = cat?.contactType?.nameEnglish?.trim()?.toLowerCase();
+     const labour = allCategories.filter((cat) => {
+  const typeName = cat?.contactType?.nameEnglish?.trim()?.toLowerCase();
+  return ALLOWED_CONTACT_TYPES.includes(typeName);
+});
 
-        return typeName === LABOUR_TYPE;
-      });
-
-      setLabourCategories(labour);
+setLabourCategories(labour);
     } catch (error) {
       console.error("❌ Error fetching contact categories:", error);
     }
@@ -1554,10 +1559,10 @@ const handleSaveNotes = useCallback(
   }
   const handleAddLabourType = async (newCategory) => {
     const category = {
-      id: newCategory.id,
-      nameEnglish: newCategory.nameEnglish,
-      contactType: { nameEnglish: LABOUR_TYPE },
-    };
+  id: newCategory.id,
+  nameEnglish: newCategory.nameEnglish,
+  contactType: newCategory.contactType || { nameEnglish: LABOUR_TYPE },
+};
 
     setLabourCategories((prev) => [...prev, category]);
 

@@ -119,7 +119,7 @@ const OtherInfoStep = ({ formData, setFormData, onInputChange, errors, eventStar
  const isPro = useMemo(() => {
   try {
     const auth = JSON.parse(localStorage.getItem("auth-storage"));
-    return ["jcxpro", "justbanq"].includes(auth?.state?.user?.softType); 
+    return ["jcxproo", "justbanq"].includes(auth?.state?.user?.softType); 
     // return ["jcx"].includes(auth?.state?.user?.softType);
   } catch {
     return false;
