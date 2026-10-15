@@ -192,11 +192,13 @@ const handleContactChange = (menuIndex, allocationIndex, vendorId) => {
         return selectedItems[itemKey] === true;
       });
     });
-
-  return (
-    <div className="mt-3 px-6 pb-6 overflow-x-auto">
-      <div className="border rounded-xl bg-white overflow-hidden">
-        <table className="w-full border-collapse text-sm">
+return (
+  <div className="mt-3 px-6 pb-6">
+    <div className="border rounded-xl bg-white overflow-x-auto">
+      <table
+        className="w-full table-fixed border-collapse text-sm"
+        style={{ minWidth: isAllFunctions ? 1804 : 1654 }}
+      >
           <colgroup>
             <col className="w-[44px]" />
             <col className="w-[60px]" />

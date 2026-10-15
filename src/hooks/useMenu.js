@@ -22,7 +22,7 @@ const HEADER_OWNED_TITLES = [
 ];
 
 const applyUpgradedModules = (menuItems, upgradedModules, currentUser) => {
-  const GATED_MODULES = ["Account", "Stock", "CRM", "AI Menu", "Menu Share Link", "Banquet" , "Captain Recipe" , "Assign Manager", "Food Taste Festival", "Event Flow", "Decor", "Menu Extra Features" , "kyc" , "followup" , "Security Deposit" , "Purchase Approve" , "Guest Signature" , "Exhibition Quotation" , "Generate with Ai Solgan" , "Generate multiple invoices", "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Selection" , "BatchWise Purchase"];
+  const GATED_MODULES = ["Account", "Stock", "CRM", "AI Menu", "Menu Share Link", "Banquet" , "Captain Recipe" , "Assign Manager", "Food Taste Festival", "Event Flow", "Decor", "Menu Extra Features" , "kyc" , "followup" , "Security Deposit" , "Purchase Approve" , "Guest Signature" , "Exhibition Quotation" , "Generate with Ai Solgan" , "Generate multiple invoices", "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Selection" , "Bank Selection Quotaion" , "BatchWise Purchase"];
 
   const modules =
     upgradedModules?.length > 0
@@ -72,6 +72,19 @@ const applyHeaderOwned = (menuItems, isVisible) => {
   });
 };
 
+const applyUserIdFilter = (menuItems, userId) =>
+  menuItems
+    .filter(
+      (item) =>
+        !item.allowedUserIds ||
+        item.allowedUserIds.map(String).includes(String(userId)),
+    )
+    .map((item) =>
+      item.children
+        ? { ...item, children: applyUserIdFilter(item.children, userId) }
+        : item,
+    );
+
 export const useMenu = () => {
   const { currentUser, loading } = useAuthContext();
   const rights = useAuthStore((state) => state.rights);
@@ -103,6 +116,8 @@ const isHeaderOwned = ["jcxpro", "justbanq"].includes(authStorage?.state?.user?.
     } else {
       baseMenu = isSuperSystem ? superAdminMenuItems : allMenuItems(navigate);
     }
+    const currentUserId = currentUser?.id ?? localStorage.getItem("userId");
+baseMenu = applyUserIdFilter(baseMenu, currentUserId)
 
     if (!plan || !isApproved) {
       return disableMenuItems(baseMenu);

@@ -213,6 +213,7 @@ import AdminReportCustomThem from "../pages/master/AdminReportCustomTheme";
 import AllReportsConfig from "../pages/super-admin/master/super-report-config";
 import RightsModule from "../pages/super-admin/master/RightsModule";
 import GodownMaster from "../pages/master/Godown-master";
+import NotesManagement from "../pages/master/Notes-Management";
 import PageMaster from "../pages/super-admin/master/pages-master";
 import ExtraPaymentMaster from "../pages/super-admin/master/ExtraPayment-master";
 import CouponMaster from "../pages/super-admin/master/Coupon-master";
@@ -363,6 +364,7 @@ import ActiveUserGuard from "../auth/ActiveUserGuard";
 import ExhibitionQuotation from "../partials/modals/calendar-event/Exhibitionquotation/Exhibitionquotation.jsx";
 import NormalPO from "../pages/stockmanagement/normal-po/Normalpo.jsx";
 import AddNormalPO from "../pages/stockmanagement/normal-po/AddNormalPO.jsx";
+import DecorProfile from "../pages/master/decorprofile/index.jsx";
 
 const AppRoutingSetup = () => {
   return (
@@ -382,7 +384,7 @@ const AppRoutingSetup = () => {
               </ProtectedRoute>
             }
           />
-
+          <Route path="/master/decorprofile" element={<DecorProfile/>}/>
           <Route path="/followup-calendar" element={<FollowUpCalendarPage />} />
           <Route path="/stock-management/accept-multiple-sot" element={<AcceptMultipleSOT />}/>
           <Route path="/master/addlabourhelper" element={<Labourhelper/>}/>
@@ -806,6 +808,7 @@ const AppRoutingSetup = () => {
           <Route path="/master/event-type" element={<EventTypeMaster />} />
           <Route path="/master/venue-type" element={<VenuetypeMaster />} />
           <Route path="/master/godown" element={<GodownMaster />} />
+          <Route path="/master/notes-management" element={<NotesManagement />} />
           <Route path="/master/unit" element={<UnitMaster />} />
           <Route path="/master/user-master" element={<AllUser />} />
           <Route path="/master/demousers" element={<DemoUsers />} />

@@ -608,7 +608,16 @@ export const allMenuItems = (navigate) => {
           path: "/master/decor-category",
           pageName: "Decor Category",
         },
-      
+       {
+          title: (
+            <FormattedMessage
+              id="DECOR_CATEGORY.MASTER"
+              defaultMessage="Decor Profile"
+            />
+          ),
+          path: "/master/decorprofile",
+          pageName: "Decor Profile",
+        },
       
 
         {
@@ -1203,6 +1212,7 @@ id="COMMON.ITEMRAWMATERIALUNITCHANGE"              defaultMessage="Item Raw Mate
           ),
           path: "/stock-management/normal-po",
           pageName: "Normal PO",
+           allowedUserIds: ["376"],
         },
 
         {

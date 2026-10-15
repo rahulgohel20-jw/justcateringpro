@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Modal } from "antd";
 import useStyle from "./style";
 
 const CustomModal = ({ open, onClose, children, footer, title, ...rest }) => {
   const classes = useStyle();
   const [shake, setShake] = useState(false);
-  const modalRef = useRef(null);
 
   const handleClose = (event, reason) => {
     if (reason === "backdropClick") {
@@ -40,31 +39,6 @@ const CustomModal = ({ open, onClose, children, footer, title, ...rest }) => {
     };
   }, [open]);
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      const target = e.target;
-
-      const isAntdPopup = [
-        ...document.querySelectorAll("[class^='ant-']"),
-      ].some((el) => el.contains(target));
-
-      if (isAntdPopup) return;
-
-      if (open && modalRef.current && !modalRef.current.contains(e.target)) {
-        setShake(true);
-        setTimeout(() => setShake(false), 300);
-      }
-    };
-
-    if (open) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [open]);
-
   return (
     <Modal
       maskClosable={false}
@@ -92,9 +66,7 @@ const CustomModal = ({ open, onClose, children, footer, title, ...rest }) => {
       open={open}
       onCancel={handleClose}
       modalRender={(modal) => (
-        <div ref={modalRef} className={shake ? classes.shake : ""}>
-          {modal}
-        </div>
+        <div className={shake ? classes.shake : ""}>{modal}</div>
       )}
       footer={footer ? <div className="pt-3">{footer}</div> : null}
       {...rest}

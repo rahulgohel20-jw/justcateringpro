@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState, useCallback, useRef } from "react";
 import { Container } from "@/components/container";
 import { Select, Button, Spin } from "antd";
 import {
-  GetAllDecorItem,
+  SearchDecorItem,
   DeleteDecorItem,
   UpdateDecorItemStatus,
   GetAllDecorCategory,
@@ -13,7 +13,53 @@ import { useIntl } from "react-intl";
 import { usePermission } from "../../../hooks/usePermission";
 import AddDecorItemModal from "../../../partials/modals/add-decor-item/AddDecorItem";
 
-const ITEMS_PER_PAGE = 100;
+const ITEMS_PER_PAGE = 10;
+
+// Pull the total record count out of whatever shape the API returns.
+// Looks for keys like totalCount / totalRecords / totalItems / total / count,
+// in response.data, response.data.data, and any pagination/meta object.
+const TOTAL_KEY = /^(total(count|records?|items?|elements|rows)?|count|recordsTotal)$/i;
+
+const findTotalIn = (obj) => {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+  for (const key of Object.keys(obj)) {
+    if (TOTAL_KEY.test(key) && obj[key] !== null && obj[key] !== "" && !isNaN(Number(obj[key]))) {
+      return Number(obj[key]);
+    }
+  }
+  return null;
+};
+
+const extractTotal = (response) => {
+  const d = response?.data;
+  const inner = d?.data;
+  const places = [
+    inner,
+    d,
+    inner?.pagination,
+    inner?.meta,
+    inner?.pageInfo,
+    d?.pagination,
+    d?.meta,
+    d?.pageInfo,
+  ];
+  for (const place of places) {
+    const found = findTotalIn(place);
+    if (found !== null) return found;
+  }
+  return null;
+};
+
+// Pull the items array out of whatever shape the API returns.
+const extractItems = (response) => {
+  const d = response?.data;
+  if (Array.isArray(d?.data?.items)) return d.data.items;
+  if (Array.isArray(d?.items)) return d.items;
+  if (Array.isArray(d?.data)) return d.data;
+  if (Array.isArray(d?.["Decore Item Details"])) return d["Decore Item Details"];
+  if (Array.isArray(d)) return d;
+  return [];
+};
 
 const DecorItem = () => {
   const permissions = usePermission("Decor Items");
@@ -21,8 +67,10 @@ const DecorItem = () => {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [totalKnown, setTotalKnown] = useState(true);
   const [tableData, setTableData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("");
   const [categoryList, setCategoryList] = useState([]);
@@ -30,6 +78,7 @@ const DecorItem = () => {
   const [selectedDecorItem, setSelectedDecorItem] = useState(null);
 
   const userId = localStorage.getItem("userId");
+  const requestId = useRef(0);
 
   /* -------------------- FETCH CATEGORIES FOR FILTER -------------------- */
   const fetchCategoryList = async () => {
@@ -46,112 +95,88 @@ const DecorItem = () => {
     }
   };
 
-  /* -------------------- FETCH ITEMS -------------------- */
-  const fetchItems = useCallback(
-    async (page, search, category) => {
-      setLoading(true);
-      try {
-        const response = await GetAllDecorItem(userId);
+  /* -------------------- FETCH ITEMS (server-side page / search / category) -------------------- */
+  const fetchItems = useCallback(async () => {
+    const thisRequest = ++requestId.current;
+    setLoading(true);
+    try {
+      const response = await SearchDecorItem({
+        userId,
+        page: currentPage,
+        size: ITEMS_PER_PAGE,
+        itemName: debouncedSearch,
+        categoryId: categoryFilter,
+      });
 
-        console.log("DecorItem API response:", response); // 🔍 debug
+      // Ignore stale responses (e.g. user typed again before this one returned)
+      if (thisRequest !== requestId.current) return;
 
-        // Try all possible response shapes
-        let allItems = [];
+      const items = extractItems(response);
 
-        if (response?.data?.data?.items) {
-          // axios: response.data.data.items
-          allItems = response.data.data.items;
-        } else if (response?.data?.items) {
-          allItems = response.data.items;
-        } else if (response?.data?.data && Array.isArray(response.data.data)) {
-          allItems = response.data.data;
-        } else if (response?.data?.["Decore Item Details"]) {
-          allItems = response.data["Decore Item Details"];
-        } else if (Array.isArray(response?.data)) {
-          allItems = response.data;
-        }
-
-        console.log("Extracted items:", allItems.length); // 🔍 debug
-
-        // Client-side filtering
-        if (search) {
-          const q = search.toLowerCase();
-          allItems = allItems.filter(
-            (item) =>
-              (item.nameEnglish || "").toLowerCase().includes(q) ||
-              (item.nameHindi || "").toLowerCase().includes(q) ||
-              (item.nameGujarati || "").toLowerCase().includes(q),
-          );
-        }
-
-        if (category) {
-          allItems = allItems.filter(
-            (item) => String(item.decoreMainCategoryId) === String(category),
-          );
-        }
-
-        const total = allItems.length;
-        setTotalItems(total);
-
-        // Client-side pagination slice
-        const start = (page - 1) * ITEMS_PER_PAGE;
-        const sliced = allItems.slice(start, start + ITEMS_PER_PAGE);
-
-        const language = localStorage.getItem("lang");
-        const languageMap = {
-          en: "nameEnglish",
-          hi: "nameHindi",
-          gu: "nameGujarati",
-        };
-        const field = languageMap[language] || "nameEnglish";
-
-        const mapped = sliced.map((item, index) => ({
-          ...item,
-          sr_no: start + index + 1,
-          displayName: item[field] || "-",
-          nameEnglish: item.nameEnglish || "",
-          nameHindi: item.nameHindi || "",
-          nameGujarati: item.nameGujarati || "",
-          imagesPath:
-            item.imagesPath ||
-            (item.images && item.images[0]?.imagePath) ||
-            "",
-          categoryName:
-            item.decoreMainCategoryName || item.decoreMainCategoryId || "-",
-        }));
-
-        setTableData(mapped);
-      } catch (error) {
-        console.error("Error fetching decor items:", error);
-        setTableData([]);
-        setTotalItems(0);
-      } finally {
-        setLoading(false);
+      let total = extractTotal(response);
+      setTotalKnown(total !== null);
+      if (total === null) {
+        // API didn't send a total: infer enough to keep Next/Previous working.
+        total =
+          (currentPage - 1) * ITEMS_PER_PAGE +
+          items.length +
+          (items.length === ITEMS_PER_PAGE ? 1 : 0);
       }
-    },
-    [userId],
-  );
+      setTotalItems(total);
 
-  /* -------------------- INITIAL LOAD -------------------- */
+      const language = localStorage.getItem("lang");
+      const languageMap = {
+        en: "nameEnglish",
+        hi: "nameHindi",
+        gu: "nameGujarati",
+      };
+      const field = languageMap[language] || "nameEnglish";
+      const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+      const mapped = items.map((item, index) => ({
+        ...item,
+        sr_no: offset + index + 1,
+        displayName: item[field] || "-",
+        nameEnglish: item.nameEnglish || "",
+        nameHindi: item.nameHindi || "",
+        nameGujarati: item.nameGujarati || "",
+        imagesPath:
+          item.imagesPath ||
+          (item.images && item.images[0]?.imagePath) ||
+          "",
+        categoryName:
+          item.decoreMainCategoryName || item.decoreMainCategoryId || "-",
+      }));
+
+      setTableData(mapped);
+    } catch (error) {
+      if (thisRequest !== requestId.current) return;
+      console.error("Error fetching decor items:", error);
+      setTableData([]);
+      setTotalItems(0);
+    } finally {
+      if (thisRequest === requestId.current) setLoading(false);
+    }
+  }, [userId, currentPage, debouncedSearch, categoryFilter]);
+
+  /* -------------------- INITIAL LOAD: categories -------------------- */
   useEffect(() => {
     fetchCategoryList();
-    fetchItems(currentPage, searchQuery, categoryFilter);
   }, []);
 
   /* -------------------- SEARCH DEBOUNCE -------------------- */
-  const isFirstRender = useRef(true);
-
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
     const timeoutId = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
       setCurrentPage(1);
-      fetchItems(1, searchQuery, categoryFilter);
     }, 500);
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  /* -------------------- LOAD ON PAGE / SEARCH / CATEGORY CHANGE -------------------- */
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
   /* -------------------- DELETE -------------------- */
   const handleDelete = (id) => {
@@ -170,7 +195,12 @@ const DecorItem = () => {
         DeleteDecorItem(id)
           .then((response) => {
             if (response?.data?.success === true) {
-              fetchItems(currentPage, searchQuery, categoryFilter);
+              // If that was the last row on this page, step back one page
+              if (tableData.length === 1 && currentPage > 1) {
+                setCurrentPage((p) => p - 1);
+              } else {
+                fetchItems();
+              }
               Swal.fire({
                 title: "Removed!",
                 text: "Decor Item has been removed successfully.",
@@ -220,15 +250,15 @@ const DecorItem = () => {
 
   /* -------------------- PAGINATION -------------------- */
   const handlePagination = (page) => {
+    if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
-    fetchItems(page, searchQuery, categoryFilter);
   };
 
   const refreshData = () => {
-    fetchItems(currentPage, searchQuery, categoryFilter);
+    fetchItems();
   };
 
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
   const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
 
@@ -270,10 +300,8 @@ const DecorItem = () => {
               optionFilterProp="label"
               value={categoryFilter || undefined}
               onChange={(value) => {
-                const selected = value || "";
-                setCategoryFilter(selected);
+                setCategoryFilter(value || "");
                 setCurrentPage(1);
-                fetchItems(1, searchQuery, selected);
               }}
               options={[
                 { value: "", label: "All Categories" },
@@ -296,10 +324,10 @@ const DecorItem = () => {
               }}
               className="bg-primary px-5 rounded-md text-xs"
             >
-             <FormattedMessage
-                              id="COMMON.CREATE_NEW"
-                              defaultMessage="Create New"
-                            />
+              <FormattedMessage
+                id="COMMON.CREATE_NEW"
+                defaultMessage="Create New"
+              />
             </Button>
           )}
         </div>
@@ -310,43 +338,35 @@ const DecorItem = () => {
             <div className="overflow-x-auto">
               <table className="table table-auto">
                 <thead>
-                <tr className="bg-gray-50">
-  <th className="text-left py-4 px-6 font-semibold text-gray-700">
-    <FormattedMessage id="COMMON.SR_NO" defaultMessage="Sr. No." />
-  </th>
-
-  <th className="text-left py-4 px-6 font-semibold text-gray-700">
-    <FormattedMessage id="COMMON.IMAGE" defaultMessage="Image" />
-  </th>
-
-  <th className="text-left py-4 px-6 font-semibold text-gray-700">
-    <FormattedMessage id="COMMON.NAME" defaultMessage="Name" />
-  </th>
-
-  <th className="text-left py-4 px-6 font-semibold text-gray-700">
-    <FormattedMessage id="DECOR_ITEM.CATEGORY" defaultMessage="Category" />
-  </th>
-
-  <th className="text-left py-4 px-6 font-semibold text-gray-700">
-    <FormattedMessage id="COMMON.PRICE" defaultMessage="Price" />
-  </th>
-
-  <th className="text-left py-4 px-6 font-semibold text-gray-700">
-    <FormattedMessage id="COMMON.SLOGAN" defaultMessage="Slogan" />
-  </th>
-
-  <th className="text-left py-4 px-6 font-semibold text-gray-700">
-    <FormattedMessage id="USER.MASTER.SEQUENCE" defaultMessage="Sequence" />
-  </th>
-
-  <th className="text-left py-4 px-6 font-semibold text-gray-700">
-    <FormattedMessage id="COMMON.STATUS" defaultMessage="Status" />
-  </th>
-
-  <th className="text-left py-4 px-6 font-semibold text-gray-700">
-    <FormattedMessage id="COMMON.ACTIONS" defaultMessage="Action" />
-  </th>
-</tr>
+                  <tr className="bg-gray-50">
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
+                      <FormattedMessage id="COMMON.SR_NO" defaultMessage="Sr. No." />
+                    </th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
+                      <FormattedMessage id="COMMON.IMAGE" defaultMessage="Image" />
+                    </th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
+                      <FormattedMessage id="COMMON.NAME" defaultMessage="Name" />
+                    </th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
+                      <FormattedMessage id="DECOR_ITEM.CATEGORY" defaultMessage="Category" />
+                    </th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
+                      <FormattedMessage id="COMMON.PRICE" defaultMessage="Price" />
+                    </th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
+                      <FormattedMessage id="COMMON.SLOGAN" defaultMessage="Slogan" />
+                    </th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
+                      <FormattedMessage id="USER.MASTER.SEQUENCE" defaultMessage="Sequence" />
+                    </th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
+                      <FormattedMessage id="COMMON.STATUS" defaultMessage="Status" />
+                    </th>
+                    <th className="text-left py-4 px-6 font-semibold text-gray-700">
+                      <FormattedMessage id="COMMON.ACTIONS" defaultMessage="Action" />
+                    </th>
+                  </tr>
                 </thead>
                 <tbody>
                   {loading ? (
@@ -446,12 +466,21 @@ const DecorItem = () => {
             </div>
           </div>
 
-          {/* Pagination */}
-          {!loading && tableData.length > 0 && (
-            <div className="card-footer justify-between">
-              <div className="text-sm text-gray-600">
-                Showing {startItem} to {endItem} of {totalItems} items
-              </div>
+          {/* Footer: item count + pagination (always visible) */}
+          <div className="card-footer justify-between">
+            <div className="text-sm text-gray-600">
+              {loading ? (
+                "Loading..."
+              ) : tableData.length === 0 ? (
+                "Showing 0 items"
+              ) : totalKnown ? (
+                `Showing ${startItem} to ${endItem} of ${totalItems} items`
+              ) : (
+                `Showing ${startItem} to ${startItem + tableData.length - 1} items`
+              )}
+            </div>
+
+            {!loading && tableData.length > 0 && (
               <div className="flex gap-2 items-center">
                 <button
                   className="btn btn-sm btn-light"
@@ -463,47 +492,42 @@ const DecorItem = () => {
                 </button>
 
                 <div className="flex gap-1">
-                  {Array.from(
-                    { length: Math.min(5, totalPages) },
-                    (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      return (
-                        <button
-                          key={pageNum}
-                          className={`btn btn-sm ${
-                            currentPage === pageNum
-                              ? "btn-primary"
-                              : "btn-light"
-                          }`}
-                          onClick={() => handlePagination(pageNum)}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    },
-                  )}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        className={`btn btn-sm ${
+                          currentPage === pageNum ? "btn-primary" : "btn-light"
+                        }`}
+                        onClick={() => handlePagination(pageNum)}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <button
                   className="btn btn-sm btn-light"
                   onClick={() => handlePagination(currentPage + 1)}
-                  disabled={currentPage === totalPages}
+                  disabled={currentPage >= totalPages}
                 >
                   Next
                   <i className="ki-filled ki-right"></i>
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <AddDecorItemModal
