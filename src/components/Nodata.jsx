@@ -5,7 +5,7 @@ const NoData = ({ text = "No data found" }) => {
   const isPro = useMemo(() => {
     try {
       const auth = JSON.parse(localStorage.getItem("auth-storage"));
-      return auth?.state?.user?.softType === "jcxpro"; 
+      return auth?.state?.user?.softType === "jcxproo"; 
       // return auth?.state?.user?.softType === "jcx"; 
     } catch {
       return false;
