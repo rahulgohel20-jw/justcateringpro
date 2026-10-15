@@ -6,25 +6,16 @@ import { App } from "./App";
 import { setupAxios } from "./auth";
 import { ProvidersWrapper } from "./providers";
 import { applyDomainTheme } from "./config/applyDomainTheme";
-// import React from "react";
+import { ThemeSync } from "./ThemeSync";
 
-/**
- * Inject interceptors for axios.
- *
- * @see https://github.com/axios/axios#interceptors
- */
 setupAxios(axios);
 
-applyDomainTheme();
+applyDomainTheme(); // first paint only (hostname / default theme)
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <ProvidersWrapper>
+    <ThemeSync />
     <App />
   </ProvidersWrapper>
 );
-// need to uncomment when production
-// root.render(<React.StrictMode>
-//     <ProvidersWrapper>
-//       <App />
-//     </ProvidersWrapper>
-//   </React.StrictMode>);
