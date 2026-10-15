@@ -4290,3 +4290,21 @@ export const DeleteNormalPO = (id) => {
 export const DeleteNormalPODetails = (detailsId) => {
   return DELETE(`/normalpo/deletedetails/${detailsId}`);
 };``
+
+
+export const addupdatedecorprofile = (data) => {
+  return POST(`/decor-profile/add-update`, data);
+};
+
+export const getbyiddecorprofile = (userId) => {
+  return GET(`/decor-profile/getbyuserId?userId=${userId}`);
+};
+
+export const uploadlogodecorprofile = (file, userId) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("userId", userId);
+  return PUT(`/decor-profile/upload-logo`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};
