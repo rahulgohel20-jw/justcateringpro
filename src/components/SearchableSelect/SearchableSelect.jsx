@@ -17,8 +17,8 @@ const SearchableSelect = ({ value, name, onChange, options }) => {
         setOpen(false);
       }
     };
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
+    document.addEventListener("mousedown", handler, true);
+    return () => document.removeEventListener("mousedown", handler, true);
   }, []);
 
   const handleSelect = (val) => {

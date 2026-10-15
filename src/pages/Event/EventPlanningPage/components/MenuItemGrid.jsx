@@ -8,7 +8,7 @@ import { resolveImagePath } from "../PlanningConfig";
 const PAGE_SIZE = 200;
 
 const MenuItemGrid = ({
-  fetchItemsFn = null,           // cfg.api.getItems — back to fetching internally
+  fetchItemsFn = null,          
   fields = null,
   refreshKey,
   category = "All",
@@ -38,7 +38,7 @@ const MenuItemGrid = ({
   const [packageType, setPackageType] = useState(null);
   const [packageFilterIds, setPackageFilterIds] = useState(null);
   const [packageTypeLoading, setPackageTypeLoading] = useState(false);
-
+  const [packageItems, setPackageItems] = useState(null);
   const sentinelRef = useRef(null);
   const isFetchingRef = useRef(false);
 
@@ -186,6 +186,7 @@ const fetchPage = useCallback(
     setTotalPage(1);
     setTotalItems(0);
     setPackageType(null);
+    setPackageItems(null);
     setPackageFilterIds(null);
     fetchPage(1, true);
   }, 300); // wait for the user to pause typing
@@ -217,27 +218,51 @@ const fetchPage = useCallback(
   }, [loading, loadingMore, currentPage, totalPage, fetchPage]);
 
   // ── Package toggle ─────────────────────────────────────────────────────
-  const handlePackageTypeToggle = useCallback(
-    async (type) => {
-      if (packageType === type) {
-        setPackageType(null);
-        setPackageFilterIds(null);
-        return;
-      }
-      setPackageType(type);
-      setPackageTypeLoading(true);
-      try {
-        const resp = await getbymenucategorywithtype(categoryId, type, userId);
-        const ids = (resp?.data?.data || []).map((it) => Number(it.menuItemId));
-        setPackageFilterIds(ids);
-      } catch (err) {
-        setPackageFilterIds([]);
-      } finally {
-        setPackageTypeLoading(false);
-      }
-    },
-    [packageType, categoryId, userId],
-  );
+ const handlePackageTypeToggle = useCallback(
+  async (type) => {
+    if (packageType === type) {
+      setPackageType(null);
+      setPackageItems(null);
+      return;
+    }
+    setPackageType(type);
+    setPackageTypeLoading(true);
+    try {
+      const resp = await getbymenucategorywithtype(categoryId, type, userId);
+      const list = Array.isArray(resp?.data?.data) ? resp.data.data : [];
+
+      const items = list.map((it) => {
+        // reuse the image from the normal grid if the same item is loaded there
+        const match = allMenuItems.find(
+          (m) =>
+            String(m.id) === String(it.menuItemId) ||
+            (m.menuItemName || "").trim().toLowerCase() ===
+              (it.menuItemName || "").trim().toLowerCase(),
+        );
+        return {
+          ...(match || {}),
+          id: it.menuItemId,
+          menuItemId: it.menuItemId,
+          menuItemName: it.menuItemName || "",
+          menuItemNameHindi: match?.menuItemNameHindi || "",
+          menuItemNameGujarati: match?.menuItemNameGujarati || "",
+          menuCategoryId: categoryId,
+          menuCategoryName: match?.menuCategoryName || category,
+          instruction: it.instruction,
+          imagePath: match?.imagePath || "",
+          isPackageItem: false,
+        };
+      });
+      setPackageItems(items);
+    } catch (err) {
+      console.error(err);
+      setPackageItems([]);
+    } finally {
+      setPackageTypeLoading(false);
+    }
+  },
+  [packageType, categoryId, userId, category, allMenuItems],
+);
 
   // ── Sorted & filtered (operates on what's been loaded so far) ─────────
   const sortedItems = useMemo(() => {
@@ -253,29 +278,27 @@ const fetchPage = useCallback(
 
   
 const displayedItems = useMemo(() => {
-  let items = packageFilterIds === null
-    ? sortedItems
-    : sortedItems.filter((it) => packageFilterIds.includes(Number(it.menuItemId || it.id)));
+  let items = packageItems !== null ? packageItems : sortedItems;
 
-  // ── Sort by search relevance when searchTerm is active ──
   if (searchTerm.trim()) {
     const lower = searchTerm.trim().toLowerCase();
+    if (packageItems !== null) {
+      items = items.filter((it) => (it.menuItemName || "").toLowerCase().includes(lower));
+    }
     items = [...items].sort((a, b) => {
       const score = (item) => {
         const name = (item.menuItemName || "").toLowerCase();
         const nameHi = (item.menuItemNameHindi || "").toLowerCase();
         const nameGu = (item.menuItemNameGujarati || "").toLowerCase();
-
-        if (name === lower || nameHi === lower || nameGu === lower) return 0;        // exact match
-        if (name.startsWith(lower) || nameHi.startsWith(lower) || nameGu.startsWith(lower)) return 1; // starts with
-        return 2; // contains
+        if (name === lower || nameHi === lower || nameGu === lower) return 0;
+        if (name.startsWith(lower) || nameHi.startsWith(lower) || nameGu.startsWith(lower)) return 1;
+        return 2;
       };
       return score(a) - score(b);
     });
   }
-
   return items;
-}, [sortedItems, packageFilterIds, searchTerm]);
+}, [sortedItems, packageItems, searchTerm]);
 
   const hasMore = currentPage < totalPage;
 

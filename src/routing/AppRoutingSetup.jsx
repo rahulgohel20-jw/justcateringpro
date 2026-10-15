@@ -213,6 +213,7 @@ import AdminReportCustomThem from "../pages/master/AdminReportCustomTheme";
 import AllReportsConfig from "../pages/super-admin/master/super-report-config";
 import RightsModule from "../pages/super-admin/master/RightsModule";
 import GodownMaster from "../pages/master/Godown-master";
+import NotesManagement from "../pages/master/Notes-Management";
 import PageMaster from "../pages/super-admin/master/pages-master";
 import ExtraPaymentMaster from "../pages/super-admin/master/ExtraPayment-master";
 import CouponMaster from "../pages/super-admin/master/Coupon-master";
@@ -807,6 +808,7 @@ const AppRoutingSetup = () => {
           <Route path="/master/event-type" element={<EventTypeMaster />} />
           <Route path="/master/venue-type" element={<VenuetypeMaster />} />
           <Route path="/master/godown" element={<GodownMaster />} />
+          <Route path="/master/notes-management" element={<NotesManagement />} />
           <Route path="/master/unit" element={<UnitMaster />} />
           <Route path="/master/user-master" element={<AllUser />} />
           <Route path="/master/demousers" element={<DemoUsers />} />

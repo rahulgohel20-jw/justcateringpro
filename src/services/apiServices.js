@@ -2937,7 +2937,7 @@ export const reporteexcelforvendorparty = (type, userId) => {
 };
 
 
-export const Getgenerateusermenuitemrawmaterialexcel = (userId , data) => {
+export const Getgenerateusermenuitemrawmaterialexcel = (userId, data) => {
   return POST(`/report/generate-user-menuitem-rawmaterial-excel?userId=${userId}`, data);
 };
 
@@ -3479,6 +3479,26 @@ export const GetAllDecorItem = (userId) => {
   return GET(`/decoreitem/getallbyuserid?userId=${userId}`);
 };
 
+export const SearchDecorItem = ({
+  userId,
+  page = 1,
+  size = 10,
+  itemName,
+  categoryId,
+  isActive,
+} = {}) => {
+  const params = new URLSearchParams({
+    userId: String(userId),
+    page: String(page),
+    size: String(size),
+  });
+  if (itemName && itemName.trim()) params.append("itemName", itemName.trim());
+  if (categoryId) params.append("categoryId", String(categoryId));
+  if (isActive !== undefined && isActive !== null && isActive !== "") {
+    params.append("isActive", String(isActive));
+  }
+  return GET(`/decoreitem/getallbyuserid?${params.toString()}`);
+};
 
 export const UpdateDecorItemStatus = (id, isActive) => {
   return PUT(`/decoreitem/updatestatus?id=${id}&isActive=${isActive}`);
@@ -3594,7 +3614,7 @@ export const IsInquiryVisible = (isVisible, userId) => {
   return PUT(`/user/isinquiryvisible?isVisible=${isVisible}&userId=${userId}`);
 };
 
-export const GeneratePurchaseDateWiseReport = (endDate, startDate, isCompanyDetails, isPrice, userId , supplierId) => {
+export const GeneratePurchaseDateWiseReport = (endDate, startDate, isCompanyDetails, isPrice, userId, supplierId) => {
   return POST(`/purchasereport/generate-datewise-puchase-report?endDate=${endDate}&startDate=${startDate}&isCompanyDetails=${isCompanyDetails}&isPrice=${isPrice}&userId=${userId}&supplierId=${supplierId}`);
 };
 
@@ -3889,7 +3909,7 @@ export const getpurchaseapprovalbyid = (purchaseRequestId) => {
 
 };
 
-export const getRawMaterialbyPurchaseRequestId = (endDate, rawMaterialCatId, startDate, page, size, rawMaterialName, purchaseRequestId, isAllData , userId) => {
+export const getRawMaterialbyPurchaseRequestId = (endDate, rawMaterialCatId, startDate, page, size, rawMaterialName, purchaseRequestId, isAllData, userId) => {
   return GET(`/purchase-approval/getRawMaterial?endDate=${endDate}&rawMaterialCatId=${rawMaterialCatId}&startDate=${startDate}&page=${page}&size=${size}&rawMaterialName=${rawMaterialName}&purchaseRequestId=${purchaseRequestId}&isAllData=${isAllData}&userId=${userId}`);
 };
 
@@ -4096,7 +4116,7 @@ export const getAllRawMaterialWithExpiryDates = (page, size, userId, searchName 
   return GET(`/storepo/getAllRawMaterialWithExpiryDates?${query.toString()}`);
 };
 
-export const genratebarcode = (qty , rawMaterialId , userId) => {
+export const genratebarcode = (qty, rawMaterialId, userId) => {
   return GET(`/rawmaterial/generate-barcode?qty=${qty}&rawMaterialId=${rawMaterialId}&userId=${userId}`);
 };
 
@@ -4104,7 +4124,7 @@ export const addupdateselectedmultiplemenuitemimages = (data) => {
   return POST(`/menupreparation/add-update-selected-item-image`, data);
 };
 
-export const getallselectedmenuitemimages =  (eventFunctionId , userId , eventId , menuCategoryId) => { 
+export const getallselectedmenuitemimages = (eventFunctionId, userId, eventId, menuCategoryId) => {
   return GET(`/menupreparation/getAllMenuItemImages?eventFunctionId=${eventFunctionId}&userId=${userId}&eventId=${eventId}&menuCategoryId=${menuCategoryId}`);
 };
 
@@ -4251,19 +4271,19 @@ export const qutationlockreport = (eventId, isDecor, isInvoice, userId) => {
   );
 };
 
-export const purchasereportvendorwise = (startDate , endDate , uerId)=> {
+export const purchasereportvendorwise = (startDate, endDate, uerId) => {
   return GET(`purchaseorder/purchaseReportPdf?startDate=${startDate}&endDate=${endDate}&userId=${uerId}`);
 };
 
-export const getlabourheplerpdf = ( laborHelperId , userId) => {
+export const getlabourheplerpdf = (laborHelperId, userId) => {
   return GET(`/laborhelper/pdf?laborHelperId=${laborHelperId}&userId=${userId}`);
 };
 
 
-export const EventLaborHelperPdf = (eventFunctionId, eventId,partyId) => {
+export const EventLaborHelperPdf = (eventFunctionId, eventId, partyId) => {
   return POST(`/eventlaborhelper/pdf?eventFunctionId=${eventFunctionId}&eventId=${eventId}&partyId=${partyId}`);
 };
-export const eventexcelforallocation = (eventId , userId) => {
+export const eventexcelforallocation = (eventId, userId) => {
   return GET(`/menuallocation/event-excel?eventId=${eventId}&userId=${userId}`);
 };
 
@@ -4272,12 +4292,12 @@ export const AddNormalPO = (data) => {
   return POST(`/normalpo/add-update`, data);
 };
 
-export const GetNormalPOById = (id ) => {
+export const GetNormalPOById = (id) => {
   return GET(`/normalpo/getbyid?id=${id}`);
 };
 
 
-export const GetAllNormalPO = (id,size, page,searchName  ) => {
+export const GetAllNormalPO = (id, size, page, searchName) => {
   return GET(`/normalpo/getbyuser?userId=${id}&size=${size}&page=${page}&searchName=${encodeURIComponent(searchName)}`);
 };
 
@@ -4289,7 +4309,50 @@ export const DeleteNormalPO = (id) => {
 
 export const DeleteNormalPODetails = (detailsId) => {
   return DELETE(`/normalpo/deletedetails/${detailsId}`);
-};``
+};
+
+
+// ======================== Notes Management ========================
+
+export const GetNotesModules = (userId) => {
+  return GET(`/notes/modules?userId=${userId}`);
+};
+
+export const GetNotesPages = (moduleId, userId) => {
+  return GET(`/notes/pages?moduleId=${moduleId}&userId=${userId}`);
+};
+
+export const AddNote = (userId, data) => {
+  return POST(`/notes/add?userId=${userId}`, data);
+};
+
+export const UpdateNote = (id, userId, data) => {
+  return PUT(`/notes/update?id=${id}&userId=${userId}`, data);
+};
+
+export const GetNoteById = (id, userId) => {
+  return GET(`/notes/getById?id=${id}&userId=${userId}`);
+};
+
+export const GetAllNotes = (userId) => {
+  return GET(`/notes/getAll?userId=${userId}`);
+};
+
+export const DeleteNoteById = (id, userId) => {
+  return DELETE(`/notes/deleteById?id=${id}&userId=${userId}`);
+};
+
+export const AddNoteHeading = (notesId, userId, data) => {
+  return POST(`/notes/heading/add?notesId=${notesId}&userId=${userId}`, data);
+};
+
+export const UpdateNoteHeading = (id, userId, data) => {
+  return PUT(`/notes/heading/update?id=${id}&userId=${userId}`, data);
+};
+
+export const DeleteNoteHeading = (id, userId) => {
+  return DELETE(`/notes/heading/deleteById?id=${id}&userId=${userId}`);
+};
 
 
 export const addupdatedecorprofile = (data) => {

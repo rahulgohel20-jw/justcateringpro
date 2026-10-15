@@ -72,6 +72,19 @@ const applyHeaderOwned = (menuItems, isVisible) => {
   });
 };
 
+const applyUserIdFilter = (menuItems, userId) =>
+  menuItems
+    .filter(
+      (item) =>
+        !item.allowedUserIds ||
+        item.allowedUserIds.map(String).includes(String(userId)),
+    )
+    .map((item) =>
+      item.children
+        ? { ...item, children: applyUserIdFilter(item.children, userId) }
+        : item,
+    );
+
 export const useMenu = () => {
   const { currentUser, loading } = useAuthContext();
   const rights = useAuthStore((state) => state.rights);
@@ -103,6 +116,8 @@ const isHeaderOwned = ["jcxpro", "justbanq"].includes(authStorage?.state?.user?.
     } else {
       baseMenu = isSuperSystem ? superAdminMenuItems : allMenuItems(navigate);
     }
+    const currentUserId = currentUser?.id ?? localStorage.getItem("userId");
+baseMenu = applyUserIdFilter(baseMenu, currentUserId)
 
     if (!plan || !isApproved) {
       return disableMenuItems(baseMenu);

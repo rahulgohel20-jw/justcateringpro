@@ -7,13 +7,13 @@ const blue = {
   primaryInverse: "rgba(255, 255, 255, 1)",
 };
 
-const green = {
-  primary: "rgba(22, 163, 74, 1)",
-  primaryActive: "rgba(21, 128, 61, 1)",
-  primaryLight: "rgba(74, 190, 117, 1)",
-  primaryLighter: "rgba(220, 252, 231, 1)",
-  primaryClarity: "rgba(22, 163, 74, 0.10)",
-  primaryInverse: "rgba(255, 255, 255, 1)",
+const teal = {
+  primary: "#0891B2",
+  primaryActive: "#0E7490",
+  primaryLight: "#22D3EE",
+  primaryLighter: "#CFFAFE",
+  primaryClarity: "rgba(8, 145, 178, 0.10)",
+  primaryInverse: "#FFFFFF",
 };
 
 const purple = {
@@ -26,20 +26,20 @@ const purple = {
 };
 
 const orange = {
-  primary: "rgba(234, 88, 12, 1)",
-  primaryActive: "rgba(194, 65, 12, 1)",
-  primaryLight: "rgba(251, 146, 60, 1)",
-  primaryLighter: "rgba(255, 237, 213, 1)",
+  primary: "#EA580C",
+  primaryActive: "#C2410C",
+  primaryLight: "#FB923C",
+  primaryLighter: "#FFEDD5",
   primaryClarity: "rgba(234, 88, 12, 0.10)",
-  primaryInverse: "rgba(255, 255, 255, 1)",
+  primaryInverse: "#FFFFFF",
 };
 
 // Keyed by softType (lowercase). Swap the colors to whatever you want.
 export const softTypeThemes = {
   jcx: blue,
-  jcxplus: green,
-  jcxpro: purple,
-  jcxpluspro: orange,
+  jcxplus: teal,
+  jcxpro: orange,
+  jcxproplus: purple,
 };
 
 // Existing hostname themes, now used only as a fallback
