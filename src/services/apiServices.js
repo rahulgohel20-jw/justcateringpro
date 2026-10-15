@@ -1043,6 +1043,22 @@ export const SearchUnit = (data, id) => {
   return GET(`/unit/getallbyuserid?unitName=${data}&userid=${id}`);
 };
 
+export const addPreparationMaster = (data) => {
+  return POST(`/Preparation/addorupdate`, data);
+};
+
+export const deletePreparationMasterById = (id) => {
+  return DELETE(`/Preparation/deleteById?id=${id}`);
+};
+
+export const getAllPreparationMaster = (userId) => {
+  return GET(`/Preparation/getall?userId=${userId}`);
+};
+
+export const getPreparationMasterById = (id) => {
+  return GET(`/Preparation/getbyid?id=${id}`);
+};
+
 export const DeleteUnit = (id) => {
   return DELETE(`/unit/deletebyid?id=${id}`);
 };

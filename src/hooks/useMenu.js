@@ -22,7 +22,7 @@ const HEADER_OWNED_TITLES = [
 ];
 
 const applyUpgradedModules = (menuItems, upgradedModules, currentUser) => {
-  const GATED_MODULES = ["Account", "Stock", "CRM", "AI Menu", "Menu Share Link", "Banquet" , "Captain Recipe" , "Assign Manager", "Food Taste Festival", "Event Flow", "Decor", "Menu Extra Features" , "kyc" , "followup" , "Security Deposit" , "Purchase Approve" , "Guest Signature" , "Exhibition Quotation" , "Generate with Ai Solgan" , "Generate multiple invoices", "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Selection" , "Bank Selection Quotaion"];
+  const GATED_MODULES = ["Account", "Stock", "CRM", "AI Menu", "Menu Share Link", "Banquet" , "Captain Recipe" , "Assign Manager", "Food Taste Festival", "Event Flow", "Decor", "Menu Extra Features" , "kyc" , "followup" , "Security Deposit" , "Purchase Approve" , "Guest Signature" , "Exhibition Quotation" , "Generate with Ai Solgan" , "Generate multiple invoices", "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Selection" , "Bank Selection Quotaion" , "Preparation Master" , "labour helper"];
 
   const modules =
     upgradedModules?.length > 0

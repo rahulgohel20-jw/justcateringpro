@@ -73,7 +73,9 @@ const DishCostingPage = () => {
   };
   const intl = useIntl();
   const isTotal = viewType === "Total Wise";
-
+const userId = localStorage.getItem("userId");
+const NORMAL_PO_USER_IDS = ["376", "233"];
+const isNormalPoUser = NORMAL_PO_USER_IDS.includes(String(userId));
   const totalPax = isTotal
     ? Number(dishCostingData?.pax || 0)
     : selectedFunctionPax;
@@ -86,9 +88,11 @@ const DishCostingPage = () => {
   const totalExtra = isTotal
     ? allFunctionWiseCosting.reduce((sum, f) => sum + Number(f.extra || 0), 0)
     : Number(dishCostingData?.extraexpensecharge || 0);
+const totalNormalPo = isNormalPoUser
+  ? Number(dishCostingData?.normalpocharge || 0)
+  : 0;
 
-  const grandTotalComputed = totalRaw + totalAgency + totalExtra;
-
+const grandTotalComputed = totalRaw + totalAgency + totalExtra + totalNormalPo;
   const perPersonCost = totalPax
     ? (grandTotalComputed / totalPax).toLocaleString(undefined, {
         minimumFractionDigits: 2,
@@ -117,6 +121,20 @@ const DishCostingPage = () => {
       value: totalAgency.toLocaleString(),
       onClick: handeAgencySidebarCLick,
     },
+     ...(isNormalPoUser
+    ? [
+        {
+          label: (
+            <FormattedMessage
+              id="COMMON.NORMAL_PO_CHARGES"
+              defaultMessage="Total Normal PO"
+            />
+          ),
+          value: totalNormalPo.toLocaleString(),
+        },
+      ]
+    : []),
+];
     // {
     //   label: (
     //     <FormattedMessage
@@ -126,7 +144,7 @@ const DishCostingPage = () => {
     //   ),
     //   value: totalExtra.toLocaleString(),
     // },
-  ];
+  
 
   useEffect(() => {
     if (viewType === "Function Wise" && eventData?.eventFunctions?.length > 0) {
