@@ -21,7 +21,7 @@ const ExhibitionSetup = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
-  const permissions = usePermission("Exhibition setup");
+  const permissions = usePermission("Exhibition Quotation");
   // Clear any previously stored local cache
   useEffect(() => {
     try {

@@ -147,7 +147,21 @@ export const allMenuItems = (navigate) => {
       ),
       icon: "  text-lg ki-filled ki-setting-4 text-primary",
       path: "/exhibition-setup",
-      pageName: "Exhibition setup",
+      pageName: "Exhibition Quotation",
+      moduleName:"Exhibition Quotation"
+    },
+
+    {
+      title: (
+        <FormattedMessage
+          id="COMMON.preparation_master"
+          defaultMessage="Preparation Master"
+        />
+      ),
+      icon: "  text-lg ki-filled ki-setting-3 text-primary",
+      path: "/master/preparation-master",
+      pageName: "Preparation Master",
+      moduleName:"Preparation Master"
     },
 
     {
@@ -402,7 +416,7 @@ export const allMenuItems = (navigate) => {
           icon: "  text-lg ki-filled ki-people  text-primary",
           path: "/master/addlabourhelper",
           pageName: "labour helper",
-          
+          moduleName : "labour helper",
         },
 
     {
