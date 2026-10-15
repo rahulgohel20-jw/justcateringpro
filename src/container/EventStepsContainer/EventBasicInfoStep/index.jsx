@@ -126,6 +126,14 @@ const [venuesLoading, setVenuesLoading] = useState(true);
         return item[`${field}English`] || "-";
     }
   };
+const isChildUser = () => {
+  try {
+    const auth = JSON.parse(localStorage.getItem("auth-storage"));
+    return auth?.state?.user?.ischilduser === true;
+  } catch {
+    return false;
+  }
+};
 
   const getSoftType = () => {
     try {
@@ -245,7 +253,7 @@ const [venuesLoading, setVenuesLoading] = useState(true);
 
   const softType = getSoftType();
   const hideODC = softType === "justbanq";
-
+const canEditInquiryDate = isChildUser();
   const banquetOptions = hideODC
     ? filterHalls(banquetList)
     : [ODC_OPTION, ...filterHalls(banquetList)];
@@ -297,21 +305,21 @@ const venueValue = resolveOptionValue(formData.venueId, venueList);
                 *
               </span>
             </label>
-            <DatePicker
-              disabled
-              className="input w-full"
-              dateFormat="dd/MM/yyyy"
-              selected={parseDate(formData.inquiryDate)}
-              onChange={(date) => {
-                handleFormDataChange(
-                  "inquiryDate",
-                  date && dayjs(date).isValid()
-                    ? dayjs(date).format("DD/MM/YYYY")
-                    : "",
-                );
-              }}
-              placeholderText="DD/MM/YYYY"
-            />
+           <DatePicker
+  disabled={!canEditInquiryDate}
+  className="input w-full"
+  dateFormat="dd/MM/yyyy"
+  selected={parseDate(formData.inquiryDate)}
+  onChange={(date) => {
+    handleFormDataChange(
+      "inquiryDate",
+      date && dayjs(date).isValid()
+        ? dayjs(date).format("DD/MM/YYYY")
+        : "",
+    );
+  }}
+  placeholderText="DD/MM/YYYY"
+/>
             {errors.inquiryDate && (
               <span className="text-red-600 font-normal text-sm mt-0.5">
                 {errors.inquiryDate}
