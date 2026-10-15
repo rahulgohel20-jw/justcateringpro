@@ -1,328 +1,379 @@
-import { Fragment, useEffect, useState } from "react";
-import { Container } from "@/components/container";
-import { TableComponent } from "@/components/table/TableComponent";
-import { columns } from "./constant";
-import { usePermission } from "../../../hooks/usePermission";
-import ViewNoteModal from "./ViewNoteModal";
-import AddNoteModal from "./AddNoteModal";
-import SearchableSelect from "../../../components/SearchableSelect/SearchableSelect";
-import { Search, Plus, StickyNote, FileText, Heading } from "lucide-react";
-import Swal from "sweetalert2";
+import { useState, useEffect } from "react";
+import { X, Plus, Trash2, StickyNote } from "lucide-react";
 import {
-  GetAllNotes,
-  GetNoteById,
-  DeleteNoteById,
-  GetNotesModules,
-  GetNotesPages,
+  AddNote,
+  UpdateNote,
+  DeleteNoteHeading,
 } from "../../../services/apiServices";
+import Swal from "sweetalert2";
 import { FormattedMessage } from "react-intl";
-import { useIntl } from "react-intl";
 
-const StatCard = ({ icon: Icon, label, value, iconColor, iconBg }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4 flex-1">
-    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
-      <Icon className={`w-6 h-6 ${iconColor}`} />
-    </div>
-    <div>
-      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">{label}</p>
-      <p className="text-3xl font-bold text-gray-900 leading-tight">{value}</p>
-    </div>
-  </div>
-);
+const EMPTY_HEADING = { id: null, heading: "", description: "" };
+const STATUS_OPTIONS = [
+  { value: "PENDING", label: "Pending" },
+  { value: "RUNNING", label: "Running" },
+  { value: "COMPLETED", label: "Completed" },
+];
 
-const NotesManagement = () => {
-  const permissions = usePermission("Notes Management");
-  const userId = localStorage.getItem("userId");
-  const intl = useIntl();
+const normalizeStatus = (raw) => {
+  const key = String(raw ?? "").trim().toUpperCase();
+  return STATUS_OPTIONS.some((o) => o.value === key) ? key : "PENDING";
+};
 
-  const [tableData, setTableData] = useState([]);
-  const [originalData, setOriginalData] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState(null);
-  const [viewTarget, setViewTarget] = useState(null);
+export default function AddNoteModal({
+  isOpen,
+  onClose,
+  refreshData,
+  noteDetails = null,
+  userId,
+}) {
+const [form, setForm] = useState({ title: "", status: "PENDING" });
+  const [headings, setHeadings] = useState([{ ...EMPTY_HEADING }]);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
 
-  // Filter dropdowns
-  const [modules, setModules] = useState([]);
-  const [pages, setPages] = useState([]);
-  const [filterModuleId, setFilterModuleId] = useState("");
-  const [filterPageId, setFilterPageId] = useState("");
+  const isEdit = !!noteDetails;
 
+  // Populate form when editing
   useEffect(() => {
-    fetchNotes();
-    fetchModules();
-  }, []);
-
-  const fetchModules = async () => {
-    try {
-      const res = await GetNotesModules(userId);
-      const data = res?.data?.data || res?.data;
-      setModules(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to load modules:", err);
-    }
-  };
-
-  const fetchPages = async (moduleId) => {
-    try {
-      const res = await GetNotesPages(moduleId, userId);
-      const data = res?.data?.data || res?.data;
-      setPages(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to load pages:", err);
-    }
-  };
-
-  const fetchNotes = async () => {
-    try {
-      setLoading(true);
-      const res = await GetAllNotes(userId);
-      const list = (res?.data?.data || res?.data || []).map((item, index) => ({
-        ...item,
-        sr_no: index + 1,
-      }));
-      setOriginalData(list);
-      setTableData(list);
-    } catch (err) {
-      console.error("Failed to fetch notes:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Apply search + filter
-  useEffect(() => {
-    let filtered = [...originalData];
-
-    // Filter by module
-    if (filterModuleId) {
-      filtered = filtered.filter(
-        (item) => String(item.moduleId) === String(filterModuleId)
-      );
-    }
-
-    // Filter by page
-    if (filterPageId) {
-      filtered = filtered.filter(
-        (item) => String(item.pageId) === String(filterPageId)
-      );
-    }
-
-    // Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter((item) =>
-        Object.values(item).some((val) =>
-          String(val).toLowerCase().includes(q)
-        )
-      );
-    }
-
-    setTableData(filtered.map((item, i) => ({ ...item, sr_no: i + 1 })));
-  }, [searchQuery, originalData, filterModuleId, filterPageId]);
-
-  const handleModuleFilterChange = (moduleId) => {
-    setFilterModuleId(moduleId);
-    setFilterPageId("");
-    setPages([]);
-    if (moduleId) {
-      fetchPages(moduleId);
-    }
-  };
-
-  const handleView = async (item) => {
-    try {
-      const res = await GetNoteById(item.id, userId);
-      const noteData = res?.data?.data || res?.data || item;
-      setViewTarget({
-        ...item,
-        ...noteData,
+    if (!isOpen) return;
+    if (noteDetails) {
+      // console.log("noteDetails", noteDetails); // uncomment to inspect the API response
+      setForm({
+        title: noteDetails.title || "",
+        status: normalizeStatus(noteDetails.status),
       });
-    } catch {
-      setViewTarget(item);
+      setHeadings(
+        noteDetails.headings?.length > 0
+          ? noteDetails.headings.map((h) => ({
+              id: h.id,
+              heading: h.heading || "",
+              description: h.description || "",
+            }))
+          : [{ ...EMPTY_HEADING }]
+      );
+    } else {
+      setForm({ title: "", status: "PENDING" });
+      setHeadings([{ ...EMPTY_HEADING }]);
     }
+    setErrors({});
+  }, [isOpen, noteDetails]);
+
+  if (!isOpen) return null;
+
+  const set = (k, v) => {
+    setForm((p) => ({ ...p, [k]: v }));
+    setErrors((p) => ({ ...p, [k]: "" }));
   };
 
-  const handleEdit = async (item) => {
-    try {
-      const res = await GetNoteById(item.id, userId);
-      const noteData = res?.data?.data || res?.data || item;
-      setEditTarget({
-        ...item,
-        ...noteData,
+  const handleHeadingChange = (index, field, value) => {
+    setHeadings((prev) =>
+      prev.map((h, i) => (i === index ? { ...h, [field]: value } : h))
+    );
+  };
+
+  const addHeading = () => {
+    setHeadings((prev) => [...prev, { ...EMPTY_HEADING }]);
+  };
+
+  const removeHeading = async (index) => {
+    const heading = headings[index];
+    // If it's an existing heading (has an id), delete from server
+    if (heading.id) {
+      const result = await Swal.fire({
+        title: "Delete Heading?",
+        text: "This heading will be permanently removed.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Yes, delete it!",
       });
-      setAddModalOpen(true);
-    } catch {
-      setEditTarget(item);
-      setAddModalOpen(true);
-    }
-  };
-
-  const handleAddNew = () => {
-    setEditTarget(null);
-    setAddModalOpen(true);
-  };
-
-  const handleDelete = async (id) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "This note will be permanently deleted.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
-    });
-    if (result.isConfirmed) {
+      if (!result.isConfirmed) return;
       try {
-        const res = await DeleteNoteById(id, userId);
-        if (res?.data?.success === false) {
-          Swal.fire({ icon: "error", title: "Failed!", text: res.data.msg || "Delete failed." });
-          return;
-        }
-        fetchNotes();
-        Swal.fire({ icon: "success", title: "Deleted!", timer: 1500, showConfirmButton: false });
+        await DeleteNoteHeading(heading.id, userId);
+        Swal.fire({
+          icon: "success",
+          title: "Heading Deleted!",
+          timer: 1200,
+          showConfirmButton: false,
+        });
       } catch {
-        Swal.fire({ icon: "error", title: "Failed to delete. Try again." });
+        Swal.fire({ icon: "error", title: "Failed to delete heading." });
+        return;
       }
     }
+    setHeadings((prev) => prev.filter((_, i) => i !== index));
+    if (headings.length === 1) {
+      setHeadings([{ ...EMPTY_HEADING }]);
+    }
   };
 
-  const handleSearch = () => {
-    // Search is already reactive via useEffect
+  const validate = () => {
+    const e = {};
+    if (!form.title.trim()) e.title = "Note title is required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  const total = originalData.length;
-  const totalHeadings = originalData.reduce(
-    (acc, n) => acc + (n.headings?.length || 0),
-    0
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    try {
+      const filteredHeadings = headings
+        .filter((h) => h.heading.trim())
+        .map((h) => ({
+          id: h.id || null,
+          heading: h.heading,
+          description: h.description,
+        }));
+
+      const payload = {
+        title: form.title.trim(),
+        status: form.status,
+        headings: filteredHeadings,
+      };
+
+      if (isEdit) {
+        const res = await UpdateNote(noteDetails.id, userId, payload);
+        if (res?.data?.success === false) {
+          Swal.fire({
+            icon: "error",
+            title: "Failed!",
+            text: res.data.msg || "Update failed.",
+          });
+          return;
+        }
+      } else {
+        const res = await AddNote(userId, payload);
+        if (res?.data?.success === false) {
+          Swal.fire({
+            icon: "error",
+            title: "Failed!",
+            text: res.data.msg || "Create failed.",
+          });
+          return;
+        }
+      }
+
+      refreshData?.();
+      onClose(false);
+
+      Swal.fire({
+        icon: "success",
+        title: isEdit ? "Note Updated!" : "Note Created!",
+        text: isEdit
+          ? "Note details have been updated successfully."
+          : "New note has been added successfully.",
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      console.error("Save failed:", err);
+      Swal.fire({
+        icon: "error",
+        title: "Failed!",
+        text: "Something went wrong. Please try again.",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputCls = (err) =>
+    `w-full border rounded-lg px-3 py-2 text-sm text-gray-800 outline-none transition-colors
+     ${err ? "border-red-400 bg-red-50" : "border-gray-200 focus:border-primary bg-white"}`;
+
+  const labelCls =
+    "block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1";
+
+  const SectionTitle = ({ title }) => (
+    <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-3 pb-1 border-b-2 border-primary inline-block">
+      {title}
+    </p>
   );
-  const uniqueModules = new Set(originalData.map((n) => n.moduleId)).size;
 
   return (
-    <Fragment>
-      <Container>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 no-scrollbar"
+      style={{
+        backgroundColor: "rgba(0,0,0,0.5)",
+        backdropFilter: "blur(4px)",
+      }}
+      onClick={() => onClose(false)}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden no-scrollbar"
+        style={{ maxHeight: "92vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 mb-4">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-start justify-between shrink-0">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">
-              <FormattedMessage id="NOTES.TITLE" defaultMessage="Notes Management" />
-            </h1>
+            <h2 className="text-lg font-bold text-gray-900">
+              {isEdit ? (
+                <FormattedMessage id="NOTES.FORM.EDIT_TITLE" defaultMessage="Edit Note" />
+              ) : (
+                <FormattedMessage id="NOTES.FORM.ADD_TITLE" defaultMessage="Add New Note" />
+              )}
+            </h2>
             <p className="text-xs text-gray-400 mt-0.5">
               <FormattedMessage
-                id="NOTES.DESCRIPTION"
-                defaultMessage="Create, organize, and manage notes with headings and descriptions across modules."
+                id="NOTES.FORM.SUBTITLE"
+                defaultMessage="Create and organize your notes with headings and descriptions."
               />
             </p>
           </div>
-          {permissions.add && (
-            <button className="btn btn-primary flex items-center gap-2" onClick={handleAddNew}>
-              <Plus className="w-4 h-4" /> <FormattedMessage id="NOTES.ADD_NOTE" defaultMessage="Add Note" />
-            </button>
-          )}
-        </div>
-
-        {/* Stat Cards */}
-        <div className="flex gap-4 mb-6">
-          <StatCard
-            icon={StickyNote}
-            label={intl.formatMessage({ id: "NOTES.TOTAL_NOTES", defaultMessage: "Total Notes" })}
-            value={String(total).padStart(2, "0")}
-            iconColor="text-primary"
-            iconBg="bg-primary/10"
-          />
-          <StatCard
-            icon={Heading}
-            label={intl.formatMessage({ id: "NOTES.TOTAL_HEADINGS", defaultMessage: "Total Headings" })}
-            value={String(totalHeadings).padStart(2, "0")}
-            iconColor="text-green-600"
-            iconBg="bg-green-50"
-          />
-          <StatCard
-            icon={FileText}
-            label={intl.formatMessage({ id: "NOTES.MODULES_USED", defaultMessage: "Modules Used" })}
-            value={String(uniqueModules).padStart(2, "0")}
-            iconColor="text-orange-500"
-            iconBg="bg-orange-50"
-          />
-        </div>
-
-        {/* Filters */}
-        <div className="filters flex flex-wrap items-end gap-3 mb-4">
-          {/* Module Filter */}
-          <div className="filItems min-w-[200px]">
-            <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
-              <FormattedMessage id="NOTES.FILTER.MODULE" defaultMessage="Module" />
-            </label>
-            <SearchableSelect
-              name="filterModuleId"
-              value={filterModuleId}
-              onChange={(e) => handleModuleFilterChange(e.target.value)}
-              options={modules.map((m) => ({ value: String(m.moduleId), label: m.moduleName }))}
-            />
-          </div>
-
-          {/* Page Filter */}
-          <div className="filItems min-w-[200px]">
-            <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
-              <FormattedMessage id="NOTES.FILTER.PAGE" defaultMessage="Page" />
-            </label>
-            <SearchableSelect
-              name="filterPageId"
-              value={filterPageId}
-              onChange={(e) => setFilterPageId(e.target.value)}
-              options={pages.map((p) => ({ value: String(p.pageId), label: p.pageName }))}
-            />
-          </div>
-
-          {/* Search Button */}
           <button
-            className="btn btn-primary flex items-center gap-2"
-            onClick={handleSearch}
+            onClick={() => onClose(false)}
+            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
           >
-            <Search className="w-4 h-4" /> <FormattedMessage id="NOTES.SEARCH_BTN" defaultMessage="Search" />
+            <X className="w-4 h-4 text-gray-500" />
           </button>
+        </div>
 
-          {/* Text Search */}
-          <div className="filItems relative ml-auto">
-            <Search className="w-4 h-4 text-primary absolute top-1/2 left-3 -translate-y-1/2 pointer-events-none" />
-            <input
-              className="input pl-9"
-              placeholder="Search notes…"
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-6 no-scrollbar">
+          {/* Note Details */}
+          <div>
+            <SectionTitle
+              title={
+                <FormattedMessage
+                  id="NOTES.FORM.SECTION.NOTE_DETAILS"
+                  defaultMessage="Note Details"
+                />
+              }
             />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Title */}
+              <div>
+                <label className={labelCls}>
+                  <StickyNote className="w-3 h-3" />{" "}
+                  <FormattedMessage id="NOTES.FORM.LABEL.TITLE" defaultMessage="Note Title" />{" "}
+                  <span className="text-red-500">*</span>
+                </label>
+                <input
+                  value={form.title}
+                  onChange={(e) => set("title", e.target.value)}
+                  placeholder="e.g. Meeting Notes"
+                  className={inputCls(errors.title)}
+                />
+                {errors.title && (
+                  <p className="text-red-500 text-[10px] mt-0.5">{errors.title}</p>
+                )}
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className={labelCls}>
+                  <FormattedMessage id="NOTES.FORM.LABEL.STATUS" defaultMessage="Status" />
+                </label>
+                <select
+  value={form.status}
+  onChange={(e) => set("status", e.target.value)}
+  className={inputCls(false)}
+>
+  {STATUS_OPTIONS.map((s) => (
+    <option key={s.value} value={s.value}>
+      {s.label}
+    </option>
+  ))}
+</select>
+              </div>
+            </div>
+          </div>
+
+          {/* Headings & Descriptions */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <SectionTitle
+                title={
+                  <FormattedMessage
+                    id="NOTES.FORM.SECTION.HEADINGS"
+                    defaultMessage="Headings & Descriptions"
+                  />
+                }
+              />
+              <button
+                type="button"
+                onClick={addHeading}
+                className="flex items-center gap-1 text-xs font-semibold text-white bg-primary hover:bg-primary/90 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />{" "}
+                <FormattedMessage id="NOTES.FORM.ADD_HEADING" defaultMessage="Add Heading" />
+              </button>
+            </div>
+
+            <div className="border border-gray-100 rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider w-[5%]">#</th>
+                    <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider w-[30%]">Heading</th>
+                    <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Description</th>
+                    <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider w-[8%]">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {headings.map((h, i) => (
+                    <tr key={i} className="border-b border-gray-50 last:border-0">
+                      <td className="px-3 py-2 text-gray-500 font-medium">{i + 1}</td>
+                      <td className="px-3 py-2">
+                        <input
+                          value={h.heading}
+                          onChange={(e) => handleHeadingChange(i, "heading", e.target.value)}
+                          placeholder="Enter heading"
+                          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-800 outline-none focus:border-primary bg-white transition-colors"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          value={h.description}
+                          onChange={(e) => handleHeadingChange(i, "description", e.target.value)}
+                          placeholder="Enter description"
+                          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-800 outline-none focus:border-primary bg-white transition-colors"
+                        />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => removeHeading(i)}
+                          className="w-7 h-7 rounded-lg bg-red-50 hover:bg-red-100 flex items-center justify-center transition-colors mx-auto"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
-        {/* Table */}
-        <TableComponent
-          columns={columns(handleView, handleEdit, handleDelete, permissions, intl)}
-          data={tableData}
-          paginationSize={10}
-          loading={loading}
-        />
-
-        {/* Add/Edit Modal */}
-        <AddNoteModal
-          isOpen={addModalOpen}
-          onClose={setAddModalOpen}
-          refreshData={fetchNotes}
-          noteDetails={editTarget}
-          userId={userId}
-        />
-
-        {/* View Modal */}
-        <ViewNoteModal
-          isOpen={!!viewTarget}
-          onClose={() => setViewTarget(null)}
-          note={viewTarget}
-        />
-      </Container>
-    </Fragment>
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 shrink-0 bg-gray-50">
+          <button
+            onClick={() => onClose(false)}
+            className="px-5 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-600 font-medium hover:bg-gray-50 transition-colors"
+          >
+            <FormattedMessage id="NOTES.FORM.CANCEL" defaultMessage="Cancel" />
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-6 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-semibold transition-colors disabled:opacity-60"
+          >
+            {saving ? (
+              <FormattedMessage id="NOTES.FORM.SAVING" defaultMessage="Saving…" />
+            ) : isEdit ? (
+              <FormattedMessage id="NOTES.FORM.UPDATE_BTN" defaultMessage="Update Note" />
+            ) : (
+              <FormattedMessage id="NOTES.FORM.CREATE_BTN" defaultMessage="Save" />
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
   );
-};
-
-export default NotesManagement;
+}

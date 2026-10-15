@@ -160,7 +160,7 @@ export default function CustomPackageModal({
         </div>
 
         {/* BODY */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
+        <div className="p-6 overflow-auto max-h-[calc(90vh-88px)] [scrollbar-width:thin]">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -181,7 +181,7 @@ export default function CustomPackageModal({
               <p className="text-gray-500">No packages available</p>
             </div>
           ) : (
-            <div className="flex gap-6 overflow-x-auto pb-4 px-2">
+            <div className="flex gap-6 pb-4 px-2 w-max min-w-full">
               {packages.map((pkg) => (
                 <div
                   key={pkg.id}

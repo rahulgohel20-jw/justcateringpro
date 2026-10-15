@@ -27,10 +27,10 @@ const LOGO_MAP = {
     monogramWhite: "/images/just_banq_monogram_white.svg",
   },
   jcxpro: {
-    default: "/images/jcxpro_logo.svg",
-    monogram: "/images/jcxpro_monogram.svg",
-    defaultWhite: "/images/jcxpro_logo_white.svg",
-    monogramWhite: "/images/jcxpro_monogram_white.svg",
+    default: "/images/logo.svg",
+    monogram: "/images/monogram.svg",
+    defaultWhite: "/images/logo_white.svg",
+    monogramWhite: "/images/monogram_white.svg",
   },
 };
 
