@@ -1203,6 +1203,7 @@ id="COMMON.ITEMRAWMATERIALUNITCHANGE"              defaultMessage="Item Raw Mate
           ),
           path: "/stock-management/normal-po",
           pageName: "Normal PO",
+           allowedUserIds: ["376"],
         },
 
         {

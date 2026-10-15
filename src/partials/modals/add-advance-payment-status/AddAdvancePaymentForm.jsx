@@ -41,6 +41,7 @@ const AddAdvancePaymentForm = ({
   const [functionId, setFunctionId] = useState("");
   const [banquetHallId, setBanquetHallId] = useState("");
   const [loadingFunctions, setLoadingFunctions] = useState(false);
+  const [eventVenueName, setEventVenueName] = useState("");
 
   useEffect(() => {
     if (editingPayment) {
@@ -149,8 +150,19 @@ const AddAdvancePaymentForm = ({
         const eventDetails = res?.data?.data?.["Event Details"]?.[0];
         const functions = eventDetails?.eventFunctions || [];
         setFunctionList(functions);
+
+        // Event-level venue object: { nameEnglish, nameHindi, nameGujarati, ... }
+        const venue =
+          eventDetails?.venue || res?.data?.data?.venue || res?.data?.venue;
+        setEventVenueName(
+          venue?.nameEnglish?.trim() ||
+            venue?.nameHindi?.trim() ||
+            venue?.nameGujarati?.trim() ||
+            "",
+        );
       } catch {
         setFunctionList([]);
+        setEventVenueName("");
       } finally {
         setLoadingFunctions(false);
       }
@@ -177,12 +189,19 @@ const AddAdvancePaymentForm = ({
 
     if (f.banquetHallShifts && f.banquetHallShifts.length > 0) {
       venueEntries = f.banquetHallShifts.map((shift) => {
-        const hallName = shift.banquetHallName?.trim() || "No Venue";
+        const hallName = shift.banquetHallName?.trim() || shift.venue;
         const venuePart = shift.shiftName ? `${hallName} (${shift.shiftName})` : hallName;
         return { venuePart, banquetHallId: shift.banquetHallId ?? null };
       });
     } else {
-      venueEntries = [{ venuePart: "No Venue", banquetHallId: null }];
+      // No banquet hall: fall back to the event's venue name
+      const fallbackVenue =
+        eventVenueName ||
+        f.venue?.nameEnglish?.trim() ||
+        f.venue?.nameHindi?.trim() ||
+        f.venue?.nameGujarati?.trim() ||
+        "No Venue";
+      venueEntries = [{ venuePart: fallbackVenue, banquetHallId: null }];
     }
 
     return venueEntries.map(({ venuePart, banquetHallId }) => ({
@@ -361,7 +380,7 @@ const AddAdvancePaymentForm = ({
         </div>
       </div>
 
-      {/* Function (Venue / Banquet) */}
+      {/* Function (Venue / Banquet) - falls back to venue name when no banquet */}
       <div className="flex flex-col gap-1.5">
         <label className={labelCls}>
           <FormattedMessage id="USER.ADVANCE_PAYMENT.FORM.VENUE_LABEL" defaultMessage="Venue" />{" "}
