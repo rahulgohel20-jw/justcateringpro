@@ -118,6 +118,7 @@ const [isLockReportLoading, setIsLockReportLoading] = useState(false);
   const [savingDepositIdx, setSavingDepositIdx] = useState(null);
   const [isSecurityDepositOpen, setIsSecurityDepositOpen] = useState(false);
   const [chequePaymentDecor, setChequePaymentDecor] = useState("0");
+  const [selectedBankId, setSelectedBankId] = useState(null);
   const [decorTax, setDecorTax] = useState({
     CGST: { percentage: "9", amount: "0" },
     SGST: { percentage: "9", amount: "0" },
@@ -170,7 +171,7 @@ const cateringBaseRef = useRef(0);
       const canAccessDecor = hasModuleAccess("Decor");
         const permissionQuotation = usePermission("Quotation")
         const canAccessecuritydeposit = hasModuleAccess("Security Deposit");
-
+const canAccessbankselection = hasModuleAccess("Bank Selection Quotaion");
 
       const getErrorMessage = (error, fallback = "Something went wrong") => {
         return (
@@ -1167,8 +1168,7 @@ isAddedAfterFinal: item.isAddedAfterFinal === true,
               setIronService(quotationInfo.ironService || "");
               setVenueTotal(parseFloat(quotationInfo.venueTotal) || 0);
               setCashPayment(parseFloat(quotationInfo.cashPayment) || 0);
-const loadedCheque = parseFloat(quotationInfo.chequePayment) || 0;
-
+setSelectedBankId(quotationInfo.bankId ?? null);
 // 1) mark as synced FIRST so the sync effect will not overwrite the saved catering value
 lastSyncedChequeRef.current = loadedCheque;
 
@@ -1245,7 +1245,6 @@ cateringBaseRef.current = loadedCateringVal + loadedDecorVal; // reconstruct pre
             console.log("Error fetching quotation:", error);
           });
       };
-
       const calculateTotals = () => {
     const subtotal = quotationData.functions.reduce((sum, func) => {
       const total = parseFloat(func.totalPrice) || 0;
@@ -1745,6 +1744,7 @@ const grandTotal =
     isDiscountPercent: isDiscountPercentage,
           eventId: parseInt(eventId),
           isDecore: isDecor,
+          bankId: selectedBankId ? Number(selectedBankId) : null,
           functionQuotationItems: allFunctions.map((fn) => ({
             defaultFunctionId: fn.isExtraQuotationFunction
               ? fn.defaultFunctionId
@@ -2731,7 +2731,15 @@ const handleLockReport = async () => {
           defaultMessage="2. Menu Planning"
         />
       </button>
-
+<Link to={`/edit-event/${eventId}`}>
+      <button className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors">
+        <i className="ki-filled ki-notepad-edit me-1"></i>
+        <FormattedMessage
+          id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_VIEW_DETAILS_EDIT_EVENT_BUTTON"
+          defaultMessage="Edit Event"
+        />
+      </button>
+    </Link>
       {/* Row 3: Decor Quotation / Menu Quotation toggle */}
     {canAccessDecor && (
       <div className="flex flex-col lg:flex-row gap-2">
@@ -2760,15 +2768,7 @@ const handleLockReport = async () => {
     )}
 
     
-      <Link to={`/edit-event/${eventId}`}>
-      <button className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors">
-        <i className="ki-filled ki-notepad-edit me-1"></i>
-        <FormattedMessage
-          id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_VIEW_DETAILS_EDIT_EVENT_BUTTON"
-          defaultMessage="Edit Event"
-        />
-      </button>
-    </Link>
+    
     </div>
 
   <div className="flex flex-col lg:flex-row gap-2">
@@ -3131,6 +3131,29 @@ const handleLockReport = async () => {
                           </div>
                         </>
                       )}
+                    {canAccessbankselection && (
+  <div className="flex flex-col gap-1">
+    <label className="text-xs font-medium text-gray-700">
+      <FormattedMessage id="COMMON.BANK_DETAILS" defaultMessage="Bank" />
+    </label>
+    <select
+      className="input w-full text-sm"
+      value={selectedBankId || ""}
+      disabled={isLocked}
+      onChange={(e) => {
+        setSelectedBankId(e.target.value ? Number(e.target.value) : null);
+        setIsEdited(true);
+      }}
+    >
+      <option value="">Select Bank</option>
+      {bankList.map((bank) => (
+        <option key={bank.id} value={bank.id}>
+          {formatAccountLabel(bank.bankName, bank.accountNo)}
+        </option>
+      ))}
+    </select>
+  </div>
+ )} 
                     </div>
                   </div>
 

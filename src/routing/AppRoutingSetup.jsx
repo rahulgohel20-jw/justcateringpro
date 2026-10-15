@@ -364,6 +364,7 @@ import ActiveUserGuard from "../auth/ActiveUserGuard";
 import ExhibitionQuotation from "../partials/modals/calendar-event/Exhibitionquotation/Exhibitionquotation.jsx";
 import NormalPO from "../pages/stockmanagement/normal-po/Normalpo.jsx";
 import AddNormalPO from "../pages/stockmanagement/normal-po/AddNormalPO.jsx";
+import DecorProfile from "../pages/master/decorprofile/index.jsx";
 
 const AppRoutingSetup = () => {
   return (
@@ -383,7 +384,7 @@ const AppRoutingSetup = () => {
               </ProtectedRoute>
             }
           />
-
+          <Route path="/master/decorprofile" element={<DecorProfile/>}/>
           <Route path="/followup-calendar" element={<FollowUpCalendarPage />} />
           <Route path="/stock-management/accept-multiple-sot" element={<AcceptMultipleSOT />}/>
           <Route path="/master/addlabourhelper" element={<Labourhelper/>}/>

@@ -4353,3 +4353,21 @@ export const UpdateNoteHeading = (id, userId, data) => {
 export const DeleteNoteHeading = (id, userId) => {
   return DELETE(`/notes/heading/deleteById?id=${id}&userId=${userId}`);
 };
+
+
+export const addupdatedecorprofile = (data) => {
+  return POST(`/decor-profile/add-update`, data);
+};
+
+export const getbyiddecorprofile = (userId) => {
+  return GET(`/decor-profile/getbyuserId?userId=${userId}`);
+};
+
+export const uploadlogodecorprofile = (file, userId) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("userId", userId);
+  return PUT(`/decor-profile/upload-logo`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+};

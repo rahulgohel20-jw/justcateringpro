@@ -447,7 +447,7 @@ useEffect(() => {
   if (!selectedBankId && primaryBank) {
     setSelectedBankId(String(primaryBank.id));
   }
-}, [bankDetails]);
+}, [bankDetails, selectedBankId]);
   useEffect(() => {
     if (invoiceData?.createdAt) {
       setInvoiceDate(invoiceData.createdAt.split("T")[0]);
@@ -606,7 +606,8 @@ const res = await GetQuotation(eventId, 1, isDecor);
       }
 
       const qInfo = apiData[0];
-
+// use the quotation's bank if it has one; otherwise "" so the primary bank is applied
+setSelectedBankId(qInfo.bankId ? String(qInfo.bankId) : "");
       // const formatAmount = (value) => {
       //   const num = Number(value) || 0;
       //   return num % 1 === 0 ? num.toString() : num.toFixed(2);
