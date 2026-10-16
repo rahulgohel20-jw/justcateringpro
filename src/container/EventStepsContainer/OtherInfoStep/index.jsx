@@ -97,6 +97,16 @@ const createEmptyRoom = (startDate) => {
   };
 };
 
+const CONFIRMED_FOOD_FIELDS = [
+  { key: "jainMenu", label: "Jain Menu %", max: 100 },
+  { key: "chauvihaarPax", label: "Chauvihaar (Pax)" },
+  { key: "zeroSpice", label: "Zero Spice %", max: 100 },
+  { key: "noOnionNoGarlic", label: "No Onion No Garlic Menu %", max: 100 },
+  { key: "sitDownFamilyDinning", label: "Sit Down Family Dining (Pax)" },
+];
+
+
+
 const OtherInfoStep = ({ formData, setFormData, onInputChange, errors, eventStartDateTime }) => {
   const classes = useStyles();
   const { isRTL, locale } = useLanguage();
@@ -206,6 +216,15 @@ useTranslate("remark", "remarksGujarati", "remarksHindi");
   };
 
   const handleAddClick = () => setShowCustomerModal(true);
+
+  console.log("status value:", formData.status, typeof formData.status);
+  const isConfirmed = String(formData.status) === "1";
+  const handleNumberChange = (e, max) => {
+  const { name, value } = e.target;
+  let cleaned = value.replace(/\D/g, "");
+  if (max != null && cleaned !== "" && Number(cleaned) > max) cleaned = String(max);
+  setFormData((prev) => ({ ...prev, [name]: cleaned }));
+};
 
   const handleInputChange = ({ target: { value, name } }) => {
     setFormData({ ...formData, [name]: value });
@@ -411,6 +430,24 @@ const handleCelbBirthDateChange = (date) => {
   keys={{ english: "meal_notes", regional: "meal_notes_gujarati", hindi: "meal_notes_hindi" }}
 />
 </div>
+
+{isConfirmed &&
+  CONFIRMED_FOOD_FIELDS.map(({ key, label, max }) => (
+    <div key={key} className="flex flex-col">
+      <label className="form-label">{label}</label>
+      <div className="input">
+        <input
+          className="h-full"
+          type="tel"
+          inputMode="numeric"
+          name={key}
+          placeholder={label}
+          value={formData[key] ?? ""}
+          onChange={(e) => handleNumberChange(e, max)}
+        />
+      </div>
+    </div>
+  ))}
 
 
 {/* <div className="w-full">

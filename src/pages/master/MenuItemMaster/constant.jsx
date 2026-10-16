@@ -1,4 +1,4 @@
-import { Switch, Tooltip } from "antd";
+import { Input, Switch, Tooltip } from "antd";
 import { FormattedMessage } from "react-intl";
 import { Select } from "antd";
 
@@ -10,6 +10,8 @@ export const columns = (
   onVenueChange = () => {},
   onVisibleChange = () => {},
   showVisibleColumn = true,
+  showStockColumns = false,
+  onFinalOutputChange = () => {},
 ) => {
   const {
     onSelectAll = () => {},
@@ -68,6 +70,7 @@ export const columns = (
         cellClassName: "w-[8%]",
       },
     },
+    
     {
       accessorKey: "weight",
       header: (
@@ -130,6 +133,55 @@ export const columns = (
       },
     },
   ];
+
+  if (showStockColumns) {
+  const nameIndex = baseColumns.findIndex((c) => c.accessorKey === "name");
+
+  baseColumns.splice(nameIndex + 1, 0, {
+    accessorKey: "preparation",
+    header: (
+      <FormattedMessage
+        id="MASTER.PREPARATION_ITEM"
+        defaultMessage="Preparation Item"
+      />
+    ),
+    cell: ({ row }) => row.original.preparation || "-",
+    meta: {
+      headerClassName: "w-[10%]",
+      cellClassName: "w-[10%]",
+    },
+  });
+}
+
+  if (showStockColumns) {
+  baseColumns.push({
+    accessorKey: "finalOutput",
+    header: (
+      <FormattedMessage
+        id="MASTER.FINAL_OUTPUT"
+        defaultMessage="Final Output (100 Pax)"
+      />
+    ),
+    cell: ({ row }) => {
+      const r = row.original;
+      return (
+        <Input
+          size="small"
+          type="tel"
+          placeholder="0"
+          key={`${r.sr_no}-${r.finalOutput ?? ""}`}
+          defaultValue={r.finalOutput ?? ""}
+          onBlur={(e) => onFinalOutputChange(r.sr_no, e.target.value)}
+          onPressEnter={(e) => e.target.blur()}
+        />
+      );
+    },
+    meta: {
+      headerClassName: "w-[10%]",
+      cellClassName: "w-[10%]",
+    },
+  });
+}
 
   if (showVisibleColumn) {
     baseColumns.push({

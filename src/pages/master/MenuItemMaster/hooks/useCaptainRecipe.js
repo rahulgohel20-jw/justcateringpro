@@ -61,7 +61,7 @@ export default function useCaptainRecipe() {
     return Number((ratio * baseRate).toFixed(2));
   };
 
-  const handleAddCaptainItems = (recipe, weight, unitId, unitName) => {
+const handleAddCaptainItems = (recipe, weight, unitId, unitName, extra = {}) => {
     if (!recipe) {
       message.warning("Please select a Captain Recipe");
       return;
@@ -96,6 +96,7 @@ export default function useCaptainRecipe() {
                 baseRate: r.baseRate ?? recipe.rate,
                 baseUnitId: r.baseUnitId ?? (recipe.unitId ?? recipe.unitHierarchy?.unitId),
                 unitHierarchy: r.unitHierarchy ?? recipe.unitHierarchy,
+                ...extra,
               }
             : r
         )
@@ -133,6 +134,7 @@ export default function useCaptainRecipe() {
         baseRate: recipe.rate,
         baseUnitId: recipe.unitId ?? recipe.unitHierarchy?.unitId,
         unitHierarchy: recipe.unitHierarchy,
+        ...extra,
       };
       setCaptainTableData((prev) => [...prev, newRow]);
       message.success("Captain recipe added");

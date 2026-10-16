@@ -105,6 +105,7 @@ export default function SummaryItemModalOutsideAgency({
   eventId,
   type,
   eventFunctionsFromParent = [],
+   eventVenueName = "",    
   mealType,          
   mealNotes,         
   mealNotesHindi,    
@@ -178,42 +179,29 @@ useEffect(() => {
   };
 }, [open, eventFunctionId, eventId, type]);
 
-  const getFunctionVenue = (eventFunction) => {
-  if (!eventFunction) return "N/A";
-
-  // 1. Try this endpoint's own banquet hall data first
-  if (eventFunction.banquetHallId) {
-    return eventFunction.banquetHallName || eventFunction.function_venue || "N/A";
-  }
-  const bhShift = eventFunction.banquetHallShifts?.[0];
-  if (bhShift?.banquetHallId) {
-    return bhShift.banquetHallName || eventFunction.function_venue || "N/A";
-  }
-
-  const parentMatch = eventFunctionsFromParent.find(
-    (f) => f.id === eventFunction.id,
+const pickName = (f) => {
+  if (!f) return "";
+  const shift = f.banquetHallShifts?.[0];
+  return (
+    f.banquetHallName ||
+    shift?.banquetHallName ||
+    f.banquetHall?.nameEnglish ||
+    f.venue?.nameEnglish ||
+    f.function_venue ||
+    ""
   );
-  if (parentMatch) {
-    if (parentMatch.banquetHallId) {
-      return (
-        parentMatch.banquetHallName ||
-        parentMatch.function_venue ||
-        eventFunction.function_venue ||
-        "N/A"
-      );
-    }
-    const parentBhShift = parentMatch.banquetHallShifts?.[0];
-    if (parentBhShift?.banquetHallId) {
-      return (
-        parentBhShift.banquetHallName ||
-        parentMatch.function_venue ||
-        eventFunction.function_venue ||
-        "N/A"
-      );
-    }
-  }
+};
 
-  return eventFunction.function_venue || "N/A";
+const getFunctionVenue = (eventFunction) => {
+  const own = pickName(eventFunction);
+  if (own) return own;
+
+  // use the API's id if present, otherwise the prop id
+  const id = eventFunction?.id ?? eventFunctionId;
+  const parentMatch = eventFunctionsFromParent.find(
+    (f) => String(f.id) === String(id),
+  );
+  return pickName(parentMatch) || eventVenueName || "N/A";
 };
 
 const displayData = apiData
@@ -415,8 +403,10 @@ const notifyWhatsApp = async (url) => {
   const greeting = (item.contactName || "THERE").toUpperCase();
   const functionName = item.functionName || singleFunctionInfo?.functionName || "";
   const functionDateTime = item.functionDateTime || singleFunctionInfo?.functionDateTime || "";
-  const venueName = item.venue || singleFunctionInfo?.venue || "";
-  const dateStr = formatWaDate(functionDateTime);
+const venueName =
+  item.venue ||
+  singleFunctionInfo?.venue ||
+  getFunctionVenue({ id: eventFunctionId });  const dateStr = formatWaDate(functionDateTime);
   const timeStr = item.time || formatWaTime(functionDateTime);
 
   const mealTypeName = (
@@ -433,7 +423,7 @@ const notifyWhatsApp = async (url) => {
 
   const itemLines = (item.allocationItems || [])
     .map((ai) => {
-      const qty = Number(ai.qty || 0).toFixed(2);
+      const qty = Number(ai.qty || 0);
       const unit = (ai.unitName || "").toUpperCase();
       const instruction = ai.notes || ai.remarks || "";
       let line = `${(ai.itemName || "").toUpperCase()} for ${qty}${unit ? ` ${unit}` : ""}`;

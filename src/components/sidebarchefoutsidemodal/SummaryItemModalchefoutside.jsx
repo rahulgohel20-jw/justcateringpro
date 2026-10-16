@@ -265,6 +265,7 @@ export default function SummaryItemModalchefoutside({
   eventId,
   type,
     eventFunctionsFromParent = [],
+    eventVenueName = "", 
      mealType,          
   mealNotes,         
   mealNotesHindi,    
@@ -293,6 +294,8 @@ const [selectedIndexForLang, setSelectedIndexForLang] = useState(null);
 const [waSendMode, setWaSendMode] = useState("api");
 
   const userId = localStorage.getItem("userId");
+
+   console.log("eventFunctionsFromParent:", eventFunctionsFromParent);
 
   useEffect(() => {
   if (!successMessage) return;
@@ -363,44 +366,29 @@ const formatWaTime = (dateTimeStr) => {
   }
 };
 
-const getFunctionVenue = (eventFunction) => {
-  if (!eventFunction) return "";
-
-  // 1. Try this endpoint's own banquet hall data first
-  if (eventFunction.banquetHallId) {
-    return eventFunction.banquetHallName || eventFunction.function_venue || "";
-  }
-  const bhShift = eventFunction.banquetHallShifts?.[0];
-  if (bhShift?.banquetHallId) {
-    return bhShift.banquetHallName || eventFunction.function_venue || "";
-  }
-
-  // 2. Fall back: look up the same function by id from parent's richer eventFunctions data
-  const parentMatch = eventFunctionsFromParent.find(
-    (f) => f.id === eventFunction.id,
+const pickName = (f) => {
+  if (!f) return "";
+  const shift = f.banquetHallShifts?.[0];
+  return (
+    f.banquetHallName ||
+    shift?.banquetHallName ||
+    f.banquetHall?.nameEnglish ||
+    f.venue?.nameEnglish ||
+    f.function_venue ||
+    ""
   );
-  if (parentMatch) {
-    if (parentMatch.banquetHallId) {
-      return (
-        parentMatch.banquetHallName ||
-        parentMatch.function_venue ||
-        eventFunction.function_venue ||
-        ""
-      );
-    }
-    const parentBhShift = parentMatch.banquetHallShifts?.[0];
-    if (parentBhShift?.banquetHallId) {
-      return (
-        parentBhShift.banquetHallName ||
-        parentMatch.function_venue ||
-        eventFunction.function_venue ||
-        ""
-      );
-    }
-  }
+};
 
-  // 3. Last resort: whatever function_venue this endpoint gave us
-  return eventFunction.function_venue || "";
+const getFunctionVenue = (eventFunction) => {
+  const own = pickName(eventFunction);
+  if (own) return own;
+
+  // use the API's id if present, otherwise the prop id
+  const id = eventFunction?.id ?? eventFunctionId;
+  const parentMatch = eventFunctionsFromParent.find(
+    (f) => String(f.id) === String(id),
+  );
+  return pickName(parentMatch) || eventVenueName;
 };
 
 const displayData = apiData
@@ -434,7 +422,7 @@ const singleFunctionInfo =
   };
 const handleWhatsAppClick = async (item, index, lang = 0, mode = "api") => {
   
-console.log("WA item:", JSON.stringify(item, null, 2));
+
  
 //  if (item._cachedPdfUrl) {
 //   try {
@@ -561,7 +549,11 @@ if (data?.data?.success) {
   const greeting = (item.contactName || "THERE").toUpperCase();
   const functionName = item.functionName || singleFunctionInfo?.functionName || "";
   const functionDateTime = item.functionDateTime || singleFunctionInfo?.functionDateTime || "";
-  const venueName = item.functionVenue || singleFunctionInfo?.functionVenue || "";
+const venueName =
+  item.functionVenue ||
+  singleFunctionInfo?.functionVenue ||
+  getFunctionVenue({ id: eventFunctionId }) ||
+  "";  
   const dateStr = formatWaDate(functionDateTime);
   const timeStr = item.time || formatWaTime(functionDateTime);
   const instruction = item.notes || "";
@@ -583,7 +575,7 @@ if (data?.data?.success) {
     .map((ai) => {
       const aiUnit = ai.unitName || ai.unit || unit || "";
       const aiInstruction = ai.instructions || ai.instruction || ai.remarks || "";
-      let line = `${(ai.itemName || "").toUpperCase()} (${ai.pax || 0} Pax${aiUnit ? ` ${aiUnit}` : ""})`;
+      let line = `${(ai.itemName || "").toUpperCase()} (${ai.pax || 0} ${aiUnit ? ` ${aiUnit}` : ""})`;
       if (aiInstruction) line += `\n  - ${aiInstruction}`;
       return line;
     })
