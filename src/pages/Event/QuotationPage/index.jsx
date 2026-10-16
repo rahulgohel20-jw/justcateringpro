@@ -1167,12 +1167,12 @@ isAddedAfterFinal: item.isAddedAfterFinal === true,
               setPoojaRooms(quotationInfo.poojaRooms || "");
               setIronService(quotationInfo.ironService || "");
               setVenueTotal(parseFloat(quotationInfo.venueTotal) || 0);
-              setCashPayment(parseFloat(quotationInfo.cashPayment) || 0);
+          setCashPayment(parseFloat(quotationInfo.cashPayment) || 0);
 setSelectedBankId(quotationInfo.bankId ?? null);
-// 1) mark as synced FIRST so the sync effect will not overwrite the saved catering value
-lastSyncedChequeRef.current = loadedCheque;
 
-// 2) values from API
+const loadedCheque = parseFloat(quotationInfo.chequePayment) || 0;   
+
+lastSyncedChequeRef.current = loadedCheque;
 setChequePayment(loadedCheque);
 const loadedCateringVal = quotationInfo.chequePaymentCatering != null
   ? parseFloat(quotationInfo.chequePaymentCatering) || 0
