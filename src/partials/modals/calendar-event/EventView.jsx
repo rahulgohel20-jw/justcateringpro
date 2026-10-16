@@ -519,7 +519,10 @@ const formatEventDate = (date) => {
                 />
               </p>
              <h3 className="font-semibold text-base mb-2">
-  {formatEventDate(eventData?.event?.start)}
+  {translatedTitle ||
+    eventData?.event?._def?.title ||
+    eventDataAll?.partyName ||
+    "N/A"}
 </h3>
               <p className="text-xs text-gray-400"></p>
 
