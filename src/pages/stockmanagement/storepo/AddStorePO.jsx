@@ -621,18 +621,64 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
         }
 
         // ── Populate items ──
-        const rawList = Array.isArray(data) ? data : data.details || [];
-        const mapped = rawList.map((detail) => ({
-          rawMaterialId: detail.rawMaterialId || detail.materialId || 0,
-          item_name: detail.rawMaterialName || detail.materialName || "",
-          qty: detail.qty ?? "",
-          unit: detail.unitName || detail.unit?.nameEnglish || "",
-          originalQty: detail.qty ?? 0,
-          closingStock: detail.closingStock ?? null,
-          isAddInStock: detail.isAddInStock ?? true,
-        }));
+let mapped = [];
+if (isBatchNoMode) {
+  const batchDetails = Array.isArray(data?.batchWiseDetails) ? data.batchWiseDetails : [];
 
-        setItems(mapped);
+  mapped = batchDetails.map((d) => {
+    const batches = Array.isArray(d.batches) ? d.batches : d.batchList || [];
+
+    const batchOptions = batches.map((b) => ({
+      batchNo: b.batchNo || "",
+      expiryDate: b.expiryDate || "",
+      qty: b.qty ?? b.availableQty ?? "",
+      availableQty: b.availableQty ?? b.qty ?? "",
+      unit: b.unitName || d.unitName || "",
+    }));
+
+    // spread the requested (remaining) qty across batches in order
+    let remaining = Number(d.remainingQty ?? d.qty ?? 0);
+    const rows = batchOptions.map((b) => {
+      const avail = Number(b.availableQty) || 0;
+      const take = Math.max(0, Math.min(remaining, avail));
+      remaining -= take;
+      return {
+        batchNo: b.batchNo,
+        date: b.expiryDate,
+        qty: take > 0 ? String(take) : "",
+        unit: b.unit,
+      };
+    });
+
+    return {
+      rawMaterialId: d.rawMaterialId || 0,
+      item_name: d.rawMaterialName || "",
+      qty: sumRowsQty(rows),
+      unit: d.unitName || "",
+      closingStock: d.closingStock ?? null,
+      isAddInStock: d.isAddInStock ?? true,
+      batchOptions,
+      detailRows: rows,
+    };
+  });
+
+  setExpandedItemIndex(mapped.length ? 0 : null);
+} else {
+  // Batch OFF → use details
+  const rawList = Array.isArray(data) ? data : data.details || [];
+
+  mapped = rawList.map((detail) => ({
+    rawMaterialId: detail.rawMaterialId || detail.materialId || 0,
+    item_name: detail.rawMaterialName || detail.materialName || "",
+    qty: detail.qty ?? "",
+    unit: detail.unitName || detail.unit?.nameEnglish || "",
+    originalQty: detail.qty ?? 0,
+    closingStock: detail.closingStock ?? null,
+    isAddInStock: detail.isAddInStock ?? true,
+  }));
+}
+
+setItems(mapped);
       } catch (error) {
         console.log("handleCrCodeSelect error:", error);
         Swal.fire({
@@ -646,6 +692,12 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
         setLoadingCRItems(false);
       }
     };
+
+    useEffect(() => {
+  if (isEdit || !selectedCrCode) return;
+  handleCrCodeSelect(selectedCrCode);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [isBatchNoMode]);
 
     // ── NEW: On PO Code select, fetch that PO's data and populate the form ──
     const handlePoCodeSelect = async (pocode) => {
@@ -684,19 +736,55 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
           setSelectedKitchenType(po.kitchenTypeId || undefined);
         }
 
-        // ── Populate items ──
-        const rawList = Array.isArray(data) ? data : data.details || [];
-        const mapped = rawList.map((detail) => ({
-          rawMaterialId: detail.rawMaterialId || detail.materialId || 0,
-          item_name: detail.rawMaterialName || detail.materialName || "",
-          qty: detail.qty ?? "",
-          unit: detail.unitName || detail.unit?.nameEnglish || "",
-          originalQty: detail.qty ?? 0,
-          closingStock: detail.closingStock ?? null,
-          isAddInStock: detail.isAddInStock ?? true,
-        }));
+       // ── Populate items ──
+let mapped = [];
 
-        setItems(mapped);
+if (isBatchNoMode) {
+  // Batch ON → use batchWiseDetails (same shape the edit screen uses)
+  const batchDetails = Array.isArray(data?.batchWiseDetails) ? data.batchWiseDetails : [];
+
+  mapped = batchDetails.map((d) => {
+    const rows = (d.batchList || []).map((b) => ({
+      batchNo: b.batchNo || "",
+      date: b.expiryDate || "",
+      qty: b.qty ?? "",
+      availableQty: b.availableQty ?? "",
+      unit: b.unitName || d.unitName || "",
+    }));
+
+    return {
+      rawMaterialId: d.rawMaterialId || 0,
+      item_name: d.rawMaterialName || "",
+      qty: sumRowsQty(rows),
+      unit: d.unitName || "",
+      closingStock: d.closingStock ?? null,
+      isAddInStock: d.isAddInStock ?? true,
+      batchOptions: rows.map((r) => ({
+        batchNo: r.batchNo,
+        expiryDate: r.date,
+        qty: r.qty,
+        availableQty: r.availableQty,
+        unit: r.unit,
+      })),
+      detailRows: rows,
+    };
+  });
+} else {
+  // Batch OFF → use details
+  const rawList = Array.isArray(data) ? data : data.details || [];
+
+  mapped = rawList.map((detail) => ({
+    rawMaterialId: detail.rawMaterialId || detail.materialId || 0,
+    item_name: detail.rawMaterialName || detail.materialName || "",
+    qty: detail.qty ?? "",
+    unit: detail.unitName || detail.unit?.nameEnglish || "",
+    originalQty: detail.qty ?? 0,
+    closingStock: detail.closingStock ?? null,
+    isAddInStock: detail.isAddInStock ?? true,
+  }));
+}
+
+setItems(mapped);s
       } catch (error) {
         console.log("handlePoCodeSelect error:", error);
         Swal.fire({
