@@ -274,6 +274,7 @@ const allCategoryIds =
   formData.append("isCompanyLogo", 0);
   formData.append("isPartyDetails", 0);
   formData.append("isWithQty", 0);
+  formData.append("isFunctionWise", 0);
   formData.append("pageSize", "");
   formData.append("isWithPrice", 1);
   formData.append("isContactNoVisible", 1); 

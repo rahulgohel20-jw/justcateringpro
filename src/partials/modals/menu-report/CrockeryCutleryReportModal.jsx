@@ -148,6 +148,7 @@ const CrockeryCutleryReportModal = ({
             enabled: Boolean(config.size2 === 0),
           },
           isWithPrice: config.isWithPrice === 1,
+          isFunctionWise : config.isFunctionWise === 1,
           isContactNoVisible: config.isContactNoVisible === 1, 
           isSignatureVisible: config.isSignatureVisible === 0 , 
           isAddMenu: config.isAddMenu === 0,
@@ -179,6 +180,7 @@ const CrockeryCutleryReportModal = ({
             size1: config.size1 === 1 ? 1 : 0,
             size2: config.size2 === 1 ? 1 : 0,
             isWithPrice: config.isWithPrice,
+            isFunctionWise: config.isFunctionWise,
             isContactNoVisible: config.isContactNoVisible,
             isSignatureVisible: config.isSignatureVisible,
             isAddMenu: config.isAddMenu,
@@ -417,6 +419,7 @@ const CrockeryCutleryReportModal = ({
       isWithQty: options.isWithQty,
       pageSize,
       isWithPrice: options.isWithPrice,
+      isFunctionWise: options.isFunctionWise,
       agencyId: selectedAgency,
       itemId: selectedItems,
       ...(adminStartDate && {

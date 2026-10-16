@@ -261,6 +261,7 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
   const address = event.extendedProps.address || "";
   const events = first?.description || event.extendedProps.event || "";
   const mobile = first?.managerName || event.extendedProps.mobile || "";
+  const clientName = first?.clientName || event.extendedProps.clientName || "";
   const banquetHallName = event.extendedProps.banquetHallName || "";
   const locationText = banquetHallName || address;
 
@@ -278,13 +279,16 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
         </div>
       `
       : `
+            
         <div class="p-1">
           <p class="mb-1"><strong>${event.title}</strong></p>
+          ${clientName ? `<p class="mb-1"><i class="me-1 ki-filled ki-user text-success"></i><span>${clientName}</span></p>` : ""}
           <p class="mb-1"><i class="me-1 ki-filled ki-calendar-tick text-success"></i><span>${events}</span></p>
           <p class="mb-1"><i class="me-1 ki-filled ki-call text-success"></i><span>${mobile}</span></p>
           <p class="mb-1"><i class="me-1 ki-filled ki-time text-success"></i><span>${time}</span></p>
           ${locationText ? `<p class="mb-1"><i class="me-1 ki-filled ki-geolocation text-success"></i><span>${locationText}</span></p>` : ""}
         </div>
+     
       `;
 
   tippy(el, {
