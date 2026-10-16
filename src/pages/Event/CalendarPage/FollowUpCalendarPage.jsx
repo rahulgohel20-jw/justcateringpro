@@ -48,6 +48,7 @@ const FollowUpCalendarPage = () => {
             date: dateKey,
             eventName: item.eventName,
             managerName: item.managerName,
+            clientName: item.clientName,
             items: [],
           };
         }
@@ -66,10 +67,14 @@ const FollowUpCalendarPage = () => {
           end: g.date,
           allDay: true,
           color: statusColor(allDone),
-          extendedProps: {
-            eventId: g.items[0]?.eventId, // ← add this
-            raw: g.items,
-          },
+        extendedProps: {
+  eventId: g.items[0]?.eventId,
+  clientName: g.clientName,      // ← add
+  managerName: g.managerName,    // ← add
+  count: g.items.length,         // ← add
+  isDone: allDone,               // ← add
+  raw: g.items,
+},
         };
       });
 

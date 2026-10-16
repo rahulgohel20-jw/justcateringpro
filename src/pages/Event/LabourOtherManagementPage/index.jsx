@@ -642,6 +642,7 @@ const scroll = (direction) => {
         formData.append("isCompanyLogo", 0);
         formData.append("isPartyDetails", 0);
         formData.append("isWithQty", 0);
+        formData.append("isFunctionWise", 0);
         formData.append("pageSize", "A4");
         formData.append("isWithPrice", 0);
         formData.append("agencyId[]", row.contactId);
@@ -779,6 +780,7 @@ const handleWebWhatsAppClick = useCallback(
         formData.append("isCompanyLogo", 0);
         formData.append("isPartyDetails", 0);
         formData.append("isWithQty", 0);
+        formData.append("isFunctionWise", 0);
         formData.append("pageSize", "A4");
         formData.append("isWithPrice", 0);
         formData.append("agencyId[]", row.contactId);
