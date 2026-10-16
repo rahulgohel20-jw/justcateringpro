@@ -171,6 +171,7 @@ const handleAddRecipe = (extra = {}) => {
               rate: Number(rate.toFixed(2)),
               rawMaterialId: raw.rawMaterialId,
               unitHierarchy: raw.unitHierarchy || row.unitHierarchy,
+              ...extra,
             }
           : row
       );

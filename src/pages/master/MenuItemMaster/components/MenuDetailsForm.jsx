@@ -1801,8 +1801,8 @@ const handleTranslateKitchenInstruction = async (value) => {
       optionFilterProp="label"
       placeholder="Select Preparation"
       className="bg-[#F8FAFC] h-10"
-      value={captainPreparationId}
-      onChange={(v) => setCaptainPreparationId(v ?? null)}
+      value={rawPreparationId}
+      onChange={(v) => setRawPreparationId(v ?? null)}
       options={preparationOptions}
     />
   </div>
@@ -1908,19 +1908,7 @@ const handleTranslateKitchenInstruction = async (value) => {
            <Button
     type="primary"
     icon={<PlusOutlined />}
-    onClick={() => {
-    handleAddCaptainItems(
-      selectedCaptainRecipe,
-      captainWeight,
-      captainUnit?.id,
-      captainUnit?.name,
-      {
-        preparationId: captainPreparationId,
-        preparation: preparationLabel(captainPreparationId),
-      },
-    );
-    setCaptainPreparationId(null);
-  }}
+   onClick={() => setIsCopyCaptainRecipe(true)}
     className="bg-primary h-10 px-6 rounded-md hover:bg-primary mt-[-16px]"
   >
     Copy Captain Recipe
