@@ -135,51 +135,53 @@ export const columns = (
   ];
 
   if (showStockColumns) {
-    baseColumns.push(
-      {
-        accessorKey: "preparation",
-        header: (
-          <FormattedMessage
-            id="MASTER.PREPARATION_ITEM"
-            defaultMessage="Preparation Item"
-          />
-        ),
-        cell: ({ row }) => row.original.preparation || "-",
-        meta: {
-          headerClassName: "w-[10%]",
-          cellClassName: "w-[10%]",
-        },
-      },
-      {
-        accessorKey: "finalOutput",
-        header: (
-          <FormattedMessage
-            id="MASTER.FINAL_OUTPUT"
-            defaultMessage="Final Output (100 Pax)"
-          />
-        ),
-        cell: ({ row }) => {
-          const r = row.original;
-          return (
-            <Input
-              size="small"
-              type="tel"
-             
-              placeholder="0"
-              key={`${r.sr_no}-${r.finalOutput ?? ""}`}
-              defaultValue={r.finalOutput ?? ""}
-              onBlur={(e) => onFinalOutputChange(r.sr_no, e.target.value)}
-              onPressEnter={(e) => e.target.blur()}
-            />
-          );
-        },
-        meta: {
-          headerClassName: "w-[10%]",
-          cellClassName: "w-[10%]",
-        },
-      },
-    );
-  }
+  const nameIndex = baseColumns.findIndex((c) => c.accessorKey === "name");
+
+  baseColumns.splice(nameIndex + 1, 0, {
+    accessorKey: "preparation",
+    header: (
+      <FormattedMessage
+        id="MASTER.PREPARATION_ITEM"
+        defaultMessage="Preparation Item"
+      />
+    ),
+    cell: ({ row }) => row.original.preparation || "-",
+    meta: {
+      headerClassName: "w-[10%]",
+      cellClassName: "w-[10%]",
+    },
+  });
+}
+
+  if (showStockColumns) {
+  baseColumns.push({
+    accessorKey: "finalOutput",
+    header: (
+      <FormattedMessage
+        id="MASTER.FINAL_OUTPUT"
+        defaultMessage="Final Output (100 Pax)"
+      />
+    ),
+    cell: ({ row }) => {
+      const r = row.original;
+      return (
+        <Input
+          size="small"
+          type="tel"
+          placeholder="0"
+          key={`${r.sr_no}-${r.finalOutput ?? ""}`}
+          defaultValue={r.finalOutput ?? ""}
+          onBlur={(e) => onFinalOutputChange(r.sr_no, e.target.value)}
+          onPressEnter={(e) => e.target.blur()}
+        />
+      );
+    },
+    meta: {
+      headerClassName: "w-[10%]",
+      cellClassName: "w-[10%]",
+    },
+  });
+}
 
   if (showVisibleColumn) {
     baseColumns.push({
