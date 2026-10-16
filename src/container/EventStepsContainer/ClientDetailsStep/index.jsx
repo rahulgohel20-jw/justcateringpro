@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Modal } from "antd";
 import { Input } from "@/components/ui/input";
 import AddCustomer from "@/partials/modals/add-customer/AddCustomer";
 import CustomerDropdown from "@/components/dropdowns/customerDropdown";
@@ -8,6 +9,16 @@ import { resolveOptionValue } from "@/utils/resolveOptionValue";
 import { FormattedMessage } from "react-intl";
 import { useLanguage } from "@/i18n";
 import MultiLangInputBox from "../../../components/form-inputs/MultiLangInputbox";
+
+
+const GST_DOCUMENT_NAMES = ["gst certifiation", "gst certification"];
+
+
+const getGstDocPath = (party) => {
+  const name = String(party?.document || "").trim().toLowerCase();
+  return GST_DOCUMENT_NAMES.includes(name) ? party?.docPath || "" : "";
+};
+
 const getLangConfig = () => {
   try {
     const auth = JSON.parse(localStorage.getItem("auth-storage"));
@@ -37,11 +48,19 @@ const ClientDetailsStep = ({
   const { isRTL, locale } = useLanguage();
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [customer, setCustomer] = useState([]);
+  const [isGstViewerOpen, setIsGstViewerOpen] = useState(false);
   const langConfig = getLangConfig();
   
   const [lang, setLang] = useState(localStorage.getItem("lang") || "en");
 
   let Id = localStorage.getItem("userId");
+
+  // GST certificate of the currently selected customer (empty → link is hidden)
+  const selectedCustomer = customer.find(
+    (c) => String(c.value) === String(formData.partyId)
+  );
+  const gstDocPath = selectedCustomer?.gstDocPath || "";
+  const isGstImage = /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i.test(gstDocPath);
 
   
   useEffect(() => {
@@ -148,6 +167,8 @@ const ClientDetailsStep = ({
             addressEnglish: customer.addressEnglish,
             addressHindi: customer.addressHindi,
             addressGujarati: customer.addressGujarati,
+
+            gstDocPath: getGstDocPath(customer),
           };
         }
       );
@@ -321,6 +342,19 @@ useEffect(() => {
                     <i className="ki-filled ki-plus"></i>
                   </button>
                 </div>
+
+                {/* GST certificate — only shown when the selected customer has one */}
+                {gstDocPath && (
+                  <button
+                    type="button"
+                    onClick={() => setIsGstViewerOpen(true)}
+                    title="View GST Certificate"
+                    className="btn  btn-primary flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap"
+                  >
+                    <i className="ki-filled ki-document"></i>
+                    GST Certificate
+                  </button>
+                )}
               </div>
               {errors.customer_name && (
                 <span className="text-red-600 font-normal text-sm mt-0.50">
@@ -478,6 +512,31 @@ required={false}
               </label>
             </div>
           </div>
+
+          {/* GST certificate viewer */}
+          <Modal
+            title="GST Certificate"
+            open={isGstViewerOpen && !!gstDocPath}
+            onCancel={() => setIsGstViewerOpen(false)}
+            footer={null}
+            width={800}
+            centered
+            destroyOnClose
+          >
+            {isGstImage ? (
+              <img
+                src={gstDocPath}
+                alt="GST Certificate"
+                className="mx-auto max-h-[75vh] w-auto max-w-full object-contain"
+              />
+            ) : (
+              <iframe
+                src={gstDocPath}
+                title="GST Certificate"
+                className="h-[75vh] w-full border-0"
+              />
+            )}
+          </Modal>
 
           <AddCustomer
             isModalOpen={isMemberModalOpen}

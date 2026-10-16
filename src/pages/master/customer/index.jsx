@@ -148,7 +148,7 @@ const CustomerMaster = () => {
           document: cust.document || "-",
           altMobileno: cust.altMobileno || "",
           contactCategoryId: cust.contact?.id,
-          image: cust.documentImage || "",
+           image: cust.docPath || cust.documentImage || "",
           nameEnglish: cust.nameEnglish,
           nameHindi: cust.nameHindi,
           nameGujarati: cust.nameGujarati,

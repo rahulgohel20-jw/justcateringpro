@@ -4430,6 +4430,9 @@ style={{ maxHeight: "calc(100vh - 260px)", minHeight: 300 }}>
   eventId={eventId}
   type={"chef"}
   eventFunctionsFromParent={eventData?.eventFunctions || []}
+  eventVenueName={
+    getVenueDisplay(eventData) !== "-" ? getVenueDisplay(eventData) : ""
+  }
   mealType={eventData?.mealType}
   mealNotes={eventData?.meal_notes}
   mealNotesHindi={eventData?.meal_notes_hindi}
@@ -4443,6 +4446,9 @@ style={{ maxHeight: "calc(100vh - 260px)", minHeight: 300 }}>
   eventId={eventId}
   type={"outside"}
   eventFunctionsFromParent={eventData?.eventFunctions || []}
+   eventVenueName={
+    getVenueDisplay(eventData) !== "-" ? getVenueDisplay(eventData) : ""
+  }
   mealType={eventData?.mealType}
   mealNotes={eventData?.meal_notes}
   mealNotesHindi={eventData?.meal_notes_hindi}
