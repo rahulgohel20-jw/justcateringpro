@@ -365,6 +365,7 @@ import ExhibitionQuotation from "../partials/modals/calendar-event/Exhibitionquo
 import NormalPO from "../pages/stockmanagement/normal-po/Normalpo.jsx";
 import AddNormalPO from "../pages/stockmanagement/normal-po/AddNormalPO.jsx";
 import DecorProfile from "../pages/master/decorprofile/index.jsx";
+import PreparationMaster from "../pages/master/preparation-master/index.jsx";
 
 const AppRoutingSetup = () => {
   return (
@@ -659,6 +660,7 @@ const AppRoutingSetup = () => {
           <Route path="/superadmin/members" element={<SuperadminMember />} />
           <Route path="/master/functions" element={<FunctionsMaster />} />
           <Route path="/master/meals" element={<MealMaster />} />
+          <Route path="/master/preparation-master" element={<PreparationMaster />} />
           <Route
             path="/master/contact-categories"
             element={<ContactCategoryMaster />}

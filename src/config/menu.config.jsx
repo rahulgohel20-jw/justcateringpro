@@ -147,7 +147,21 @@ export const allMenuItems = (navigate) => {
       ),
       icon: "  text-lg ki-filled ki-setting-4 text-primary",
       path: "/exhibition-setup",
-      pageName: "Exhibition setup",
+      pageName: "Exhibition Quotation",
+      moduleName:"Exhibition Quotation"
+    },
+
+    {
+      title: (
+        <FormattedMessage
+          id="COMMON.preparation_master"
+          defaultMessage="Preparation Master"
+        />
+      ),
+      icon: "  text-lg ki-filled ki-setting-3 text-primary",
+      path: "/master/preparation-master",
+      pageName: "Preparation Master",
+      moduleName:"Preparation Master"
     },
 
     {
@@ -368,6 +382,19 @@ export const allMenuItems = (navigate) => {
     },
 
      {
+      title: (
+        <FormattedMessage
+          id="COMMON.NOTES_MANAGEMENT"
+          defaultMessage="Notes Management"
+        />
+      ),
+      icon: "text-lg ki-filled ki-note-2 text-primary", 
+      path: "/master/notes-management",
+      pageName: "Notes Management",
+      moduleName: "Notes Management",
+    },
+
+     {
           title: (
             <FormattedMessage
               id="COMMON.GUEST_MASTER"
@@ -389,7 +416,7 @@ export const allMenuItems = (navigate) => {
           icon: "  text-lg ki-filled ki-people  text-primary",
           path: "/master/addlabourhelper",
           pageName: "labour helper",
-          
+          moduleName : "labour helper",
         },
 
     {

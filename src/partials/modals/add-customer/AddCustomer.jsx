@@ -709,6 +709,12 @@ if (!isModalOpen) return null;
                     defaultMessage="Driving License"
                   />
                 </option>
+                <option value="gst certifiation">
+                  <FormattedMessage
+                    id="USER.MASTER.DRIVING_LICENSE"
+                    defaultMessage="GST Certification"
+                  />
+                </option>
               </select>
             </div>
 

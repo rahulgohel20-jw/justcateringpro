@@ -1,6 +1,5 @@
 import {
   X, StickyNote, FileText, Heading, Calendar, User,
-  Layers, BookOpen,
 } from "lucide-react";
 
 export default function ViewNoteModal({ isOpen, onClose, note }) {
@@ -22,23 +21,7 @@ export default function ViewNoteModal({ isOpen, onClose, note }) {
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between shrink-0">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg font-bold text-gray-900">{note.title || "Untitled Note"}</h2>
-            </div>
-            <div className="flex items-center gap-4 text-xs text-gray-400">
-              {note.moduleName && (
-                <span className="flex items-center gap-1">
-                  <Layers className="w-3 h-3" />
-                  {note.moduleName}
-                </span>
-              )}
-              {note.pageName && (
-                <span className="flex items-center gap-1">
-                  <BookOpen className="w-3 h-3" />
-                  {note.pageName}
-                </span>
-              )}
-            </div>
+            <h2 className="text-lg font-bold text-gray-900">{note.title || "Untitled Note"}</h2>
           </div>
           <button
             onClick={onClose}
@@ -52,20 +35,6 @@ export default function ViewNoteModal({ isOpen, onClose, note }) {
         <div className="overflow-y-auto flex-1 p-6">
           {/* Note Info Cards */}
           <div className="grid grid-cols-2 gap-3 mb-5">
-            <div className="flex items-center gap-3 border border-gray-100 rounded-xl p-3 bg-gray-50">
-              <Layers className="w-5 h-5 text-primary shrink-0" />
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">Module</p>
-                <p className="text-sm font-bold text-gray-900">{note.moduleName || "—"}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 border border-gray-100 rounded-xl p-3 bg-gray-50">
-              <BookOpen className="w-5 h-5 text-primary shrink-0" />
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">Page</p>
-                <p className="text-sm font-bold text-gray-900">{note.pageName || "—"}</p>
-              </div>
-            </div>
             <div className="flex items-center gap-3 border border-gray-100 rounded-xl p-3 bg-gray-50">
               <StickyNote className="w-5 h-5 text-primary shrink-0" />
               <div>

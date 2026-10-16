@@ -1,19 +1,25 @@
 import { useState, useEffect } from "react";
+import { X, Plus, Trash2, StickyNote } from "lucide-react";
 import {
-  X, Plus, Trash2, StickyNote, Heading, Layers, BookOpen,
-} from "lucide-react";
-import {
-  GetNotesModules,
-  GetNotesPages,
   AddNote,
   UpdateNote,
   DeleteNoteHeading,
 } from "../../../services/apiServices";
 import Swal from "sweetalert2";
 import { FormattedMessage } from "react-intl";
-import SearchableSelect from "../../../components/SearchableSelect/SearchableSelect";
 
 const EMPTY_HEADING = { id: null, heading: "", description: "" };
+
+const STATUS_OPTIONS = [
+  { value: "PENDING", label: "Pending" },
+  { value: "RUNNING", label: "Running" },
+  { value: "COMPLETED", label: "Completed" },
+];
+
+const normalizeStatus = (raw) => {
+  const key = String(raw ?? "").trim().toUpperCase();
+  return STATUS_OPTIONS.some((o) => o.value === key) ? key : "PENDING";
+};
 
 export default function AddNoteModal({
   isOpen,
@@ -22,32 +28,20 @@ export default function AddNoteModal({
   noteDetails = null,
   userId,
 }) {
-  const [form, setForm] = useState({ moduleId: "", pageId: "", title: "" });
+const [form, setForm] = useState({ title: "", status: "PENDING" });
   const [headings, setHeadings] = useState([{ ...EMPTY_HEADING }]);
-  const [modules, setModules] = useState([]);
-  const [pages, setPages] = useState([]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-  const [loadingModules, setLoadingModules] = useState(false);
-  const [loadingPages, setLoadingPages] = useState(false);
-
   const isEdit = !!noteDetails;
-
-  // Load modules on open
-  useEffect(() => {
-    if (!isOpen) return;
-    fetchModules();
-  }, [isOpen]);
 
   // Populate form when editing
   useEffect(() => {
     if (!isOpen) return;
     if (noteDetails) {
       setForm({
-        moduleId: noteDetails.moduleId || "",
-        pageId: noteDetails.pageId || "",
-        title: noteDetails.title || "",
-      });
+    title: noteDetails.title || "",
+    status: noteDetails.status || "PENDING",
+  });
       setHeadings(
         noteDetails.headings?.length > 0
           ? noteDetails.headings.map((h) => ({
@@ -57,58 +51,18 @@ export default function AddNoteModal({
           }))
           : [{ ...EMPTY_HEADING }]
       );
-      // Load pages for the existing module
-      if (noteDetails.moduleId) {
-        fetchPages(noteDetails.moduleId);
-      }
     } else {
-      setForm({ moduleId: "", pageId: "", title: "" });
-      setHeadings([{ ...EMPTY_HEADING }]);
-      setPages([]);
+     setForm({ title: "", status: "PENDING" });
+  setHeadings([{ ...EMPTY_HEADING }]);
     }
     setErrors({});
   }, [isOpen, noteDetails]);
-
-  const fetchModules = async () => {
-    try {
-      setLoadingModules(true);
-      const res = await GetNotesModules(userId);
-      const data = res?.data?.data || res?.data;
-      setModules(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to load modules:", err);
-    } finally {
-      setLoadingModules(false);
-    }
-  };
-
-  const fetchPages = async (moduleId) => {
-    try {
-      setLoadingPages(true);
-      const res = await GetNotesPages(moduleId, userId);
-      const data = res?.data?.data || res?.data;
-      setPages(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to load pages:", err);
-    } finally {
-      setLoadingPages(false);
-    }
-  };
 
   if (!isOpen) return null;
 
   const set = (k, v) => {
     setForm((p) => ({ ...p, [k]: v }));
     setErrors((p) => ({ ...p, [k]: "" }));
-  };
-
-  const handleModuleChange = (moduleId) => {
-    set("moduleId", moduleId);
-    set("pageId", "");
-    setPages([]);
-    if (moduleId) {
-      fetchPages(moduleId);
-    }
   };
 
   const handleHeadingChange = (index, field, value) => {
@@ -151,8 +105,6 @@ export default function AddNoteModal({
 
   const validate = () => {
     const e = {};
-    // if (!form.moduleId) e.moduleId = "Module is required";
-    // if (!form.pageId) e.pageId = "Page is required";
     if (!form.title.trim()) e.title = "Note title is required";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -171,9 +123,8 @@ export default function AddNoteModal({
         }));
 
       const payload = {
-        moduleId: form.moduleId ? Number(form.moduleId) : null,
-        pageId: form.pageId ? Number(form.pageId) : null,
         title: form.title.trim(),
+        status: form.status,
         headings: filteredHeadings,
       };
 
@@ -267,55 +218,36 @@ export default function AddNoteModal({
           {/* Note Details */}
           <div>
             <SectionTitle title={<FormattedMessage id="NOTES.FORM.SECTION.NOTE_DETAILS" defaultMessage="Note Details" />} />
-            <div className="grid grid-cols-2 gap-4">
-              {/* Module Dropdown */}
-              <div>
-                <label className={labelCls}>
-                  <Layers className="w-3 h-3" /> <FormattedMessage id="NOTES.FORM.LABEL.MODULE" defaultMessage="Module" />
-                </label>
-                <SearchableSelect
-                  name="moduleId"
-                  value={form.moduleId ? String(form.moduleId) : ""}
-                  onChange={(e) => handleModuleChange(e.target.value)}
-                  options={modules.map((m) => ({ value: String(m.moduleId), label: m.moduleName }))}
-                />
-                {/* {errors.moduleId && (
-                  <p className="text-red-500 text-[10px] mt-0.5">{errors.moduleId}</p>
-                )} */}
-              </div>
-
-              {/* Page Dropdown */}
-              <div>
-                <label className={labelCls}>
-                  <BookOpen className="w-3 h-3" /> <FormattedMessage id="NOTES.FORM.LABEL.PAGE" defaultMessage="Page" />
-                </label>
-                <SearchableSelect
-                  name="pageId"
-                  value={form.pageId ? String(form.pageId) : ""}
-                  onChange={(e) => set("pageId", e.target.value)}
-                  options={pages.map((p) => ({ value: String(p.pageId), label: p.pageName }))}
-                />
-                {/* {errors.pageId && (
-                  <p className="text-red-500 text-[10px] mt-0.5">{errors.pageId}</p>
-                )} */}
-              </div>
-
-              {/* Note Title */}
-              <div className="col-span-2">
-                <label className={labelCls}>
-                  <StickyNote className="w-3 h-3" /> <FormattedMessage id="NOTES.FORM.LABEL.TITLE" defaultMessage="Note Title" /> <span className="text-red-500">*</span>
-                </label>
-                <input
-                  value={form.title}
-                  onChange={(e) => set("title", e.target.value)}
-                  placeholder="e.g. Meeting Notes"
-                  className={inputCls(errors.title)}
-                />
-                {errors.title && (
-                  <p className="text-red-500 text-[10px] mt-0.5">{errors.title}</p>
-                )}
-              </div>
+            <div>
+              <label className={labelCls}>
+                <StickyNote className="w-3 h-3" /> <FormattedMessage id="NOTES.FORM.LABEL.TITLE" defaultMessage="Note Title" /> <span className="text-red-500">*</span>
+              </label>
+              <input
+                value={form.title}
+                onChange={(e) => set("title", e.target.value)}
+                placeholder="e.g. Meeting Notes"
+                className={inputCls(errors.title)}
+              />
+              {errors.title && (
+                <p className="text-red-500 text-[10px] mt-0.5">{errors.title}</p>
+              )}
             </div>
+            <div>
+    <label className={labelCls}>
+      <FormattedMessage id="NOTES.FORM.LABEL.STATUS" defaultMessage="Status" />
+    </label>
+    <select
+      value={form.status}
+      onChange={(e) => set("status", e.target.value)}
+      className={inputCls(false)}
+    >
+      {STATUS_OPTIONS.map((s) => (
+  <option key={s.value} value={s.value}>
+    {s.label}
+  </option>
+))}
+    </select>
+  </div>
           </div>
 
           {/* Headings & Descriptions */}

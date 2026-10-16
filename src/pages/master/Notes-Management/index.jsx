@@ -5,15 +5,12 @@ import { columns } from "./constant";
 import { usePermission } from "../../../hooks/usePermission";
 import ViewNoteModal from "./ViewNoteModal";
 import AddNoteModal from "./AddNoteModal";
-import SearchableSelect from "../../../components/SearchableSelect/SearchableSelect";
-import { Search, Plus, StickyNote, FileText, Heading } from "lucide-react";
+import { Search, Plus, StickyNote, Heading } from "lucide-react";
 import Swal from "sweetalert2";
 import {
   GetAllNotes,
   GetNoteById,
   DeleteNoteById,
-  GetNotesModules,
-  GetNotesPages,
 } from "../../../services/apiServices";
 import { FormattedMessage } from "react-intl";
 import { useIntl } from "react-intl";
@@ -43,36 +40,9 @@ const NotesManagement = () => {
   const [editTarget, setEditTarget] = useState(null);
   const [viewTarget, setViewTarget] = useState(null);
 
-  // Filter dropdowns
-  const [modules, setModules] = useState([]);
-  const [pages, setPages] = useState([]);
-  const [filterModuleId, setFilterModuleId] = useState("");
-  const [filterPageId, setFilterPageId] = useState("");
-
   useEffect(() => {
     fetchNotes();
-    fetchModules();
   }, []);
-
-  const fetchModules = async () => {
-    try {
-      const res = await GetNotesModules(userId);
-      const data = res?.data?.data || res?.data;
-      setModules(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to load modules:", err);
-    }
-  };
-
-  const fetchPages = async (moduleId) => {
-    try {
-      const res = await GetNotesPages(moduleId, userId);
-      const data = res?.data?.data || res?.data;
-      setPages(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to load pages:", err);
-    }
-  };
 
   const fetchNotes = async () => {
     try {
@@ -91,25 +61,10 @@ const NotesManagement = () => {
     }
   };
 
-  // Apply search + filter
+  // Apply search
   useEffect(() => {
     let filtered = [...originalData];
 
-    // Filter by module
-    if (filterModuleId) {
-      filtered = filtered.filter(
-        (item) => String(item.moduleId) === String(filterModuleId)
-      );
-    }
-
-    // Filter by page
-    if (filterPageId) {
-      filtered = filtered.filter(
-        (item) => String(item.pageId) === String(filterPageId)
-      );
-    }
-
-    // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter((item) =>
@@ -120,16 +75,7 @@ const NotesManagement = () => {
     }
 
     setTableData(filtered.map((item, i) => ({ ...item, sr_no: i + 1 })));
-  }, [searchQuery, originalData, filterModuleId, filterPageId]);
-
-  const handleModuleFilterChange = (moduleId) => {
-    setFilterModuleId(moduleId);
-    setFilterPageId("");
-    setPages([]);
-    if (moduleId) {
-      fetchPages(moduleId);
-    }
-  };
+  }, [searchQuery, originalData]);
 
   const handleView = async (item) => {
     try {
@@ -189,16 +135,11 @@ const NotesManagement = () => {
     }
   };
 
-  const handleSearch = () => {
-    // Search is already reactive via useEffect
-  };
-
   const total = originalData.length;
   const totalHeadings = originalData.reduce(
     (acc, n) => acc + (n.headings?.length || 0),
     0
   );
-  const uniqueModules = new Set(originalData.map((n) => n.moduleId)).size;
 
   return (
     <Fragment>
@@ -212,7 +153,7 @@ const NotesManagement = () => {
             <p className="text-xs text-gray-400 mt-0.5">
               <FormattedMessage
                 id="NOTES.DESCRIPTION"
-                defaultMessage="Create, organize, and manage notes with headings and descriptions across modules."
+                defaultMessage="Create, organize, and manage notes with headings and descriptions."
               />
             </p>
           </div>
@@ -224,68 +165,11 @@ const NotesManagement = () => {
         </div>
 
         {/* Stat Cards */}
-        <div className="flex gap-4 mb-6">
-          <StatCard
-            icon={StickyNote}
-            label={intl.formatMessage({ id: "NOTES.TOTAL_NOTES", defaultMessage: "Total Notes" })}
-            value={String(total).padStart(2, "0")}
-            iconColor="text-primary"
-            iconBg="bg-primary/10"
-          />
-          <StatCard
-            icon={Heading}
-            label={intl.formatMessage({ id: "NOTES.TOTAL_HEADINGS", defaultMessage: "Total Headings" })}
-            value={String(totalHeadings).padStart(2, "0")}
-            iconColor="text-green-600"
-            iconBg="bg-green-50"
-          />
-          <StatCard
-            icon={FileText}
-            label={intl.formatMessage({ id: "NOTES.MODULES_USED", defaultMessage: "Modules Used" })}
-            value={String(uniqueModules).padStart(2, "0")}
-            iconColor="text-orange-500"
-            iconBg="bg-orange-50"
-          />
-        </div>
+        
 
-        {/* Filters */}
-        <div className="filters flex flex-wrap items-end gap-3 mb-4">
-          {/* Module Filter */}
-          <div className="filItems min-w-[200px]">
-            <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
-              <FormattedMessage id="NOTES.FILTER.MODULE" defaultMessage="Module" />
-            </label>
-            <SearchableSelect
-              name="filterModuleId"
-              value={filterModuleId}
-              onChange={(e) => handleModuleFilterChange(e.target.value)}
-              options={modules.map((m) => ({ value: String(m.moduleId), label: m.moduleName }))}
-            />
-          </div>
-
-          {/* Page Filter */}
-          <div className="filItems min-w-[200px]">
-            <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
-              <FormattedMessage id="NOTES.FILTER.PAGE" defaultMessage="Page" />
-            </label>
-            <SearchableSelect
-              name="filterPageId"
-              value={filterPageId}
-              onChange={(e) => setFilterPageId(e.target.value)}
-              options={pages.map((p) => ({ value: String(p.pageId), label: p.pageName }))}
-            />
-          </div>
-
-          {/* Search Button */}
-          <button
-            className="btn btn-primary flex items-center gap-2"
-            onClick={handleSearch}
-          >
-            <Search className="w-4 h-4" /> <FormattedMessage id="NOTES.SEARCH_BTN" defaultMessage="Search" />
-          </button>
-
-          {/* Text Search */}
-          <div className="filItems relative ml-auto">
+        {/* Search */}
+        <div className="filters flex flex-wrap justify-start gap-3 mb-4">
+          <div className="filterItems relative ml-auto">
             <Search className="w-4 h-4 text-primary absolute top-1/2 left-3 -translate-y-1/2 pointer-events-none" />
             <input
               className="input pl-9"

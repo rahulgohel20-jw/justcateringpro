@@ -59,7 +59,7 @@ const EventViewModal = ({
   const permissionExpense = usePermission("Expense Management");
   const permissionCrockeryCutlery = usePermission("Crockery Cutlery");
   const permissionRoomDetails = usePermission("Room Details");
-const permissionExhibitionSetup = usePermission("Exhibition setup");
+const permissionExhibitionSetup = usePermission("Exhibition Quotation");
   const navigate = useNavigate();
   const eventDataAll = eventData?.event?._def?.extendedProps || {};
   const eventFunctionId = 108;
@@ -519,7 +519,10 @@ const formatEventDate = (date) => {
                 />
               </p>
              <h3 className="font-semibold text-base mb-2">
-  {formatEventDate(eventData?.event?.start)}
+  {translatedTitle ||
+    eventData?.event?._def?.title ||
+    eventDataAll?.partyName ||
+    "N/A"}
 </h3>
               <p className="text-xs text-gray-400"></p>
 

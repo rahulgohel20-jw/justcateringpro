@@ -404,6 +404,10 @@ setKitchenInstructionHindi(editData.kitchenInstructionHindi || "");
       kitchenInstructionGujarati: editData.kitchenInstructionGujarati || "",
       kitchenInstructionHindi: editData.kitchenInstructionHindi || "",
       imageUrl: editData.url || "",
+      garnishing: editData.garnishing || "",
+accompaniment: editData.accompaniment || "",
+calorieCount: editData.calorieCount || "",
+allergicInformation: editData.allergicInformation || "",
     });
     setEnglishInstruction(editData.instructionEnglish || "");
 
@@ -1530,6 +1534,53 @@ const handleTranslateKitchenInstruction = async (value) => {
             className="bg-[#F8FAFC] h-10 hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
           />
         </Form.Item>
+
+        {/* Garnishing, Accompaniment, Calorie Count, Allergic Information */}
+<div className="grid gap-4 md:grid-cols-2">
+  <Form.Item
+    label={<span className="text-[#6A7C94] text-base font-medium">Garnishing</span>}
+    name="garnishing"
+  >
+    <TextArea
+      rows={3}
+      placeholder="Enter garnishing details"
+      className="bg-[#F8FAFC] hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
+    />
+  </Form.Item>
+
+  <Form.Item
+    label={<span className="text-[#6A7C94] text-base font-medium">Accompaniment</span>}
+    name="accompaniment"
+  >
+    <TextArea
+      rows={3}
+      placeholder="Enter accompaniment"
+      className="bg-[#F8FAFC] hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
+    />
+  </Form.Item>
+
+  <Form.Item
+    label={<span className="text-[#6A7C94] text-base font-medium">Calorie Count</span>}
+    name="calorieCount"
+  >
+    <TextArea
+      rows={3}
+      placeholder="Enter calorie count"
+      className="bg-[#F8FAFC] hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
+    />
+  </Form.Item>
+
+  <Form.Item
+    label={<span className="text-[#6A7C94] text-base font-medium">Allergic Information</span>}
+    name="allergicInformation"
+  >
+    <TextArea
+      rows={3}
+      placeholder="Enter allergic information"
+      className="bg-[#F8FAFC] hover:border-[#d9d9d9] focus:border-[#d9d9d9]"
+    />
+  </Form.Item>
+</div>
         {/* Raw Material List */}
         <div className="w-full">
           <div className="flex justify-between items-center">

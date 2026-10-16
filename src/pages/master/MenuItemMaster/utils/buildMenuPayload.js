@@ -23,7 +23,10 @@ export const buildPayload = (details, allocation = {}) => {
   formData.append("instructionEnglish", details.instructionEnglish || "");
   formData.append("instructionGujarati", details.instructionGujarati || "");
   formData.append("instructionHindi", details.instructionHindi || "");
-
+formData.append("garnishing", details.garnishing || "");
+formData.append("accompaniment", details.accompaniment || "");
+formData.append("calorieCount", details.calorieCount || "");
+formData.append("allergicInformation", details.allergicInformation || "");
   // Finish fields
   formData.append(
     "finishRate",
