@@ -12,6 +12,8 @@ const RawMaterialTable = ({
   onVenueChange,
   onVisibleChange = () => {},
   showVisibleColumn = true,   
+  showStockColumns = false,
+  onFinalOutputChange,
 }) => {
   const handleSelectAll = (checked) => {
     if (checked) setSelectedRows([...data]);
@@ -45,17 +47,14 @@ const RawMaterialTable = ({
         godownOptions,
         onVenueChange,
         onVisibleChange,
-        showVisibleColumn,   
+        showVisibleColumn,
+        showStockColumns,
+        onFinalOutputChange,   
       ),
-    [
-      onEditRow,
-      onDeleteRow,
-      selectedRows,
-      data,
-      godownOptions,
-      onVenueChange,
-      onVisibleChange,
-      showVisibleColumn,   
+     [
+      onEditRow, onDeleteRow, selectedRows, data, godownOptions,
+      onVenueChange, onVisibleChange, showVisibleColumn,
+      showStockColumns, onFinalOutputChange,
     ],
   );
 

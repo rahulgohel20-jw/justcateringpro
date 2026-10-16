@@ -24,7 +24,8 @@ import {
   Getunit,
   getMenuItemCaptainReceipeByMenuId,
   SearchRawMaterial,
-  Aislogsfirmenuitemandcategory
+  Aislogsfirmenuitemandcategory,
+  getAllPreparationMaster,
 } from "@/services/apiServices";
 import AddMenuCategory from "@/partials/modals/add-menu-category/AddMenuCategory";
 import AddMenuSubCategory from "@/partials/modals/add-menu-sub-category/AddMenuSubCategory";
@@ -71,13 +72,17 @@ const MenuDetailsForm = ({
 
   const langConfig = getLangConfig();
 const { hasModuleAccess } = useModuleAccess();
+const canAccessPreparation = hasModuleAccess("Preparation Master");
+
 const canAccessgenratewithaislogan = hasModuleAccess("Generate with Ai Solgan");
   const canAccesscaptainRecipe = hasModuleAccess("Captain Recipe");
 const { getCategories, getSubCategories } = useMenuApi(userId);
 const FINISH_FIELDS_USER_IDS = [233, 103];
 const showFinishFields = FINISH_FIELDS_USER_IDS.includes(Number(userId));
   const [finishUnitOptions, setFinishUnitOptions] = useState([]);
-
+  const [preparationOptions, setPreparationOptions] = useState([]);
+const [rawPreparationId, setRawPreparationId] = useState(null);
+const [captainPreparationId, setCaptainPreparationId] = useState(null);
   const [fileList, setFileList] = useState([]);
   const [menuCategory, setMenuCategory] = useState([]);
   const [menuSubCategory, setMenuSubCategory] = useState([]);
@@ -101,6 +106,14 @@ const skipNextRawFetchRef = useRef(false);
 const [isSloganModalOpen, setIsSloganModalOpen] = useState(false);
 const [sloganOptions, setSloganOptions] = useState([]);
 const [sloganLoading, setSloganLoading] = useState(false);
+
+
+const preparationLabel = (id) =>
+  preparationOptions.find((p) => String(p.value) === String(id))?.label || "";
+
+ 
+
+
   const {
     captainTableData,
     setCaptainTableData,
@@ -146,6 +159,18 @@ const [sloganLoading, setSloganLoading] = useState(false);
     editingRowId,
     handleCancelEdit,
   } = useRecipe(rawmaterialList, defaultData, captainTableData);
+
+
+const rawFinalOutputTotal = tableData.reduce(
+  (sum, r) => sum + (Number(r.finalOutput) || 0),
+  0,
+);
+const captainFinalOutputTotal = captainTableData.reduce(
+  (sum, r) => sum + (Number(r.finalOutput) || 0),
+  0,
+);    
+
+
   const [captainUnitOptions, setCaptainUnitOptions] = useState([]);
   const [englishInstruction, setEnglishInstruction] = useState("");
   // add these two states
@@ -213,7 +238,27 @@ const [isCopyCaptainRecipe, setIsCopyCaptainRecipe] = useState(false);
 );
 
 
-
+useEffect(() => {
+  if (!userId || !canAccessPreparation) return;
+  (async () => {
+    try {
+      const res = await getAllPreparationMaster(userId);
+      const raw = res?.data?.data;
+      const list = Array.isArray(raw)
+        ? raw
+        : raw?.["Preparation Details"] || raw?.preparations || [];
+      setPreparationOptions(
+        list.map((p) => ({
+          value: p.id,
+          label: p.nameEnglish || p.name || `Preparation ${p.id}`,
+        })),
+      );
+    } catch (err) {
+      console.error("Failed to load preparations:", err);
+      message.error("Failed to load preparation items");
+    }
+  })();
+}, [userId, canAccessPreparation]);
 
 
   useEffect(() => {
@@ -475,6 +520,9 @@ allergicInformation: editData.allergicInformation || "",
           venue: resolvedVenueName,
           isVisible: rm?.isVisible !== false,
           unitHierarchy: rm.rawMaterial?.unitHierarchy || rm?.unitHierarchy,
+         preparationId: rm?.preparationId ?? null,
+preparation: rm?.preparationName || "",
+finalOutput: rm?.finalOutput ?? "",
         };
       });
       setTableData(mapped);
@@ -511,6 +559,9 @@ allergicInformation: editData.allergicInformation || "",
           venueId: resolvedVenueId,
           venue: resolvedVenueName,
           isVisible: cr?.isVisible !== false,
+          preparationId: cr?.preparationId ?? null,
+preparation: cr?.preparationName || "",
+finalOutput: cr?.finalOutput ?? "",
         };
       });
       setCaptainTableData(mappedCaptain);
@@ -556,10 +607,24 @@ allergicInformation: editData.allergicInformation || "",
         rate: rm.rate,
         venueId: rm?.godown?.id ?? null,
         venue: rm?.godown?.nameEnglish ?? "",
+        preparationId: rm?.preparationId ?? null,
+preparation: rm?.preparationName || "",
+finalOutput: rm?.finalOutput ?? "",
       }));
 
       if (syncedItems.length > 0) {
-        setTableData(syncedItems);
+        setTableData((prev) =>
+  syncedItems.map((item) => {
+    const old = prev.find((r) => r.menuRmId === item.menuRmId);
+   return {
+  ...item,
+  isVisible: old?.isVisible ?? true,
+  preparationId: old?.preparationId ?? item.preparationId,
+  preparation: old?.preparation || item.preparation,
+  finalOutput: old?.finalOutput ?? item.finalOutput,
+};
+  }),
+);
         message.success(`Successfully Synced Raw Materials`);
       } else {
         message.info("No raw materials found to sync");
@@ -676,6 +741,16 @@ allergicInformation: editData.allergicInformation || "",
       ),
     );
   };
+
+  const handleFinalOutputChange = (srNo, value) =>
+  setTableData((prev) =>
+    prev.map((row) => (row.sr_no === srNo ? { ...row, finalOutput: value } : row)),
+  );
+
+const handleCaptainFinalOutputChange = (srNo, value) =>
+  setCaptainTableData((prev) =>
+    prev.map((row) => (row.sr_no === srNo ? { ...row, finalOutput: value } : row)),
+  );
 
   const handleCaptainVisibleChange = (srNo, isVisible) => {
   setCaptainTableData((prev) =>
@@ -1000,6 +1075,7 @@ const handleTranslateKitchenInstruction = async (value) => {
     });
 
     handleEditRow(row);
+    setRawPreparationId(row.preparationId ?? null);
 
     // If unitHierarchy is missing, search to fetch full hierarchy options
     if (!row.unitHierarchy && row.name && userId) {
@@ -1041,9 +1117,9 @@ const handleTranslateKitchenInstruction = async (value) => {
 
   // In MenuDetailsForm.jsx — add this wrapper function near the captain section
   const handleEditCaptainRowWithFetch = async (row) => {
-    // First set the basic edit state via the hook
+   
     handleEditCaptainRow(row);
-
+    setCaptainPreparationId(row.preparationId ?? null);
     // Then fetch the full recipe to rebuild captainUnitOptions properly
     try {
       setCaptainRecipeLoading(true);
@@ -1715,24 +1791,43 @@ const handleTranslateKitchenInstruction = async (value) => {
   options={unitOptions}
 />
               </div>
+
+              {canAccessPreparation && (
+  <div className="flex flex-col w-[250px] flex-shrink-0">
+    <label className="text-[#6A7C94] text-base font-medium mb-2">Preparation Item</label>
+    <Select
+      showSearch
+      allowClear
+      optionFilterProp="label"
+      placeholder="Select Preparation"
+      className="bg-[#F8FAFC] h-10"
+      value={captainPreparationId}
+      onChange={(v) => setCaptainPreparationId(v ?? null)}
+      options={preparationOptions}
+    />
+  </div>
+)}
             </div>
 
             <div className="flex items-center gap-2 mt-7">
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={handleAddRecipe}
+                onClick={() => {
+  handleAddRecipe({
+    preparationId: rawPreparationId,
+    preparation: preparationLabel(rawPreparationId),
+  });
+  setRawPreparationId(null);
+}}
                 className="bg-primary h-10 px-6 rounded-md hover:bg-primary"
               >
                 {editingRowId !== null ? "Update Recipe" : "Add Recipe"}
               </Button>
               {editingRowId !== null && (
-                <Button
-                  onClick={handleCancelEdit}
-                  className="h-10 px-4 rounded-md"
-                >
-                  Cancel
-                </Button>
+               <Button onClick={() => { handleCancelEdit(); setRawPreparationId(null); }} className="h-10 px-4 rounded-md">
+  Cancel
+</Button>
               )}
             </div>
           </div>
@@ -1787,7 +1882,23 @@ const handleTranslateKitchenInstruction = async (value) => {
         godownOptions={godownOptions}
         onVenueChange={handleVenueChange}
          onVisibleChange={handleVisibleChange}
-      />
+           showStockColumns={canAccessPreparation}
+  onFinalOutputChange={handleFinalOutputChange}
+  showVisibleColumn={false}
+/>
+{canAccessPreparation && (
+  <div className="flex justify-end mt-2 text-base font-medium text-[#6A7C94]">
+    Total Final Output (100 Pax) :
+    <span className="text-primary ml-2">
+      {rawFinalOutputTotal.toFixed(2)}
+    </span>
+  </div>
+)}
+
+
+
+
+
 {canAccesscaptainRecipe && (
        <div className="w-full mt-12">
         <div className="flex justify-between items-center">
@@ -1797,7 +1908,19 @@ const handleTranslateKitchenInstruction = async (value) => {
            <Button
     type="primary"
     icon={<PlusOutlined />}
-    onClick={() => setIsCopyCaptainRecipe(true)}
+    onClick={() => {
+    handleAddCaptainItems(
+      selectedCaptainRecipe,
+      captainWeight,
+      captainUnit?.id,
+      captainUnit?.name,
+      {
+        preparationId: captainPreparationId,
+        preparation: preparationLabel(captainPreparationId),
+      },
+    );
+    setCaptainPreparationId(null);
+  }}
     className="bg-primary h-10 px-6 rounded-md hover:bg-primary mt-[-16px]"
   >
     Copy Captain Recipe
@@ -1894,6 +2017,21 @@ const handleTranslateKitchenInstruction = async (value) => {
         options={captainUnitOptions}
       />
     </div>
+    {canAccessPreparation && (
+  <div className="flex flex-col w-[250px] flex-shrink-0">
+    <label className="text-[#6A7C94] text-base font-medium mb-2">Preparation Item</label>
+    <Select
+      showSearch
+      allowClear
+      optionFilterProp="label"
+      placeholder="Select Preparation"
+      className="bg-[#F8FAFC] h-10"
+      value={captainPreparationId}
+      onChange={(v) => setCaptainPreparationId(v ?? null)}
+      options={preparationOptions}
+    />
+  </div>
+)}
   </div>
 
   {/* Right: buttons */}
@@ -1901,14 +2039,19 @@ const handleTranslateKitchenInstruction = async (value) => {
     <Button
       type="primary"
       icon={<PlusOutlined />}
-      onClick={() =>
-        handleAddCaptainItems(
-          selectedCaptainRecipe,
-          captainWeight,
-          captainUnit?.id,
-          captainUnit?.name,
-        )
-      }
+      onClick={() => {
+  handleAddCaptainItems(
+    selectedCaptainRecipe,
+    captainWeight,
+    captainUnit?.id,
+    captainUnit?.name,
+    {
+      preparationId: captainPreparationId,
+      preparation: preparationLabel(captainPreparationId),
+    },
+  );
+  setCaptainPreparationId(null);
+}}
       className="bg-primary h-10 px-3 rounded-md whitespace-nowrap"
     >
       {editingCaptainRow !== null ? "Update Recipe" : "Add Recipe"}
@@ -1916,11 +2059,11 @@ const handleTranslateKitchenInstruction = async (value) => {
 
     {editingCaptainRow !== null && (
       <Button
-        onClick={handleCancelCaptainEdit}
-        className="h-10 px-3 rounded-md whitespace-nowrap"
-      >
-        Cancel
-      </Button>
+  onClick={() => { handleCancelCaptainEdit(); setCaptainPreparationId(null); }}
+  className="h-10 px-3 rounded-md whitespace-nowrap"
+>
+  Cancel
+</Button>
     )}
 
     <button
@@ -1955,7 +2098,7 @@ const handleTranslateKitchenInstruction = async (value) => {
           </div>
           {selectedCaptainRows.length > 0 && (
             <Button
-              dangerc
+              danger
               icon={<DeleteOutlined />}
               onClick={() => {
                 const srNos = selectedCaptainRows.map((r) => r.sr_no);
@@ -1991,7 +2134,17 @@ const handleTranslateKitchenInstruction = async (value) => {
     );
   }}
   showVisibleColumn={false}
+   showStockColumns={canAccessPreparation}
+    onFinalOutputChange={handleCaptainFinalOutputChange}
 />
+{canAccessPreparation && (
+  <div className="flex justify-end mt-2 text-base font-medium text-[#6A7C94]">
+    Total Final Output (100 Pax) :
+    <span className="text-primary ml-2">
+      {captainFinalOutputTotal.toFixed(2)}
+    </span>
+  </div>
+)}
       </div> 
 )}
       <div className="flex justify-between mt-4 text-lg font-medium text-[#6A7C94]">

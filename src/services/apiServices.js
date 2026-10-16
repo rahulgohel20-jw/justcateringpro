@@ -4387,3 +4387,7 @@ export const uploadlogodecorprofile = (file, userId) => {
     headers: { "Content-Type": "multipart/form-data" },
   });
 };
+
+export const GenerateRecipeExcel = (userId, menuItemId ) => {
+  return GET(`/menuitems/menu-recipe-excel?userId=${userId}&menuItemId=${menuItemId}`);
+};

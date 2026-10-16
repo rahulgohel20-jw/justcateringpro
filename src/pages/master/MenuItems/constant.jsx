@@ -141,6 +141,8 @@ export const columns = (onEdit, onDelete, onstatus, onVideo) => [
           </button>
         </Tooltip>
 
+        
+
         {row.original.video && (
           <Tooltip title="Watch Video">
             <button className="btn btn-sm btn-icon btn-clear" onClick={() => onVideo(row.original.video)}>
