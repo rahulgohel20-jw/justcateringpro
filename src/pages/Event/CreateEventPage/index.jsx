@@ -24,7 +24,7 @@ import { FormattedMessage } from "react-intl";
 import RoomDetailsStep from "../../../container/EventStepsContainer/RoomDetailsStep/RoomDetailsStep";
 import { useModuleAccess } from "../../../hooks/useModuleAccess";
 
-// const STEP_KEYS = ["basic_info", "client_info", "functions", "other"];
+
 const getChildUserId = () => {
   try {
     const authStorage = localStorage.getItem("auth-storage");
@@ -115,6 +115,11 @@ const [isVenueTranslating, setIsVenueTranslating] = useState(false);
     meal_notes: "",
     meal_notes_gujarati: "",
     meal_notes_hindi: "",
+    jainMenu: "",
+chauvihaarPax: "",
+zeroSpice: "",
+noOnionNoGarlic: "",
+sitDownFamilyDinning: "",
     remarksGujarati: "",
     service: "",
     serviceGujarati: "",
@@ -283,8 +288,14 @@ cordinatorPersonContactNo: event.cordinatorPersonContactNo || "",
             address: event.address || event.party?.addressEnglish || "",
             mobileno: event.mobileno || event.party?.mobileno || "",
             isHighPriority: event.isHighPriority,
+            jainMenu: event.jainMenu ?? "",
+chauvihaarPax: event.chauvihaarPax ?? "",
+zeroSpice: event.zeroSpice ?? "",
+noOnionNoGarlic: event.noOnionNoGarlic ?? "",
+sitDownFamilyDinning: event.sitDownFamilyDinning ?? "",
             eventFunction: (event.eventFunctions || []).map((f) => {
-              // Support both new banquetHallShifts array and old flat fields
+              
+              
               const shifts = f.banquetHallShifts || [];
               const firstShift = shifts[0];
 
@@ -841,6 +852,11 @@ const sendLog = useCallback(
       managerId: formData.managerId ? Number(formData.managerId) : 0,
       mealTypeId: formData.mealTypeId ? Number(formData.mealTypeId) : 0,
       partyId: formData.partyId ? Number(formData.partyId) : 0,
+      jainMenu: Number(formData.jainMenu) || 0,
+chauvihaarPax: Number(formData.chauvihaarPax) || 0,
+zeroSpice: Number(formData.zeroSpice) || 0,
+noOnionNoGarlic: Number(formData.noOnionNoGarlic) || 0,
+sitDownFamilyDinning: Number(formData.sitDownFamilyDinning) || 0,
       venueId: isBanquet
         ? 0
         : formData.venueId === "" || formData.venueId == null

@@ -107,7 +107,7 @@ useEffect(() => {
       : weightInParent;
   };
 
-  const handleAddRecipe = () => {
+const handleAddRecipe = (extra = {}) => {
     if (!selectedRaw || !weight || !unit) {
       return message.error("Please fill all recipe fields");
     }
@@ -157,10 +157,10 @@ useEffect(() => {
       return message.error("This raw material is already added.");
     }
 
-    if (editingRowId) {
-      const updatedRows = tableData.map((row) =>
-        row.sr_no === editingRowId
-          ? {
+     if (editingRowId) {
+    const updatedRows = tableData.map((row) =>
+      row.sr_no === editingRowId
+        ? {
               ...row,
               category: raw.category,
               name: raw.name,
@@ -171,6 +171,7 @@ useEffect(() => {
               rate: Number(rate.toFixed(2)),
               rawMaterialId: raw.rawMaterialId,
               unitHierarchy: raw.unitHierarchy || row.unitHierarchy,
+              ...extra,
             }
           : row
       );
@@ -191,6 +192,7 @@ useEffect(() => {
         menuRmId: null,
         rawMaterialId: raw.rawMaterialId,
         unitHierarchy: raw.unitHierarchy,
+        ...extra,
       };
 
       setTableData((prev) => {

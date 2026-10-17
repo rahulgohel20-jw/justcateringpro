@@ -1,12 +1,14 @@
-import { createContext, useState, useEffect, useRef } from "react";
+import {  useState, useEffect, useRef } from "react";
+import { AuthContext } from "./AuthContext";
 import { LoginUser, getUserById, LoginOutUser } from "@/services/apiServices";
 import * as authHelper from "../_helpers";
 import { message } from "antd";
 import { useAuthStore } from "@/store/useAuthStore";
 import { normalizeRights } from "@/utils/normalizeRights";
 import { getSoftType } from "../../config/getSoftType ";
+import { flushSync } from "react-dom";
 
-const AuthContext = createContext(null);
+
 
 const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
@@ -23,29 +25,38 @@ const AuthProvider = ({ children }) => {
     else authHelper.removeAuth();
   };
 
-  const verify = async () => {
-    const token = localStorage.getItem("userToken");
-    const userId = localStorage.getItem("mainId");
+ const verify = async () => {
+  const token = localStorage.getItem("userToken");
+  const userId = localStorage.getItem("mainId");
 
-    if (!token || !userId) {
-      saveAuth(undefined);
-      setCurrentUser(undefined);
-      setLoading(false);
-      return;
-    }
+  if (!token || !userId) {
+    saveAuth(undefined);
+    setCurrentUser(undefined);
+    setLoading(false);
+    return;
+  }
 
-    try {
+  try {
     const response = await getUserById(userId);
     if (response?.data?.success) {
       const user = response.data.data["User Details"][0];
-      setCurrentUser(user);
       const normalizedRights = normalizeRights(user?.userRights || []);
       const upgradedModules = user?.userUpgradedModule || [];
-      const roleReportRights = user?.roleReportRights || null; 
+      const roleReportRights = user?.roleReportRights || null;
 
+      // 1. store first
       useAuthStore
         .getState()
-        .setAuth(user, user.token, normalizedRights, upgradedModules, roleReportRights); 
+        .setAuth(
+          user,
+          user.token || token, // fall back to the stored token
+          normalizedRights,
+          upgradedModules,
+          roleReportRights,
+        );
+
+      // 2. then React state
+      setCurrentUser(user);
     } else {
       logout();
     }
@@ -154,32 +165,40 @@ const handleAuthSuccess = async (response) => {
     expires_in: userData.expiresIn,
   };
 
-  saveAuth(authData);
   localStorage.setItem("userToken", userData.token);
   localStorage.setItem("lang", "en");
 
-  const finalUserId = (userData.clientId === 0 || userData.clientId === -1)
-    ? userData.id
-    : userData.clientId;
+  const finalUserId =
+    userData.clientId === 0 || userData.clientId === -1
+      ? userData.id
+      : userData.clientId;
   localStorage.setItem("userId", finalUserId.toString());
   localStorage.setItem("mainId", userData.id);
 
+  const normalizedRights = normalizeRights(userData?.userRights || []);
+  const upgradedModules = userData?.userUpgradedModule || [];
+  const roleReportRights = userData?.roleReportRights || null;
+
+  // 1. store first
+  useAuthStore
+    .getState()
+    .setAuth(
+      userData,
+      userData.token,
+      normalizedRights,
+      upgradedModules,
+      roleReportRights,
+    );
+
+  // 2. then React state
+  saveAuth(authData);
   setCurrentUser(userData);
 
-  const normalizedRights   = normalizeRights(userData?.userRights || []);
-  const upgradedModules     = userData?.userUpgradedModule || [];
-  const roleReportRights    = userData?.roleReportRights || null;
-
-  useAuthStore.getState().setAuth(
-    userData, userData.token, normalizedRights, upgradedModules, roleReportRights
-  );
-
-  try { await LoginOutUser(userData.email, "login"); 
-   }
-     catch {}
+  try {
+    await LoginOutUser(userData.email, "login");
+  } catch {}
 
   startInactivityTimer();
-
 
   return { ...authData, userDetails: userData };
 };
@@ -201,14 +220,16 @@ const handleAuthSuccess = async (response) => {
     sessionStorage.removeItem("calendar_selected_year");
     localStorage.removeItem("calendar_selected_month");
     localStorage.removeItem("calendar_selected_year");
-
+    localStorage.removeItem("mainId");
     localStorage.removeItem("userToken");
     localStorage.removeItem("userId");
     localStorage.removeItem("lang");
-
+     flushSync(() => {
+     saveAuth(undefined);
+     setCurrentUser(undefined);
+   });
     clearAuth();
-    saveAuth(undefined);
-    setCurrentUser(undefined);
+    
     clearInactivityTimer();
   };
 
@@ -242,7 +263,7 @@ const handleAuthSuccess = async (response) => {
     } else clearInactivityTimer();
   }, [currentUser]);
 
-  const loginWithToken = async (token, userId) => {
+ const loginWithToken = async (token, userId) => {
   try {
     if (!token || !userId) {
       throw new Error("Missing SSO token or user id.");
@@ -266,8 +287,6 @@ const handleAuthSuccess = async (response) => {
       access_token: token,
     };
 
-    saveAuth(authData);
-
     const finalUserId =
       userData.clientId === 0 || userData.clientId === -1
         ? userData.id
@@ -275,15 +294,18 @@ const handleAuthSuccess = async (response) => {
     localStorage.setItem("userId", finalUserId.toString());
     localStorage.setItem("mainId", userData.id);
 
-    setCurrentUser(userData);
-
     const normalizedRights = normalizeRights(userData?.userRights || []);
     const upgradedModules = userData?.userUpgradedModule || [];
     const roleReportRights = userData?.roleReportRights || null;
 
+    // 1. store first
     useAuthStore
       .getState()
       .setAuth(userData, token, normalizedRights, upgradedModules, roleReportRights);
+
+    // 2. then React state
+    saveAuth(authData);
+    setCurrentUser(userData);
 
     startInactivityTimer();
 
@@ -292,6 +314,7 @@ const handleAuthSuccess = async (response) => {
     localStorage.removeItem("userToken");
     localStorage.removeItem("userId");
     localStorage.removeItem("mainId");
+    clearAuth();
     saveAuth(undefined);
     setCurrentUser(undefined);
     throw new Error(

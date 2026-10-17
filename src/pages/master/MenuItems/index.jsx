@@ -10,7 +10,8 @@ import {
   GetAllCategory,
   Getallsyncitems,
   syncallcaptainreceiperate,
-  Getgenerateusermenuitemrawmaterialexcel
+  Getgenerateusermenuitemrawmaterialexcel,
+  GenerateRecipeExcel,
 } from "@/services/apiServices";
 import { SyncOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
@@ -27,6 +28,8 @@ const ITEMS_PER_PAGE = 100;
 const MenuItems = () => {
     const { hasModuleAccess } = useModuleAccess();
   const canAccessCaptainRecipe = hasModuleAccess("Captain Recipe");
+  const canAccessPreparation = hasModuleAccess("Preparation Master");
+const [recipeExcelLoadingId, setRecipeExcelLoadingId] = useState(null);
   const permissions = usePermission("Items With Recipe");
   const navigate = useNavigate();
   const intl = useIntl();
@@ -272,6 +275,49 @@ const handleGenerateExcel = async () => {
     Swal.fire("Error", "Failed to export Excel.", "error");
   } finally {
     setExcelLoading(false);
+  }
+};
+
+const handleRecipeExcel = async (menuItemId) => {
+  if (recipeExcelLoadingId) return;
+
+  try {
+    setRecipeExcelLoadingId(menuItemId);
+    const res = await GenerateRecipeExcel(Id, menuItemId);
+
+    const d = res?.data;
+    const fileUrl =
+      d?.fileUrl ||
+      d?.report_path ||
+      d?.data?.report_path ||
+      d?.excel_path ||
+      d?.data?.excel_path ||
+      d?.file_path ||
+      d?.data?.file_path ||
+      d?.url ||
+      (typeof d?.data === "string" ? d.data : null);
+
+    if (fileUrl) {
+      const a = document.createElement("a");
+      a.href = fileUrl;
+      a.download = "Recipe.xlsx";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } else {
+      console.log("Recipe export response:", res?.data);
+      throw new Error(d?.msg || "No file URL returned");
+    }
+  } catch (error) {
+    console.error("Recipe export error:", error);
+    Swal.fire(
+      "Error",
+      error?.response?.data?.msg || error.message || "Failed to export recipe Excel.",
+      "error",
+    );
+  } finally {
+    setRecipeExcelLoadingId(null);
   }
 };
 
@@ -860,6 +906,21 @@ onClick={() => {
         <i className="ki-filled ki-notepad-edit text-lg"></i>
       </button>
     )}
+
+    {canAccessPreparation && (
+    <button
+      className="w-9 h-9 flex items-center justify-center rounded hover:bg-green-50 text-green-600 transition-colors disabled:opacity-50"
+      onClick={() => handleRecipeExcel(item.id)}
+      disabled={recipeExcelLoadingId === item.id}
+      title="Recipe Excel Export"
+    >
+      {recipeExcelLoadingId === item.id ? (
+        <Spin size="small" />
+      ) : (
+        <i className="ki-filled ki-file-down text-lg"></i>
+      )}
+    </button>
+  )}
 
     {item.video && (
       <button

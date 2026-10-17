@@ -1,32 +1,41 @@
+// auth/ProtectedRoute.jsx
+import { Navigate, Outlet } from "react-router";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useAuthContext } from "@/auth";
-import { Navigate } from "react-router-dom";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
 
-const ProtectedRoute = ({ pageName, children }) => {
+const PLATFORM_ADMIN_ROLE = 1;
+const CLIENT_ADMIN_ROLE = 2;
+
+const ProtectedRoute = ({ pageName, moduleName, action = "view", children }) => {
   const { currentUser } = useAuthContext();
-  const rights = useAuthStore((state) => state.rights);
+  const token = useAuthStore((s) => s.token);
+  const rights = useAuthStore((s) => s.rights);
+  const { hasModuleAccess } = useModuleAccess();
 
-  if (!currentUser) {
-    return <Navigate to="/auth/login" replace />;
-  }
+  // Logged out or logging out: go to login, never to 403.
+  // `token` is cleared in the same store update as rights/modules,
+  // so this check can't see "user present but no rights".
+  if (!token || !currentUser) return <Navigate to="/auth/login" replace />;
 
   const roleId = Number(currentUser?.userBasicDetails?.role?.id);
+  const content = children ?? <Outlet />;
 
-  // Super admin / admin always have full access
-  if (roleId === 1 || roleId === 2) {
-    return children;
+  if (roleId === PLATFORM_ADMIN_ROLE) return content;
+
+  // 1. Company must have the module active (applies to client admins too)
+  if (moduleName && !hasModuleAccess(moduleName)) {
+    return <Navigate to="/403" replace state={{ reason: "module" }} />;
   }
 
-  // No pageName = unprotected route (dashboard etc.)
-  if (!pageName) return children;
+  if (roleId === CLIENT_ADMIN_ROLE) return content;
 
-  const canView = rights[pageName]?.view === true;
-
-  if (!canView) {
-    return <Navigate to="/403" replace />;
+  // 2. Role must have the right
+  if (pageName && rights?.[pageName]?.[action] !== true) {
+    return <Navigate to="/403" replace state={{ reason: "rights" }} />;
   }
 
-  return children;
+  return content;
 };
 
 export default ProtectedRoute;

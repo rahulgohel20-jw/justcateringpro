@@ -60,6 +60,8 @@ formData.append("allergicInformation", details.allergicInformation || "");
     weight: Number(r.weight) || 0,
     venue: r.venueId || 0, 
     isVisible: r.isVisible !== false,
+     finalOutput: Number(r.finalOutput) || 0,
+  preparationId: Number(r.preparationId) || "",
   }));
 
 // Captain Receipes
@@ -68,6 +70,8 @@ const captainReceipes = (details.captainRecipes || []).map((r) => ({
 id: Number(r.id || r.menuRmId) || 0,  rate: Number(r.rate) || 0,
   unitId: Number(r.unitId) || 0,
   venue: r.venueId === 0 ? 0 : Number(r.venueId) || 0,   weight: Number(r.weight) || 0,
+  finalOutput: Number(r.finalOutput) || 0,
+preparationId: Number(r.preparationId) || "",
 }));
 
 captainReceipes.forEach((cr, index) => {
@@ -77,6 +81,8 @@ captainReceipes.forEach((cr, index) => {
   formData.append(`captainReceipes[${index}].unitId`, cr.unitId);
   formData.append(`captainReceipes[${index}].venue`, cr.venue);
   formData.append(`captainReceipes[${index}].weight`, cr.weight);
+  formData.append(`captainReceipes[${index}].finalOutput`, cr.finalOutput);
+formData.append(`captainReceipes[${index}].preparationId`, cr.preparationId);
 });
 
   rawMaterials.forEach((rm, index) => {
@@ -88,6 +94,8 @@ captainReceipes.forEach((cr, index) => {
     );
     formData.append(`menuItemRawMaterials[${index}].unitId`, rm.unitId);
     formData.append(`menuItemRawMaterials[${index}].weight`, rm.weight);
+    formData.append(`menuItemRawMaterials[${index}].finalOutput`, rm.finalOutput);
+formData.append(`menuItemRawMaterials[${index}].preparationId`, rm.preparationId);
 formData.append(
     `menuItemRawMaterials[${index}].venue`,
     rm.venue === 0 ? 0 : Number(rm.venue) || 0,  // ✅ 0 for At Venue

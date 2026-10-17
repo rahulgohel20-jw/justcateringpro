@@ -166,8 +166,9 @@ type: selectedCustomer.type || "",
         });
 
         if (selectedCustomer.image) {
-          setImagePreview(`/uploads/${selectedCustomer.image}`);
-        }
+  setSelectedFile(null);
+setImagePreview(selectedCustomer.image || null);
+}
       } else {
         setFormData(initialFormState);
         setImagePreview(null);

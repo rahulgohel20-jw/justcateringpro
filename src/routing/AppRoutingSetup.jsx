@@ -366,6 +366,8 @@ import NormalPO from "../pages/stockmanagement/normal-po/Normalpo.jsx";
 import AddNormalPO from "../pages/stockmanagement/normal-po/AddNormalPO.jsx";
 import DecorProfile from "../pages/master/decorprofile/index.jsx";
 import PreparationMaster from "../pages/master/preparation-master/index.jsx";
+import ModuleRouteGuard from "../auth/ModuleRouteGuard.jsx";
+import RightsRouteGuard from "../auth/RightsRouteGuard.jsx";
 
 const AppRoutingSetup = () => {
   return (
@@ -373,6 +375,8 @@ const AppRoutingSetup = () => {
       <Route element={<RequireAuth />}>
     <Route path="/approvepending" element={<ApprovalPendingPage />} />
        <Route element={<ActiveUserGuard />}>
+        <Route element={<RightsRouteGuard />}>
+       <Route element={<ModuleRouteGuard />}>
         <Route element={<Demo1Layout />}>
           {/* project routs */}
           <Route path="/tapinquiry" element={<TapInquiryListPage/>}/>
@@ -1252,7 +1256,8 @@ const AppRoutingSetup = () => {
             element={<AuthenticationGetStartedPage />}
           />
         </Route>
-
+          </Route>
+          </Route>
        </Route>
       </Route>
 
