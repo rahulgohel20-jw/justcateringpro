@@ -13,6 +13,7 @@ import AvailabilityModal from "../../../partials/modals/availabilty/Availability
 import { useLocation } from "react-router-dom";
 import DayAvailabilityModal from "../../../partials/modals/availabilty/DayAvailabilityModal";
 import { useBanquetPermission } from "../../../hooks/useBanquetPermission";
+import { Select } from "antd";
 
 const CalendarPage = () => {
   const permissions = usePermission("Calendar");
@@ -360,6 +361,7 @@ const FetchEventdetails = (
                 getLocalizedText(item.eventType, "name"),
               start: startDate,
               end: addOneDay(endDate),
+              inquiryDate: item.inquiryDate || null,
               time: time12,
               mobile: item.party?.mobileno || "N/A",
               statusCode: item.status,
@@ -695,55 +697,56 @@ const legendItems = [
             lang={lang}
             loading={loadingEvents}
             initialDate={initialCalendarDate}
-            extraFilters={
-              <Fragment>
-                {/* Venue Filter Dropdown */}
-                <select
-                  value={selectedVenue}
-                  onChange={(e) => {
-                    const val = Number(e.target.value);
-                    setSelectedVenue(val);
-                    if (val !== -1) {
-                      setSelectedBanquet(-1);
-                    }
-                  }}
-                  disabled={loadingEvents}
-                  className="border border-gray-300 rounded-lg px-2.5 py-2 text-xs md:text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <option value={0}>Select Venue</option>
-                  <option value={-1}>All Venues</option>
-                  {venueList.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {getLocalizedText(v, "name") || v.nameEnglish || v.name}
-                    </option>
-                  ))}
-                </select>
+           extraFilters={
+  <Fragment>
+    {/* Venue filter */}
+    <Select
+      showSearch
+      allowClear
+      style={{ width: 190 }}
+      popupMatchSelectWidth={false}   // dropdown grows for long names, the box stays 190px
+      placeholder="Select Venue"
+      optionFilterProp="label"
+      disabled={loadingEvents}
+      value={selectedVenue === 0 ? undefined : selectedVenue}
+      onChange={(val) => {
+        const v = val ?? 0;            // clearing goes back to "nothing selected"
+        setSelectedVenue(v);
+        if (v !== -1) setSelectedBanquet(-1);
+      }}
+      options={[
+        { value: -1, label: "All Venues" },
+        ...venueList.map((v) => ({
+          value: v.id,
+          label: getLocalizedText(v, "name") || v.nameEnglish || v.name,
+        })),
+      ]}
+    />
 
-                {/* Banquet Filter Dropdown - shown only when canAccessBanquet is true */}
-                {canAccessBanquet && (
-                  <select
-                    value={selectedBanquet}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setSelectedBanquet(val);
-                      if (val !== -1) {
-                        setSelectedVenue(-1);
-                      }
-                    }}
-                    disabled={loadingEvents}
-                    className="border border-gray-300 rounded-lg px-2.5 py-2 text-xs md:text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value={0}>Select Banquet</option>
-                    <option value={-1}>All Banquets</option>
-                    {banquetList.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.hallName}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </Fragment>
-            }
+    {/* Banquet filter (only with Banquet module) */}
+    {canAccessBanquet && (
+      <Select
+        showSearch
+        allowClear
+        style={{ width: 190 }}
+        popupMatchSelectWidth={false}
+        placeholder="Select Banquet"
+        optionFilterProp="label"
+        disabled={loadingEvents}
+        value={selectedBanquet === 0 ? undefined : selectedBanquet}
+        onChange={(val) => {
+          const v = val ?? 0;
+          setSelectedBanquet(v);
+          if (v !== -1) setSelectedVenue(-1);
+        }}
+        options={[
+          { value: -1, label: "All Banquets" },
+          ...banquetList.map((b) => ({ value: b.id, label: b.hallName })),
+        ]}
+      />
+    )}
+  </Fragment>
+}
           />
         </div>
       </Container>

@@ -4132,8 +4132,8 @@ export const getAllRawMaterialWithExpiryDates = (page, size, userId, searchName 
   return GET(`/storepo/getAllRawMaterialWithExpiryDates?${query.toString()}`);
 };
 
-export const genratebarcode = (qty, rawMaterialId, userId) => {
-  return GET(`/rawmaterial/generate-barcode?qty=${qty}&rawMaterialId=${rawMaterialId}&userId=${userId}`);
+export const genratebarcode = (qty, rawMaterialId, userId,rawMaterialCatId) => {
+  return GET(`/rawmaterial/generate-barcode?qty=${qty}&rawMaterialId=${rawMaterialId}&userId=${userId}&rawMaterialCatId=${rawMaterialCatId}`);
 };
 
 export const addupdateselectedmultiplemenuitemimages = (data) => {
