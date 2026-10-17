@@ -49,7 +49,7 @@ const [barcodeQty, setBarcodeQty] = useState(1);
 const [barcodeLoading, setBarcodeLoading] = useState(false);
 const [printQty, setPrintQty] = useState(1);
 const [printLoading, setPrintLoading] = useState(false);
-const isBarcodeUser = Number(Id) === 376; //AMONCAR 
+const isBarcodeUser = [376,233].includes(Number(Id)); //AMONCAR 
 const [excelLoading, setExcelLoading] = useState(false);
   const field = useMemo(() => {
   const languageMap = {
@@ -317,7 +317,7 @@ const handlePrintAll = async () => {
 
   try {
     setPrintLoading(true);
-    const res = await genratebarcode(qty, -1, Id);
+    const res = await genratebarcode(qty, -1, Id,categoryFilter || "",);
     const fileUrl =
       res?.data?.fileUrl ||
       res?.data?.data?.fileUrl ||
@@ -424,7 +424,7 @@ const handleGenerateBarcode = async () => {
 
   try {
     setBarcodeLoading(true);
-    const res = await genratebarcode(qty, barcodeItem.raw_material_id, Id);
+    const res = await genratebarcode(qty, barcodeItem.raw_material_id, Id,barcodeItem.raw_material_cat_id || "", );
     const fileUrl =
       res?.data?.fileUrl ||
       res?.data?.data?.fileUrl ||

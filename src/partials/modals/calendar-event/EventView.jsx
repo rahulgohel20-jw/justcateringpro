@@ -275,12 +275,21 @@ const permissionExhibitionSetup = usePermission("Exhibition Quotation");
     return page ? page[type] === true : false;
   };
 
-  const formatCreatedDate = (ddmmyyyy) => {
-  if (!ddmmyyyy) return "N/A";
-  const [day, month, year] = ddmmyyyy.split("/");
-  if (!day || !month || !year) return ddmmyyyy;
-  return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+ const formatInquiryDate = (value) => {
+  if (!value) return "N/A";
+
+  // DD/MM/YYYY (same format createdAt used)
+  if (typeof value === "string" && /^\d{1,2}\/\d{1,2}\/\d{4}/.test(value)) {
+    const [day, month, year] = value.split(" ")[0].split("/");
+    return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+  }
+
+  // ISO or any other date string
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? String(value) : d.toLocaleDateString("en-GB");
 };
+
+
 const formatEventDate = (date) => {
   if (!date || typeof date.toLocaleDateString !== "function") return "N/A";
   return date.toLocaleDateString("en-GB"); // DD/MM/YYYY
@@ -535,14 +544,14 @@ const formatEventDate = (date) => {
               <h3 className="font-semibold text-base mb-2">
                 {eventDataAll?.mobile}
               </h3>
-<p className="text-gray-600">
+ <p className="text-gray-600">
   <FormattedMessage
-    id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_VIEW_DETAILS_DATE"
+    id="USER.DASHBOARD.DASHBOARD_CALENDAR_INQUIRY_DATE"
     defaultMessage="Date"
   />
 </p>
 <h3 className="font-semibold text-base mb-2">
-  {formatEventDate(eventData?.event?.start)}
+  {formatInquiryDate(eventDataAll?.inquiryDate)}
 </h3>
 
               <p className="text-gray-600">
@@ -564,15 +573,7 @@ const formatEventDate = (date) => {
                   : translatedAddress || eventDataAll?.address || "N/A"}
               </h3>
 
-              <p className="text-gray-600">
-                <FormattedMessage
-                  id="USER.DASHBOARD.DASHBOARD_CALENDAR_CREATED_DATE"
-                  defaultMessage="Created Date"
-                />
-              </p>
-              <h3 className="font-semibold text-base mb-2">
-                {formatCreatedDate(eventDataAll?.createdAt)}
-              </h3>
+             
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 space-y-2">
