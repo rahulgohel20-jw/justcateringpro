@@ -784,7 +784,8 @@ Exhibition quotation "
                     defaultMessage="Menu Planning"
                   />
                 ),
-                icon: "/media/eventviewicon/menuprep.png",
+                icon: "/media/eventviewicon/menuprep.svg",
+                tint: true,
                 path: `/menu-preparation/${safeEventId}`,
                 onClick: () => navigate(`/menu-preparation/${safeEventId}`),
                 show: permissionMenuPlanning.view,
@@ -796,7 +797,8 @@ Exhibition quotation "
                     defaultMessage="Menu Execution"
                   />
                 ),
-                icon: "/media/eventviewicon/menuallocation.png",
+                icon: "/media/eventviewicon/menuallocation.svg",
+                tint: true,
                 path: `/menu-allocation/${safeEventId}`,
                 onClick: () => navigate(`/menu-allocation/${safeEventId}`),
                 show: permissionMenuExecution.view,
@@ -809,7 +811,8 @@ Exhibition quotation "
                     defaultMessage="Raw Material Distribution"
                   />
                 ),
-                icon: "/media/eventviewicon/rawmaterial.png",
+                icon: "/media/eventviewicon/rawmaterial.svg",
+                tint: true,
                 path: `/raw-material-allocation/${safeEventId}`,
                 onClick: () =>
                   navigate(`/raw-material-allocation/${safeEventId}`),
@@ -823,7 +826,8 @@ Exhibition quotation "
                     defaultMessage="Labour Agency Order"
                   />
                 ),
-                icon: "/media/eventviewicon/labour.png",
+                icon: "/media/eventviewicon/labour.svg",
+                tint: true,
                 path: `/labour-and-other-management/${safeEventId}`,
                 onClick: () =>
                   navigate(`/labour-and-other-management/${safeEventId}`),
@@ -837,7 +841,8 @@ Exhibition quotation "
                     defaultMessage="Per Dish Costing"
                   />
                 ),
-                icon: "/media/eventviewicon/dishcost.png",
+                icon: "/media/eventviewicon/dishcost.svg",
+                tint: true,
                 path: `/dish-costing/${safeEventId}`,
                 onClick: () => navigate(`/dish-costing/${safeEventId}`),
                 show: permissionDishCosting.view,
@@ -849,7 +854,8 @@ Exhibition quotation "
                     defaultMessage="Events Report"
                   />
                 ),
-                icon: "/media/eventviewicon/menureport.png",
+                icon: "/media/eventviewicon/menureport.svg",
+                tint: true,
                 path: `/allreports/${safeEventId}`,
                 onClick: () => navigate(`/allreports/${safeEventId}`),
                 show: permissionMenuReport.view,
@@ -865,7 +871,8 @@ Exhibition quotation "
                     defaultMessage="Quotation"
                   />
                 ),
-                icon: "/media/eventviewicon/quotation.png",
+                icon: "/media/eventviewicon/quotation.svg",
+                tint: true,
                 path: `/quotation/${safeEventId}`,
                 onClick: () => navigate(`/quotation/${safeEventId}`),
                 show: permissionQuotation.view,
@@ -877,7 +884,8 @@ Exhibition quotation "
                     defaultMessage="Invoice"
                   />
                 ),
-                icon: "/media/eventviewicon/invoice.png",
+                icon: "/media/eventviewicon/invoice.svg",
+                tint: true,
                 path: `/add-invoice/${safeEventId}`,
                 onClick: () =>
                   navigate(`/add-invoice/${safeEventId}`, {
@@ -895,7 +903,8 @@ Exhibition quotation "
                     defaultMessage="Expense"
                   />
                 ),
-                icon: "/media/eventviewicon/icon.png",
+                icon: "/media/eventviewicon/expense.svg",
+                tint: true,
                 onClick: () =>
                   navigate(`/expense-management/${safeEventId}`, {
                     state: {
@@ -941,14 +950,22 @@ Exhibition quotation "
                 >
                   <div className="text-blue-600 text-3xl mb-2">
                     {item.renderIcon ? (
-                      item.renderIcon()
-                    ) : (
-                      <img
-                        src={toAbsoluteUrl(item.icon)}
-                        alt={typeof item.label === "string" ? item.label : "Icon"}
-                        className="w-8 h-8 md:w-10 md:h-10"
-                      />
-                    )}
+  item.renderIcon()
+) : item.tint ? (
+  <span
+    className="inline-block w-8 h-8 md:w-10 md:h-10 bg-primary"
+    style={{
+      WebkitMask: `url(${toAbsoluteUrl(item.icon)}) no-repeat center / contain`,
+      mask: `url(${toAbsoluteUrl(item.icon)}) no-repeat center / contain`,
+    }}
+  />
+) : (
+  <img
+    src={toAbsoluteUrl(item.icon)}
+    alt={typeof item.label === "string" ? item.label : "Icon"}
+    className="w-8 h-8 md:w-10 md:h-10"
+  />
+)}
                   </div>
                   <p className="font-large text-gray font-bold text-center">{item.label}</p>
                 </div>
