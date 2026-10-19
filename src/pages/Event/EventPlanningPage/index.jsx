@@ -3603,34 +3603,39 @@ if (!updatedCategorySlogans[categoryName]) {
     return payload;
   };
 
-  const animateProgress = (from, to, duration = 600) => {
-    return new Promise((resolve) => {
-      if (progressAnimRef.current) clearInterval(progressAnimRef.current);
+  const animateProgress = (to, duration = 600) => {
+  return new Promise((resolve) => {
+    if (progressAnimRef.current) {
+      clearInterval(progressAnimRef.current);
+      progressAnimRef.current = null;
+    }
 
-      const steps = to - from;
-      if (steps <= 0) {
-        setSaveProgress(to);
-        saveProgressRef.current = to;
+    const from = saveProgressRef.current;
+    const steps = to - from;
+
+    if (steps <= 0) {
+      setSaveProgress(to);
+      saveProgressRef.current = to;
+      resolve();
+      return;
+    }
+
+    const intervalMs = Math.max(10, Math.floor(duration / steps));
+    let current = from;
+
+    progressAnimRef.current = setInterval(() => {
+      current += 1;
+      setSaveProgress(current);
+      saveProgressRef.current = current;
+
+      if (current >= to) {
+        clearInterval(progressAnimRef.current);
+        progressAnimRef.current = null;
         resolve();
-        return;
       }
-
-      const intervalMs = Math.floor(duration / steps);
-      let current = from;
-
-      progressAnimRef.current = setInterval(() => {
-        current += 1;
-        setSaveProgress(current);
-        saveProgressRef.current = current;
-
-        if (current >= to) {
-          clearInterval(progressAnimRef.current);
-          progressAnimRef.current = null;
-          resolve();
-        }
-      }, intervalMs);
-    });
-  };
+    }, intervalMs);
+  });
+};
 
 
 
@@ -3855,6 +3860,7 @@ if (!updatedCategorySlogans[categoryName]) {
     setIsSaving(true);
     setIsSubmitting(true);
     setSaveProgress(0);
+    saveProgressRef.current = 0; 
 
     try {
       const bucket = selectedByFunction[selectedFunction];
@@ -3895,10 +3901,11 @@ if (!updatedCategorySlogans[categoryName]) {
         isSavingRef.current = false;
         return;
       }
-      animateProgress(0, 60, 800);
+      animateProgress(60, 800);
       const resp = await cfg.api.saveOrUpdate(payload);
 
       if (resp?.data?.success === true) {
+         animateProgress(90, 300); 
         setIsDirty(false);
         clearDraft();
         const newId = resp?.data?.data?.id || payload.id;
@@ -3964,7 +3971,8 @@ if (!updatedCategorySlogans[categoryName]) {
           user: getUserEmail(),
         }).catch((err) => console.error("Failed to save log:", err));
         useMenuPrepStore.getState().bumpMenuPrepNotify();
-        await animateProgress(85, 100, 500);
+         await animateProgress(100, 400);   
+  await new Promise((r) => setTimeout(r, 250)); 
 
         Swal.fire({
           icon: "success",
@@ -3989,13 +3997,18 @@ if (!updatedCategorySlogans[categoryName]) {
         text: err?.response?.data?.msg,
       });
     } finally {
-      setTimeout(() => {
-        isSavingRef.current = false;
-        setIsSaving(false);
-        setIsSubmitting(false);
-        setSaveProgress(0);
-      }, 600);
+  setTimeout(() => {
+    if (progressAnimRef.current) {
+      clearInterval(progressAnimRef.current);
+      progressAnimRef.current = null;
     }
+    isSavingRef.current = false;
+    setIsSaving(false);
+    setIsSubmitting(false);
+    setSaveProgress(0);
+    saveProgressRef.current = 0;
+  }, 600);
+}
   };
 
 
@@ -4415,7 +4428,7 @@ if (!updatedCategorySlogans[categoryName]) {
 
   return (
     <Fragment>
-      {(navigatingMode || isPrepLoading) && (
+      {(navigatingMode || (isPrepLoading && !isSaving)) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[998] flex items-center justify-center">
           <div className="flex flex-col items-center gap-3 bg-white rounded-xl px-8 py-6 shadow-xl">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
@@ -5538,8 +5551,8 @@ if (!updatedCategorySlogans[categoryName]) {
         </div>
       )}
       {isSaving && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center"
+  <div
+    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center"
           onClickCapture={(e) => e.stopPropagation()}
           style={{ cursor: "not-allowed" }}
         >
