@@ -435,6 +435,7 @@ const typeOptions = allowedStockTypes.map((t) => ({
         crdate: formatDateForApi(form.date),
         partyId: form.party_id || null,
         stockTypeId: form.stock_type_id,
+        eventId: form.event_id ? Number(form.event_id) : null,
         invoicetype: form.invoice_type,
         remarks: form.remark,
         details: itemsWithQty.map((item) => ({

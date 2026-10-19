@@ -593,9 +593,10 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
       setSelectedCrCode(crcode || null);
 
       if (!crcode) {
-        setItems([]);
-        return;
-      }
+  setItems([]);
+  setForm((prev) => ({ ...prev, party_id: "", party_name: "", event_id: "" }));
+  return;
+}
 
       try {
         setLoadingCRItems(true);
@@ -603,23 +604,33 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
         const data = res?.data?.data;
         if (!data) return;
 
-        // ── Populate form from CR data ──
-        const cr = Array.isArray(data) ? null : data;
-        if (cr) {
-          setForm((prev) => ({
-            ...prev,
-            party_id: cr.partyId || prev.party_id,
-            party_name: cr.partyName || prev.party_name,
-            stock_type_id: cr.stockTypeId || prev.stock_type_id,
-            invoice_type: cr.invoicetype || prev.invoice_type,
-            remark: cr.remarks || prev.remark,
-            status: cr.status
-              ? cr.status.charAt(0).toUpperCase() +
-                cr.status.slice(1).toLowerCase()
-              : prev.status,
-          }));
-        }
+// ── Populate form from CR data ──
+const cr = Array.isArray(data) ? null : data;
+if (cr) {
+  const hasEvent =
+    cr.eventId !== null &&
+    cr.eventId !== undefined &&
+    cr.eventId !== "" &&
+    Number(cr.eventId) !== 0;
 
+  const matchedSupplier = hasEvent
+    ? supplier.find((s) => s.eventId === cr.eventId)
+    : null;
+
+  setForm((prev) => ({
+    ...prev,
+    // CR with an event -> set the party. CR without one -> clear it.
+    party_id: hasEvent ? cr.partyId || matchedSupplier?.partyId || "" : "",
+    party_name: hasEvent ? cr.partyName || matchedSupplier?.partyName || "" : "",
+    event_id: hasEvent ? cr.eventId : "",
+    stock_type_id: cr.stockTypeId || prev.stock_type_id,
+    invoice_type: cr.invoicetype || prev.invoice_type,
+    remark: cr.remarks || prev.remark,
+    status: cr.status
+      ? cr.status.charAt(0).toUpperCase() + cr.status.slice(1).toLowerCase()
+      : prev.status,
+  }));
+}
         // ── Populate items ──
 let mapped = [];
 if (isBatchNoMode) {
