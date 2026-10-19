@@ -33,7 +33,11 @@ import DatePicker from "react-datepicker";
 
 
 
-
+const showDate = (d) => {
+  if (!d) return "—";
+  const s = String(d).slice(0, 10); // yyyy-mm-dd
+  return s.includes("-") ? s.split("-").reverse().join("/") : d;
+};
 const getUserEmail = () => {
   try {
     const authStorage = localStorage.getItem("auth-storage");
@@ -127,6 +131,7 @@ useEffect(() => {
     remark: "",
     stock_type_id: "",
   stock_type_name: "",
+  isBatchWise: false,
   });
 
   const navigate = useNavigate();
@@ -154,6 +159,8 @@ useEffect(() => {
     maxQty: (detail.remainingQty ?? 0) + (detail.returnedQty ?? 0),
     unit: detail.unitName || "",
     price_per_unit: detail.price ?? 0,
+    batchNo: detail.batchNo ?? null,
+    expiryDate: detail.expiryDate || "",
     total_price: ((detail.returnedQty ?? 0) * (detail.price ?? 0)).toFixed(2),
   });
 
@@ -180,6 +187,8 @@ useEffect(() => {
         remark: data.remarks || "",
         stock_type_id: data.stockTypeId || "",
          stock_type_name: data.stockTypeName || "",
+isBatchWise:
+  data.isBatchWise ?? (data.details || []).some((d) => d.batchNo),
       });
 
       setDiscount(data.discountper ?? 0);
@@ -207,9 +216,23 @@ useEffect(() => {
             unit: detail.unitName || "",
             price_per_unit: detail.price ?? 0,
             total_price: (1 * (detail.price ?? 0)).toFixed(2),
+            expiryDate: detail.expiryDate || "",
+            batchNo: detail.batchNo ?? null,
           }));
 
           setAvailableItems(allPOItems);
+setForm((p) => ({ ...p, isBatchWise: p.isBatchWise || !!poData.isBatchWise }));
+const poMap = {};
+poData.details.forEach((d) => {
+  poMap[d.rawMaterialId] = d;
+});
+setItems((prev) =>
+  prev.map((it) => ({
+    ...it,
+    expiryDate: it.expiryDate || poMap[it.rawMaterialId]?.expiryDate || "",
+    batchNo: it.batchNo || poMap[it.rawMaterialId]?.batchNo || null,
+  })),
+);
         }
       }
     } catch (error) {
@@ -348,6 +371,7 @@ useEffect(() => {
       date: null,
       stock_type_id: "",    
       stock_type_name: "", 
+isBatchWise: false,
     }));
     setDiscount(0);
     setAdjustment(0);
@@ -371,7 +395,8 @@ useEffect(() => {
       date: data.podate ? new Date(data.podate) : null,
       stock_type_id: data.stockTypeId || "",    
       stock_type_name: data.stockTypeName || "", 
-    }));
+isBatchWise:
+  data.isBatchWise ?? (data.details || []).some((d) => d.batchNo),    }));
 
       const mapped = (data.details || []).map((detail) => ({
         rawMaterialId: detail.rawMaterialId,
@@ -387,6 +412,8 @@ useEffect(() => {
         maxQty: detail.remainingQty ?? 0,
         unit: detail.unitName || "",
         price_per_unit: detail.price ?? 0,
+        expiryDate: detail.expiryDate || "",
+        batchNo: detail.batchNo ?? null,
         total_price: (1 * (detail.price ?? 0)).toFixed(2),
       }));
 
@@ -422,8 +449,10 @@ useEffect(() => {
         remainingQty: sel.remainingQty,
         maxQty: sel.maxQty,
         unit: sel.unit,
-        price_per_unit: sel.price_per_unit,
-        total_price: (sel.remainingQty * sel.price_per_unit).toFixed(2),
+       price_per_unit: sel.price_per_unit,
+batchNo: sel.batchNo ?? null,
+expiryDate: sel.expiryDate || "",
+total_price: (sel.remainingQty * sel.price_per_unit).toFixed(2),
       }));
 
     if (newItems.length === 0) {
@@ -517,18 +546,18 @@ useEffect(() => {
     }
 
    try {
-  const details = items.map((item) => ({
-    rawMaterialId: item.rawMaterialId || 0,
-    hsccode: item.hsc_sac || "",
-    cgst: Number(item.cgst) || 0,
-    sgst: Number(item.sgst) || 0,
-    igst: Number(item.igst) || 0,
-    qty: Number(item.qty) || 0,
-    price: Number(item.price_per_unit) || 0,
-    othercharge: 0,
-    total: Number(item.total_price) || 0,
-  }));
-
+const details = items.map((item) => ({
+  rawMaterialId: item.rawMaterialId || 0,
+  batchNo: form.isBatchWise ? item.batchNo || null : null,
+  hsccode: item.hsc_sac || "",
+  cgst: Number(item.cgst) || 0,
+  sgst: Number(item.sgst) || 0,
+  igst: Number(item.igst) || 0,
+  qty: Number(item.qty) || 0,
+  price: Number(item.price_per_unit) || 0,
+  othercharge: 0,
+  total: Number(item.total_price) || 0,
+}));
   const subamount = items.reduce((sum, i) => sum + Number(i.total_price || 0), 0);
   const discountval = (subamount * (Number(discount) || 0)) / 100;
   const finalamount = subamount - discountval + (Number(adjustment) || 0);
@@ -549,6 +578,7 @@ useEffect(() => {
     adjustamount: Number(adjustment) || 0,
     finalamount,
     stockTypeId: Number(form.stock_type_id) || 0,
+    isBatchWise: !!form.isBatchWise,
     details,
   };
 
@@ -596,7 +626,25 @@ useEffect(() => {
   const discountAmount = (totalAmount * (parseFloat(discount) || 0)) / 100;
   const finalAmount =
     totalAmount - discountAmount + (parseFloat(adjustment) || 0);
+const showBatch = form.isBatchWise;
 
+const headers = [
+  { key: "sr", label: "#" },
+  { key: "name", label: <FormattedMessage id="item.name" defaultMessage="Item Name" /> },
+  { key: "pqty", label: <FormattedMessage id="purchase.qty" defaultMessage="Purchase Qty" /> },
+  { key: "rqty", label: <FormattedMessage id="returned.qty" defaultMessage="Returned" /> },
+  { key: "retqty", label: <FormattedMessage id="return.qty" defaultMessage="Return Qty" /> },
+  { key: "unit", label: <FormattedMessage id="unit" defaultMessage="Unit" /> },
+  { key: "price", label: <FormattedMessage id="price.unit" defaultMessage="Price/Unit" /> },
+  ...(showBatch
+    ? [
+        { key: "batch", label: "Batch No." },
+        { key: "expiry", label: <FormattedMessage id="PURCHASE.EXPIRY_DATE" defaultMessage="Expiry Date" /> },
+      ]
+    : []),
+  { key: "total", label: <FormattedMessage id="total.price" defaultMessage="Total Price" /> },
+  { key: "del", label: "" },
+];
   const fieldClass =
     "w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all";
   const labelClass =
@@ -988,48 +1036,17 @@ useEffect(() => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  {[
-                    "#",
-                    <FormattedMessage
-                      id="item.name"
-                      defaultMessage="Item Name"
-                    />,
-                    <FormattedMessage
-                      id="purchase.qty"
-                      defaultMessage="Purchase Qty"
-                    />,
-                    <FormattedMessage
-                      id="returned.qty"
-                      defaultMessage="Returned"
-                    />,
-                    <FormattedMessage
-                      id="return.qty"
-                      defaultMessage="Return Qty"
-                    />,
-                    <FormattedMessage id="unit" defaultMessage="Unit" />,
-                    <FormattedMessage
-                      id="price.unit"
-                      defaultMessage="Price/Unit"
-                    />,
-                    <FormattedMessage
-                      id="total.price"
-                      defaultMessage="Total Price"
-                    />,
-                    "",
-                  ].map((h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
+           <table className="w-full min-w-max text-sm">
+  <thead>
+    <tr className="bg-slate-50 border-b border-slate-100">
+      {headers.map((h) => (
+        <th key={h.key} className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+          {h.label}
+        </th>
+      ))}
+    </tr>
+  </thead>
+  <tbody>
                 {items.length === 0 ? (
                   <tr>
                     <td
@@ -1117,6 +1134,18 @@ useEffect(() => {
                       <td className="px-4 py-3 text-slate-600">
                         ₹ {item.price_per_unit}
                       </td>
+                      
+  {showBatch && (
+  <>
+    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+      {item.batchNo || "—"}
+    </td>
+    <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+      {showDate(item.expiryDate)}
+    </td>
+  </>
+)}
+
                       <td className="px-4 py-3 font-bold text-primary whitespace-nowrap">
                         ₹ {item.total_price}
                       </td>

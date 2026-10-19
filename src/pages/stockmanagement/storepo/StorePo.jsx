@@ -533,45 +533,62 @@ const StorePo = () => {
     }
   };
 
-  const handleDelete = (issueid) => {
-    const targetItem = currentPageData.find((i) => i.issueid === issueid) || {};
+ const handleDelete = (issueid) => {
+  const targetItem = currentPageData.find((i) => i.issueid === issueid) || {};
 
-    Swal.fire({
-      title: "Are you sure?",
-      text: "This purchase entry will be deleted.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          await DeleteIssue(issueid);
-          await sendLog("DELETE_SUCCESS", targetItem);
+  Swal.fire({
+    title: "Are you sure?",
+    text: "This store issue entry will be deleted.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#3085d6",
+    confirmButtonText: "Yes, delete it!",
+  }).then(async (result) => {
+    if (!result.isConfirmed) return;
 
-          // Force TableComponent to refetch the current page from the server.
-          setRefreshKey((k) => k + 1);
+    try {
+      const res = await DeleteIssue(issueid);
+      const data = res?.data;
 
-          Swal.fire({
-            icon: "success",
-            title: "Deleted!",
-            text: "Purchase entry deleted.",
-            confirmButtonColor: "#005BA8",
-          });
-        } catch (error) {
-          console.error("Delete failed:", error);
-          await sendLog("DELETE_ERROR", targetItem);
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: "Failed to delete purchase. Please try again.",
-            confirmButtonColor: "#d33",
-          });
-        }
+      // Backend rejected the delete (HTTP 200 with success: false)
+      if (data?.success === false) {
+        await sendLog("DELETE_ERROR", targetItem);
+        await Swal.fire({
+          icon: "error",
+          title: "Cannot Delete",
+          text: data?.msg || "Failed to delete store issue.",
+          confirmButtonColor: "#d33",
+        });
+        setRefreshKey((k) => k + 1); // refetch list
+        return;
       }
-    });
-  };
+
+      await sendLog("DELETE_SUCCESS", targetItem);
+      await Swal.fire({
+        icon: "success",
+        title: "Deleted!",
+        text: data?.msg || "Store issue entry deleted.",
+        confirmButtonColor: "#005BA8",
+      });
+      setRefreshKey((k) => k + 1); // refetch list
+    } catch (error) {
+      console.error("Delete failed:", error);
+      await sendLog("DELETE_ERROR", targetItem);
+
+      // HTTP 4xx/5xx: axios throws, message is in error.response.data.msg
+      await Swal.fire({
+        icon: "error",
+        title: "Cannot Delete",
+        text:
+          error?.response?.data?.msg ||
+          "Failed to delete store issue. Please try again.",
+        confirmButtonColor: "#d33",
+      });
+      setRefreshKey((k) => k + 1); // refetch list
+    }
+  });
+};
 
   const handleEdit = (item) => {
     navigate("/stock-management/storepo/add", { state: { editData: item } });
