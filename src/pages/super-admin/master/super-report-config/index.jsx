@@ -68,6 +68,7 @@ const SuperReportConfig = () => {
         isAddStoreIssue:item.isAddStoreIssue,
         is5Column:item.is5Column,
         isSignatureVisible:item.isSignatureVisible,
+        isShowPackageLabel:item.isShowPackageLabel,
         showLastPage:item.showLastPage,
         isAllItemTogether:item.isAllItemTogether,
         isShowRoomDetails:item.isShowRoomDetails,
