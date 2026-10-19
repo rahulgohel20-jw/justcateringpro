@@ -27,7 +27,9 @@ import {
   OutsideContactName,
   AddAutoManualPOApi,
   GetAllApprovedPurchase,
-  getautomanualpurchsaseid
+  getautomanualpurchsaseid,
+   GetAllCrCodes,          
+  GetMaterialByCrcode,    
 } from "@/services/apiServices";
 import AddContactName from "@/pages/master/MenuItemMaster/components/AddContactName";
 import Swal from "sweetalert2";
@@ -92,6 +94,10 @@ const [isPurchaseApproved, setIsPurchaseApproved] = useState(false);
   const backDatePermission = usePermission("Lock Back Date Entry");
 const isBackDateLocked = backDatePermission.add || backDatePermission.edit;
 const todayStr = new Date().toISOString().split("T")[0];
+const [crCodes, setCrCodes] = useState([]);
+const [loadingCR, setLoadingCR] = useState(false);
+const [selectedCrCode, setSelectedCrCode] = useState(null);
+const [loadingCRItems, setLoadingCRItems] = useState(false);
 
 // Fetch full PO detail when editing
 useEffect(() => {
@@ -161,7 +167,20 @@ useEffect(() => {
 
   useEffect(() => {
     fetchSupplier();
+     fetchCrCodes(); 
   }, []);
+
+const fetchCrCodes = async () => {
+  try {
+    setLoadingCR(true);
+    const res = await GetAllCrCodes(userId);
+    setCrCodes(res?.data?.data || []);
+  } catch (error) {
+    console.log("fetchCrCodes error:", error);
+  } finally {
+    setLoadingCR(false);
+  }
+};
 
   const fetchSupplier = async () => {
     try {
@@ -175,6 +194,69 @@ useEffect(() => {
   const handleFormChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
+
+
+
+ const handleCrCodeSelect = async (crcode) => {
+  setSelectedCrCode(crcode || null);
+
+  if (!crcode) {
+    setItems([]);
+    return;
+  }
+
+  try {
+    setLoadingCRItems(true);
+    const res = await GetMaterialByCrcode(crcode, userId);
+    const data = res?.data?.data;
+    if (!data) return;
+
+    const cr = Array.isArray(data) ? null : data;
+
+    if (cr?.remarks) {
+      setForm((prev) => ({ ...prev, remark: cr.remarks }));
+    }
+
+    const rawList = Array.isArray(data) ? data : data.details || [];
+    const mapped = rawList.map((d) => {
+      const qty = d.qty ?? "";
+      const price = d.price ?? d.supplierRate ?? "";
+      const cgst = d.cgst ?? 0;
+      const sgst = d.sgst ?? 0;
+      const igst = d.igst ?? 0;
+      return {
+        id: 0,
+        rawMaterialId: d.rawMaterialId || d.materialId || 0,
+        rawMaterialCatId: d.rawMaterialCatId || d.categoryId || 0,
+        unitId: d.unitId || d.unit?.id || 0,
+        item_name: d.rawMaterialName || d.materialName || "",
+        hsc_sac: d.hsccode || d.hsc_sac || "",
+        cgst,
+        sgst,
+        igst,
+        qty,
+        unit: d.unitName || d.unit?.nameEnglish || "",
+        price_per_unit: price,
+        other_charges: 0,
+        total_price: calcTotal(qty, price, 0, cgst, sgst, igst),
+        originalQty: d.qty ?? 0,
+      };
+    });
+
+    setItems(mapped);
+  } catch (error) {
+    console.log("handleCrCodeSelect error:", error);
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "Failed to load materials for selected CR code.",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+  } finally {
+    setLoadingCRItems(false);
+  }
+};
 
 
 const fetchApprovedPurchases = (page = 0, append = false) => {
@@ -585,6 +667,38 @@ if (response?.data?.success === true) {
                   <option>Retail Invoice</option>
                 </select>
               </div>
+
+             <div>
+  <label className={labelClass}>
+    <Hash size={16} /> Chef Requisition
+  </label>
+  <Select
+    showSearch
+    allowClear
+    placeholder="Select CR code"
+    style={{ width: "100%", height: "38px" }}
+    value={selectedCrCode || undefined}
+    onChange={handleCrCodeSelect}
+    disabled={isEdit}
+    loading={loadingCR}
+    filterOption={(input, option) =>
+      option?.label?.toLowerCase().includes(input.toLowerCase())
+    }
+    options={crCodes.map((cr) => ({
+      value: cr.crcode,
+      label: cr.crcode,
+    }))}
+  />
+  {loadingCRItems && (
+    <p className="text-xs text-blue-500 mt-1 flex items-center gap-1">
+      <span className="inline-block w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+      Loading materials…
+    </p>
+  )}
+  {!isEdit && crCodes.length === 0 && !loadingCR && (
+    <p className="text-xs text-gray-400 mt-1">No CR Codes available</p>
+  )}
+</div>
               <div>
     {canAccessPurchaseApprove && (   
       <div>
