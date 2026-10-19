@@ -278,6 +278,7 @@ const allCategoryIds =
   formData.append("showAddOnLabel",0);
   formData.append("showLastPage",0);
   formData.append("isSignatureVisible" ,0);
+  formData.append("isShowPackageLabel",0);
   formData.append("isDoc", 0);
   formData.append("isExtraCharges", 0);
   formData.append("isExcel", 0);

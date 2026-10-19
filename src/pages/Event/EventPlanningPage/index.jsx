@@ -13,26 +13,10 @@ import FunctionCard from "./components/FunctionCard";
 import CategoryList from "./components/CategoryList";
 import SearchInput from "./components/SearchInput";
 import {
-  Mic,
-  Eye,
-  EyeOff,
-  Menu,
-  MenuIcon,
-  NotebookPen,
-  CaseUpper,
-  IndianRupee,
-  Calendar,
-  Sparkles,
-  Wand2,
-  Loader2,
-  CheckCircle2,
-  X,
-  ChevronDown,
-  Search,
-  UtensilsCrossed,
-  Palette,
-  ChefHat,
-  FileText
+  Mic, Eye, EyeOff, Menu, MenuIcon, NotebookPen, CaseUpper, IndianRupee,
+  Calendar, Sparkles, Wand2, Loader2, CheckCircle2, X, ChevronDown, Search,
+  UtensilsCrossed, Palette, ChefHat, FileText,
+  Pencil, Truck, Users, FileCheck2, History, ClipboardList, Ticket, User, MapPin, // NEW
 } from "lucide-react";
 import Swal from "sweetalert2";
 import { Tooltip } from "antd";
@@ -94,6 +78,19 @@ import PermissableNonPermissableModal from "../../../partials/modals/permissable
 import EditFunctionDetailsModal from "./components/EditFunctionDetailsModal";
 import { QRCodeCanvas } from "qrcode.react";
 import useSpeechRecognition from "@/hooks/useSpeechRecognition";
+
+
+
+const NAV_BTN =
+  "flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-primary hover:text-primary transition-colors";
+const NAV_BTN_DISABLED =
+  "opacity-40 cursor-not-allowed hover:border-gray-300 hover:text-gray-700";
+const PLAN_BTN =
+  "text-primary font-semibold text-md border border-primary px-4 py-2 rounded-lg flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed";
+const TOOL_BTN =
+  "flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-700 bg-white text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors";
+const ACTION_BTN =
+  "min-w-[90px] px-4 py-2.5 rounded-xl bg-white text-gray-700 text-sm font-semibold text-center border border-gray-200 hover:border-gray-300 transition-colors";
 
 
 const SearchWithSuggestions = ({
@@ -4483,71 +4480,60 @@ if (!updatedCategorySlogans[categoryName]) {
                 <FormattedMessage id="USER.EVENT_PLANNING.STEP_TITLE" defaultMessage="2. Menu Planning" />
               </h2>
 
-              <div className="flex gap-2 flex-wrap">
-                {canEdit && (
-                  <button
-                    className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-primary text-white text-sm font-semibold shadow-sm hover:bg-primary/90 transition-colors"
-                    onClick={handleOpenEditFunction}
-                  >
-                    <span className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">
-                      <i className="ki-filled ki-user text-[11px] text-white"></i>
-                    </span>
-                    <FormattedMessage id="USER.EVENT_PLANNING.EDIT_PERSON" defaultMessage="Edit Function" />
-                  </button>
-                )}
+              <div className="flex gap-2 flex-wrap items-center">
+  {canEdit && (
+    <button
+      className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+      onClick={handleOpenEditFunction}
+    >
+      <Pencil size={15} />
+      <FormattedMessage id="USER.EVENT_PLANNING.EDIT_PERSON" defaultMessage="Edit Function" />
+    </button>
+  )}
 
+  {mode === "menu" && permMenuExecution.view && (
+    <button
+      onClick={() => navigate(`/menu-allocation/${eventId}`)}
+      disabled={shouldDisableNavButtons}
+      className={`${NAV_BTN} ${shouldDisableNavButtons ? NAV_BTN_DISABLED : ""}`}
+    >
+      <Truck size={15} className="text-primary" />
+      <FormattedMessage id="USER.EVENT_PLANNING.MENU_EXECUTION_STEP" defaultMessage="3. Menu Execution" />
+    </button>
+  )}
 
-                {mode === "menu" && permMenuExecution.view && (
-                  <button
-                    onClick={() => navigate(`/menu-allocation/${eventId}`)}
-                    disabled={shouldDisableNavButtons}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold shadow-sm hover:border-primary hover:text-primary transition-colors ${shouldDisableNavButtons ? "opacity-40 cursor-not-allowed hover:border-gray-300 hover:text-gray-700" : ""}`}
-                  >
-                    <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <i className="ki-filled ki-menu text-[16px] text-primary"></i>
-                    </span>
-                    <FormattedMessage id="USER.EVENT_PLANNING.MENU_EXECUTION_STEP" defaultMessage="3. Menu Execution" />
-                  </button>
-                )}
+  {mode === "menu" && permRawMaterial.view && (
+    <button
+      disabled={shouldDisableNavButtons}
+      className={`${NAV_BTN} ${shouldDisableNavButtons ? NAV_BTN_DISABLED : ""}`}
+      onClick={() => navigate(`/raw-material-allocation/${eventId}`)}
+    >
+      <ClipboardList size={15} className="text-primary" />
+      <FormattedMessage id="USER.EVENT_PLANNING.RAW_MATERIAL_STEP" defaultMessage="4. Raw Material Distribution" />
+    </button>
+  )}
 
-                {mode === "menu" && permRawMaterial.view && (
-                  <button
-                    disabled={shouldDisableNavButtons}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold shadow-sm hover:border-primary hover:text-primary transition-colors ${shouldDisableNavButtons ? "opacity-40 cursor-not-allowed hover:border-gray-300 hover:text-gray-700" : ""}`}
-                    onClick={() => navigate(`/raw-material-allocation/${eventId}`)}
-                  >
-                    <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <i className="ki-filled ki-gift text-[16px] text-primary"></i>
-                    </span>
-                    <FormattedMessage id="USER.EVENT_PLANNING.RAW_MATERIAL_STEP" defaultMessage="4. Raw Material Distribution" />
-                  </button>
-                )}
+  {mode === "menu" && permRawMaterial.view && (
+    <button
+      disabled={shouldDisableNavButtons}
+      className={`${NAV_BTN} ${shouldDisableNavButtons ? NAV_BTN_DISABLED : ""}`}
+      onClick={() => navigate(`/labour-and-other-management/${eventId}`)}
+    >
+      <Users size={15} className="text-primary" />
+      <FormattedMessage id="USER.EVENT_PLANNING.AGENCY_STEP" defaultMessage="5. Agency Distribution" />
+    </button>
+  )}
 
-                {mode === "menu" && permRawMaterial.view && (
-                  <button
-                    disabled={shouldDisableNavButtons}
-                    className={`flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold shadow-sm hover:border-primary hover:text-primary transition-colors ${shouldDisableNavButtons ? "opacity-40 cursor-not-allowed hover:border-gray-300 hover:text-gray-700" : ""}`}
-                    onClick={() => navigate(`/labour-and-other-management/${eventId}`)}
-                  >
-                    <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <i className="ki-filled ki-users text-[16px] text-primary"></i>
-                    </span>
-                    <FormattedMessage id="USER.EVENT_PLANNING.AGENCY_STEP" defaultMessage="5. Agency Distribution" />
-                  </button>
-                )}
-
-                {permQuotation.view && (
-                  <button
-                    className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold shadow-sm hover:border-primary hover:text-primary transition-colors"
-                    onClick={() => navigate(`/quotation/${eventId}?type=${mode}`)}
-                  >
-                    <span className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <i className="ki-filled ki-note text-[16px] text-primary"></i>
-                    </span>
-                    <FormattedMessage id="USER.EVENT_PLANNING.QUOTATION_STEP" defaultMessage="6. Quotation" />
-                  </button>
-                )}
-              </div>
+  {permQuotation.view && (
+    <button
+      className={NAV_BTN}
+      onClick={() => navigate(`/quotation/${eventId}?type=${mode}`)}
+    >
+      <FileText size={15} className="text-primary" />
+      <FormattedMessage id="USER.EVENT_PLANNING.QUOTATION_STEP" defaultMessage="6. Quotation" />
+    </button>
+  )}
+</div>
 
               <button
                 onClick={() => navigate("/")}
@@ -4560,262 +4546,250 @@ if (!updatedCategorySlogans[categoryName]) {
             </div>
           </div>
 
-          <div className={`border rounded mb-4 w-full `}>
-            <div className="card w-full">
-              <div className={`w-full border-b p-3 `}>
+          <div className="border rounded mb-4 w-full">
+  <div className="card w-full">
+    <div className="w-full border-b p-3">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-2">
-                  <div className="flex items-center gap-2">
-                    <img className="w-5 h-5" src={toAbsoluteUrl("/media/menu/eventno.png")} alt="event no" />
-                    <span className="text-sm font-semibold text-gray-900"> <FormattedMessage id="USER.EVENT_PLANNING.EVENT_NO_LABEL" defaultMessage="Event No:" /></span>
-                    <span
-                      className={`  underline cursor-pointer ${isHighlightUser ? "font-extrabold text-lg px-1 rounded text-[#863232]" : "font-semibold text-sm text-primary"}`}
-                      onClick={() => setIsAllCustomerToogleOpen(true)}
-                    >
-                      {eventData?.eventNo}
-                    </span>
-                  </div>
+      {/* Row 1 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-2">
+        <div className="flex items-center gap-2">
+          <Ticket size={18} className="text-primary" />
+          <span className="text-sm font-semibold text-gray-900">
+            <FormattedMessage id="USER.EVENT_PLANNING.EVENT_NO_LABEL" defaultMessage="Event No:" />
+          </span>
+          <span
+            className={`underline cursor-pointer ${isHighlightUser ? "font-extrabold text-lg px-1 rounded text-[#863232]" : "font-semibold text-sm text-primary"}`}
+            onClick={() => setIsAllCustomerToogleOpen(true)}
+          >
+            {eventData?.eventNo}
+          </span>
+        </div>
 
-                  <div className="flex items-center gap-2">
-                    <img className="w-5 h-5" src={toAbsoluteUrl("/media/menu/person.png")} alt="person" />
-                    <span className="text-sm font-semibold text-gray-900"><FormattedMessage id="USER.EVENT_PLANNING.PERSON_LABEL" defaultMessage="Person:" /></span>
-                    <input
-                      type="tel" min={1} readOnly
-                      className={`input input-sm w-28 ${isHighlightUser ? "font-extrabold text-primary text-base" : "text-gray-800"}`}
-                      value={personCount}
-                      onChange={(e) => setPersonCount(e.target.value)}
-                    />
-                  </div>
+        <div className="flex items-center gap-2">
+          <User size={18} className="text-primary" />
+          <span className="text-sm font-semibold text-gray-900">
+            <FormattedMessage id="USER.EVENT_PLANNING.PERSON_LABEL" defaultMessage="Person:" />
+          </span>
+          <input
+            type="tel" min={1} readOnly
+            className={`input input-sm w-28 ${isHighlightUser ? "font-extrabold text-primary text-base" : "text-gray-800"}`}
+            value={personCount}
+            onChange={(e) => setPersonCount(e.target.value)}
+          />
+        </div>
 
-                  <div className="flex items-center gap-2">
-                    <img className="w-5 h-5" src={toAbsoluteUrl("/media/menu/eventname.png")} alt="event name" />
-                    <span className="text-sm font-semibold text-gray-900">  <FormattedMessage id="USER.EVENT_PLANNING.EVENT_NAME_LABEL" defaultMessage="Event Name:" />
-                    </span>
-                    <span className={` ${isHighlightUser ? "font-extrabold text-lg text-[#863232]" : " text-primary text-sm font-semibold"}`}>
-                      {eventData?.eventType?.nameEnglish}
-                    </span>
-                  </div>
-                </div>
+        <div className="flex items-center gap-2">
+          <Ticket size={18} className="text-primary" />
+          <span className="text-sm font-semibold text-gray-900">
+            <FormattedMessage id="USER.EVENT_PLANNING.EVENT_NAME_LABEL" defaultMessage="Event Name:" />
+          </span>
+          <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-primary text-sm font-semibold"}>
+            {eventData?.eventType?.nameEnglish}
+          </span>
+        </div>
+      </div>
 
-                <hr className="border-t-2 border-gray-300 my-3" />
+      <hr className="border-t-2 border-gray-300 my-3" />
 
-                <div>
-                  <div className="flex items-center gap-2">
-                    <img className="w-5 h-5" src={toAbsoluteUrl("/media/menu/partyname.png")} alt="party" />
-                    <span className="text-sm font-semibold text-gray-900"> <FormattedMessage id="USER.EVENT_PLANNING.CUSTOMER_LABEL" defaultMessage="Customer:" /></span>
-                    <span className={` ${isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}`}>
-                      {eventData?.party?.nameEnglish}
-                    </span>
-                  </div>
-                  <div className="mt-4">
-                    <div className="flex items-center gap-2">
-                      <img className="w-5 h-5" src={toAbsoluteUrl("/media/menu/venue.png")} alt="venue" />
-                      <span className="text-sm font-semibold text-gray-900"><FormattedMessage id="USER.EVENT_PLANNING.VENUE_LABEL" defaultMessage="Venue/Banquet:" /></span>
-                      <span className={` ${isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}`}>
-                        {eventData?.venue?.nameEnglish || eventData?.banquetHallName}
-                      </span>
-                    </div>
+      {/* Row 2 */}
+      <div>
+        <div className="flex items-center gap-2">
+          <User size={18} className="text-primary" />
+          <span className="text-sm font-semibold text-gray-900">
+            <FormattedMessage id="USER.EVENT_PLANNING.CUSTOMER_LABEL" defaultMessage="Customer:" />
+          </span>
+          <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
+            {eventData?.party?.nameEnglish}
+          </span>
+        </div>
 
-                  </div>
+        <div className="mt-4 flex items-center gap-2">
+          <MapPin size={18} className="text-primary" />
+          <span className="text-sm font-semibold text-gray-900">
+            <FormattedMessage id="USER.EVENT_PLANNING.VENUE_LABEL" defaultMessage="Venue/Banquet:" />
+          </span>
+          <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
+            {eventData?.venue?.nameEnglish || eventData?.banquetHallName}
+          </span>
+        </div>
 
+        {/* Buttons (left) + Status (right) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 mt-5">
+          <div className="flex flex-wrap items-center gap-2">
+            {canAccessDecor && (
+              <button
+                type="button"
+                disabled={navigatingMode === "menu"}
+                onClick={() => {
+                  setNavigatingMode("menu");
+                  navigate(`/menu-preparation/${eventId}`);
+                }}
+                className={PLAN_BTN}
+              >
+                {navigatingMode === "menu" ? (
+                  <Loader2 size={18} className="animate-spin text-primary" />
+                ) : (
+                  <ChefHat size={18} className="text-primary" />
+                )}
+                <FormattedMessage id="USER.EVENT_PLANNING.MENU_PLANNING_BTN" defaultMessage="Menu Planning" />
+              </button>
+            )}
 
+            {canAccessDecor && (
+              <button
+                type="button"
+                disabled={navigatingMode === "decor"}
+                onClick={() => {
+                  setNavigatingMode("decor");
+                  navigate(`/decor-preparation/${eventId}`);
+                }}
+                className={PLAN_BTN}
+              >
+                {navigatingMode === "decor" ? (
+                  <Loader2 size={18} className="animate-spin text-primary" />
+                ) : (
+                  <Sparkles size={18} className="text-primary" />
+                )}
+                <FormattedMessage id="USER.EVENT_PLANNING.DECOR_PLANNING_BTN" defaultMessage="Decor Planning" />
+              </button>
+            )}
 
+            <button
+              type="button"
+              onClick={() => {
+                fetchRawMaterials();
+                fetchRawMaterialCategories();
+                setShowPermissableModal(true);
+              }}
+              className={NAV_BTN}
+            >
+              <FileCheck2 size={15} className="text-primary" />
+              Permissable / Non Permissable
+            </button>
 
-                  {/* Preparation Status Dropdown */}
-                  <div className="flex felx-col justify-end gap-2 mt-5">
-                    {canAccessDecor && (
-                      <button
-                        type="button"
-                        disabled={navigatingMode === "menu"}
-                        onClick={() => {
-                          setNavigatingMode("menu");
-                          navigate(`/menu-preparation/${eventId}`);
-                        }}
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {navigatingMode === "menu" ? (
-                          <Loader2 size={18} className="animate-spin" />
-                        ) : (
-                          <ChefHat size={18} />
-                        )}
-                        <FormattedMessage id="USER.EVENT_PLANNING.MENU_PLANNING_BTN" defaultMessage="Menu Planning" />
-                      </button>
-                    )}
+            {canAccessMenuExtraFeature && (
+              <button type="button" onClick={() => setShowAdvancePayment(true)} className={NAV_BTN}>
+                <IndianRupee size={15} className="text-primary" />
+                <FormattedMessage id="USER.EVENT_PLANNING.PAYMENT_RECEIPT_BTN" defaultMessage="Payment Receipt" />
+              </button>
+            )}
 
-                    {canAccessDecor && (
-                      <button
-                        type="button"
-                        disabled={navigatingMode === "decor"}
-                        onClick={() => {
-                          setNavigatingMode("decor");
-                          navigate(`/decor-preparation/${eventId}`);
-                        }}
-                        className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {navigatingMode === "decor" ? (
-                          <Loader2 size={18} className="animate-spin" />
-                        ) : (
-                          <Sparkles size={18} />
-                        )}
-                        <FormattedMessage id="USER.EVENT_PLANNING.DECOR_PLANNING_BTN" defaultMessage="Decor Planning" />
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        fetchRawMaterials();
-                        fetchRawMaterialCategories();
-                        setShowPermissableModal(true);
-                      }}
-                      className="btn w-auto flex items-center justify-center gap-2 bg-white hover:bg-rose-50 text-rose-600 font-semibold border border-rose-500"
-                    >
-                      <FileText size={16} />
-                      Permissable / Non Permissable
-                    </button>
-
-
-                    {canAccessMenuExtraFeature && (
-                      <button
-                        type="button"
-                        onClick={() => setShowAdvancePayment(true)}
-                        className="bg-white hover:bg-blue-50 text-blue-600 border border-blue-500 px-4 py-2 rounded-lg flex items-center gap-2 font-semibold transition-colors"
-                      >
-                        <IndianRupee size={16} />
-                        <FormattedMessage id="USER.EVENT_PLANNING.PAYMENT_RECEIPT_BTN" defaultMessage="Payment Receipt" />
-                      </button>
-                    )}
-
-
-                    {/* Existing Revision History button */}
-
-                    {canAccessMenuExtraFeature && (
-                      <button
-                        type="button"
-                        onClick={() => setShowRevisionHistory(true)}
-                        className="bg-white hover:bg-violet-50 text-violet-600 border border-violet-500 px-4 py-2 rounded-lg flex items-center gap-2 font-semibold transition-colors"
-                      >
-                        <NotebookPen size={16} />
-                        <FormattedMessage id="USER.EVENT_PLANNING.REVISION_HISTORY_BTN" defaultMessage="Revision History" />
-                      </button>
-                    )}
-
-
-
-                    {canAccessMenuExtraFeature && (
-                      <>
-                        <label className="flex items-center font-semibold"> <FormattedMessage id="USER.EVENT_PLANNING.STATUS_LABEL" defaultMessage="Status:" /></label>
-                        <select
-                          value={prepStatus ?? ""}
-                          disabled={prepStatusLoading}
-                          onChange={(e) => handlePrepStatusChange(e.target.value)}
-                          className={`border rounded-lg px-3 py-1.5 text-sm font-semibold outline-none transition
-              ${prepStatus === "PENDING" ? "border-yellow-400 bg-yellow-50 text-yellow-700"
-                              : prepStatus === "RUNNING" ? "border-blue-400 bg-blue-50 text-blue-700"
-                                : prepStatus === "COMPLETED" ? "border-green-400 bg-green-50 text-green-700"
-                                  : "border-gray-300 bg-white text-gray-600"}`}
-                        >
-                          <option value="">
-                            {intl.formatMessage({ id: "USER.EVENT_PLANNING.SELECT_STATUS_OPTION", defaultMessage: "— Select Status —" })}
-                          </option>
-                          <option value="PENDING">
-                            {intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_PENDING", defaultMessage: "Pending" })}
-                          </option>
-                          <option value="RUNNING">
-                            {intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_RUNNING", defaultMessage: "Running" })}
-                          </option>
-                          <option value="COMPLETED">
-                            {intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_COMPLETE", defaultMessage: "Complete" })}
-                          </option>
-                        </select>
-                        {prepStatusLoading && (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <hr className="border-t-2 border-gray-300 my-3" />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2">
-                  <div className="flex items-center gap-2">
-                    <img className="w-5 h-5" src={toAbsoluteUrl("/media/menu/eventdate.png")} alt="date" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-gray-900"> <FormattedMessage id="USER.EVENT_PLANNING.EVENT_START_DATE_LABEL" defaultMessage="Event Start Date :" /></span>
-                      <span className={` ${isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}`}>
-                        {eventData?.eventStartDateTime?.split(" ")[0]}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <img className="w-5 h-5" src={toAbsoluteUrl("/media/menu/eventdate.png")} alt="date" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-gray-900"><FormattedMessage id="USER.EVENT_PLANNING.EVENT_END_DATE_LABEL" defaultMessage="Event End Date :" /></span>
-                      <span className={` ${isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}`}>
-                        {eventData?.eventEndDateTime?.split(" ")[0]}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <img className="w-5 h-5" src={toAbsoluteUrl("/media/menu/rate.png")} alt="rate" />
-                    <span className="text-sm font-semibold text-gray-900"><FormattedMessage id="USER.EVENT_PLANNING.RATE_LABEL" defaultMessage="Rate:" /></span>
-                    <input
-                      type="text" min={0} readOnly
-                      className={`input input-sm w-28 ${isHighlightUser ? "font-extrabold text-primary border-primary" : "text-gray-800"}`}
-                      value={defaultRate}
-                      onChange={(e) => { setDefaultRate(e.target.value); setIsDirty(true); }}
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="btn w-[160px] flex items-center justify-center gap-2 bg-white hover:bg-amber-50 text-amber-600 font-semibold border border-amber-500"
-                      onClick={() => {
-                        setExtraChargesData(null);
-                        fetchExtraCharges();
-                        setShowExtraChargesModal(true);
-                      }}
-                    >
-                      <IndianRupee size={16} />
-                      <FormattedMessage id="USER.EVENT_PLANNING.EXTRA_CHARGE_BTN" defaultMessage="Extra Charge" />
-                    </button>
-
-
-
-
-                    <Tooltip title={intl.formatMessage({ id: "USER.EVENT_PLANNING.TERMS_TOOLTIP", defaultMessage: "Terms & Conditions" })}>
-                      <button
-                        type="button"
-                        onClick={() => setShowTermsModal(true)}
-                        className="w-10 h-10 rounded-lg bg-white hover:bg-teal-50 border border-teal-500 text-teal-600 flex items-center justify-center transition-colors"
-                      >
-                        <FileText size={18} strokeWidth={2.5} />
-                      </button>
-                    </Tooltip>
-                  </div>
-
-                  {canEdit && (
-                    <button
-                      className="btn w-48 flex items-center justify-center gap-2 bg-white hover:bg-indigo-50 text-indigo-600 font-semibold border border-indigo-500"
-                      onClick={() => setIsCopyMenuModalOpen(true)}
-                    >
-                      <NotebookPen className="w-4 h-4" /> {mode === "decor"
-                        ? intl.formatMessage({ id: "USER.EVENT_PLANNING.COPY_DECOR_PLANNING_BTN", defaultMessage: "Copy Decor Planning" })
-                        : intl.formatMessage({ id: "USER.EVENT_PLANNING.COPY_MENU_PLANNING_BTN", defaultMessage: "Copy Menu Planning" })}
-                    </button>
-                  )}
-
-
-
-                </div>
-
-
-              </div>
-            </div>
+            {canAccessMenuExtraFeature && (
+              <button type="button" onClick={() => setShowRevisionHistory(true)} className={NAV_BTN}>
+                <History size={15} className="text-primary" />
+                <FormattedMessage id="USER.EVENT_PLANNING.REVISION_HISTORY_BTN" defaultMessage="Revision History" />
+              </button>
+            )}
           </div>
+
+          {canAccessMenuExtraFeature && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-semibold text-gray-700">
+                <FormattedMessage id="USER.EVENT_PLANNING.STATUS_LABEL" defaultMessage="Status:" />
+              </label>
+              <select
+                value={prepStatus ?? ""}
+                disabled={prepStatusLoading}
+                onChange={(e) => handlePrepStatusChange(e.target.value)}
+                className={`border rounded-lg px-3 py-1.5 text-sm font-semibold outline-none transition
+                  ${prepStatus === "PENDING" ? "border-yellow-400 bg-yellow-50 text-yellow-700"
+                    : prepStatus === "RUNNING" ? "border-blue-400 bg-blue-50 text-blue-700"
+                    : prepStatus === "COMPLETED" ? "border-green-400 bg-green-50 text-green-700"
+                    : "border-gray-300 bg-white text-gray-600"}`}
+              >
+                <option value="">
+                  {intl.formatMessage({ id: "USER.EVENT_PLANNING.SELECT_STATUS_OPTION", defaultMessage: "— Select Status —" })}
+                </option>
+                <option value="PENDING">{intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_PENDING", defaultMessage: "Pending" })}</option>
+                <option value="RUNNING">{intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_RUNNING", defaultMessage: "Running" })}</option>
+                <option value="COMPLETED">{intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_COMPLETE", defaultMessage: "Complete" })}</option>
+              </select>
+              {prepStatusLoading && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <hr className="border-t-2 border-gray-300 my-3" />
+
+      {/* Row 3 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2">
+        <div className="flex items-center gap-2">
+          <Calendar size={18} className="text-primary" />
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-gray-900">
+              <FormattedMessage id="USER.EVENT_PLANNING.EVENT_START_DATE_LABEL" defaultMessage="Event Start Date :" />
+            </span>
+            <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
+              {eventData?.eventStartDateTime?.split(" ")[0]}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Calendar size={18} className="text-primary" />
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-gray-900">
+              <FormattedMessage id="USER.EVENT_PLANNING.EVENT_END_DATE_LABEL" defaultMessage="Event End Date :" />
+            </span>
+            <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
+              {eventData?.eventEndDateTime?.split(" ")[0]}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <IndianRupee size={18} className="text-primary" />
+          <span className="text-sm font-semibold text-gray-900">
+            <FormattedMessage id="USER.EVENT_PLANNING.RATE_LABEL" defaultMessage="Rate:" />
+          </span>
+          <input
+            type="text" min={0} readOnly
+            className={`input input-sm w-28 ${isHighlightUser ? "font-extrabold text-primary border-primary" : "text-gray-800"}`}
+            value={defaultRate}
+            onChange={(e) => { setDefaultRate(e.target.value); setIsDirty(true); }}
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            className={TOOL_BTN}
+            onClick={() => {
+              setExtraChargesData(null);
+              fetchExtraCharges();
+              setShowExtraChargesModal(true);
+            }}
+          >
+            <IndianRupee size={16} className="text-primary" />
+            <FormattedMessage id="USER.EVENT_PLANNING.EXTRA_CHARGE_BTN" defaultMessage="Extra Charge" />
+          </button>
+
+          <Tooltip title={intl.formatMessage({ id: "USER.EVENT_PLANNING.TERMS_TOOLTIP", defaultMessage: "Terms & Conditions" })}>
+            <button
+              type="button"
+              onClick={() => setShowTermsModal(true)}
+              className="w-10 h-10 rounded-lg bg-white hover:bg-gray-50 border-2 border-gray-500 text-gray-600 flex items-center justify-center transition-colors"
+            >
+              <FileText size={18} strokeWidth={2.5} />
+            </button>
+          </Tooltip>
+        </div>
+
+        {canEdit && (
+          <button className={TOOL_BTN} onClick={() => setIsCopyMenuModalOpen(true)}>
+            <NotebookPen size={16} className="text-primary" />
+            {mode === "decor"
+              ? intl.formatMessage({ id: "USER.EVENT_PLANNING.COPY_DECOR_PLANNING_BTN", defaultMessage: "Copy Decor Planning" })
+              : intl.formatMessage({ id: "USER.EVENT_PLANNING.COPY_MENU_PLANNING_BTN", defaultMessage: "Copy Menu Planning" })}
+          </button>
+        )}
+      </div>
+
+    </div>
+  </div>
+</div>
 
           {/* functions + package controls */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 mb-1">
@@ -4858,94 +4832,82 @@ if (!updatedCategorySlogans[categoryName]) {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 p-2 border rounded bg-gray-200">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleSaveOrUpdate}
-                  disabled={isSubmitting || isSaving || !isDirty || !canEdit}
-                  className="btn bg-success text-white px-3 py-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {hasExistingData
-                    ? intl.formatMessage({ id: "USER.EVENT_PLANNING.UPDATE_MENU_BTN", defaultMessage: "Update Menu" })
-                    : intl.formatMessage({ id: "USER.EVENT_PLANNING.SAVE_MENU_BTN", defaultMessage: "Save Menu" })}
-                </button>
-                {canEdit && (
-                  <button
-                    className={`btn text-sm px-3 py-1 ${packageAppliedForFunction[selectedFunction]
-                      ? "bg-white text-primary border border-primary"
-                      : "bg-primary text-white"
-                      }`}
-                    onClick={() => {
-                      setPackageAppliedForFunction((prev) => ({ ...prev, [selectedFunction]: false }));
-                      setPackageCategoryLimitsByFunction((prev) => ({ ...prev, [selectedFunction]: {} }));
-                      setPackageCategoriesByFunction((prev) => ({ ...prev, [selectedFunction]: [] }));
-                      setPackageItemsByFunction((prev) => ({ ...prev, [selectedFunction]: [] }));
-                      setPackageInfoByFunction((prev) => ({ ...prev, [selectedFunction]: null }));
+              <div className="flex gap-2 flex-wrap">
+  <button
+    type="button"
+    onClick={handleSaveOrUpdate}
+    disabled={isSubmitting || isSaving || !isDirty || !canEdit}
+    className="min-w-[90px] px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold text-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+  >
+    {hasExistingData
+      ? intl.formatMessage({ id: "USER.EVENT_PLANNING.UPDATE_MENU_BTN", defaultMessage: "Update Menu" })
+      : intl.formatMessage({ id: "USER.EVENT_PLANNING.SAVE_MENU_BTN", defaultMessage: "Save Menu" })}
+  </button>
 
-                      const cached = savedMenuPrepCacheRef.current[selectedFunction];
-                      setSelectedByFunction((prev) => ({
-                        ...prev,
-                        [selectedFunction]: cached || {
-                          categoriesOrder: [],
-                          categories: {},
-                          categoryNotes: {},
-                          categorySlogans: {},
-                          categorySubTexts: {},
-                        },
-                      }));
+  {canEdit && (
+    <button
+      className={ACTION_BTN}
+      onClick={() => {
+        setPackageAppliedForFunction((prev) => ({ ...prev, [selectedFunction]: false }));
+        setPackageCategoryLimitsByFunction((prev) => ({ ...prev, [selectedFunction]: {} }));
+        setPackageCategoriesByFunction((prev) => ({ ...prev, [selectedFunction]: [] }));
+        setPackageItemsByFunction((prev) => ({ ...prev, [selectedFunction]: [] }));
+        setPackageInfoByFunction((prev) => ({ ...prev, [selectedFunction]: null }));
 
-                      setIsDirty(false);
-                    }}
-                  >
-                    <FormattedMessage id="USER.EVENT_PLANNING.A_LA_CARTE_BTN" defaultMessage="A La Carte" />
-                  </button>
-                )}
+        const cached = savedMenuPrepCacheRef.current[selectedFunction];
+        setSelectedByFunction((prev) => ({
+          ...prev,
+          [selectedFunction]: cached || {
+            categoriesOrder: [],
+            categories: {},
+            categoryNotes: {},
+            categorySlogans: {},
+            categorySubTexts: {},
+          },
+        }));
+        setIsDirty(false);
+      }}
+    >
+      <FormattedMessage id="USER.EVENT_PLANNING.A_LA_CARTE_BTN" defaultMessage="A La Carte" />
+    </button>
+  )}
 
-                {canEdit && (
-                  <button
-                    className={`btn text-sm px-3 py-1 ${packageAppliedForFunction[selectedFunction]
-                      ? "bg-primary text-white"
-                      : "bg-white text-primary border border-primary"
-                      }`}
-                    onClick={() => setShowCustomPackageModal(true)}
-                  >
-                    <FormattedMessage id="USER.EVENT_PLANNING.MENU_PACKAGE_BTN" defaultMessage="Menu Package" />
-                  </button>
-                )}
-                <button
-                  className="btn bg-primary text-white text-sm px-3 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => {
-                    setMenuReportEventId(eventId);
-                    setIsSelectMenuReport(true);
-                  }}
-                  disabled={!hasSelectedItems || isDirty}
-                >
-                  <FormattedMessage id="USER.EVENT_PLANNING.REPORT_BTN" defaultMessage="Report" />
-                </button>
-                {canAccessMenuLink && packageAppliedForFunction[selectedFunction] && (
-                  <button
-                    className="btn bg-blue-600 text-white text-sm px-3 py-1"
-                    onClick={() => {
-                      setShareLink("");
-                      setShowShareModal(true);
-                      handleGenerateShareLink();
-                    }}
-                  >
-                    <FormattedMessage id="USER.EVENT_PLANNING.SHARE_MENU_BTN" defaultMessage="Share Menu" />
-                  </button>
-                )}
+  {canEdit && (
+    <button className={ACTION_BTN} onClick={() => setShowCustomPackageModal(true)}>
+      <FormattedMessage id="USER.EVENT_PLANNING.MENU_PACKAGE_BTN" defaultMessage="Menu Package" />
+    </button>
+  )}
 
+  <button
+    className={`${ACTION_BTN} disabled:opacity-50 disabled:cursor-not-allowed`}
+    onClick={() => {
+      setMenuReportEventId(eventId);
+      setIsSelectMenuReport(true);
+    }}
+    disabled={!hasSelectedItems || isDirty}
+  >
+    <FormattedMessage id="USER.EVENT_PLANNING.REPORT_BTN" defaultMessage="Report" />
+  </button>
 
-                {canAccessFoodFestival && (
-                  <button
-                    className="btn bg-orange-500 text-white text-sm px-3 py-1"
-                    onClick={() => setShowFoodFestivalModal(true)}
-                  >
-                    <FormattedMessage id="USER.EVENT_PLANNING.FOOD_FESTIVAL_BTN" defaultMessage="Food Festival" />
-                  </button>
-                )}
+  {canAccessMenuLink && packageAppliedForFunction[selectedFunction] && (
+    <button
+      className={ACTION_BTN}
+      onClick={() => {
+        setShareLink("");
+        setShowShareModal(true);
+        handleGenerateShareLink();
+      }}
+    >
+      <FormattedMessage id="USER.EVENT_PLANNING.SHARE_MENU_BTN" defaultMessage="Share Menu" />
+    </button>
+  )}
 
-              </div>
+  {canAccessFoodFestival && (
+    <button className={ACTION_BTN} onClick={() => setShowFoodFestivalModal(true)}>
+      <FormattedMessage id="USER.EVENT_PLANNING.FOOD_FESTIVAL_BTN" defaultMessage="Food Festival" />
+    </button>
+  )}
+</div>
 
               {packageAppliedForFunction[selectedFunction] &&
                 selectedPkgInfo && (
