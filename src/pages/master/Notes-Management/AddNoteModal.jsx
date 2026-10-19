@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { X, Plus, Trash2, StickyNote } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Plus, Trash2, StickyNote, GripVertical } from "lucide-react";
 import {
   AddNote,
   UpdateNote,
@@ -8,18 +8,32 @@ import {
 import Swal from "sweetalert2";
 import { FormattedMessage } from "react-intl";
 
-const EMPTY_HEADING = { id: null, heading: "", description: "" };
-
 const STATUS_OPTIONS = [
   { value: "PENDING", label: "Pending" },
   { value: "RUNNING", label: "Running" },
   { value: "COMPLETED", label: "Completed" },
 ];
 
+const STATUS_STYLES = {
+  PENDING: "border-yellow-400 bg-yellow-50 text-yellow-700",
+  RUNNING: "border-blue-400 bg-blue-50 text-blue-700",
+  COMPLETED: "border-green-400 bg-green-50 text-green-700",
+};
+
 const normalizeStatus = (raw) => {
   const key = String(raw ?? "").trim().toUpperCase();
   return STATUS_OPTIONS.some((o) => o.value === key) ? key : "PENDING";
 };
+
+// Each row gets a stable client-side key so drag/reorder doesn't mix up inputs
+let rowUid = 0;
+const newHeading = () => ({
+  _key: `row-${++rowUid}`,
+  id: null,
+  heading: "",
+  description: "",
+  status: "PENDING",
+});
 
 export default function AddNoteModal({
   isOpen,
@@ -28,35 +42,67 @@ export default function AddNoteModal({
   noteDetails = null,
   userId,
 }) {
-const [form, setForm] = useState({ title: "", status: "PENDING" });
-  const [headings, setHeadings] = useState([{ ...EMPTY_HEADING }]);
+  const [form, setForm] = useState({ title: "", status: "PENDING" });
+  const [headings, setHeadings] = useState([newHeading()]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
+  const [dragIndex, setDragIndex] = useState(null);
+  const [overIndex, setOverIndex] = useState(null);
   const isEdit = !!noteDetails;
+
+  const headingInputRefs = useRef({});
+  const scrollRef = useRef(null);
+const scrollSpeedRef = useRef(0);
+const rafRef = useRef(null);
+const [focusKey, setFocusKey] = useState(null);
 
   // Populate form when editing
   useEffect(() => {
     if (!isOpen) return;
     if (noteDetails) {
       setForm({
-    title: noteDetails.title || "",
-    status: noteDetails.status || "PENDING",
-  });
+        title: noteDetails.title || "",
+        status: normalizeStatus(noteDetails.status),
+      });
       setHeadings(
         noteDetails.headings?.length > 0
-          ? noteDetails.headings.map((h) => ({
-            id: h.id,
-            heading: h.heading || "",
-            description: h.description || "",
-          }))
-          : [{ ...EMPTY_HEADING }]
+          ? [...noteDetails.headings]
+              .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0))
+              .map((h) => ({
+                _key: `row-${++rowUid}`,
+                id: h.id,
+                heading: h.heading || "",
+                description: h.description || "",
+                status: normalizeStatus(h.status),
+              }))
+          : [newHeading()]
       );
     } else {
-     setForm({ title: "", status: "PENDING" });
-  setHeadings([{ ...EMPTY_HEADING }]);
+      setForm({ title: "", status: "PENDING" });
+      setHeadings([newHeading()]);
     }
     setErrors({});
+    setDragIndex(null);
+    setOverIndex(null);
   }, [isOpen, noteDetails]);
+
+
+  useEffect(() => {
+  if (!focusKey) return;
+  const el = headingInputRefs.current[focusKey];
+  if (el) {
+    el.focus();
+    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    setFocusKey(null);
+  }
+}, [focusKey, headings]);
+
+
+useEffect(() => {
+  return () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+  };
+}, []);
 
   if (!isOpen) return null;
 
@@ -72,8 +118,10 @@ const [form, setForm] = useState({ title: "", status: "PENDING" });
   };
 
   const addHeading = () => {
-    setHeadings((prev) => [...prev, { ...EMPTY_HEADING }]);
-  };
+  const row = newHeading();
+  setHeadings((prev) => [...prev, row]);
+  setFocusKey(row._key);
+};
 
   const removeHeading = async (index) => {
     const heading = headings[index];
@@ -97,10 +145,95 @@ const [form, setForm] = useState({ title: "", status: "PENDING" });
         return;
       }
     }
-    setHeadings((prev) => prev.filter((_, i) => i !== index));
-    if (headings.length === 1) {
-      setHeadings([{ ...EMPTY_HEADING }]);
+    setHeadings((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      return next.length ? next : [newHeading()];
+    });
+  };
+
+ const EDGE_ZONE = 70;   // px from the top/bottom edge where scrolling starts
+const MAX_SPEED = 14;   // px per frame at the very edge
+
+const stopAutoScroll = () => {
+  scrollSpeedRef.current = 0;
+  if (rafRef.current) {
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+  }
+};
+
+const autoScrollTick = () => {
+  const el = scrollRef.current;
+  if (!el || scrollSpeedRef.current === 0) {
+    rafRef.current = null;
+    return;
+  }
+  el.scrollTop += scrollSpeedRef.current;
+  rafRef.current = requestAnimationFrame(autoScrollTick);
+};
+
+const handleContainerDragOver = (e) => {
+  if (dragIndex === null) return;
+  const el = scrollRef.current;
+  if (!el) return;
+
+  const rect = el.getBoundingClientRect();
+  const distTop = e.clientY - rect.top;
+  const distBottom = rect.bottom - e.clientY;
+
+  let speed = 0;
+  if (distTop < EDGE_ZONE) {
+    speed = -Math.ceil(MAX_SPEED * Math.min(1, (EDGE_ZONE - Math.max(0, distTop)) / EDGE_ZONE));
+  } else if (distBottom < EDGE_ZONE) {
+    speed = Math.ceil(MAX_SPEED * Math.min(1, (EDGE_ZONE - Math.max(0, distBottom)) / EDGE_ZONE));
+  }
+
+  scrollSpeedRef.current = speed;
+  if (speed !== 0 && !rafRef.current) {
+    rafRef.current = requestAnimationFrame(autoScrollTick);
+  }
+};
+
+const handleContainerDragLeave = (e) => {
+  // stop only when the pointer really leaves the scroll area, not when it moves between children
+  if (!e.currentTarget.contains(e.relatedTarget)) stopAutoScroll();
+};
+
+const resetDrag = () => {
+  stopAutoScroll();       // NEW
+  setDragIndex(null);
+  setOverIndex(null);
+};
+
+  const handleDragStart = (e, index) => {
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+    // show the whole row as the drag preview, not just the small handle
+    const row = e.currentTarget.closest("tr");
+    if (row) e.dataTransfer.setDragImage(row, 0, 0);
+  };
+
+  const handleDragOver = (e, index) => {
+    if (dragIndex === null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (overIndex !== index) setOverIndex(index);
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === dropIndex) {
+      resetDrag();
+      return;
     }
+    setHeadings((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(dropIndex, 0, moved);
+      return next;
+    });
+    resetDrag();
   };
 
   const validate = () => {
@@ -114,12 +247,15 @@ const [form, setForm] = useState({ title: "", status: "PENDING" });
     if (!validate()) return;
     setSaving(true);
     try {
+      // sequence = position in the list (1, 2, 3…) after blank rows are dropped
       const filteredHeadings = headings
         .filter((h) => h.heading.trim())
-        .map((h) => ({
+        .map((h, idx) => ({
           id: h.id || null,
           heading: h.heading,
           description: h.description,
+          status: h.status,
+          sequence: idx + 1,
         }));
 
       const payload = {
@@ -179,6 +315,9 @@ const [form, setForm] = useState({ title: "", status: "PENDING" });
     </p>
   );
 
+  const thCls =
+    "px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider";
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 no-scrollbar"
@@ -189,7 +328,7 @@ const [form, setForm] = useState({ title: "", status: "PENDING" });
       onClick={() => onClose(false)}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden no-scrollbar"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl flex flex-col overflow-hidden no-scrollbar"
         style={{ maxHeight: "92vh" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -214,7 +353,12 @@ const [form, setForm] = useState({ title: "", status: "PENDING" });
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-6 no-scrollbar">
+        <div
+  ref={scrollRef}
+  onDragOver={handleContainerDragOver}
+  onDragLeave={handleContainerDragLeave}
+  className="overflow-y-auto flex-1 px-6 py-5 space-y-6 no-scrollbar"
+>
           {/* Note Details */}
           <div>
             <SectionTitle title={<FormattedMessage id="NOTES.FORM.SECTION.NOTE_DETAILS" defaultMessage="Note Details" />} />
@@ -232,22 +376,22 @@ const [form, setForm] = useState({ title: "", status: "PENDING" });
                 <p className="text-red-500 text-[10px] mt-0.5">{errors.title}</p>
               )}
             </div>
-            <div>
-    <label className={labelCls}>
-      <FormattedMessage id="NOTES.FORM.LABEL.STATUS" defaultMessage="Status" />
-    </label>
-    <select
-      value={form.status}
-      onChange={(e) => set("status", e.target.value)}
-      className={inputCls(false)}
-    >
-      {STATUS_OPTIONS.map((s) => (
-  <option key={s.value} value={s.value}>
-    {s.label}
-  </option>
-))}
-    </select>
-  </div>
+            <div className="mt-3">
+              <label className={labelCls}>
+                <FormattedMessage id="NOTES.FORM.LABEL.STATUS" defaultMessage="Status" />
+              </label>
+              <select
+                value={form.status}
+                onChange={(e) => set("status", e.target.value)}
+                className={inputCls(false)}
+              >
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Headings & Descriptions */}
@@ -263,36 +407,92 @@ const [form, setForm] = useState({ title: "", status: "PENDING" });
               </button>
             </div>
 
-            <div className="border border-gray-100 rounded-xl overflow-hidden">
+            <div className="border border-gray-100 rounded-xl overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider w-[5%]">#</th>
-                    <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider w-[30%]">Heading</th>
-                    <th className="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Description</th>
-                    <th className="text-center px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider w-[8%]">Action</th>
-                  </tr>
+                 <tr className="bg-gray-50 border-b border-gray-100">
+  <th className={`${thCls} w-[4%]`}></th>
+  <th className={`${thCls} text-left w-[6%]`}>Seq</th>
+  <th className={`${thCls} text-left w-[20%]`}>Heading</th>
+  <th className={`${thCls} text-left min-w-[320px]`}>Description</th>
+  <th className={`${thCls} text-left w-[14%]`}>Status</th>
+  <th className={`${thCls} text-center w-[8%]`}>Action</th>
+</tr>
                 </thead>
                 <tbody>
                   {headings.map((h, i) => (
-                    <tr key={i} className="border-b border-gray-50 last:border-0">
-                      <td className="px-3 py-2 text-gray-500 font-medium">{i + 1}</td>
+                    <tr
+                      key={h._key}
+                      onDragOver={(e) => handleDragOver(e, i)}
+                      onDrop={(e) => handleDrop(e, i)}
+                      className={`border-b border-gray-50 last:border-0 transition-colors
+                        ${dragIndex === i ? "opacity-40 bg-gray-50" : ""}
+                        ${overIndex === i && dragIndex !== null && dragIndex !== i ? "border-t-2 border-t-primary" : ""}`}
+                    >
+                      {/* Drag handle */}
+                      <td className="px-2 py-2 text-center">
+                        <span
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, i)}
+                          onDragEnd={resetDrag}
+                          title="Drag to reorder"
+                          className="inline-flex cursor-grab active:cursor-grabbing text-gray-400 hover:text-primary"
+                        >
+                          <GripVertical className="w-4 h-4" />
+                        </span>
+                      </td>
+
+                      {/* Sequence (automatic, follows row order) */}
                       <td className="px-3 py-2">
-                        <input
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                          {i + 1}
+                        </span>
+                      </td>
+
+                      <td className="px-3 py-2">
+                       <input
+                          ref={(el) => {
+                            if (el) headingInputRefs.current[h._key] = el;
+                            else delete headingInputRefs.current[h._key];
+                          }}
                           value={h.heading}
                           onChange={(e) => handleHeadingChange(i, "heading", e.target.value)}
                           placeholder="Enter heading"
                           className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-800 outline-none focus:border-primary bg-white transition-colors"
                         />
                       </td>
+
                       <td className="px-3 py-2">
-                        <input
-                          value={h.description}
-                          onChange={(e) => handleHeadingChange(i, "description", e.target.value)}
-                          placeholder="Enter description"
-                          className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-800 outline-none focus:border-primary bg-white transition-colors"
-                        />
+  <textarea
+    ref={(el) => {
+      if (el) {
+        el.style.height = "auto";
+        el.style.height = `${el.scrollHeight}px`;
+      }
+    }}
+    rows={1}
+    value={h.description}
+    onChange={(e) => handleHeadingChange(i, "description", e.target.value)}
+    placeholder="Enter description"
+    className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-800 outline-none focus:border-primary bg-white transition-colors resize-none overflow-hidden"
+  />
+</td>
+
+                      {/* Status per heading */}
+                      <td className="px-3 py-2">
+                        <select
+                          value={h.status}
+                          onChange={(e) => handleHeadingChange(i, "status", e.target.value)}
+                          className={`w-full border rounded-lg px-2 py-1.5 text-xs font-semibold outline-none transition-colors ${STATUS_STYLES[h.status] || STATUS_STYLES.PENDING}`}
+                        >
+                          {STATUS_OPTIONS.map((s) => (
+                            <option key={s.value} value={s.value}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
                       </td>
+
                       <td className="px-3 py-2 text-center">
                         <button
                           type="button"

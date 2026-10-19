@@ -8,12 +8,12 @@ const blue = {
 };
 
 const teal = {
-  primary: "#0891B2",
-  primaryActive: "#0E7490",
-  primaryLight: "#22D3EE",
-  primaryLighter: "#CFFAFE",
-  primaryClarity: "rgba(8, 145, 178, 0.10)",
-  primaryInverse: "#FFFFFF",
+ primary: "#45634A",
+primaryActive: "#526F57",
+primaryLight: "#8BB191",
+primaryLighter: "#E6F0E7",
+primaryClarity: "rgba(101, 134, 106, 0.10)",
+primaryInverse: "#FFFFFF",
 };
 
 const purple = {
@@ -26,13 +26,25 @@ const purple = {
 };
 
 const orange = {
-  primary: "#EA580C",
-  primaryActive: "#C2410C",
-  primaryLight: "#FB923C",
-  primaryLighter: "#FFEDD5",
-  primaryClarity: "rgba(234, 88, 12, 0.10)",
-  primaryInverse: "#FFFFFF",
+  primary: "#326B78",
+primaryActive: "#26515B",
+primaryLight: "#53B2C7",
+primaryLighter: "#DEF2F7",
+primaryClarity: "rgba(50, 107, 120, 0.10)",
+primaryInverse: "#FFFFFF",
 };
+
+// const orange = {
+//   primary: "#233E63",
+// primaryActive: "#1A2D49",
+// primaryLight: "#4780CE",
+// primaryLighter: "#DDE8F8",
+// primaryClarity: "rgba(35, 62, 99, 0.10)",
+// primaryInverse: "#FFFFFF",
+// };
+
+
+
 
 // Keyed by softType (lowercase). Swap the colors to whatever you want.
 export const softTypeThemes = {
@@ -54,5 +66,5 @@ export const domainThemes = {
     primaryClarity: "rgba(204, 51, 51, 0.10)",
     primaryInverse: "rgba(255, 255, 255, 1)",
   },
-  default: purple,
+  default: blue,
 };
