@@ -39,6 +39,7 @@ const SuperReportConfig = () => {
         isPartyDetails: item.isPartyDetails,
         isWithQuantity: item.isWithQty,
         isFunctionWise : item.isFunctionWise,
+        isContinuous: item.isContinuous,
         labourType: item.type,
         size1: item.size1,
         size2: item.size2,

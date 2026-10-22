@@ -2157,8 +2157,9 @@ const getMasterCats = useCallback(async () => {
       const loadedAddonState = {};
       const categoryIdsMap = {};
 const categoryMultiImageIdsMap = {};
+const categoryMultiImageCatMap = {};  
+const categoryMultiImageOrderMap = {};   // ✅ add
 
-      setDefaultRate(prepMeta?.eventFunction?.rate ?? "");
 
       const categoryRenamesMap = {};
 
@@ -2177,6 +2178,7 @@ const norm = cfg.normaliseCategory(rawCat, allItemsForPrice, prepMeta, masterCat
         categoryIdsMap[norm.catName] = norm.catId;
         categoryHeadingsMap[norm.catName] = norm.catHeading;
 categoryMultiImageIdsMap[norm.catName] = norm.multiImageMenuItemIds || [];
+categoryMultiImageCatMap[norm.catName] = !!norm.multiImageCat;
 
         if (
           norm.nicknames?.english?.trim() ||
@@ -2223,6 +2225,8 @@ categoryMultiImageIdsMap[norm.catName] = norm.multiImageMenuItemIds || [];
         categoryRenames: categoryRenamesMap,
         categoryIds: categoryIdsMap,
          categoryMultiImageIds: categoryMultiImageIdsMap,  
+         categoryMultiImageCat: categoryMultiImageCatMap,
+         categoryMultiImageOrder: categoryMultiImageOrderMap
       };
 
       setSelectedByFunction((prev) => ({
@@ -2237,6 +2241,8 @@ categoryMultiImageIdsMap[norm.catName] = norm.multiImageMenuItemIds || [];
           categoryRenames: categoryRenamesMap,
           categoryIds: categoryIdsMap,
           categoryMultiImageIds: categoryMultiImageIdsMap,
+          categoryMultiImageCat: categoryMultiImageCatMap,
+          categoryMultiImageOrder: categoryMultiImageOrderMap
         },
         _menuPrepId: menuPrepId,
       }));
@@ -3590,6 +3596,8 @@ if (!updatedCategorySlogans[categoryName]) {
       categoryRenames: selectedByFunction[selectedFunction]?.categoryRenames || {},
       categoryIds: bucket.categoryIds || {},
       categoryMultiImageIds: bucket.categoryMultiImageIds || {},
+      
+      categoryMultiImageOrder: bucket.categoryMultiImageOrder || {},
       primaryItems: primaryItemsByFunction[selectedFunction] || {},
       itemRenames: selectedByFunction[selectedFunction]?.itemRenames || {},
       itemReportNames: selectedByFunction[selectedFunction]?.itemReportNames || {},

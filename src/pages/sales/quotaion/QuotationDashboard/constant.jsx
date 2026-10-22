@@ -63,6 +63,20 @@ export const columns = (permissions = {}) => [
       />
     ),
   },
+   {
+    accessorKey: "quotationCode",
+    header: ({ column }) => (
+      <DataGridColumnHeader
+        title={
+          <FormattedMessage
+            id="SALES.QUOTATION_DATE"
+            defaultMessage="Quotation Code"
+          />
+        }
+        column={column}
+      />
+    ),
+  },
   {
     accessorKey: "TotalAmount",
     header: ({ column }) => (

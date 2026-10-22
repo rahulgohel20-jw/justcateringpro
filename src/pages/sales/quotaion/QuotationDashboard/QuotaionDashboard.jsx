@@ -217,6 +217,7 @@ const handleExcelDownload = async () => {
         ? formatDateDisplay(q.event.eventStartDateTime)
         : "-",
       QuotationDate: q?.createdAt || "-",
+      quotationCode: q?.quotationCode || "-",
       Amount: q?.totalAmount || "-",
       BalanceDue: q?.remainingAmount || "-",
       TotalAmount: q?.grandTotal || "-",
