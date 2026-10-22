@@ -552,7 +552,7 @@ const generatePdf = async () => {
   mode="package"
   customPackageId={selectedPackageId}
   onPackageTemplateSelect={handlePackageTemplateSelect}
-  restrictToType="Type 1"
+  // restrictToType="Type 1"
 />
 
 {isMenuReportOpen && (
