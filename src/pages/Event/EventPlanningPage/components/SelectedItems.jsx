@@ -9,7 +9,7 @@ import { Modal } from "antd";
 import Swal from "sweetalert2";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { toAbsoluteUrl } from "@/utils";
-import { GetCategoryImg } from "@/services/apiServices";
+import { GetCategoryImg , SearchCategoryformenu  } from "@/services/apiServices";
 import {
   ArrowUpNarrowWide,
   Plus,
@@ -45,6 +45,14 @@ const getStatusClasses = (status, kind = "category") => {
   // "Normal" or anything else → unchanged / default
   return kind === "category" ? "bg-white border-gray-200" : "bg-[#EEF3F7]";
 };
+
+const isValidImg = (src) =>
+  typeof src === "string" &&
+  src.trim() !== "" &&
+  src !== "null" &&
+  src !== "undefined" &&
+  !src.toLowerCase().includes("/null") &&
+  /\.(jpg|jpeg|png|webp|gif)$/i.test(src);
 
 // Add near the top of the file, alongside getStatusClasses
 const payloadToDisplayHtml = (payload) => {
@@ -1037,18 +1045,66 @@ const SubTextModal = ({ label, onClose, onSave, initialValues = {}, mode = "menu
 
 const StationItemsModal = ({
   title,
+  catId = 0,
   items = [],
   initialSelected = [],
+  initialCategorySelected = false,
+    initialOrder = [],    
   language = "en",
+  mode = "menu",
   onClose,
   onSave,
 }) => {
-  const normalizedInitial = Array.isArray(initialSelected)
-    ? initialSelected.map(Number).filter(Boolean)
-    : [];
+const normalizedInitial = Array.isArray(initialSelected)
+  ? initialSelected.map(Number).filter(Boolean)
+  : [];
 
-  const [selectedIds, setSelectedIds] = useState(normalizedInitial);
+// tokens: "c" = category image, "i:123" = item 123, in click order
+const [order, setOrder] = useState(() => {
+  if (Array.isArray(initialOrder) && initialOrder.length) return initialOrder;
+  return [
+    ...normalizedInitial.map((id) => `i:${id}`),
+    ...(initialCategorySelected ? ["c"] : []),
+  ];
+});
+
+const catSelected = order.includes("c");
+const selectedIds = order.filter((t) => t !== "c").map((t) => Number(t.slice(2)));
+
   const [search, setSearch] = useState("");
+  const userId = localStorage.getItem("userId");
+  const [masterCat, setMasterCat] = useState(null);
+  const [masterLoading, setMasterLoading] = useState(false);
+
+  const NO_IMG = toAbsoluteUrl("/media/menu/noImage.jpg");
+  const onImgError = (e) => {
+    console.warn("[img-failed]", e.currentTarget.src);
+    e.currentTarget.onerror = null;
+    e.currentTarget.src = NO_IMG;
+  };
+
+  useEffect(() => {
+    if (mode === "decor") return;
+    let cancelled = false;
+    setMasterLoading(true);
+
+    const catId = Number(items[0]?.catId || 0);
+    const wanted = (title || "").trim().toLowerCase();
+
+    SearchCategoryformenu(userId, title)
+      .then((res) => {
+        const cats = res?.data?.data?.["Menu Category Details"] || [];
+        const match =
+          (catId && cats.find((c) => Number(c.id) === catId)) ||
+          cats.find((c) => (c.nameEnglish || "").trim().toLowerCase() === wanted) ||
+          null;
+        if (!cancelled) setMasterCat(match);
+      })
+      .catch(() => !cancelled && setMasterCat(null))
+      .finally(() => !cancelled && setMasterLoading(false));
+
+    return () => { cancelled = true; };
+  }, [title, userId, mode, items[0]?.catId]);
 
   const getItemId = (it) => Number(it.menuItemId ?? it.id ?? it.itemId ?? 0);
 
@@ -1063,9 +1119,7 @@ const StationItemsModal = ({
 
   const getImg = (it) => {
     const src = it.imagePath || it.image || it.itemImage || it.imgUrl || it.imageUrl;
-    return src && src !== "null" && /\.(jpg|jpeg|png|webp|gif)$/i.test(src)
-      ? src
-      : toAbsoluteUrl("/media/menu/noImage.jpg");
+    return isValidImg(src) ? encodeURI(src) : NO_IMG;
   };
 
   const filtered = useMemo(() => {
@@ -1079,19 +1133,59 @@ const StationItemsModal = ({
     [items, selectedIds],
   );
 
-  const toggle = (id) =>
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((itemId) => itemId !== id) : [...prev, id],
-    );
+ const toggle = (id) =>
+  setOrder((prev) => {
+    const tok = `i:${id}`;
+    return prev.includes(tok) ? prev.filter((t) => t !== tok) : [...prev, tok];
+  });
+
+  const toggleCat = () =>
+  setOrder((prev) =>
+    prev.includes("c") ? prev.filter((t) => t !== "c") : [...prev, "c"],
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col p-6">
         <h2 className="text-base font-semibold text-gray-800 mb-3">
-        <span className="text-primary font-bold">{title}</span>
+          <span className="text-primary font-bold">{title}</span>
         </h2>
 
-        {/* Search */}
+       {mode !== "decor" && (
+  <div className="mb-3">
+    <label className="block text-sm font-semibold text-gray-700 mb-2">Category Image</label>
+    <div
+onClick={toggleCat}
+      className={`relative cursor-pointer w-28 rounded-lg border-2 overflow-hidden transition ${
+        catSelected ? "border-primary bg-blue-50" : "border-gray-200 hover:border-gray-300"
+      }`}
+    >
+      {masterLoading ? (
+        <div className="w-full h-24 bg-gray-100 animate-pulse" />
+      ) : (
+        <img
+          src={isValidImg(masterCat?.imagePath) ? encodeURI(masterCat.imagePath) : NO_IMG}
+          onError={onImgError}
+          alt={masterCat?.nameEnglish || title}
+          className="w-full h-24 object-cover"
+        />
+      )}
+      <input
+        type="checkbox"
+        checked={catSelected}
+        readOnly
+        className="absolute top-1.5 left-1.5 w-4 h-4 accent-primary"
+      />
+      <p className="text-xs font-medium text-gray-800 p-1.5 line-clamp-2">
+        {masterCat?.nameEnglish || title}
+      </p>
+    </div>
+  </div>
+)}
+
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
+          Item Images ({filtered.length})
+        </label>
 
         {/* All items grid */}
         <div className="flex-1 overflow-y-auto custom-scrollbar border border-gray-200 rounded-lg p-2">
@@ -1112,6 +1206,7 @@ const StationItemsModal = ({
                   >
                     <img
                       src={getImg(it)}
+                      onError={onImgError}
                       alt={getName(it)}
                       loading="lazy"
                       className="w-full h-24 object-cover"
@@ -1142,10 +1237,10 @@ const StationItemsModal = ({
           </button>
           <button
             type="button"
-            onClick={() => {
-              onSave(selectedIds, selectedItems);
-              onClose();
-            }}
+         onClick={() => {
+  onSave(selectedIds, selectedItems, catSelected, order);
+  onClose();
+}}
             className="px-4 py-2 rounded-lg bg-primary text-white text-sm hover:opacity-90"
           >
             Save
@@ -1691,24 +1786,36 @@ if (loading) {
 
            {stationItemsModal && canAccessCaptainRecipe && (
         <StationItemsModal
-          title={stationItemsModal.catName}
-          items={stationItemsModal.items || []}
-          initialSelected={stationItemsModal.selectedIds || []}
-          onClose={() => setStationItemsModal(null)}
-          onSave={(selectedIds) => {
-            onDragEndNewState({
-              categoriesOrder: [...categoriesOrder],
-              categories: { ...categories },   // items stay untouched
-              categoryNotes: data.categoryNotes,
-              categorySlogans: data.categorySlogans,
-              categoryMultiImageIds: {
-                ...(data.categoryMultiImageIds || {}),
-                [stationItemsModal.catName]: (selectedIds || []).map(Number),
-              },
-            });
-            setStationItemsModal(null);
-          }}
-        />
+  title={stationItemsModal.catName}
+  catId={data.categoryIds?.[stationItemsModal.catName] ?? stationItemsModal.items?.[0]?.catId ?? 0}
+  mode={mode}
+  items={stationItemsModal.items || []}
+  initialSelected={stationItemsModal.selectedIds || []}
+  initialCategorySelected={!!data.categoryMultiImageCat?.[stationItemsModal.catName]}
+    initialOrder={data.categoryMultiImageOrder?.[stationItemsModal.catName] || []} 
+  onClose={() => setStationItemsModal(null)}
+onSave={(selectedIds, _items, catSelected, order) => {
+    onDragEndNewState({
+      categoriesOrder: [...categoriesOrder],
+      categories: { ...categories },
+      categoryNotes: data.categoryNotes,
+      categorySlogans: data.categorySlogans,
+      categoryMultiImageIds: {
+        ...(data.categoryMultiImageIds || {}),
+        [stationItemsModal.catName]: (selectedIds || []).map(Number),
+      },
+      categoryMultiImageCat: {
+        ...(data.categoryMultiImageCat || {}),
+        [stationItemsModal.catName]: !!catSelected,
+      },
+      categoryMultiImageOrder: {                                   // ← NEW
+        ...(data.categoryMultiImageOrder || {}),
+        [stationItemsModal.catName]: order || [],
+      },
+    });
+    setStationItemsModal(null);
+  }}
+/>
       )}
 
       <div className="w-full flex flex-col h-full overflow-hidden">

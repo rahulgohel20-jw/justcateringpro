@@ -262,20 +262,31 @@ const slogan = savedSlogan || (masterCat?.menuSlogan ?? "").toString().trim();
     };
 
   const sourceItems = savedItems.length > 0
-    ? savedItems
-    : isPackageCategory
-      ? []   
-      : flatItems.filter(
-          (f) => Number(f[fields.categoryId] ?? f.menuCategoryId ?? 0) === Number(rawCat[fields.categoryId] ?? 0)
-        );
+  ? savedItems
+  : isPackageCategory
+    ? []
+    : flatItems.filter(
+        (f) => Number(f[fields.categoryId] ?? f.menuCategoryId ?? 0) === Number(rawCat[fields.categoryId] ?? 0)
+      );
 
-  const multiImageMenuItemIds = Array.from(
-    new Set((rawCat.multiImageMenuItemIds || []).map((id) => Number(id)).filter(Boolean)),
-  );
+// ⬇️ paste here (replaces the old multiImageMenuItemIds block)
+const rawMulti = Array.isArray(rawCat.multiImageMenuItems) ? rawCat.multiImageMenuItems : [];
 
-  // const sourceItems = savedItems;
+const multiImageMenuItemIds = Array.from(
+  new Set(
+    (rawMulti.length
+      ? rawMulti.filter((m) => !m.isCategoryImg).map((m) => m.multiImageMenuItemId)
+      : (rawCat.multiImageMenuItemIds || [])
+    ).map(Number).filter(Boolean),
+  ),
+);
 
-          const isPackage   = prepMeta.isPackage || false;
+const multiImageCat = rawMulti.some((m) => !!m.isCategoryImg);
+// ⬆️
+const multiImageOrder = rawMulti.map((m) =>
+  m.isCategoryImg ? "c" : `i:${Number(m.multiImageMenuItemId)}`,
+);
+const isPackage = prepMeta.isPackage || false;
 
     const hasSavedItems = sourceItems.length > 0;
 
@@ -378,6 +389,8 @@ const slogan = savedSlogan || (masterCat?.menuSlogan ?? "").toString().trim();
     catName, catNameHindi, catNameGujarati, 
     catId, notes, slogan, images, space, subCat,catHeading, items, 
     multiImageMenuItemIds,
+    multiImageCat, 
+    multiImageOrder, 
     isAddon: !!rawCat[fields.isCategoryAddon],
     categoryStatus,
     reportNameEnglish:  rawCat.reportNameEnglish  || originalCatName,
@@ -400,7 +413,7 @@ const slogan = savedSlogan || (masterCat?.menuSlogan ?? "").toString().trim();
       menuPrepId, eventFunctionId, personCount, defaultRate,
       categoriesOrder, categories, categoryNotes, categorySlogans,
   categoryRenames, primaryItems, itemRenames,
-      categorySubTexts, categoryHeadings, categoryImages, categorySpaces,categoryMultiImageIds, 
+      categorySubTexts, categoryHeadings, categoryImages, categorySpaces,categoryMultiImageIds,categoryMultiImageCat,categoryMultiImageOrder,     
       addonState, packageApplied, packageInfo, packageItems,categoryIds,
       permissionRawMaterials,
       userId, 
@@ -425,13 +438,49 @@ const slogan = savedSlogan || (masterCat?.menuSlogan ?? "").toString().trim();
     const subCatData  = categorySubTexts?.[catName] || {};
     const headingData = categoryHeadings?.[catName] || {};
    const activeItemIds = new Set(items.map((i) => Number(i.id)));
-const multiImageMenuItemIds = Array.from(
+
+const resolvedCatId = (() => {
+  if (categoryIds?.[catName]) return categoryIds[catName];
+  if (first.catId) return first.catId;
+  const anyItemWithCatId = items.find((i) => i.catId);
+  return anyItemWithCatId?.catId || 0;
+})();
+
+const selectedImgItemIds = Array.from(
   new Set(
     (categoryMultiImageIds?.[catName] || [])
       .map(Number)
-      .filter((id) => id && activeItemIds.has(id)),   // drops removed/cancelled items
+      .filter((id) => id && activeItemIds.has(id)), // drops removed/cancelled items
   ),
 );
+
+const multiImageMenuItems = (() => {
+  const savedOrder = categoryMultiImageOrder?.[catName];
+
+  if (Array.isArray(savedOrder) && savedOrder.length) {
+    return savedOrder
+      .map((tok) => {
+        if (tok === "c") {
+          return resolvedCatId
+            ? { isCategoryImg: true, multiImageMenuItemId: Number(resolvedCatId) }
+            : null;
+        }
+        const id = Number(tok.slice(2));
+        return id && activeItemIds.has(id)
+          ? { isCategoryImg: false, multiImageMenuItemId: id }
+          : null;
+      })
+      .filter(Boolean);
+  }
+
+  // fallback (no saved order): category first, then items
+  return [
+    ...(categoryMultiImageCat?.[catName] && resolvedCatId
+      ? [{ isCategoryImg: true, multiImageMenuItemId: Number(resolvedCatId) }]
+      : []),
+    ...selectedImgItemIds.map((id) => ({ isCategoryImg: false, multiImageMenuItemId: id })),
+  ];
+})();
 
       return {
         // menuCategoryId:           first.catId || 0,
@@ -492,7 +541,7 @@ const multiImageMenuItemIds = Array.from(
         startTime:                "",
         isMenuCatAddons:          !!addonState?.[catName]?.cat,
         categoryStatus:           allItems[0]?.categoryStatus || "NORMAL",
-        multiImageMenuItemIds:    multiImageMenuItemIds,
+multiImageMenuItems,
   changedAfterCompletion:   allItems[0]?.changedAfterCompletion ?? null,
         bgImgId:                  imgData.bgImgId  || 0,
         catImgId:                 imgData.catImgId || 0,
