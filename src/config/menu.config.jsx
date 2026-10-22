@@ -391,7 +391,7 @@ export const allMenuItems = (navigate) => {
       icon: "text-lg ki-filled ki-note-2 text-primary", 
       path: "/master/notes-management",
       pageName: "Notes Management",
-      moduleName: "Notes Management",
+      
     },
 
      {
