@@ -71,7 +71,7 @@ const [selectedNamePlateImages, setSelectedNamePlateImages] = useState(null);
 
 
   
-
+const PACKAGE_TYPE1_ONLY_USER_IDS = ["233", "811"];
   const currentlang = useMemo(() => {
     switch (lang) {
       case "en":
@@ -751,6 +751,11 @@ if (
 // Aroma Caterers (userId 359) requirement: in Custom Package mode,
 if (mode === "package" && String(userId) === "359") {
   if (template.type !== "Type 19" && template.type !== "Type 20") {
+    return false;
+  }
+}
+if (mode === "package" && PACKAGE_TYPE1_ONLY_USER_IDS.includes(String(userId))) {
+  if (template.type !== "Type 1") {
     return false;
   }
 }
