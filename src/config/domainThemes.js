@@ -49,9 +49,9 @@ primaryInverse: "#FFFFFF",
 // Keyed by softType (lowercase). Swap the colors to whatever you want.
 export const softTypeThemes = {
   jcx: blue,
-  jcxplus: teal,
-  jcxpro: orange,
-  jcxproplus: purple,
+  jcxplus: blue,
+  jcxpro: blue,
+  jcxproplus: blue,
 };
 
 // Existing hostname themes, now used only as a fallback
