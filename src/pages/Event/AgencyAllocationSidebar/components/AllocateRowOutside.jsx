@@ -3,6 +3,8 @@ import BaseSelect from "../ui/BaseSelect";
 import BaseInput from "../ui/BaseInput";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { OutsideContactName, GetUnitData } from "@/services/apiServices";
 
 
@@ -12,29 +14,53 @@ const getFunctionTime24 = (functionStartDateTime) => {
   return parsed.isValid() ? parsed.format("HH:mm") : "";
 };
 
+const parseDMY = (dateStr) => {
+  if (!dateStr || dateStr === "-") return null;
+  const parsed = dayjs(dateStr, [
+    "DD/MM/YYYY",
+    "YYYY-MM-DD",
+    "DD/MM/YYYY hh:mm A",
+    "YYYY-MM-DD HH:mm:ss",
+  ]);
+  return parsed.isValid() ? parsed.toDate() : null;
+};
+
+const getFunctionDateDMY = (functionStartDateTime) => {
+  if (!functionStartDateTime || functionStartDateTime === "-") return "";
+  const parsed = dayjs(functionStartDateTime, [
+    "DD/MM/YYYY hh:mm A",
+    "DD/MM/YYYY",
+    "YYYY-MM-DD",
+    "YYYY-MM-DD HH:mm:ss",
+  ]);
+  return parsed.isValid() ? parsed.format("DD/MM/YYYY") : "";
+};
+
 export default function AllocateRowOutside({
   onAllocate,
   vendorRefreshTrigger = 0,
   selectedCount,
-  functionStartDateTime 
+  functionStartDateTime,
 }) {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState("");
   const [quantity, setQuantity] = useState("");
   const [shiftTransPrice, setShiftTransPrice] = useState("");
-const [reportingTime, setReportingTime] = useState(() =>
-  getFunctionTime24(functionStartDateTime),
-);
+  const [reportingTime, setReportingTime] = useState(() =>
+    getFunctionTime24(functionStartDateTime),
+  );
+  const [reportingDate, setReportingDate] = useState(() =>
+    getFunctionDateDMY(functionStartDateTime),
+  );
   const userid = localStorage.getItem("userId");
   const [units, setUnits] = useState([]);
   const [selectedUnit, setSelectedUnit] = useState("");
 
   useEffect(() => {
-  setReportingTime(getFunctionTime24(functionStartDateTime));
-}, [functionStartDateTime]);
-
-
+    setReportingTime(getFunctionTime24(functionStartDateTime));
+    setReportingDate(getFunctionDateDMY(functionStartDateTime));
+  }, [functionStartDateTime]);
 
   useEffect(() => {
     fetchdata();
@@ -68,12 +94,13 @@ const [reportingTime, setReportingTime] = useState(() =>
     const hasQuantity = quantity !== "" && Number(quantity) > 0;
     const hasPrice = shiftTransPrice !== "" && Number(shiftTransPrice) >= 0;
     const hasUnit = !!selectedUnit;
-    const hasTime = !!reportingTime; // ⬅ NEW
+    const hasTime = !!reportingTime;
+    const hasDate = !!reportingDate;
 
-    if (!hasVendor && !hasQuantity && !hasPrice && !hasUnit && !hasTime) {
+    if (!hasVendor && !hasQuantity && !hasPrice && !hasUnit && !hasTime && !hasDate) {
       Swal.fire({
         title: "Missing Information",
-        text: "Please fill at least one field (Vendor, Quantity, Shift/Trans Price, Unit, or Time)",
+        text: "Please fill at least one field (Vendor, Quantity, Shift/Trans Price, Unit, Date, or Time)",
         icon: "warning",
       });
       return;
@@ -107,7 +134,8 @@ const [reportingTime, setReportingTime] = useState(() =>
     if (shiftTransPrice !== "" && Number(shiftTransPrice) >= 0)
       allocationData.shiftTransPrice = shiftTransPrice;
 
-    if (reportingTime) allocationData.reportingTime = reportingTime; // ⬅ NEW — "HH:MM" 24hr
+    if (reportingDate) allocationData.reportingDate = reportingDate;
+    if (reportingTime) allocationData.reportingTime = reportingTime;
 
     onAllocate(allocationData);
 
@@ -115,7 +143,8 @@ const [reportingTime, setReportingTime] = useState(() =>
     setQuantity("");
     setShiftTransPrice("");
     setSelectedUnit("");
-    setReportingTime(getFunctionTime24(functionStartDateTime)); 
+    setReportingDate(getFunctionDateDMY(functionStartDateTime));
+    setReportingTime(getFunctionTime24(functionStartDateTime));
   };
 
   return (
@@ -125,59 +154,81 @@ const [reportingTime, setReportingTime] = useState(() =>
           Bulk Allocate {selectedCount > 0 && `(${selectedCount} selected)`}
         </span>
       </div>
-      <div className="grid grid-cols-8 gap-4">
-        <BaseSelect
-          value={selectedVendor}
-          onChange={(e) => setSelectedVendor(e.target.value)}
-          disabled={loading}
-        >
-          <option value="">{loading ? "Loading..." : "Select Vendor"}</option>
-          {vendors.map((vendor) => (
-            <option key={vendor.id} value={vendor.id}>{vendor.nameEnglish}</option>
-          ))}
-        </BaseSelect>
-
-        <BaseInput
-          type="tel"
-          placeholder="Enter quantity"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-          min="0"
-        />
-
-        <BaseSelect
-          value={selectedUnit || ""}
-          onChange={(e) => setSelectedUnit(e.target.value)}
-        >
-          <option value="">Select Unit</option>
-          {selectedUnit &&
-            !units.some((u) => String(u.id) === String(selectedUnit)) && (
-              <option value={selectedUnit}>Selected Unit</option>
-            )}
-          {units.map((u) => (
-            <option key={u.id} value={u.id}>{u.nameEnglish}</option>
-          ))}
-        </BaseSelect>
-
-        <BaseInput
-          type="tel"
-          placeholder="Shift/Trans Price"
-          value={shiftTransPrice}
-          onChange={(e) => setShiftTransPrice(e.target.value)}
-          min="0"
-        />
-
-        {/* ⬅ NEW: Reporting Time */}
-        <input
-          type="time"
-          className="input"
-          value={reportingTime}
-          onChange={(e) => setReportingTime(e.target.value)}
-          placeholder="Reporting Time"
-        />
-
+      <div className="grid grid-cols-12 gap-3 items-center">
         <div className="col-span-3">
-          <button className="btn-primary w-full h-full" onClick={handleAllocate}>
+          <BaseSelect
+            value={selectedVendor}
+            onChange={(e) => setSelectedVendor(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">{loading ? "Loading..." : "Select Vendor"}</option>
+            {vendors.map((vendor) => (
+              <option key={vendor.id} value={vendor.id}>{vendor.nameEnglish}</option>
+            ))}
+          </BaseSelect>
+        </div>
+
+        <div className="col-span-1">
+          <BaseInput
+            type="tel"
+            placeholder="Qty"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            min="0"
+          />
+        </div>
+
+        <div className="col-span-2">
+          <BaseSelect
+            value={selectedUnit || ""}
+            onChange={(e) => setSelectedUnit(e.target.value)}
+          >
+            <option value="">Select Unit</option>
+            {selectedUnit &&
+              !units.some((u) => String(u.id) === String(selectedUnit)) && (
+                <option value={selectedUnit}>Selected Unit</option>
+              )}
+            {units.map((u) => (
+              <option key={u.id} value={u.id}>{u.nameEnglish}</option>
+            ))}
+          </BaseSelect>
+        </div>
+
+        <div className="col-span-2">
+          <BaseInput
+            type="tel"
+            placeholder="Shift/Trans Price"
+            value={shiftTransPrice}
+            onChange={(e) => setShiftTransPrice(e.target.value)}
+            min="0"
+          />
+        </div>
+
+        <div className="col-span-2">
+          <DatePicker
+            selected={parseDMY(reportingDate)}
+            onChange={(date) =>
+              setReportingDate(date ? dayjs(date).format("DD/MM/YYYY") : "")
+            }
+            dateFormat="dd/MM/yyyy"
+            placeholderText="DD/MM/YYYY"
+            className="w-full h-9 rounded-md border border-gray-300 bg-white px-2 text-sm focus:ring-2 focus:ring-blue-500/40"
+            wrapperClassName="w-full"
+          />
+        </div>
+
+        <div className="col-span-1">
+          <input
+            type="time"
+            className="input w-full h-9 rounded-md border border-gray-300 bg-white px-2 text-sm focus:ring-2 focus:ring-blue-500/40"
+            value={reportingTime}
+            onChange={(e) => setReportingTime(e.target.value)}
+            placeholder="Reporting Time"
+          />
+        </div>
+
+        <div className="col-span-1">
+          <button className="btn-primary w-full h-9 text-sm" onClick={handleAllocate}>
             Allocate
           </button>
         </div>

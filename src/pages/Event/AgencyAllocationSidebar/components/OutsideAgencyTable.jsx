@@ -1,8 +1,22 @@
 import { useState, useEffect, useRef } from "react";
+import dayjs from "dayjs";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import BaseInput from "../ui/BaseInput";
 import BaseSelect from "../ui/BaseSelect";
 import { OutsideContactName, GetUnitData } from "@/services/apiServices";
 import { useModuleAccess } from "../../../../hooks/useModuleAccess";
+
+const parseDMY = (dateStr) => {
+  if (!dateStr || dateStr === "-") return null;
+  const parsed = dayjs(dateStr, [
+    "DD/MM/YYYY",
+    "YYYY-MM-DD",
+    "DD/MM/YYYY hh:mm A",
+    "YYYY-MM-DD HH:mm:ss",
+  ]);
+  return parsed.isValid() ? parsed.toDate() : null;
+};
 
 export default function OutsideAgencyTable({
   menuItems,
@@ -181,7 +195,8 @@ export default function OutsideAgencyTable({
             <col className="w-[160px]" />
             <col className="w-[200px]" />
             <col className="w-[160px]" />
-              <col className="w-[110px]" /> 
+            <col className="w-[135px]" />
+            <col className="w-[110px]" /> 
             <col className="w-[160px]" />
             <col className="w-[140px]" />
             <col className="w-[140px]" />
@@ -203,7 +218,7 @@ export default function OutsideAgencyTable({
               <th className="p-3 text-left">Item Name</th>
               <th className="p-3 text-left">Contact Name</th>
               <th className="p-3 text-left">Pax</th>
-              
+              <th className="p-3 text-left">Date</th>
               <th className="p-3 text-left">Time</th> 
               <th className="p-3 text-left">Quantity</th>
               <th className="p-3 text-left">Unit</th>
@@ -305,18 +320,35 @@ export default function OutsideAgencyTable({
                           onBlur={() => handleAllocationBlur(menuIndex)}
                         />
                       </td>
-                     
-<td className="p-2">
-  <BaseInput
-    type="time"
-    placeholder="Time"
-    value={allocation.reportingTime || ""}
-    onChange={(e) =>
-      handleAllocationChange(menuIndex, allocationIndex, "reportingTime", e.target.value)
-    }
-    onBlur={() => handleAllocationBlur(menuIndex)}
-  />
-</td>
+                      <td className="p-2">
+                        <DatePicker
+                          selected={parseDMY(allocation.reportingDate)}
+                          onChange={(date) => {
+                            handleAllocationChange(
+                              menuIndex,
+                              allocationIndex,
+                              "reportingDate",
+                              date ? dayjs(date).format("DD/MM/YYYY") : ""
+                            );
+                            setTimeout(() => handleAllocationBlur(menuIndex), 0);
+                          }}
+                          dateFormat="dd/MM/yyyy"
+                          placeholderText="DD/MM/YYYY"
+                          className="h-9 w-full rounded-md border border-gray-300 bg-white px-2 text-xs focus:ring-2 focus:ring-blue-500/40"
+                          wrapperClassName="w-full"
+                        />
+                      </td>
+                      <td className="p-2">
+                        <BaseInput
+                          type="time"
+                          placeholder="Time"
+                          value={allocation.reportingTime || ""}
+                          onChange={(e) =>
+                            handleAllocationChange(menuIndex, allocationIndex, "reportingTime", e.target.value)
+                          }
+                          onBlur={() => handleAllocationBlur(menuIndex)}
+                        />
+                      </td>
                      
                       <td className="p-2">
                         <BaseInput

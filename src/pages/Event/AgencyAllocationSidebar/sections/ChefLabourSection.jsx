@@ -11,6 +11,28 @@ const getFunctionTime24 = (functionStartDateTime) => {
   return parsed.isValid() ? parsed.format("HH:mm") : "";
 };
 
+const getFunctionDateDMY = (functionStartDateTime) => {
+  if (!functionStartDateTime || functionStartDateTime === "-") return "";
+  const parsed = dayjs(functionStartDateTime, [
+    "DD/MM/YYYY hh:mm A",
+    "DD/MM/YYYY",
+    "YYYY-MM-DD",
+    "YYYY-MM-DD HH:mm:ss",
+  ]);
+  return parsed.isValid() ? parsed.format("DD/MM/YYYY") : "";
+};
+
+const formatDateDMY = (dateVal) => {
+  if (!dateVal) return "";
+  const parsed = dayjs(dateVal, [
+    "DD/MM/YYYY",
+    "YYYY-MM-DD",
+    "DD/MM/YYYY hh:mm A",
+    "YYYY-MM-DDTHH:mm:ss",
+  ]);
+  return parsed.isValid() ? parsed.format("DD/MM/YYYY") : dateVal;
+};
+
 export default function ChefLabourSection({
   data,
   onDataUpdate,
@@ -54,9 +76,12 @@ export default function ChefLabourSection({
     quantity,
     serviceType,
     totalPrice: alloc.totalPrice ?? calculatedTotal,
-      reportingTime:
-    formatTime24hr(alloc.reportingTime || "") ||
-    getFunctionTime24(functionStartDateTime),  
+    reportingTime:
+      formatTime24hr(alloc.reportingTime || "") ||
+      getFunctionTime24(functionStartDateTime),  
+    reportingDate:
+      formatDateDMY(alloc.reportingDate || "") ||
+      getFunctionDateDMY(functionStartDateTime),
   };
 };
 
@@ -183,7 +208,7 @@ const handleAllocate = useCallback(
       allocationData.quantity !== undefined ||
       allocationData.shiftTransPrice !== undefined;
 
-    // Only require a selection if something OTHER than reporting time was provided
+    // Only require a selection if something OTHER than reporting date/time was provided
     if (hasNonTimeFields && !hasSelectedItems) {
       Swal.fire({ title: "Warning", text: "Please select at least one item to allocate", icon: "warning" });
       return false;
@@ -191,7 +216,8 @@ const handleAllocate = useCallback(
 
     if (
       !hasNonTimeFields &&
-      allocationData.reportingTime === undefined
+      allocationData.reportingTime === undefined &&
+      allocationData.reportingDate === undefined
     ) {
       Swal.fire({ title: "Warning", text: "Please provide at least one allocation value", icon: "warning" });
       return false;
@@ -207,20 +233,20 @@ const handleAllocate = useCallback(
           const itemKey = `${menuIndex}-${allocationIndex}`;
           const isSelected = !!selectedItems[itemKey];
 
-          // ⬅ reporting time is stamped on EVERY row, regardless of checkbox
-          const timeUpdate =
-            allocationData.reportingTime !== undefined
-              ? { reportingTime: allocationData.reportingTime }
-              : {};
+          // ⬅ reporting date & time are stamped on EVERY row, regardless of checkbox
+          const timeDateUpdate = {
+            ...(allocationData.reportingTime !== undefined ? { reportingTime: allocationData.reportingTime } : {}),
+            ...(allocationData.reportingDate !== undefined ? { reportingDate: allocationData.reportingDate } : {}),
+          };
 
           if (!isSelected) {
-            return Object.keys(timeUpdate).length
-              ? { ...allocation, ...timeUpdate }
+            return Object.keys(timeDateUpdate).length
+              ? { ...allocation, ...timeDateUpdate }
               : allocation;
           }
 
           allocatedCount++;
-          const updates = { ...timeUpdate };
+          const updates = { ...timeDateUpdate };
 
           if (allocationData.partyId !== undefined) {
             updates.partyId = allocationData.partyId;
@@ -278,11 +304,15 @@ const handleAllocate = useCallback(
     if (onDataUpdate) onDataUpdate(updatedMenuItems);
     setSelectedItems({});
 
+    const hasDateTime =
+      allocationData.reportingTime !== undefined ||
+      allocationData.reportingDate !== undefined;
+
     Swal.fire({
       title: "Success",
       text:
-        allocationData.reportingTime !== undefined
-          ? `Reporting time set on all items${allocatedCount ? `, and ${allocatedCount} selected item(s) updated` : ""}`
+        hasDateTime
+          ? `Reporting date/time set on all items${allocatedCount ? `, and ${allocatedCount} selected item(s) updated` : ""}`
           : `Updated ${allocatedCount} selected item(s) successfully`,
       icon: "success",
       timer: 2000,
@@ -447,8 +477,8 @@ const handleCancel = useCallback(() => {
       unitId: allocation.unitId || 0,
       remarks: "",
       isOutside: false,
-        reportingTime: formatTime12hr(allocation.reportingTime || ""),
-      
+      reportingDate: formatDateDMY(allocation.reportingDate || ""),
+      reportingTime: formatTime12hr(allocation.reportingTime || ""),
     };
   }) || [],
       };
@@ -517,6 +547,7 @@ const buildChefLabourChangeSummary = (prevItems, currentItems) => {
         ["shiftTransPrice", "Transport"],
         ["totalPrice", "Total Price"],
         ["unitId", "Unit"],
+        ["reportingDate", "Reporting Date"],
         ["reportingTime", "Reporting Time"],
       ];
 

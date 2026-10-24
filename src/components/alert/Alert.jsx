@@ -25,7 +25,7 @@ const Alert = ({
         className={`text-lg leading-0 ${variantStyles[variant].split(" ")[2]}`}
         aria-label={icon}
       />
-      <div className="text-gray-700 text-sm">{children}</div>
+      <div className="text-white text-sm">{children}</div>
     </div>
   );
 };

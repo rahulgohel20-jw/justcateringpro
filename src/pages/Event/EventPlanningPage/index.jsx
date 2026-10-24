@@ -4899,16 +4899,17 @@ if (!updatedCategorySlogans[categoryName]) {
     </button>
   )}
 
-  <button
-    className={`${ACTION_BTN} disabled:opacity-50 disabled:cursor-not-allowed`}
-    onClick={() => {
-      setMenuReportEventId(eventId);
-      setIsSelectMenuReport(true);
-    }}
-    disabled={!hasSelectedItems || isDirty}
-  >
-    <FormattedMessage id="USER.EVENT_PLANNING.REPORT_BTN" defaultMessage="Report" />
-  </button>
+<button
+  className={`  min-w-[90px] px-4 py-2.5 rounded-xl  text-white text-sm font-semibold text-center border border-gray-200 hover:border-gray-300 transition-colors";
+ bg-success text-black disabled:opacity-50 disabled:cursor-not-allowed`}
+  onClick={() => {
+    setMenuReportEventId(eventId);
+    setIsSelectMenuReport(true);
+  }}
+  disabled={!hasSelectedItems || isDirty}
+>
+  <FormattedMessage id="USER.EVENT_PLANNING.REPORT_BTN" defaultMessage="Report" />
+</button>
 
   {canAccessMenuLink && packageAppliedForFunction[selectedFunction] && (
     <button
