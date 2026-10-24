@@ -1,8 +1,22 @@
 import { useState, useEffect } from "react";
+import dayjs from "dayjs";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import BaseInput from "../ui/BaseInput";
 import BaseSelect from "../ui/BaseSelect";
 import { OutsideContactName, GetUnitData } from "@/services/apiServices";
 import { useModuleAccess } from "../../../../hooks/useModuleAccess";
+
+const parseDMY = (dateStr) => {
+  if (!dateStr || dateStr === "-") return null;
+  const parsed = dayjs(dateStr, [
+    "DD/MM/YYYY",
+    "YYYY-MM-DD",
+    "DD/MM/YYYY hh:mm A",
+    "YYYY-MM-DD HH:mm:ss",
+  ]);
+  return parsed.isValid() ? parsed.toDate() : null;
+};
 
 export default function ChefLabourTable({
   menuItems,
@@ -15,7 +29,7 @@ export default function ChefLabourTable({
   const [vendors, setVendors] = useState([]);
   const [loadingVendors, setLoadingVendors] = useState(false);
   const [unit, setUnit] = useState([]);
-  const {hasModuleAccess} = useModuleAccess();
+  const { hasModuleAccess } = useModuleAccess();
   const canAccessAssignManager = hasModuleAccess("Assign Manager")
 
   useEffect(() => {
@@ -126,44 +140,44 @@ export default function ChefLabourTable({
     onUpdate(menuIndex, updatedMenuItem);
   };
 
-const handleContactChange = (menuIndex, allocationIndex, vendorId) => {
-  const menuItem = menuItems[menuIndex];
-  const updatedAllocations = [...menuItem.eventFunctionMenuAllocations];
-  const existing = updatedAllocations[allocationIndex];
+  const handleContactChange = (menuIndex, allocationIndex, vendorId) => {
+    const menuItem = menuItems[menuIndex];
+    const updatedAllocations = [...menuItem.eventFunctionMenuAllocations];
+    const existing = updatedAllocations[allocationIndex];
 
-  if (!vendorId) {
-    const updatedAllocation = {
-      ...existing,
-      partyId: "",
-      partyName: "",
-      number: "",
-    };
-    updatedAllocation.totalPrice = calcTotal(updatedAllocation);
-    updatedAllocations[allocationIndex] = updatedAllocation;
-    onUpdate(menuIndex, { ...menuItem, eventFunctionMenuAllocations: updatedAllocations });
-    return;
-  }
+    if (!vendorId) {
+      const updatedAllocation = {
+        ...existing,
+        partyId: "",
+        partyName: "",
+        number: "",
+      };
+      updatedAllocation.totalPrice = calcTotal(updatedAllocation);
+      updatedAllocations[allocationIndex] = updatedAllocation;
+      onUpdate(menuIndex, { ...menuItem, eventFunctionMenuAllocations: updatedAllocations });
+      return;
+    }
 
-  const selectedVendor = vendors.find((v) => String(v.id) === String(vendorId));
-  if (selectedVendor) {
-    const updatedAllocation = {
-      ...existing,
-      partyId: selectedVendor.id || "",
-      partyName: selectedVendor.nameEnglish || "",
-      number: selectedVendor.mobileno || "",
-      // set every pricing variant up front, regardless of current serviceType,
-      // so switching Type later still has the right values available
-      price: selectedVendor.price ?? existing.price ?? 0,
-      counterPrice: selectedVendor.counterPrice ?? existing.counterPrice ?? 0,
-      helperPrice: selectedVendor.helperPrice ?? existing.helperPrice ?? 0,
-    };
+    const selectedVendor = vendors.find((v) => String(v.id) === String(vendorId));
+    if (selectedVendor) {
+      const updatedAllocation = {
+        ...existing,
+        partyId: selectedVendor.id || "",
+        partyName: selectedVendor.nameEnglish || "",
+        number: selectedVendor.mobileno || "",
+        // set every pricing variant up front, regardless of current serviceType,
+        // so switching Type later still has the right values available
+        price: selectedVendor.price ?? existing.price ?? 0,
+        counterPrice: selectedVendor.counterPrice ?? existing.counterPrice ?? 0,
+        helperPrice: selectedVendor.helperPrice ?? existing.helperPrice ?? 0,
+      };
 
-    updatedAllocation.totalPrice = calcTotal(updatedAllocation);
+      updatedAllocation.totalPrice = calcTotal(updatedAllocation);
 
-    updatedAllocations[allocationIndex] = updatedAllocation;
-    onUpdate(menuIndex, { ...menuItem, eventFunctionMenuAllocations: updatedAllocations });
-  }
-};
+      updatedAllocations[allocationIndex] = updatedAllocation;
+      onUpdate(menuIndex, { ...menuItem, eventFunctionMenuAllocations: updatedAllocations });
+    }
+  };
   const handleCheckboxChange = (menuIndex, allocationIndex, isChecked) => {
     const itemKey = `${menuIndex}-${allocationIndex}`;
     onItemSelect(itemKey, isChecked, menuIndex, allocationIndex);
@@ -192,13 +206,13 @@ const handleContactChange = (menuIndex, allocationIndex, vendorId) => {
         return selectedItems[itemKey] === true;
       });
     });
-return (
-  <div className="mt-3 px-6 pb-6">
-    <div className="border rounded-xl bg-white overflow-x-auto">
-      <table
-        className="w-full table-fixed border-collapse text-sm"
-        style={{ minWidth: isAllFunctions ? 1804 : 1654 }}
-      >
+  return (
+    <div className="mt-3 px-6 pb-6">
+      <div className="border rounded-xl bg-white overflow-x-auto">
+        <table
+          className="w-full table-fixed border-collapse text-sm"
+          style={{ minWidth: isAllFunctions ? 1939 : 1789 }}
+        >
           <colgroup>
             <col className="w-[44px]" />
             <col className="w-[60px]" />
@@ -207,7 +221,8 @@ return (
             <col className="w-[120px]" />
             <col className="w-[220px]" />
             <col className="w-[170px]" />
-             <col className="w-[110px]" /> 
+            <col className="w-[135px]" />
+            <col className="w-[110px]" />
             <col className="w-[120px]" />
             <col className="w-[120px]" />
             <col className="w-[120px]" />
@@ -231,17 +246,16 @@ return (
               <th className="p-3 text-left">Pax</th>
               <th className="p-3 text-left">Contact Name</th>
               <th className="p-3 text-left">Type</th>
-              
-              <th className="p-3 text-left">
-                Time </th>
-              
+              <th className="p-3 text-left">Date</th>
+              <th className="p-3 text-left">Time</th>
+
               <th className="p-3 text-center border-l" colSpan={2}>Quantity</th>
               <th className="p-3 text-center border-l" colSpan={2}>Price</th>
               <th className="p-3 text-left border-l">Shift/Trans</th>
               <th className="p-3 text-left border-l">Total</th>
             </tr>
             <tr className="text-gray-600 text-xs font-semibold bg-gray-50">
-            <th colSpan={isAllFunctions ? 8 : 7}></th> 
+              <th colSpan={isAllFunctions ? 9 : 8}></th>
               <th className="p-3 text-center border-l">Labour/Qty</th>
               <th className="p-3 text-center">Helper/Unit</th>
               <th className="p-3 text-center border-l">Labour/Price</th>
@@ -267,9 +281,8 @@ return (
                       return (
                         <tr
                           key={`${menuIndex}-${allocationIndex}`}
-                          className={`border-b hover:bg-gray-50 align-middle ${
-                            selectedItems[itemKey] ? "bg-blue-50" : ""
-                          }`}
+                          className={`border-b hover:bg-gray-50 align-middle ${selectedItems[itemKey] ? "bg-blue-50" : ""
+                            }`}
                         >
                           <td className="p-3 text-center">
                             <input
@@ -341,18 +354,34 @@ return (
                               <option value="counter_wise">Counter Wise</option>
                             </BaseSelect>
                           </td>
-                          
-<td className="p-2">
-  <BaseInput
-    type="time"
-    placeholder="Time"
-   value={allocation.reportingTime || ""}
-    onChange={(e) =>
-      handleAllocationChange(menuIndex, allocationIndex, "reportingTime", e.target.value)
-    }
-  />
-</td>
-                        
+                          <td className="p-2">
+                            <DatePicker
+                              selected={parseDMY(allocation.reportingDate)}
+                              onChange={(date) =>
+                                handleAllocationChange(
+                                  menuIndex,
+                                  allocationIndex,
+                                  "reportingDate",
+                                  date ? dayjs(date).format("DD/MM/YYYY") : ""
+                                )
+                              }
+                              dateFormat="dd/MM/yyyy"
+                              placeholderText="DD/MM/YYYY"
+                              className="h-9 w-full rounded-md border border-gray-300 bg-white px-2 text-xs focus:ring-2 focus:ring-blue-500/40"
+                              wrapperClassName="w-full"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <BaseInput
+                              type="time"
+                              placeholder="Time"
+                              value={allocation.reportingTime || ""}
+                              onChange={(e) =>
+                                handleAllocationChange(menuIndex, allocationIndex, "reportingTime", e.target.value)
+                              }
+                            />
+                          </td>
+
                           {isPlateWise ? (
                             <>
                               <td className="p-2">

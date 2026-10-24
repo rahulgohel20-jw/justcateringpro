@@ -8,7 +8,7 @@ import { Plus } from "lucide-react";
 
 import { GetAllItemByType } from "@/services/apiServices";
 import Swal from "sweetalert2";
-import { FormattedMessage  , useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 
 const TABS = [
   { id: "chef", label: "Chef Labour" },
@@ -39,10 +39,10 @@ export default function AgencyAllocationSidebar({
     allocationDataRef.current = allocationData;
   }, [allocationData]);
 
-  
+
   const isAllFunctions = eventFunctionId === -1;
 
- 
+
   const eventFunctionData = useMemo(() => {
     if (!allocationData || allocationData.length === 0) return null;
 
@@ -57,7 +57,7 @@ export default function AgencyAllocationSidebar({
       };
     }
 
-   
+
     const {
       function: func,
       functionStartDateTime,
@@ -73,7 +73,7 @@ export default function AgencyAllocationSidebar({
   }, [allocationData, isAllFunctions]);
 
   const handleVendorRefresh = useCallback(() => {
-   
+
     setVendorRefreshTrigger((prev) => prev + 1);
   }, []);
 
@@ -114,7 +114,7 @@ export default function AgencyAllocationSidebar({
             });
           });
 
-         
+
         }
 
         const res = await GetAllItemByType(
@@ -131,7 +131,7 @@ export default function AgencyAllocationSidebar({
           return;
         }
 
-      
+
         if (preserveSelections && Object.keys(currentSelections).length > 0) {
           const restoredData = details.map((functionData) => {
             const functionKey = functionData.eventFunction?.id || "all";
@@ -192,56 +192,56 @@ export default function AgencyAllocationSidebar({
   }, [open, fetchAllocationData]);
 
   const handleTabClick = useCallback(
-  (selectedTab) => {
-    if (selectedTab === tab) return;
+    (selectedTab) => {
+      if (selectedTab === tab) return;
 
+      if (isDirty) {
+        Swal.fire({
+          title: "Unsaved Changes",
+          text: "You have unsaved changes. Are you sure you want to switch tabs without saving?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Switch Without Saving",
+          cancelButtonText: "Stay",
+          confirmButtonColor: "#d33",
+          cancelButtonColor: "#6c757d",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            setIsDirty(false);
+            setTab(selectedTab);
+            fetchAllocationData(selectedTab);
+          }
+        });
+      } else {
+        setIsDirty(false);
+        setTab(selectedTab);
+        fetchAllocationData(selectedTab);
+      }
+    },
+    [tab, isDirty, fetchAllocationData],
+  );
+
+  const handleClose = useCallback(() => {
     if (isDirty) {
       Swal.fire({
         title: "Unsaved Changes",
-        text: "You have unsaved changes. Are you sure you want to switch tabs without saving?",
+        text: "You have unsaved changes. Are you sure you want to close without saving?",
         icon: "warning",
         showCancelButton: true,
-        confirmButtonText: "Switch Without Saving",
+        confirmButtonText: "Close Without Saving",
         cancelButtonText: "Stay",
         confirmButtonColor: "#d33",
         cancelButtonColor: "#6c757d",
       }).then((result) => {
         if (result.isConfirmed) {
           setIsDirty(false);
-          setTab(selectedTab);
-          fetchAllocationData(selectedTab);
+          onClose();
         }
       });
     } else {
-      setIsDirty(false);  
-      setTab(selectedTab);
-      fetchAllocationData(selectedTab);
+      onClose();
     }
-  },
-  [tab, isDirty, fetchAllocationData],
-);
-
-const handleClose = useCallback(() => {
-  if (isDirty) {
-    Swal.fire({
-      title: "Unsaved Changes",
-      text: "You have unsaved changes. Are you sure you want to close without saving?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Close Without Saving",
-      cancelButtonText: "Stay",
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#6c757d",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setIsDirty(false);
-        onClose();
-      }
-    });
-  } else {
-    onClose();
-  }
-}, [isDirty, onClose]);
+  }, [isDirty, onClose]);
 
   const renderSection = useMemo(() => {
     if (loading) {
@@ -264,47 +264,47 @@ const handleClose = useCallback(() => {
     }
 
     const sectionProps = {
-    data: allocationData,
-    close: handleClose,          
-    vendorRefreshTrigger,
-    isAllFunctions,
-    onDirtyChange: setIsDirty,   
-    isDirty,               
-  };
+      data: allocationData,
+      close: handleClose,
+      vendorRefreshTrigger,
+      isAllFunctions,
+      onDirtyChange: setIsDirty,
+      isDirty,
+    };
 
     switch (tab) {
       case "chef":
         return (
           <ChefLabourSection
             data={allocationData}
-            close={handleClose}   
-            isDirty={isDirty} 
+            close={handleClose}
+            isDirty={isDirty}
             vendorRefreshTrigger={vendorRefreshTrigger}
             isAllFunctions={isAllFunctions}
             onDirtyChange={setIsDirty}
             onSectionSave={(items) => onSectionSave?.(items, "chef")}
-             functionStartDateTime={eventFunctionData?.functionStartDateTime} 
+            functionStartDateTime={eventFunctionData?.functionStartDateTime}
           />
         );
       case "outside":
         return (
           <OutsideAgencySection
             data={allocationData}
-            close={handleClose}   
-            isDirty={isDirty} 
+            close={handleClose}
+            isDirty={isDirty}
             vendorRefreshTrigger={vendorRefreshTrigger}
             isAllFunctions={isAllFunctions}
             onDirtyChange={setIsDirty}
             onSectionSave={(items) => onSectionSave?.(items, "outside")}
-            functionStartDateTime={eventFunctionData?.functionStartDateTime} 
+            functionStartDateTime={eventFunctionData?.functionStartDateTime}
           />
         );
       case "inside":
         return (
           <InHouseCookSection
             data={allocationData}
-            close={handleClose}   
-            isDirty={isDirty} 
+            close={handleClose}
+            isDirty={isDirty}
             vendorRefreshTrigger={vendorRefreshTrigger}
             isAllFunctions={isAllFunctions}
             onDirtyChange={setIsDirty}
@@ -318,8 +318,8 @@ const handleClose = useCallback(() => {
     tab,
     loading,
     allocationData,
-     handleClose,       
-  isDirty, 
+    handleClose,
+    isDirty,
     vendorRefreshTrigger,
     isAllFunctions,
   ]);
@@ -349,7 +349,7 @@ const handleClose = useCallback(() => {
           >
             {/* Header */}
             <div className="flex justify-between items-center px-6 py-4 border-b bg-gray-50">
-                      <h2 className="text-lg font-semibold text-gray-800">
+              <h2 className="text-lg font-semibold text-gray-800">
                 <FormattedMessage id="AGENCY.AGENCY_ALLOCATION" defaultMessage="Agency Allocation" />
               </h2>
               <button
@@ -361,7 +361,7 @@ const handleClose = useCallback(() => {
                 })}
               >
                 <FormattedMessage id="COMMON.CLOSE" defaultMessage="Close" />
-              
+
               </button>
             </div>
 
@@ -427,11 +427,10 @@ const handleClose = useCallback(() => {
                   key={id}
                   onClick={() => handleTabClick(id)}
                   disabled={loading}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    tab === id
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${tab === id
                       ? "bg-primary text-white shadow-sm"
                       : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                  } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    } ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
                   aria-selected={tab === id}
                 >
                   {label}
