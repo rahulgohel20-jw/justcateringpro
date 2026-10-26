@@ -436,6 +436,7 @@ const ItemRow = ({
   isPrimary = false,
   onSelectPrimaryItem = () => {},
   onRenameItemSave = () => {},
+  renameValue = null, // saved rename for this item (data.itemRenames[item.id])
   onOpenItemImage = () => {},
    mode = "menu",
    canAccessDecor = false,
@@ -497,9 +498,9 @@ useEffect(() => {
   <RenameItemCat
     label={displayItemName}
     initialValues={{
-      english: item.nicknames?.english || item.nameEnglish || "",
-      hindi: item.nicknames?.hindi || item.nameHindi || "",
-      gujarati: item.nicknames?.gujarati || item.nameGujarati || "",
+      english: renameValue?.english || item.nicknames?.english || item.nameEnglish || "",
+      hindi: renameValue?.hindi || item.nicknames?.hindi || item.nameHindi || "",
+      gujarati: renameValue?.gujarati || item.nicknames?.gujarati || item.nameGujarati || "",
     }}
     onClose={() => setShowRenameModal(false)}
     onLiveChange={(val) => onRenameItemSave(catName, item.id, val)}
@@ -2147,6 +2148,7 @@ return (
                                            isPrimary={!!primaryItems[catName]?.[item.id]}
                                            onSelectPrimaryItem={onSelectPrimaryItem}
                                            onRenameItemSave={onRenameItemSave}
+                                           renameValue={data.itemRenames?.[item.id]}
                                              mode={mode}
                                           rowRef={(el) => {
                                             itemRowRefs.current[
@@ -2246,5 +2248,3 @@ return (
 };
 
 export default SelectedItems;
-
-
