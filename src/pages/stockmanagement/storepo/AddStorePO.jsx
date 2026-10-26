@@ -525,6 +525,7 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
           item_name: d.rawMaterialName || "",
           qty: sumRowsQty(rows),
           unit: d.unitName || "",
+           unitId: d.unitId || 0,
           closingStock: d.closingStock ?? null,
           isAddInStock: d.isAddInStock ?? true,
           batchOptions: rows.map((r) => ({
@@ -545,6 +546,7 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
         item_name: d.rawMaterialName || "",
         qty: d.qty || "",
         unit: d.unitName || "",
+        unitId: d.unitId ?? 0,  
         originalQty: d.qty || 0,
         closingStock: d.closingStock ?? null,
         isAddInStock: d.isAddInStock ?? true,
@@ -683,6 +685,7 @@ if (isBatchNoMode) {
     item_name: detail.rawMaterialName || detail.materialName || "",
     qty: detail.qty ?? "",
     unit: detail.unitName || detail.unit?.nameEnglish || "",
+     unitId: detail.unitId ?? detail.unit?.id ?? 0,
     originalQty: detail.qty ?? 0,
     closingStock: detail.closingStock ?? null,
     isAddInStock: detail.isAddInStock ?? true,
@@ -789,6 +792,7 @@ if (isBatchNoMode) {
     item_name: detail.rawMaterialName || detail.materialName || "",
     qty: detail.qty ?? "",
     unit: detail.unitName || detail.unit?.nameEnglish || "",
+     unitId: detail.unitId ?? detail.unit?.id ?? 0,
     originalQty: detail.qty ?? 0,
     closingStock: detail.closingStock ?? null,
     isAddInStock: detail.isAddInStock ?? true,
@@ -851,6 +855,7 @@ setItems((prev) => [
     item_name: rawItem.rawMaterialName || rawItem.nameEnglish || "",
     qty: "",
     unit: fallbackUnit,
+     unitId: rawItem.unitId ?? rawItem.unit?.id ?? 0,
     // batch API returns total stock as `qty`; normal search API returns `closingStock`
     closingStock: isBatchNoMode
       ? (rawItem.qty ?? rawItem.closingStock ?? null)
@@ -1146,6 +1151,7 @@ try {
         rawMaterialId: item.rawMaterialId || 0,
         qty: Number(item.qty),
         isAddInStock: item.isAddInStock ?? true,
+        unitId: Number(item.unitId || 0),
       })),
     };
 
