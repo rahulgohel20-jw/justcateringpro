@@ -19,7 +19,7 @@ import {
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { useReportPermission } from "@/hooks/useReportPermission";
-import workerUrl from "pdfjs-dist/build/pdf.worker.min.js?url"; 
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.js?url";
 import { Send } from "lucide-react";
 import { WhatsAppOutlined } from "@ant-design/icons";
 
@@ -83,8 +83,8 @@ const WhatsAppModal = ({
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
           </svg>
           <h2 className="text-white font-semibold text-lg">
-  {mode === "web" ? "Open WhatsApp" : "Send"}
-</h2>
+            {mode === "web" ? "Open WhatsApp" : "Send"}
+          </h2>
         </div>
         <div className="px-6 py-5 space-y-4">
           <p className="text-gray-600 text-sm">
@@ -135,7 +135,7 @@ const WhatsAppModal = ({
             onClick={handleSend}
             className="px-5 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium flex items-center gap-2"
           >
-           <Send size={20} />
+            <Send size={20} />
             Send
           </button>
         </div>
@@ -154,8 +154,8 @@ const ConfigModal = ({
   isExclusiveFlow,
   isQuotationFlow,
 }) => {
-    const userId = localStorage.getItem("userId");
-const canShowRoomDetails = String(userId) === "757";
+  const userId = localStorage.getItem("userId");
+  const canShowRoomDetails = String(userId) === "757";
   const [selectedLanguage, setSelectedLanguage] = useState("english");
   const [isQrcode, setIsQrcode] = useState(false);
   const [isTermsCond, setIsTermsCond] = useState(false);
@@ -167,9 +167,9 @@ const canShowRoomDetails = String(userId) === "757";
   const [itemFontSize, setItemFontSize] = useState(null);
   const [sloganFontSize, setSloganFontSize] = useState(null);
   const [isAdvance, setIsAdvance] = useState(false);
-const [isShowLastPage, setIsShowLastPage] = useState(
-  () => String(userId) === "376" && isQuotationFlow,
-);
+  const [isShowLastPage, setIsShowLastPage] = useState(
+    () => String(userId) === "376" && isQuotationFlow,
+  );
   // Per-module config: { [moduleId]: { visibleOptions, options, reportType, mappingId } }
   const [moduleConfigs, setModuleConfigs] = useState({});
   const [configLoading, setConfigLoading] = useState(false);
@@ -237,7 +237,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
             categorySlogan: config.isCategorySlogan,
             categoryInstruction: config.isCategoryInstruction,
             categoryImage: config.isCategoryImage,
-            isAddDecoration:config.isAddDecoration,
+            isAddDecoration: config.isAddDecoration,
             itemSlogan: config.isItemSlogan,
             itemInstruction: config.isItemInstruction,
             companyLogo: config.isCompanyLogo,
@@ -254,30 +254,34 @@ const [isShowLastPage, setIsShowLastPage] = useState(
             isTermsCond: config.isTermsCond,
             isExtraCharges: config.isExtraCharges,
             isDoc: !!config.isDoc,
-            isExcel: !!config.isExcel, 
+            isExcel: !!config.isExcel,
             isHalfPax: config.isHalfPax,
-            isOnePage:config.isOnePage,
+            isOnePage: config.isOnePage,
             isShowEventRemarks: config.isShowEventRemarks,
-            showAdditional:config.showAdditional,
-            isAgencyNextPage:config.isAgencyNextPage,
-            isItemShow:config.isItemShow,
-            storeIssueWise:config.storeIssueWise, 
-            isAddStoreIssue:config.isAddStoreIssue,
-            is5Column:config.is5Column,
+            showAdditional: config.showAdditional,
+            isAgencyNextPage: config.isAgencyNextPage,
+            isItemShow: config.isItemShow,
+            storeIssueWise: config.storeIssueWise,
+            isShowCashAmount: config.isShowCashAmount,
+            isShowChequeAmount: config.isShowChequeAmount,
+            isAddStoreIssue: config.isAddStoreIssue,
+            is5Column: config.is5Column,
             isContactNoVisible: config.isContactNoVisible,
-            isSignatureVisible:config.isSignatureVisible,
+            isSignatureVisible: config.isSignatureVisible,
             isShowPackageLabel: config.isShowPackageLabel,
-            isAddMenu : config.isAddMenu,
+            isAddMenu: config.isAddMenu,
             isAdvancePayment: config.isAdvancePayment,
             withOutBg: config.withOutBg,
-            isAllItemTogether: config.isAllItemTogether ,
+            isAllItemTogether: config.isAllItemTogether,
             isShowRoomDetails: canShowRoomDetails && config.isShowRoomDetails,
             isShowFunctionDetails: config.isShowFunctionDetails,
             isShowFunctionImg: config.isShowFunctionImg,
             withVendor: config.withVendor,
-            isNotes : config.isNotes,
+            isNotes: config.isNotes,
             showAddOnLabel: config.showAddOnLabel,
             isSignature: config.isSignature,
+            isShowCashAmount: config.isShowCashAmount,
+            isShowChequeAmount: config.isShowChequeAmount,
           })
             .filter(([, v]) => v)
             .map(([k]) => k);
@@ -300,7 +304,7 @@ const [isShowLastPage, setIsShowLastPage] = useState(
               partyDetails: config.isPartyDetails === 1,
               isWithQty: config.isWithQty === 1,
               isFunctionWise: config.isFunctionWise === 1,
-              isContinuous: config.isContinuous === 1, 
+              isContinuous: config.isContinuous === 1,
               size1: { label: config.size1, enabled: config.size1 === 1 },
               size2: { label: config.size2, enabled: config.size2 === 0 },
               size3: { label: config.size3, enabled: config.size3 === 0 },
@@ -310,26 +314,30 @@ const [isShowLastPage, setIsShowLastPage] = useState(
               isDoc: config.isDoc === 0,
               isExcel: config.isExcel === 1,
               isHalfPax: config.isHalfPax === 0,
-              isOnePage:config.isOnePage === 0,
-                          isAdvancedPay: config.isAdvancedPay === 1,
-              isAddDecoration:config.isAddDecoration === 0,
+              isOnePage: config.isOnePage === 0,
+              isAdvancedPay: config.isAdvancedPay === 1,
+              isAddDecoration: config.isAddDecoration === 0,
               isShowEventRemarks: config.isShowEventRemarks === 1,
-              showAdditional:config.showAdditional === 0 ,
-              isAgencyNextPage:config.isAgencyNextPage === 0 ,
-              isItemShow:config.isItemShow === 0,
-              storeIssueWise:config.storeIssueWise === 0, 
-              isAddStoreIssue:config.isAddStoreIssue === 0,
-              is5Column:config.is5Column === 0 ,
+              showAdditional: config.showAdditional === 0,
+              isAgencyNextPage: config.isAgencyNextPage === 0,
+              isItemShow: config.isItemShow === 0,
+              storeIssueWise: config.storeIssueWise === 0,
+              isShowChequeAmount: config.isShowChequeAmount === 1,
+              isShowCashAmount: config.isShowCashAmount === 1,
+              isAddStoreIssue: config.isAddStoreIssue === 0,
+              is5Column: config.is5Column === 0,
               isContactNoVisible: config.isContactNoVisible === 0,
-              isSignatureVisible:config.isSignatureVisible === 0,
+              isSignatureVisible: config.isSignatureVisible === 0,
+              isShowChequeAmount: config.isShowChequeAmount === 1,
+              isShowCashAmount: config.isShowCashAmount === 1,
               isShowPackageLabel: config.isShowPackageLabel === 0,
-              isAddMenu:config.isAddMenu === 0,
-              isAdvancePayment:config.isAdvancePayment === 0,
+              isAddMenu: config.isAddMenu === 0,
+              isAdvancePayment: config.isAdvancePayment === 0,
               withOutBg: config.withOutBg === 0,
               isAllItemTogether: config.isAllItemTogether === 0,
-isShowRoomDetails: canShowRoomDetails && config.isShowRoomDetails === 0,  
-isShowFunctionDetails: config.isShowFunctionDetails === 1,
-            isShowFunctionImg: config.isShowFunctionImg == 0,
+              isShowRoomDetails: canShowRoomDetails && config.isShowRoomDetails === 0,
+              isShowFunctionDetails: config.isShowFunctionDetails === 1,
+              isShowFunctionImg: config.isShowFunctionImg == 0,
               withVendor: config.withVendor === 0,
               isNotes: config.isNotes === 0,
               showAddOnLabel: config.showAddOnLabel === 0
@@ -390,14 +398,12 @@ isShowFunctionDetails: config.isShowFunctionDetails === 1,
     <button
       type="button"
       onClick={onChange}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-        checked ? "bg-blue-600" : "bg-gray-300"
-      }`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${checked ? "bg-blue-600" : "bg-gray-300"
+        }`}
     >
       <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
-          checked ? "translate-x-5" : "translate-x-1"
-        }`}
+        className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${checked ? "translate-x-5" : "translate-x-1"
+          }`}
       />
     </button>
   );
@@ -417,7 +423,7 @@ isShowFunctionDetails: config.isShowFunctionDetails === 1,
       isQrcode: isQrcode ? 1 : 0,
       isTermsCond: isTermsCond ? 1 : 0,
       isAdvance: isAdvance ? 1 : 0,
-       isShowLastPage: String(userId) === "376" ? (isShowLastPage ? 1 : 0) : 0,
+      isShowLastPage: String(userId) === "376" ? (isShowLastPage ? 1 : 0) : 0,
     });
   };
 
@@ -487,11 +493,10 @@ isShowFunctionDetails: config.isShowFunctionDetails === 1,
                   <button
                     key={lang}
                     onClick={() => setSelectedLanguage(lang)}
-                    className={`flex-1 py-2 font-medium text-sm transition ${
-                      selectedLanguage === lang
-                        ? "bg-[#005BA8] text-white"
-                        : "bg-white text-gray-700 hover:bg-gray-50"
-                    }`}
+                    className={`flex-1 py-2 font-medium text-sm transition ${selectedLanguage === lang
+                      ? "bg-[#005BA8] text-white"
+                      : "bg-white text-gray-700 hover:bg-gray-50"
+                      }`}
                   >
                     {lang.charAt(0).toUpperCase() + lang.slice(1)}
                   </button>
@@ -510,14 +515,12 @@ isShowFunctionDetails: config.isShowFunctionDetails === 1,
                 <button
                   type="button"
                   onClick={() => setIsQrcode((prev) => !prev)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                    isQrcode ? "bg-blue-600" : "bg-gray-300"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${isQrcode ? "bg-blue-600" : "bg-gray-300"
+                    }`}
                 >
                   <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
-                      isQrcode ? "translate-x-5" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${isQrcode ? "translate-x-5" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
@@ -529,37 +532,33 @@ isShowFunctionDetails: config.isShowFunctionDetails === 1,
                 <button
                   type="button"
                   onClick={() => setIsTermsCond((prev) => !prev)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                    isTermsCond ? "bg-blue-600" : "bg-gray-300"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${isTermsCond ? "bg-blue-600" : "bg-gray-300"
+                    }`}
                 >
                   <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
-                      isTermsCond ? "translate-x-5" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${isTermsCond ? "translate-x-5" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
-          {String(userId) === "376" && (
-  <div className="flex items-center justify-between">
-    <span className="text-xs font-semibold text-gray-500">
-      Show Last Page
-    </span>
-    <button
-      type="button"
-      onClick={() => setIsShowLastPage((prev) => !prev)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-        isShowLastPage ? "bg-blue-600" : "bg-gray-300"
-      }`}
-    >
-      <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
-          isShowLastPage ? "translate-x-5" : "translate-x-1"
-        }`}
-      />
-    </button>
-  </div>
-)}
+              {String(userId) === "376" && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-500">
+                    Show Last Page
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsShowLastPage((prev) => !prev)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${isShowLastPage ? "bg-blue-600" : "bg-gray-300"
+                      }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${isShowLastPage ? "translate-x-5" : "translate-x-1"
+                        }`}
+                    />
+                  </button>
+                </div>
+              )}
               {showAdvancePay && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-500">
@@ -568,14 +567,12 @@ isShowFunctionDetails: config.isShowFunctionDetails === 1,
                   <button
                     type="button"
                     onClick={() => setIsAdvance((prev) => !prev)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                      isAdvance ? "bg-blue-600" : "bg-gray-300"
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${isAdvance ? "bg-blue-600" : "bg-gray-300"
+                      }`}
                   >
                     <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
-                        isAdvance ? "translate-x-5" : "translate-x-1"
-                      }`}
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${isAdvance ? "translate-x-5" : "translate-x-1"
+                        }`}
                     />
                   </button>
                 </div>
@@ -733,7 +730,7 @@ const getCompanyAuthInfo = () => {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobileNumber, partyName ,invoiceId = null, }) => {
+const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobileNumber, partyName, invoiceId = null, }) => {
   const [selectedThemes, setSelectedThemes] = useState({}); // { [moduleId]: themeId }
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -746,10 +743,10 @@ const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobi
   const [isPdfModalVisible, setIsPdfModalVisible] = useState(false);
   const [pdfUrl, setPdfUrl] = useState("");
   const [loadingPdf, setLoadingPdf] = useState(false);
-  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false); 
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [whatsAppSendMode, setWhatsAppSendMode] = useState("api");
-const pdfPlugin = defaultLayoutPlugin({ sidebarTabs: () => [] });  const userId = localStorage.getItem("userId");
-  
+  const pdfPlugin = defaultLayoutPlugin({ sidebarTabs: () => [] }); const userId = localStorage.getItem("userId");
+
   const lang = localStorage.getItem("lang");
   const language =
     lang === "en" ? 0 : lang === "hi" ? 1 : lang === "gu" ? 2 : 0;
@@ -777,7 +774,7 @@ const pdfPlugin = defaultLayoutPlugin({ sidebarTabs: () => [] });  const userId 
     }
   }, [open]);
 
-  
+
 
   const fetchAllModulesWithThemes = async () => {
     setLoading(true);
@@ -803,15 +800,15 @@ const pdfPlugin = defaultLayoutPlugin({ sidebarTabs: () => [] });  const userId 
       const ALLOWED_MODULES_ORDERED =
         isinvoice === 0
           ? [
-              "INVOICE REPORTS", // 3rd
-              "Exclusive Theme", // 1st
-              "Back Office Theme", // 2nd
-            ]
+            "INVOICE REPORTS", // 3rd
+            "Exclusive Theme", // 1st
+            "Back Office Theme", // 2nd
+          ]
           : [
-              "QUOTATION REPORTS", // 3rd
-              "Exclusive Theme", // 1st
-              "Back Office Theme", // 2nd
-            ];
+            "QUOTATION REPORTS", // 3rd
+            "Exclusive Theme", // 1st
+            "Back Office Theme", // 2nd
+          ];
 
       // Filter + sort in the defined order above
       const filteredTemplates = ALLOWED_MODULES_ORDERED.map((name) =>
@@ -895,69 +892,73 @@ const pdfPlugin = defaultLayoutPlugin({ sidebarTabs: () => [] });  const userId 
     setIsConfigOpen(true);
   };
 
- const generateQuotationPdfs = async ({
-  isQrcode = 0,
-  isTermsCond = 0,
-  lang = language,
-  isAdvance = 0,
-    showLastPage = 0,  
-  isWithPrice = 0,
-  isCompanyDetails = 0,
-  isDecor = false,
-  isOnePage = 0,
-  isCombo = 0,
-  isNotes = 0,
-  exclusiveThemeId = -1, 
-  backOfficeId = -1,  
-  isSignature = 0,
-} = {}) => {
-  setLoadingPdf(true);
-  try {
-    const nonExclusiveEntries = Object.entries(selectedThemes).filter(
-      ([moduleId]) => {
-        const mod = modules.find((m) => String(m.id) === String(moduleId));
-        return !mod?.isExclusive;
-      },
-    );
+  const generateQuotationPdfs = async ({
+    isQrcode = 0,
+    isTermsCond = 0,
+    lang = language,
+    isAdvance = 0,
+    showLastPage = 0,
+    isWithPrice = 0,
+    isCompanyDetails = 0,
+    isDecor = false,
+    isOnePage = 0,
+    isCombo = 0,
+    isNotes = 0,
+    exclusiveThemeId = -1,
+    backOfficeId = -1,
+    isSignature = 0,
+    isShowCashAmount = 0,
+    isShowChequeAmount = 0,
+  } = {}) => {
+    setLoadingPdf(true);
+    try {
+      const nonExclusiveEntries = Object.entries(selectedThemes).filter(
+        ([moduleId]) => {
+          const mod = modules.find((m) => String(m.id) === String(moduleId));
+          return !mod?.isExclusive;
+        },
+      );
 
-    if (!nonExclusiveEntries.length) return [];
+      if (!nonExclusiveEntries.length) return [];
 
-    const results = await Promise.allSettled(
-      nonExclusiveEntries.map(([, themeId]) =>
-        GetQuotationReport(
-          themeId,
-          eventId,
-          lang,
-          userId,
-          isinvoice === 0 ? 1 : 0,
-          isQrcode,
-          isTermsCond,
-          isAdvance,
-                
-          isWithPrice,
-          isCompanyDetails,
-          isDecor,
-          isOnePage,
-          isCombo,
-          isNotes,          
-          exclusiveThemeId,
-          backOfficeId, 
+      const results = await Promise.allSettled(
+        nonExclusiveEntries.map(([, themeId]) =>
+          GetQuotationReport(
+            themeId,
+            eventId,
+            lang,
+            userId,
+            isinvoice === 0 ? 1 : 0,
+            isQrcode,
+            isTermsCond,
+            isAdvance,
+
+            isWithPrice,
+            isCompanyDetails,
+            isDecor,
+            isOnePage,
+            isCombo,
+            isNotes,
+            exclusiveThemeId,
+            backOfficeId,
             showLastPage,
             isSignature,
-isinvoice === 0 ? (invoiceId ?? 0) : 0,
+            isShowCashAmount,
+            isShowChequeAmount,
+            isinvoice === 0 ? (invoiceId ?? 0) : 0,
+          ),
         ),
-      ),
-    );
-    return results
-      .filter((r) => r.status === "fulfilled" && r.value?.data?.report_path)
-      .map((r) => r.value.data.report_path);
-  } catch (e) {
-    console.error("Quotation PDF error:", e);
-    return [];
-  } finally {
-    setLoadingPdf(false);
-  }
-};
+      );
+      return results
+        .filter((r) => r.status === "fulfilled" && r.value?.data?.report_path)
+        .map((r) => r.value.data.report_path);
+    } catch (e) {
+      console.error("Quotation PDF error:", e);
+      return [];
+    } finally {
+      setLoadingPdf(false);
+    }
+  };
 
   // Generate PDFs for exclusive modules (AddExclusiveReport)
   const generateExclusivePdfs = async (configData) => {
@@ -995,80 +996,82 @@ isinvoice === 0 ? (invoiceId ?? 0) : 0,
               : "";
 
         const payload = {
-  eventId,
-  partyId: -1,
-  eventFunctionId: -1,
-  eventFunctionIds: [],
-  adminTemplateModuleId: themeId,
-  type: reportType || null,
-  userId,
-  lang,
-  
-  isCategoryImage: opts.categoryImage,
-  isCategoryInstruction: opts.categoryInstruction,
-  isCategorySlogan: opts.categorySlogan,
-  isItemImage: opts.itemImage,
-  isCombo: opts.isCombo,
-  isOnePage: opts.isOnePage ?? false,
-  isItemInstruction: opts.itemInstruction,
-  isItemSlogan: opts.itemSlogan,
-  isCompanyDetails: opts.CompanyInfo,
-  isCompanyLogo: opts.companyLogo,
-  isPartyDetails: opts.partyDetails,
-  isWithQty: opts.isWithQty,
-  isFunctionWise: opts.isFunctionWise, 
-  isContinuous: opts.isContinuous,
-  pageSize,
-  isWithPrice: opts.isWithPrice,
-  agencyId: [],
-  managerIds: [],
-  itemId: [],
-  rawMaterialCatIds: [],
-  catFontId: catFontId || -1,
-  itemFontId: itemFontId || -1,
-  sloganFontId: sloganFontId || -1,
-  catFontSize: catFontSize || -1,
-  itemFontSize: itemFontSize || -1,
-  sloganFontSize: sloganFontSize || -1,
-  isTermsCond: opts.isTermsCond ?? false,
-  isExtraCharges: opts.isExtraCharges ?? false,
-  isAdvance: configData.isAdvance ?? 0,
-  isHalfPax: opts.isHalfPax ?? false,
-  isDoc: opts.isDoc ?? false,
-  isExcel: opts.isExcel ?? false, 
-isAdvancedPay:opts.isAdvancedPay ?? false,
+          eventId,
+          partyId: -1,
+          eventFunctionId: -1,
+          eventFunctionIds: [],
+          adminTemplateModuleId: themeId,
+          type: reportType || null,
+          userId,
+          lang,
+
+          isCategoryImage: opts.categoryImage,
+          isCategoryInstruction: opts.categoryInstruction,
+          isCategorySlogan: opts.categorySlogan,
+          isItemImage: opts.itemImage,
+          isCombo: opts.isCombo,
+          isOnePage: opts.isOnePage ?? false,
+          isItemInstruction: opts.itemInstruction,
+          isItemSlogan: opts.itemSlogan,
+          isCompanyDetails: opts.CompanyInfo,
+          isCompanyLogo: opts.companyLogo,
+          isPartyDetails: opts.partyDetails,
+          isWithQty: opts.isWithQty,
+          isFunctionWise: opts.isFunctionWise,
+          isContinuous: opts.isContinuous,
+          pageSize,
+          isWithPrice: opts.isWithPrice,
+          agencyId: [],
+          managerIds: [],
+          itemId: [],
+          rawMaterialCatIds: [],
+          catFontId: catFontId || -1,
+          itemFontId: itemFontId || -1,
+          sloganFontId: sloganFontId || -1,
+          catFontSize: catFontSize || -1,
+          itemFontSize: itemFontSize || -1,
+          sloganFontSize: sloganFontSize || -1,
+          isTermsCond: opts.isTermsCond ?? false,
+          isExtraCharges: opts.isExtraCharges ?? false,
+          isAdvance: configData.isAdvance ?? 0,
+          isHalfPax: opts.isHalfPax ?? false,
+          isDoc: opts.isDoc ?? false,
+          isExcel: opts.isExcel ?? false,
+          isAdvancedPay: opts.isAdvancedPay ?? false,
           isContactNoVisible: opts.isContactNoVisible ?? false,
-          isSignatureVisible:opts.isSignatureVisible ?? false,
-          isShowPackageLabel:opts.isShowPackageLabel ?? false,
-          isAddMenu:opts.isAddMenu ?? false,
-          isAdvancePayment:opts.isAdvancePayment ?? false,
-          showAddOnLabel:opts.showAddOnLabel ?? false,
+          isSignatureVisible: opts.isSignatureVisible ?? false,
+          isShowCashAmount: opts.isShowCashAmount ?? false,
+          isShowChequeAmount: opts.isShowChequeAmount ?? false,
+          isShowPackageLabel: opts.isShowPackageLabel ?? false,
+          isAddMenu: opts.isAddMenu ?? false,
+          isAdvancePayment: opts.isAdvancePayment ?? false,
+          showAddOnLabel: opts.showAddOnLabel ?? false,
           withOutBg: opts.withOutBg === 0,
           isAllItemTogether: opts.isAllItemTogether ?? false,
           isShowRoomDetails: opts.isShowRoomDetails ?? false,
           isShowFunctionDetails: opts.isShowFunctionDetails ?? false,
           isShowFunctionImg: opts.isShowFunctionImg ?? false,
           withVendor: opts.withVendor === 0,
-          isNotes:opts.isNotes ?? false,
-  is3Column: opts.is3Column ?? false,
-  isFunctionNextPage: opts.isFunctionNextPage ?? false,
-  isAddDecoration: opts.isAddDecoration ?? false,
-  isShowEventRemarks: opts.isShowEventRemarks ?? false,
- showLastPage: String(userId) === "376" ? 0 : 1, 
-  showAdditional:opts.showAdditional ?? false,
-  isAgencyNextPage:opts.isAgencyNextPage ?? false,
-  isItemShow:opts.isItemShow ?? false,
-  storeIssueWise:opts.storeIssueWise ?? false, 
-  isAddStoreIssue:opts.isAddStoreIssue ?? false,
-  is5Column:opts.is5Column ?? false,
-  startDate: "",
-  endDate: "",
-  eventStatus: [],
-    leadAssignId: 0,
-  priority: "",
-  sourceId: 0,
-  statusId: 0,
-};
+          isNotes: opts.isNotes ?? false,
+          is3Column: opts.is3Column ?? false,
+          isFunctionNextPage: opts.isFunctionNextPage ?? false,
+          isAddDecoration: opts.isAddDecoration ?? false,
+          isShowEventRemarks: opts.isShowEventRemarks ?? false,
+          showLastPage: String(userId) === "376" ? 0 : 1,
+          showAdditional: opts.showAdditional ?? false,
+          isAgencyNextPage: opts.isAgencyNextPage ?? false,
+          isItemShow: opts.isItemShow ?? false,
+          storeIssueWise: opts.storeIssueWise ?? false,
+          isAddStoreIssue: opts.isAddStoreIssue ?? false,
+          is5Column: opts.is5Column ?? false,
+          startDate: "",
+          endDate: "",
+          eventStatus: [],
+          leadAssignId: 0,
+          priority: "",
+          sourceId: 0,
+          statusId: 0,
+        };
 
 
 
@@ -1094,228 +1097,232 @@ isAdvancedPay:opts.isAdvancedPay ?? false,
   };
 
 
-const mergePdfUrls = async (urls) => {
-  if (urls.length === 1) return urls[0];
+  const mergePdfUrls = async (urls) => {
+    if (urls.length === 1) return urls[0];
 
-  console.time("1-download");
-  const buffers = await Promise.all(urls.map(async (url) => {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.arrayBuffer();
-  }));
-  console.timeEnd("1-download");
+    console.time("1-download");
+    const buffers = await Promise.all(urls.map(async (url) => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.arrayBuffer();
+    }));
+    console.timeEnd("1-download");
 
-  console.time("2-parse");
-  const docs = await Promise.all(
-    buffers.map((b) => PDFDocument.load(b, { updateMetadata: false })),
-  );
-  console.timeEnd("2-parse");
+    console.time("2-parse");
+    const docs = await Promise.all(
+      buffers.map((b) => PDFDocument.load(b, { updateMetadata: false })),
+    );
+    console.timeEnd("2-parse");
 
-  console.time("3-copy+save");
-  const merged = await PDFDocument.create();
-  for (const doc of docs) {
-    const pages = await merged.copyPages(doc, doc.getPageIndices());
-    pages.forEach((p) => merged.addPage(p));
-  }
-  const bytes = await merged.save({ useObjectStreams: false });
-  console.timeEnd("3-copy+save");
+    console.time("3-copy+save");
+    const merged = await PDFDocument.create();
+    for (const doc of docs) {
+      const pages = await merged.copyPages(doc, doc.getPageIndices());
+      pages.forEach((p) => merged.addPage(p));
+    }
+    const bytes = await merged.save({ useObjectStreams: false });
+    console.timeEnd("3-copy+save");
 
-  return URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
-};
-
-
-const closePdfModal = () => {
-  setWhatsAppSendMode("api");
-  setIsPdfModalVisible(false);
-  setPdfUrl((prev) => {
-    if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
-    return "";
-  });
-};
+    return URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  };
 
 
-const handleConfigGenerate = async (configData) => {
-  setGeneratingPdf(true);
-  try {
-    const nonExclusiveModuleId = Object.keys(selectedThemes).find((moduleId) => {
-      const mod = modules.find((m) => String(m.id) === String(moduleId));
-      return !mod?.isExclusive;
+  const closePdfModal = () => {
+    setWhatsAppSendMode("api");
+    setIsPdfModalVisible(false);
+    setPdfUrl((prev) => {
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return "";
     });
+  };
 
-    const nonExclusiveConfig = nonExclusiveModuleId
-      ? configData.moduleConfigs[nonExclusiveModuleId]?.options
-      : null;
 
-    const isWithPrice = nonExclusiveConfig?.isWithPrice ? 1 : 0;
-    const isCompanyDetails = nonExclusiveConfig?.CompanyInfo ? 1 : 0;
-    const isOnePage = nonExclusiveConfig?.isOnePage ? 1 : 0;
-    const isCombo = nonExclusiveConfig?.isCombo ? 1 : 0;
-    const isContactNoVisible = nonExclusiveConfig?.isContactNoVisible ? 1 : 0;
-    const isAddMenu = nonExclusiveConfig?.isAddMenu ? 1 : 0;
-    const isAdvancePayment = nonExclusiveConfig?.isAdvancePayment ? 1 : 0;
-    const isNotes = nonExclusiveConfig?.isNotes ? 1 : 0;
-    const showAddOnLabel = nonExclusiveConfig?.showAddOnLabel ? 1 : 0;
-    const withOutBg = nonExclusiveConfig?.withOutBg === 0 ? 0 : 1;
-    const withVendor = nonExclusiveConfig?.withVendor === 0 ? 0 : 1;
-    const isAllItemTogether = nonExclusiveConfig?.isAllItemTogether ? 1 : 0;
-    const isShowRoomDetails = nonExclusiveConfig?.isShowRoomDetails ? 1 :0;
-    const isShowFunctionDetails = nonExclusiveConfig?.isShowFunctionDetails ? 1 :0;
-   const isSignature = nonExclusiveConfig?.isSignature ? 1 : 0;
-   const isShowFunctionImg =  nonExclusiveConfig?.isShowFunctionImg ? 1 : 0;
-    
+  const handleConfigGenerate = async (configData) => {
+    setGeneratingPdf(true);
+    try {
+      const nonExclusiveModuleId = Object.keys(selectedThemes).find((moduleId) => {
+        const mod = modules.find((m) => String(m.id) === String(moduleId));
+        return !mod?.isExclusive;
+      });
 
-    // ⬅ Exclusive Theme module — pass the theme record's OWN id (e.g. 18402),
-    // not templateMaster.id (e.g. 183). Matched by nameEnglish so it can't be
-    // confused with the Back Office module below.
-    const exclusiveModuleId = Object.keys(selectedThemes).find((moduleId) => {
-      const mod = modules.find((m) => String(m.id) === String(moduleId));
-      return mod?.nameEnglish === "Exclusive Theme";
-    });
+      const nonExclusiveConfig = nonExclusiveModuleId
+        ? configData.moduleConfigs[nonExclusiveModuleId]?.options
+        : null;
 
-    const exclusiveThemeId = exclusiveModuleId
-      ? (modules
+      const isWithPrice = nonExclusiveConfig?.isWithPrice ? 1 : 0;
+      const isCompanyDetails = nonExclusiveConfig?.CompanyInfo ? 1 : 0;
+      const isOnePage = nonExclusiveConfig?.isOnePage ? 1 : 0;
+      const isCombo = nonExclusiveConfig?.isCombo ? 1 : 0;
+      const isContactNoVisible = nonExclusiveConfig?.isContactNoVisible ? 1 : 0;
+      const isAddMenu = nonExclusiveConfig?.isAddMenu ? 1 : 0;
+      const isAdvancePayment = nonExclusiveConfig?.isAdvancePayment ? 1 : 0;
+      const isNotes = nonExclusiveConfig?.isNotes ? 1 : 0;
+      const showAddOnLabel = nonExclusiveConfig?.showAddOnLabel ? 1 : 0;
+      const withOutBg = nonExclusiveConfig?.withOutBg === 0 ? 0 : 1;
+      const withVendor = nonExclusiveConfig?.withVendor === 0 ? 0 : 1;
+      const isAllItemTogether = nonExclusiveConfig?.isAllItemTogether ? 1 : 0;
+      const isShowRoomDetails = nonExclusiveConfig?.isShowRoomDetails ? 1 : 0;
+      const isShowFunctionDetails = nonExclusiveConfig?.isShowFunctionDetails ? 1 : 0;
+      const isSignature = nonExclusiveConfig?.isSignature ? 1 : 0;
+      const isShowFunctionImg = nonExclusiveConfig?.isShowFunctionImg ? 1 : 0;
+      const isShowCashAmount = nonExclusiveConfig?.isShowCashAmount ? 1 : 0;
+      const isShowChequeAmount = nonExclusiveConfig?.isShowChequeAmount ? 1 : 0;
+
+
+      // ⬅ Exclusive Theme module — pass the theme record's OWN id (e.g. 18402),
+      // not templateMaster.id (e.g. 183). Matched by nameEnglish so it can't be
+      // confused with the Back Office module below.
+      const exclusiveModuleId = Object.keys(selectedThemes).find((moduleId) => {
+        const mod = modules.find((m) => String(m.id) === String(moduleId));
+        return mod?.nameEnglish === "Exclusive Theme";
+      });
+
+      const exclusiveThemeId = exclusiveModuleId
+        ? (modules
           .find((m) => String(m.id) === String(exclusiveModuleId))
           ?.themes.find((t) => t.id === selectedThemes[exclusiveModuleId])
           ?.id ?? -1)
-      : -1;
+        : -1;
 
-    // ⬅ Back Office Theme module — same idea, separately resolved.
-    // This was previously undefined and would have thrown at call time.
-    const backOfficeModuleId = Object.keys(selectedThemes).find((moduleId) => {
-      const mod = modules.find((m) => String(m.id) === String(moduleId));
-      return mod?.nameEnglish === "Back Office Theme";
-    });
+      // ⬅ Back Office Theme module — same idea, separately resolved.
+      // This was previously undefined and would have thrown at call time.
+      const backOfficeModuleId = Object.keys(selectedThemes).find((moduleId) => {
+        const mod = modules.find((m) => String(m.id) === String(moduleId));
+        return mod?.nameEnglish === "Back Office Theme";
+      });
 
-    const backOfficeId = backOfficeModuleId
-      ? (modules
+      const backOfficeId = backOfficeModuleId
+        ? (modules
           .find((m) => String(m.id) === String(backOfficeModuleId))
           ?.themes.find((t) => t.id === selectedThemes[backOfficeModuleId])
           ?.id ?? -1)
-      : -1;
+        : -1;
       const generateQuotationPdfs_showLastPage = configData.isShowLastPage ?? 0;
 
-    const urlResults = await Promise.all([
-      hasExclusiveSelected
-        ? generateExclusivePdfs(configData)
-        : Promise.resolve([]),
-      generateQuotationPdfs({
-        isQrcode: configData.isQrcode,
-        isTermsCond: configData.isTermsCond,
-        lang: configData.lang,
-        isAdvance: configData.isAdvance ?? 0,
-        showLastPage: generateQuotationPdfs_showLastPage,   
-        isWithPrice,
-        isCompanyDetails,
-        isDecor,
-        isOnePage,
-        isCombo,
-        isNotes,
-        exclusiveThemeId,
-        backOfficeId,
-        isSignature,
-      }),
-    ]);
+      const urlResults = await Promise.all([
+        hasExclusiveSelected
+          ? generateExclusivePdfs(configData)
+          : Promise.resolve([]),
+        generateQuotationPdfs({
+          isQrcode: configData.isQrcode,
+          isTermsCond: configData.isTermsCond,
+          lang: configData.lang,
+          isAdvance: configData.isAdvance ?? 0,
+          showLastPage: generateQuotationPdfs_showLastPage,
+          isWithPrice,
+          isCompanyDetails,
+          isDecor,
+          isOnePage,
+          isCombo,
+          isNotes,
+          exclusiveThemeId,
+          backOfficeId,
+          isSignature,
+          isShowCashAmount,
+          isShowChequeAmount,
+        }),
+      ]);
 
-    const allUrls = urlResults.flat();
-    if (!allUrls.length)
-      throw new Error("No reports generated successfully.");
+      const allUrls = urlResults.flat();
+      if (!allUrls.length)
+        throw new Error("No reports generated successfully.");
 
-    const finalUrl = await mergePdfUrls(allUrls);
-    setPdfUrl(finalUrl);
-    setIsConfigOpen(false);
-    onClose();
-    setIsPdfModalVisible(true);
-  } catch (err) {
-    Swal.fire({
-      title: "Error",
-      text: "Failed to generate preview. Please try again.",
-      icon: "error",
-      confirmButtonColor: "#005BA8",
-    });
-  } finally {
-    setGeneratingPdf(false);
-  }
-};
-
-const openWebWhatsApp = (mobile, recipientName) => {
-  if (pdfUrl?.startsWith("blob:")) {
-    Swal.fire({
-      title: "Can't share this link",
-      text: "A merged preview only exists in your browser. Select a single theme to share a link.",
-      icon: "warning",
-      confirmButtonColor: "#005BA8",
-    });
-    return;
-  }
-  const label = isinvoice === 0 ? "Invoice" : "Quotation";
-  const message = `Hello ${recipientName || "there"},\n\nPlease find your ${label} report:\n${pdfUrl}`;
-  const waUrl = `https://wa.me/${mobile.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
-  window.open(waUrl, "_blank", "noopener,noreferrer");
-  setShowWhatsAppModal(false);
-};
-
-const handleWhatsAppClick = (mode = "api") => {
-  if (mode === "web" && pdfUrl?.startsWith("blob:")) {
-    Swal.fire({
-      title: "Can't share this link",
-      text: "A merged preview only exists in your browser. Select a single theme to share a link.",
-      icon: "warning",
-      confirmButtonColor: "#005BA8",
-    });
-    return;
-  }
-
-  setWhatsAppSendMode(mode);
-  const last10 = normalizeMobile(mobileNumber);
-  if (mode === "api" && last10.length === 10) {
-    handleWhatsAppSend(`+91${last10}`, partyName);
-    return;
-  }
-  setShowWhatsAppModal(true);
-};
-
- const handleWhatsAppSend = async (mobile, recipientName) => {
-  const cleanedMobile = mobile.replace(/\D/g, "");
-
-  try {
-    const { companyMobileNo, companyName } = getCompanyAuthInfo();
-    const res = await WhatsAppPdf({
-      companyMobileNo,
-      companyName,
-      mobileNo: cleanedMobile,
-      moduleName: isinvoice === 0 ? "Invoice Report" : "Quotation Report",
-      partyName: recipientName || "",
-      url: pdfUrl,
-      userId: Number(userId) || 0,
-    });
-
-    if (res?.data?.success) {
-      Swal.fire({
-        title: "Success",
-        text: "Report sent successfully!",
-        icon: "success",
-        confirmButtonColor: "#005BA8",
-      });
-    } else {
+      const finalUrl = await mergePdfUrls(allUrls);
+      setPdfUrl(finalUrl);
+      setIsConfigOpen(false);
+      onClose();
+      setIsPdfModalVisible(true);
+    } catch (err) {
       Swal.fire({
         title: "Error",
-        text: res?.data?.msg || "Failed to send report",
+        text: "Failed to generate preview. Please try again.",
+        icon: "error",
+        confirmButtonColor: "#005BA8",
+      });
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const openWebWhatsApp = (mobile, recipientName) => {
+    if (pdfUrl?.startsWith("blob:")) {
+      Swal.fire({
+        title: "Can't share this link",
+        text: "A merged preview only exists in your browser. Select a single theme to share a link.",
+        icon: "warning",
+        confirmButtonColor: "#005BA8",
+      });
+      return;
+    }
+    const label = isinvoice === 0 ? "Invoice" : "Quotation";
+    const message = `Hello ${recipientName || "there"},\n\nPlease find your ${label} report:\n${pdfUrl}`;
+    const waUrl = `https://wa.me/${mobile.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+    setShowWhatsAppModal(false);
+  };
+
+  const handleWhatsAppClick = (mode = "api") => {
+    if (mode === "web" && pdfUrl?.startsWith("blob:")) {
+      Swal.fire({
+        title: "Can't share this link",
+        text: "A merged preview only exists in your browser. Select a single theme to share a link.",
+        icon: "warning",
+        confirmButtonColor: "#005BA8",
+      });
+      return;
+    }
+
+    setWhatsAppSendMode(mode);
+    const last10 = normalizeMobile(mobileNumber);
+    if (mode === "api" && last10.length === 10) {
+      handleWhatsAppSend(`+91${last10}`, partyName);
+      return;
+    }
+    setShowWhatsAppModal(true);
+  };
+
+  const handleWhatsAppSend = async (mobile, recipientName) => {
+    const cleanedMobile = mobile.replace(/\D/g, "");
+
+    try {
+      const { companyMobileNo, companyName } = getCompanyAuthInfo();
+      const res = await WhatsAppPdf({
+        companyMobileNo,
+        companyName,
+        mobileNo: cleanedMobile,
+        moduleName: isinvoice === 0 ? "Invoice Report" : "Quotation Report",
+        partyName: recipientName || "",
+        url: pdfUrl,
+        userId: Number(userId) || 0,
+      });
+
+      if (res?.data?.success) {
+        Swal.fire({
+          title: "Success",
+          text: "Report sent successfully!",
+          icon: "success",
+          confirmButtonColor: "#005BA8",
+        });
+      } else {
+        Swal.fire({
+          title: "Error",
+          text: res?.data?.msg || "Failed to send report",
+          icon: "error",
+          confirmButtonColor: "#d33",
+        });
+      }
+    } catch (err) {
+      console.error("WhatsAppPdf notify failed:", err);
+      Swal.fire({
+        title: "Error",
+        text: err?.response?.data?.msg || "Failed to send report",
         icon: "error",
         confirmButtonColor: "#d33",
       });
     }
-  } catch (err) {
-    console.error("WhatsAppPdf notify failed:", err);
-    Swal.fire({
-      title: "Error",
-      text: err?.response?.data?.msg || "Failed to send report",
-      icon: "error",
-      confirmButtonColor: "#d33",
-    });
-  }
 
-  setShowWhatsAppModal(false);
-};
+    setShowWhatsAppModal(false);
+  };
 
   const exclusiveModulesSelected = modules
     .filter((m) => selectedThemes[m.id] !== undefined)
@@ -1332,13 +1339,13 @@ const handleWhatsAppClick = (mode = "api") => {
   return (
     <>
       <WhatsAppModal
-  isOpen={showWhatsAppModal}
-  onClose={() => setShowWhatsAppModal(false)}
-  onSend={whatsAppSendMode === "web" ? openWebWhatsApp : handleWhatsAppSend}
-  defaultName={partyName}
-  defaultMobile={mobileNumber}
-  mode={whatsAppSendMode}
-/>
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        onSend={whatsAppSendMode === "web" ? openWebWhatsApp : handleWhatsAppSend}
+        defaultName={partyName}
+        defaultMobile={mobileNumber}
+        mode={whatsAppSendMode}
+      />
 
       <Modal
         title={
@@ -1365,11 +1372,10 @@ const handleWhatsAppClick = (mode = "api") => {
           <div className="flex items-center justify-between pt-2">
             <span className="text-xs text-gray-400">
               {hasAnySelection
-                ? `${Object.keys(selectedThemes).length} module(s) selected${
-                    hasExclusiveSelected
-                      ? " — configuration required before preview"
-                      : ""
-                  }`
+                ? `${Object.keys(selectedThemes).length} module(s) selected${hasExclusiveSelected
+                  ? " — configuration required before preview"
+                  : ""
+                }`
                 : "Select at least one theme to generate preview"}
             </span>
             <div className="flex gap-2">
@@ -1432,26 +1438,26 @@ const handleWhatsAppClick = (mode = "api") => {
             {modules.map((module) => {
               const selectedThemeId = selectedThemes[module.id];
 
-      const visibleThemes = module.themes.filter((theme) => {
-  if (allowedTemplateIds === null) {
-    // superuser path — still apply the Aroma (userId 359) exclusion below
-  } else if (allowedTemplateIds.size === 0) {
-    return false; // no permissions
-  } else if (!allowedTemplateIds.has(theme.templateMaster?.id)) {
-    return false;
-  }
+              const visibleThemes = module.themes.filter((theme) => {
+                if (allowedTemplateIds === null) {
+                  // superuser path — still apply the Aroma (userId 359) exclusion below
+                } else if (allowedTemplateIds.size === 0) {
+                  return false; // no permissions
+                } else if (!allowedTemplateIds.has(theme.templateMaster?.id)) {
+                  return false;
+                }
 
-  // Aroma Caterers (userId 359): hide Type 19 / Type 20 templates here —
-  // those are handled exclusively through the Custom Package flow, not Invoice/Quotation.
-  const themeType = theme?.templateMappingResponseDto?.nameEnglish;
-  if (String(userId) === "359" && (themeType === "Type 19" || themeType === "Type 20")) {
-    return false;
-  }
+                // Aroma Caterers (userId 359): hide Type 19 / Type 20 templates here —
+                // those are handled exclusively through the Custom Package flow, not Invoice/Quotation.
+                const themeType = theme?.templateMappingResponseDto?.nameEnglish;
+                if (String(userId) === "359" && (themeType === "Type 19" || themeType === "Type 20")) {
+                  return false;
+                }
 
-  return true;
-});
+                return true;
+              });
 
-  if (visibleThemes.length === 0) return null;
+              if (visibleThemes.length === 0) return null;
 
               return (
                 <div key={module.id}>
@@ -1577,7 +1583,7 @@ const handleWhatsAppClick = (mode = "api") => {
           selectedModules={exclusiveModulesSelected}
           loading={generatingPdf}
           isExclusiveFlow={hasExclusiveSelected}
-           isQuotationFlow={isinvoice !== 0} 
+          isQuotationFlow={isinvoice !== 0}
         />
       )}
 
@@ -1596,7 +1602,7 @@ const handleWhatsAppClick = (mode = "api") => {
           />
         }
         open={isPdfModalVisible}
-         onCancel={closePdfModal}
+        onCancel={closePdfModal}
         width="70%"
         style={{ top: 20, maxWidth: "1200px" }}
         footer={
@@ -1612,17 +1618,17 @@ const handleWhatsAppClick = (mode = "api") => {
               <span className="sm:hidden">WhatsApp</span>
             </button>
             <button
-  onClick={() => handleWhatsAppClick("web")}
-  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded flex items-center justify-center gap-2 w-full sm:w-auto"
-  title="Send via Web WhatsApp"
->
-<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              onClick={() => handleWhatsAppClick("web")}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded flex items-center justify-center gap-2 w-full sm:w-auto"
+              title="Send via Web WhatsApp"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
               </svg> Web WhatsApp
-</button>
+            </button>
             <button
               className="btn btn-light w-full sm:w-auto"
-             onClick={closePdfModal}
+              onClick={closePdfModal}
             >
               <FormattedMessage id="COMMON.CLOSE" defaultMessage="Close" />
             </button>
@@ -1631,7 +1637,7 @@ const handleWhatsAppClick = (mode = "api") => {
       >
         <div style={{ height: "70vh" }}>
           {pdfUrl && (
-            <Worker workerUrl={workerUrl}>              
+            <Worker workerUrl={workerUrl}>
               <Viewer
                 fileUrl={pdfUrl}
                 plugins={[pdfPlugin]}

@@ -525,6 +525,7 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
           item_name: d.rawMaterialName || "",
           qty: sumRowsQty(rows),
           unit: d.unitName || "",
+           unitId: d.unitId || 0,
           closingStock: d.closingStock ?? null,
           isAddInStock: d.isAddInStock ?? true,
           batchOptions: rows.map((r) => ({
@@ -545,6 +546,7 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
         item_name: d.rawMaterialName || "",
         qty: d.qty || "",
         unit: d.unitName || "",
+        unitId: d.unitId ?? 0,  
         originalQty: d.qty || 0,
         closingStock: d.closingStock ?? null,
         isAddInStock: d.isAddInStock ?? true,
@@ -683,6 +685,7 @@ if (isBatchNoMode) {
     item_name: detail.rawMaterialName || detail.materialName || "",
     qty: detail.qty ?? "",
     unit: detail.unitName || detail.unit?.nameEnglish || "",
+     unitId: detail.unitId ?? detail.unit?.id ?? 0,
     originalQty: detail.qty ?? 0,
     closingStock: detail.closingStock ?? null,
     isAddInStock: detail.isAddInStock ?? true,
@@ -789,13 +792,14 @@ if (isBatchNoMode) {
     item_name: detail.rawMaterialName || detail.materialName || "",
     qty: detail.qty ?? "",
     unit: detail.unitName || detail.unit?.nameEnglish || "",
+     unitId: detail.unitId ?? detail.unit?.id ?? 0,
     originalQty: detail.qty ?? 0,
     closingStock: detail.closingStock ?? null,
     isAddInStock: detail.isAddInStock ?? true,
   }));
 }
 
-setItems(mapped);s
+setItems(mapped);
       } catch (error) {
         console.log("handlePoCodeSelect error:", error);
         Swal.fire({
@@ -851,10 +855,15 @@ setItems((prev) => [
     item_name: rawItem.rawMaterialName || rawItem.nameEnglish || "",
     qty: "",
     unit: fallbackUnit,
+     unitId: rawItem.unitId ?? rawItem.unit?.id ?? 0,
     // batch API returns total stock as `qty`; normal search API returns `closingStock`
     closingStock: isBatchNoMode
       ? (rawItem.qty ?? rawItem.closingStock ?? null)
       : (rawItem.closingStock ?? null),
+      closingStockUnit:
+  rawItem.closingStockUnit?.nameEnglish ||
+  rawItem.closingStockUnit?.symbolEnglish ||
+  fallbackUnit,
     isAddInStock: true,
     batchOptions,
     detailRows: initialRows,
@@ -877,33 +886,11 @@ useEffect(() => {
   );
 }, [kitchenTypes, isEdit, userId]);
 const updateQty = useCallback((index, value) => {
-      if (!/^\d*\.?\d*$/.test(value)) return;
-
-      setItems((prev) => {
-        const item = prev[index];
-        if (!item) return prev;
-
-        const parsedValue = parseFloat(value);
-        const stock = item.closingStock;
-
-        if (
-          stock != null &&
-          !isNaN(parsedValue) &&
-          parsedValue > stock
-        ) {
-          Swal.fire({
-            icon: "warning",
-            title: "Quantity Exceeded",
-            text: `Qty cannot be greater than available stock (${stock}).`,
-            timer: 2000,
-            showConfirmButton: false,
-          });
-          return prev; // reject the change, keep old qty
-        }
-
-        return prev.map((it, i) => (i === index ? { ...it, qty: value } : it));
-      });
-    }, []);
+  if (!/^\d*\.?\d*$/.test(value)) return;
+  setItems((prev) =>
+    prev.map((it, i) => (i === index ? { ...it, qty: value } : it)),
+  );
+}, []);
     const handleDeleteItem = useCallback((index) => {
       setItems((prev) => prev.filter((_, i) => i !== index));
     }, []);
@@ -1146,6 +1133,7 @@ try {
         rawMaterialId: item.rawMaterialId || 0,
         qty: Number(item.qty),
         isAddInStock: item.isAddInStock ?? true,
+        unitId: Number(item.unitId || 0),
       })),
     };
 
@@ -1702,6 +1690,7 @@ try {
                       />,
                       <FormattedMessage id="COMMON.QTY" defaultMessage="Qty *" />,
                       " Available Stock",
+                      
                       <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />,
                       "",
                     ].map((h, idx) => (
@@ -1718,7 +1707,7 @@ try {
                   {items.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={8}
                         className="px-4 py-14 text-center text-slate-400 text-sm"
                       >
                         <div className="flex flex-col items-center gap-2">
@@ -1803,27 +1792,24 @@ ref={(el) => (qtyInputRefs.current[i] = el)}
                                 </p>
                               )}
                             </td>
-                            <td className="px-4 py-2 w-28 text-center">
-                              {item.closingStock != null ? (
-                                <span
-                                  className={`text-xs font-semibold px-2 py-1 rounded-lg inline-block
-                                ${
-                                  item.closingStock < 0
-                                    ? "bg-red-100 text-red-600"
-                                    : "bg-slate-50 text-slate-600"
-                                }`}
-                                >
-                                  {item.closingStock}
-                                </span>
-                              ) : (
-                                <span className="text-slate-300 text-xs">—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-2 w-24">
-                              <span className="text-xs text-slate-500 font-medium">
-                                {item.unit || "—"}
-                              </span>
-                            </td>
+                            <td className="px-4 py-2 w-36 text-center">
+  {item.closingStock != null ? (
+    <span
+      className={`text-xs font-semibold px-2 py-1 rounded-lg inline-block whitespace-nowrap
+      ${item.closingStock < 0 ? "bg-red-100 text-red-600" : "bg-slate-50 text-slate-600"}`}
+    >
+      {item.closingStock} {item.closingStockUnit || item.unit || ""}
+    </span>
+  ) : (
+    <span className="text-slate-300 text-xs">—</span>
+  )}
+</td>
+                          
+<td className="px-4 py-2 w-24 text-center">
+  <span className="text-xs text-slate-500 font-medium">
+    {item.unit || "—"}
+  </span>
+</td>
                             <td className="px-4 py-2 w-20">
                               <div className="flex items-center justify-end gap-2">
                             {isBatchNoMode && (
@@ -1856,7 +1842,7 @@ ref={(el) => (qtyInputRefs.current[i] = el)}
 
                           {isBatchNoMode && expandedItemIndex === i && (
   <tr className="bg-blue-50/40">
-    <td colSpan={7} className="px-4 py-4">
+    <td colSpan={8} className="px-4 py-4">
       <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-blue-100/40 to-blue-50 p-3 shadow-inner">
         <div className="flex items-center justify-between gap-3 mb-3">
           <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-700">
