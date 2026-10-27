@@ -35,6 +35,136 @@ const newHeading = () => ({
   status: "PENDING",
 });
 
+const DescriptionRichInput = ({
+  value = "",
+  onChange,
+  placeholder = "Enter description",
+}) => {
+  const editorRef = useRef(null);
+  const [isBold, setIsBold] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (editorRef.current && document.activeElement !== editorRef.current) {
+      const incoming = value || "";
+      if (editorRef.current.innerHTML !== incoming) {
+        editorRef.current.innerHTML = incoming;
+      }
+    }
+  }, [value]);
+
+  const checkBoldState = () => {
+    try {
+      const active = document.queryCommandState("bold");
+      setIsBold(Boolean(active));
+    } catch {
+      setIsBold(false);
+    }
+  };
+
+  const triggerChange = () => {
+    if (!editorRef.current) return;
+    const html = editorRef.current.innerHTML;
+    const text = editorRef.current.textContent.trim();
+    onChange(text === "" ? "" : html);
+  };
+
+  const handleToggleBold = (e) => {
+    if (e) e.preventDefault();
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+    document.execCommand("bold", false, null);
+    checkBoldState();
+    triggerChange();
+  };
+
+  const handleKeyDown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B")) {
+      e.preventDefault();
+      handleToggleBold();
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData("text/plain");
+    document.execCommand("insertText", false, text);
+    triggerChange();
+  };
+
+  const isEmpty = !value || value.trim() === "" || value === "<br>";
+
+  return (
+    <div className="relative w-full group">
+      <style>{`
+        .note-desc-editor b, .note-desc-editor strong {
+          display: inline !important;
+          font-weight: 700 !important;
+        }
+      `}</style>
+
+      {/* Bold button pinned inside top-right corner of the textarea */}
+      <div className="absolute top-1.5 right-1.5 z-10 flex items-center">
+        <button
+          type="button"
+          onMouseDown={handleToggleBold}
+          title="Bold (Ctrl+B)"
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-bold rounded border transition-all cursor-pointer select-none ${
+            isBold
+              ? "bg-primary text-white border-primary shadow-xs ring-1 ring-primary"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300"
+          }`}
+        >
+          <span className="font-black text-[11px] leading-none">B</span>
+          <span className={`text-[9px] font-normal ${isBold ? "text-white/90" : "text-gray-400"}`}>
+            Ctrl+B
+          </span>
+          {isBold && (
+            <span className="flex items-center gap-1 text-[8px] bg-white/20 px-1 py-0.2 rounded font-bold uppercase tracking-wider text-emerald-200 ml-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
+              ON
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={() => {
+          checkBoldState();
+          triggerChange();
+        }}
+        onKeyDown={handleKeyDown}
+        onKeyUp={checkBoldState}
+        onMouseUp={checkBoldState}
+        onPaste={handlePaste}
+        onFocus={() => {
+          setIsFocused(true);
+          checkBoldState();
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+          checkBoldState();
+          triggerChange();
+        }}
+        className="note-desc-editor w-full border border-gray-200 rounded-lg pl-2.5 pr-20 py-1.5 text-sm text-gray-800 outline-none focus:border-primary bg-white transition-colors min-h-[38px] max-h-[140px] overflow-y-auto leading-relaxed select-text cursor-text"
+        style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+      />
+      {isEmpty && !isFocused && (
+        <div
+          onClick={() => editorRef.current?.focus()}
+          className="absolute left-2.5 top-1.5 text-sm text-gray-400 pointer-events-none select-none"
+        >
+          {placeholder}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function AddNoteModal({
   isOpen,
   onClose,
@@ -430,7 +560,7 @@ const resetDrag = () => {
                         ${overIndex === i && dragIndex !== null && dragIndex !== i ? "border-t-2 border-t-primary" : ""}`}
                     >
                       {/* Drag handle */}
-                      <td className="px-2 py-2 text-center">
+                      <td className="px-2 py-2 text-center align-top pt-3.5">
                         <span
                           draggable
                           onDragStart={(e) => handleDragStart(e, i)}
@@ -443,13 +573,13 @@ const resetDrag = () => {
                       </td>
 
                       {/* Sequence (automatic, follows row order) */}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 align-top pt-2.5">
                         <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
                           {i + 1}
                         </span>
                       </td>
 
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 align-top pt-2">
                        <input
                           ref={(el) => {
                             if (el) headingInputRefs.current[h._key] = el;
@@ -462,24 +592,16 @@ const resetDrag = () => {
                         />
                       </td>
 
-                      <td className="px-3 py-2">
-  <textarea
-    ref={(el) => {
-      if (el) {
-        el.style.height = "auto";
-        el.style.height = `${el.scrollHeight}px`;
-      }
-    }}
-    rows={1}
-    value={h.description}
-    onChange={(e) => handleHeadingChange(i, "description", e.target.value)}
-    placeholder="Enter description"
-    className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-800 outline-none focus:border-primary bg-white transition-colors resize-none overflow-hidden"
-  />
-</td>
+                      <td className="px-3 py-2 align-top pt-2">
+                        <DescriptionRichInput
+                          value={h.description}
+                          onChange={(val) => handleHeadingChange(i, "description", val)}
+                          placeholder="Enter description"
+                        />
+                      </td>
 
                       {/* Status per heading */}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 align-top pt-2">
                         <select
                           value={h.status}
                           onChange={(e) => handleHeadingChange(i, "status", e.target.value)}
@@ -493,7 +615,7 @@ const resetDrag = () => {
                         </select>
                       </td>
 
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-3 py-2 text-center align-top pt-2.5">
                         <button
                           type="button"
                           onClick={() => removeHeading(i)}

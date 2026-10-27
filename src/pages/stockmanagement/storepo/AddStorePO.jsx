@@ -273,6 +273,7 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
     const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
     const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
     const [items, setItems] = useState([]);
+    const [tableSearch, setTableSearch] = useState("");
     const [supplier, setSupplier] = useState([]);
     const [stockTypes, setStockTypes] = useState([]);
     const [saving, setSaving] = useState(false);
@@ -516,8 +517,8 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
           date: b.expiryDate || "",
           qty: b.qty ?? "",
           availableQty : b.availableQty  ?? "",
-          
           unit: b.unitName || d.unitName || "",
+          unitId: b.unitId ?? d.unitId ?? 0,
         }));
 
         return {
@@ -525,6 +526,7 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
           item_name: d.rawMaterialName || "",
           qty: sumRowsQty(rows),
           unit: d.unitName || "",
+          unitId: d.unitId || 0,
           closingStock: d.closingStock ?? null,
           isAddInStock: d.isAddInStock ?? true,
           batchOptions: rows.map((r) => ({
@@ -533,6 +535,7 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
             qty: r.qty,
             availableQty  : r.availableQty,
             unit: r.unit,
+            unitId: r.unitId,
           })),
           detailRows: rows,
         };
@@ -545,6 +548,7 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
         item_name: d.rawMaterialName || "",
         qty: d.qty || "",
         unit: d.unitName || "",
+        unitId: d.unitId ?? 0,  
         originalQty: d.qty || 0,
         closingStock: d.closingStock ?? null,
         isAddInStock: d.isAddInStock ?? true,
@@ -645,6 +649,7 @@ if (isBatchNoMode) {
       qty: b.qty ?? b.availableQty ?? "",
       availableQty: b.availableQty ?? b.qty ?? "",
       unit: b.unitName || d.unitName || "",
+      unitId: b.unitId ?? d.unitId ?? 0,
     }));
 
     // spread the requested (remaining) qty across batches in order
@@ -658,6 +663,7 @@ if (isBatchNoMode) {
         date: b.expiryDate,
         qty: take > 0 ? String(take) : "",
         unit: b.unit,
+        unitId: b.unitId,
       };
     });
 
@@ -666,6 +672,7 @@ if (isBatchNoMode) {
       item_name: d.rawMaterialName || "",
       qty: sumRowsQty(rows),
       unit: d.unitName || "",
+      unitId: d.unitId ?? 0,
       closingStock: d.closingStock ?? null,
       isAddInStock: d.isAddInStock ?? true,
       batchOptions,
@@ -683,6 +690,7 @@ if (isBatchNoMode) {
     item_name: detail.rawMaterialName || detail.materialName || "",
     qty: detail.qty ?? "",
     unit: detail.unitName || detail.unit?.nameEnglish || "",
+     unitId: detail.unitId ?? detail.unit?.id ?? 0,
     originalQty: detail.qty ?? 0,
     closingStock: detail.closingStock ?? null,
     isAddInStock: detail.isAddInStock ?? true,
@@ -761,6 +769,7 @@ if (isBatchNoMode) {
       qty: b.qty ?? "",
       availableQty: b.availableQty ?? "",
       unit: b.unitName || d.unitName || "",
+      unitId: b.unitId ?? d.unitId ?? 0,
     }));
 
     return {
@@ -768,6 +777,7 @@ if (isBatchNoMode) {
       item_name: d.rawMaterialName || "",
       qty: sumRowsQty(rows),
       unit: d.unitName || "",
+      unitId: d.unitId ?? 0,
       closingStock: d.closingStock ?? null,
       isAddInStock: d.isAddInStock ?? true,
       batchOptions: rows.map((r) => ({
@@ -776,6 +786,7 @@ if (isBatchNoMode) {
         qty: r.qty,
         availableQty: r.availableQty,
         unit: r.unit,
+        unitId: r.unitId,
       })),
       detailRows: rows,
     };
@@ -789,13 +800,14 @@ if (isBatchNoMode) {
     item_name: detail.rawMaterialName || detail.materialName || "",
     qty: detail.qty ?? "",
     unit: detail.unitName || detail.unit?.nameEnglish || "",
+     unitId: detail.unitId ?? detail.unit?.id ?? 0,
     originalQty: detail.qty ?? 0,
     closingStock: detail.closingStock ?? null,
     isAddInStock: detail.isAddInStock ?? true,
   }));
 }
 
-setItems(mapped);s
+setItems(mapped);
       } catch (error) {
         console.log("handlePoCodeSelect error:", error);
         Swal.fire({
@@ -851,10 +863,15 @@ setItems((prev) => [
     item_name: rawItem.rawMaterialName || rawItem.nameEnglish || "",
     qty: "",
     unit: fallbackUnit,
+     unitId: rawItem.unitId ?? rawItem.unit?.id ?? 0,
     // batch API returns total stock as `qty`; normal search API returns `closingStock`
     closingStock: isBatchNoMode
       ? (rawItem.qty ?? rawItem.closingStock ?? null)
       : (rawItem.closingStock ?? null),
+      closingStockUnit:
+  rawItem.closingStockUnit?.nameEnglish ||
+  rawItem.closingStockUnit?.symbolEnglish ||
+  fallbackUnit,
     isAddInStock: true,
     batchOptions,
     detailRows: initialRows,
@@ -877,33 +894,11 @@ useEffect(() => {
   );
 }, [kitchenTypes, isEdit, userId]);
 const updateQty = useCallback((index, value) => {
-      if (!/^\d*\.?\d*$/.test(value)) return;
-
-      setItems((prev) => {
-        const item = prev[index];
-        if (!item) return prev;
-
-        const parsedValue = parseFloat(value);
-        const stock = item.closingStock;
-
-        if (
-          stock != null &&
-          !isNaN(parsedValue) &&
-          parsedValue > stock
-        ) {
-          Swal.fire({
-            icon: "warning",
-            title: "Quantity Exceeded",
-            text: `Qty cannot be greater than available stock (${stock}).`,
-            timer: 2000,
-            showConfirmButton: false,
-          });
-          return prev; // reject the change, keep old qty
-        }
-
-        return prev.map((it, i) => (i === index ? { ...it, qty: value } : it));
-      });
-    }, []);
+  if (!/^\d*\.?\d*$/.test(value)) return;
+  setItems((prev) =>
+    prev.map((it, i) => (i === index ? { ...it, qty: value } : it)),
+  );
+}, []);
     const handleDeleteItem = useCallback((index) => {
       setItems((prev) => prev.filter((_, i) => i !== index));
     }, []);
@@ -958,6 +953,7 @@ const updateQty = useCallback((index, value) => {
             date: src.expiryDate || "",
             qty: "",
             unit: src.unit || it.unit || "",
+            unitId: src.unitId || it.unitId || 0,
           };
         });
 
@@ -994,10 +990,14 @@ const updateQty = useCallback((index, value) => {
       .map((item) => {
       const rows = Array.isArray(item.detailRows) ? item.detailRows : [];
         const batchList = rows
-          .map((row) => ({
-            batchNo: row.batchNo || "",
-            qty: Number(row.qty || 0),
-          }))
+          .map((row) => {
+            const src = (item.batchOptions || []).find((b) => b.batchNo === row.batchNo);
+            return {
+              batchNo: row.batchNo || "",
+              qty: Number(row.qty || 0),
+              unitId: Number(row.unitId || src?.unitId || item.unitId || 0),
+            };
+          })
           .filter((row) => row.batchNo && row.qty > 0);
 
         return {
@@ -1146,6 +1146,7 @@ try {
         rawMaterialId: item.rawMaterialId || 0,
         qty: Number(item.qty),
         isAddInStock: item.isAddInStock ?? true,
+        unitId: Number(item.unitId || 0),
       })),
     };
 
@@ -1195,6 +1196,21 @@ try {
 
     const currentStatus =
       STATUS_OPTIONS.find((s) => s.value === form.status) || STATUS_OPTIONS[0];
+
+    const filteredItems = items
+      .map((item, originalIndex) => ({ item, originalIndex }))
+      .filter(({ item }) => {
+        if (!tableSearch.trim()) return true;
+        const q = tableSearch.trim().toLowerCase();
+        const name = (item.item_name || "").toLowerCase();
+        const unit = (item.unit || "").toLowerCase();
+        const batchMatch =
+          Array.isArray(item.detailRows) &&
+          item.detailRows.some((r) =>
+            String(r.batchNo || "").toLowerCase().includes(q)
+          );
+        return name.includes(q) || unit.includes(q) || batchMatch;
+      });
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 p-6 font-sans">
@@ -1567,7 +1583,10 @@ try {
                 </h2>
                 {items.length > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
-                    {items.length} item{items.length !== 1 ? "s" : ""}
+                    {tableSearch.trim()
+                      ? `${filteredItems.length} of ${items.length}`
+                      : items.length}{" "}
+                    item{items.length !== 1 ? "s" : ""}
                   </span>
                 )}
               </div>
@@ -1591,97 +1610,124 @@ try {
             </div>
 
             {/* ── Search Bar ── */}
-            <div className="px-6 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center gap-3">
-              <div className="relative w-full max-w-md">
-                <Select
-                  ref={searchSelectRef}
-                  showSearch
-                  placeholder={isBatchNoMode ? "Search raw material..." : "Search & add item..."}
-                  value={searchValue || undefined}
-                  filterOption={false}
-                  onSearch={(value) => {
-                    setSearchValue(value);
-                    if (isBatchNoMode) {
-                      setBatchRawMaterials([]);
-                      fetchBatchRawMaterials(value, 0, false);
-                      return;
-                    }
-                    setSearchQuery(value);
-                  }}
-                  onDropdownVisibleChange={(open) => {
-                    if (isBatchNoMode) {
-                      if (open && batchRawMaterials.length === 0 && !loadingBatchMaterials)
-                        fetchBatchRawMaterials(searchValue || "", 0, false);
-                      return;
-                    }
-                    if (open && menuItems.length === 0 && !loadingItems)
-                      FetchSearchDropdown("", 1, false);
-                  }}
-                  onSelect={(value, option) => {
-                    handleSelectItem(option.raw);
-                    setSearchValue("");
-                    setSearchQuery("");
-                    if (isBatchNoMode) fetchBatchRawMaterials("", 0, false); 
-                  }}
-                  notFoundContent={isBatchNoMode ? (loadingBatchMaterials ? "Loading..." : "No items found") : (loadingItems ? "Loading..." : "No items found")}
-                  style={{ width: "100%", maxWidth: "400px" }}
-                  options={(isBatchNoMode ? batchRawMaterials : menuItems)
-                    .filter((item) => {
-                      const name = (item.rawMaterialName || item.nameEnglish || "").toLowerCase();
-                      const q = (searchValue || "").toLowerCase();
-                      return !q || name.includes(q);
-                    })
-                    .map((item) => {
-                      const rawName = item.rawMaterialName || item.nameEnglish || "";
-                      const unitName = item.unitName || item.unit?.nameEnglish || item.unit || "";
-                      const isAdded = items.some((i) => i.rawMaterialId === (item.rawMaterialId || item.id));
-                      return {
-                        value: item.rawMaterialId || item.id,
-                        label: (
-                          <div className="flex justify-between">
-                            <span className={isAdded ? "text-gray-400" : ""}>{rawName}</span>
-                            <div className="flex gap-2 items-center">
-                              {unitName && <span className="text-xs text-gray-400">{unitName}</span>}
-                              {isAdded && <span className="text-xs text-red-400">Added</span>}
+            <div className="px-6 py-3 bg-slate-50/70 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
+                <div className="relative w-full max-w-md">
+                  <Select
+                    ref={searchSelectRef}
+                    showSearch
+                    placeholder={isBatchNoMode ? "Search raw material..." : "Search & add item..."}
+                    value={searchValue || undefined}
+                    filterOption={false}
+                    onSearch={(value) => {
+                      setSearchValue(value);
+                      if (isBatchNoMode) {
+                        setBatchRawMaterials([]);
+                        fetchBatchRawMaterials(value, 0, false);
+                        return;
+                      }
+                      setSearchQuery(value);
+                    }}
+                    onDropdownVisibleChange={(open) => {
+                      if (isBatchNoMode) {
+                        if (open && batchRawMaterials.length === 0 && !loadingBatchMaterials)
+                          fetchBatchRawMaterials(searchValue || "", 0, false);
+                        return;
+                      }
+                      if (open && menuItems.length === 0 && !loadingItems)
+                        FetchSearchDropdown("", 1, false);
+                    }}
+                    onSelect={(value, option) => {
+                      handleSelectItem(option.raw);
+                      setSearchValue("");
+                      setSearchQuery("");
+                      if (isBatchNoMode) fetchBatchRawMaterials("", 0, false); 
+                    }}
+                    notFoundContent={isBatchNoMode ? (loadingBatchMaterials ? "Loading..." : "No items found") : (loadingItems ? "Loading..." : "No items found")}
+                    style={{ width: "100%", maxWidth: "400px" }}
+                    options={(isBatchNoMode ? batchRawMaterials : menuItems)
+                      .filter((item) => {
+                        const name = (item.rawMaterialName || item.nameEnglish || "").toLowerCase();
+                        const q = (searchValue || "").toLowerCase();
+                        return !q || name.includes(q);
+                      })
+                      .map((item) => {
+                        const rawName = item.rawMaterialName || item.nameEnglish || "";
+                        const unitName = item.unitName || item.unit?.nameEnglish || item.unit || "";
+                        const isAdded = items.some((i) => i.rawMaterialId === (item.rawMaterialId || item.id));
+                        return {
+                          value: item.rawMaterialId || item.id,
+                          label: (
+                            <div className="flex justify-between">
+                              <span className={isAdded ? "text-gray-400" : ""}>{rawName}</span>
+                              <div className="flex gap-2 items-center">
+                                {unitName && <span className="text-xs text-gray-400">{unitName}</span>}
+                                {isAdded && <span className="text-xs text-red-400">Added</span>}
+                              </div>
                             </div>
-                          </div>
-                        ),
-                        raw: item,
-                        disabled: isAdded,
-                      };
-                    })}
-                  onPopupScroll={(e) => {
-                    const target = e.target;
-                    if (isBatchNoMode) {
+                          ),
+                          raw: item,
+                          disabled: isAdded,
+                        };
+                      })}
+                    onPopupScroll={(e) => {
+                      const target = e.target;
+                      if (isBatchNoMode) {
+                        if (
+                          target.scrollTop + target.offsetHeight >=
+                            target.scrollHeight - 10 &&
+                          batchHasMore &&
+                          !loadingBatchMaterials
+                        ) {
+                          fetchBatchRawMaterials(searchValue || "", batchPage + 1, true);
+                        }
+                        return;
+                      }
                       if (
                         target.scrollTop + target.offsetHeight >=
                           target.scrollHeight - 10 &&
-                        batchHasMore &&
-                        !loadingBatchMaterials
-                      ) {
-                        fetchBatchRawMaterials(searchValue || "", batchPage + 1, true);
-                      }
-                      return;
-                    }
-                    if (
-                      target.scrollTop + target.offsetHeight >=
-                        target.scrollHeight - 10 &&
-                      hasMore &&
-                      !loadingMore
-                    )
-                      FetchSearchDropdown(searchQuery, dropdownPage + 1, true);
-                  }}
-                />
-                {(loadingItems || loadingBatchMaterials) && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                  </div>
-                )}
-                {loadingMore && (
-                  <div className="text-xs text-gray-400 px-2 py-1">
-                    Loading more...
-                  </div>
-                )}
+                        hasMore &&
+                        !loadingMore
+                      )
+                        FetchSearchDropdown(searchQuery, dropdownPage + 1, true);
+                    }}
+                  />
+                  {(loadingItems || loadingBatchMaterials) && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {loadingMore && (
+                    <div className="text-xs text-gray-400 px-2 py-1">
+                      Loading more...
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Search Raw Material in Table (next to dropdown) ── */}
+                <div className="relative w-full max-w-xs">
+                  <Search
+                    size={15}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  />
+                  <input
+                    type="text"
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    placeholder="Search raw material in table..."
+                    className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 rounded-xl bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400 transition"
+                  />
+                  {tableSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setTableSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      title="Clear search"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1702,6 +1748,7 @@ try {
                       />,
                       <FormattedMessage id="COMMON.QTY" defaultMessage="Qty *" />,
                       " Available Stock",
+                      
                       <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />,
                       "",
                     ].map((h, idx) => (
@@ -1718,7 +1765,7 @@ try {
                   {items.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={8}
                         className="px-4 py-14 text-center text-slate-400 text-sm"
                       >
                         <div className="flex flex-col items-center gap-2">
@@ -1736,8 +1783,29 @@ try {
                         </div>
                       </td>
                     </tr>
+                  ) : filteredItems.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="px-4 py-12 text-center text-slate-400 text-sm"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <Search size={32} className="text-slate-300" />
+                          <p className="font-medium text-slate-500">
+                            No raw materials found matching "{tableSearch}"
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setTableSearch("")}
+                            className="text-xs text-blue-600 hover:underline font-semibold"
+                          >
+                            Clear search
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   ) : (
-                    items.map((item, i) => {
+                    filteredItems.map(({ item, originalIndex: i }, displayIdx) => {
                      const detailRows = Array.isArray(item.detailRows) ? item.detailRows : [];
                       return (
                         <Fragment key={i}>
@@ -1745,7 +1813,7 @@ try {
                             className="border-b text-center border-slate-50 hover:bg-blue-50/20 transition-colors group"
                           >
                             <td className="px-4 py-2 text-xs text-slate-400 font-medium w-8">
-                              {i + 1}
+                              {displayIdx + 1}
                             </td>
                             <td className="px-4 py-2 w-20 text-center">
                               <input
@@ -1803,27 +1871,24 @@ ref={(el) => (qtyInputRefs.current[i] = el)}
                                 </p>
                               )}
                             </td>
-                            <td className="px-4 py-2 w-28 text-center">
-                              {item.closingStock != null ? (
-                                <span
-                                  className={`text-xs font-semibold px-2 py-1 rounded-lg inline-block
-                                ${
-                                  item.closingStock < 0
-                                    ? "bg-red-100 text-red-600"
-                                    : "bg-slate-50 text-slate-600"
-                                }`}
-                                >
-                                  {item.closingStock}
-                                </span>
-                              ) : (
-                                <span className="text-slate-300 text-xs">—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-2 w-24">
-                              <span className="text-xs text-slate-500 font-medium">
-                                {item.unit || "—"}
-                              </span>
-                            </td>
+                            <td className="px-4 py-2 w-36 text-center">
+  {item.closingStock != null ? (
+    <span
+      className={`text-xs font-semibold px-2 py-1 rounded-lg inline-block whitespace-nowrap
+      ${item.closingStock < 0 ? "bg-red-100 text-red-600" : "bg-slate-50 text-slate-600"}`}
+    >
+      {item.closingStock} {item.closingStockUnit || item.unit || ""}
+    </span>
+  ) : (
+    <span className="text-slate-300 text-xs">—</span>
+  )}
+</td>
+                          
+<td className="px-4 py-2 w-24 text-center">
+  <span className="text-xs text-slate-500 font-medium">
+    {item.unit || "—"}
+  </span>
+</td>
                             <td className="px-4 py-2 w-20">
                               <div className="flex items-center justify-end gap-2">
                             {isBatchNoMode && (
@@ -1856,7 +1921,7 @@ ref={(el) => (qtyInputRefs.current[i] = el)}
 
                           {isBatchNoMode && expandedItemIndex === i && (
   <tr className="bg-blue-50/40">
-    <td colSpan={7} className="px-4 py-4">
+    <td colSpan={8} className="px-4 py-4">
       <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 via-blue-100/40 to-blue-50 p-3 shadow-inner">
         <div className="flex items-center justify-between gap-3 mb-3">
           <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-blue-700">

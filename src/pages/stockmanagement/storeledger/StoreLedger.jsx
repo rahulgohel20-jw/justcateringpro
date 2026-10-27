@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Container } from "@/components/container";
-import { SearchRawMaterial, GetStockLedger, GetStockLedgerPdfReport  } from "@/services/apiServices";
+import { SearchRawMaterial, GetStockLedger, GetStockLedgerPdfReport } from "@/services/apiServices";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { TableComponent } from "../../../components/table/TableComponent";
@@ -21,13 +21,60 @@ import { Modal, Switch } from "antd";
 const DROPDOWN_PAGE_SIZE = 100;
 const TODAY = new Date();
 
+const extractUnits = (unitHierarchy, fallbackUnit) => {
+  console.log("raw unitHierarchy:", unitHierarchy);
+  const unitsMap = new Map();
+  const visited = new Set();
 
+  const traverse = (node) => {
+    if (!node || typeof node !== "object") return;
+    if (visited.has(node)) return;
+    visited.add(node);
 
+    if (Array.isArray(node)) {
+      node.forEach(traverse);
+      return;
+    }
 
+    const unitId = node.unitId ?? node.id;
+    const name = node.nameEnglish || node.symbolEnglish;
 
+    if (unitId != null && name) {
+      const key = String(unitId);
+      if (!unitsMap.has(key)) {
+        unitsMap.set(key, { id: unitId, name });
+      }
+    }
 
+    for (const key of Object.keys(node)) {
+      const val = node[key];
+      if (val && typeof val === "object") {
+        traverse(val);
+      }
+    }
+  };
 
+  if (unitHierarchy) {
+    try {
+      traverse(unitHierarchy);
+    } catch (err) {
+      console.error("Error parsing unitHierarchy:", err);
+    }
+  }
 
+  let options = Array.from(unitsMap.values());
+
+  if (options.length === 0 && fallbackUnit) {
+    const fallbackId = fallbackUnit.id ?? fallbackUnit.unitId;
+    const fallbackName =
+      fallbackUnit.nameEnglish || fallbackUnit.symbolEnglish || fallbackUnit.name;
+    if (fallbackId != null) {
+      options = [{ id: fallbackId, name: fallbackName || "Default" }];
+    }
+  }
+
+  return options;
+};
 
 const StoreLedger = () => {
   const navigate = useNavigate();
@@ -48,9 +95,18 @@ const StoreLedger = () => {
   const loaderRef = useRef(null);
   const dropdownRef = useRef(null);
   const [price, setPrice] = useState("");
-  const [unit, setUnit] = useState("");
-const [printModalOpen, setPrintModalOpen] = useState(false);
-const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default off
+  const [unitOptions, setUnitOptions] = useState([]);
+  const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default off
+
+  const unit = useMemo(() => {
+    const selected = unitOptions.find(
+      (opt) => String(opt.id) === String(selectedUnitId)
+    );
+    return selected ? selected.name : "";
+  }, [unitOptions, selectedUnitId]);
+
   const tableData = useMemo(() => {
     if (!ledgerData?.rows) return [];
     return ledgerData.rows.map((row, index) => ({
@@ -64,8 +120,8 @@ const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default 
       sale: row.sale ?? 0,
       sale_return: row.saleReturn ?? 0,
       balance: row.balance ?? 0,
-      increase:row.increase??0,
-      wastage:row.wastage ?? 0
+      increase: row.increase ?? 0,
+      wastage: row.wastage ?? 0,
     }));
   }, [ledgerData]);
 
@@ -79,7 +135,7 @@ const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default 
       return;
     }
     page === 1 ? setLoadingItems(true) : setLoadingMore(true);
-    SearchRawMaterial(true,userId, page, DROPDOWN_PAGE_SIZE, searchTerm)
+    SearchRawMaterial(true, userId, page, DROPDOWN_PAGE_SIZE, searchTerm)
       .then((res) => {
         const data = res?.data?.data || {};
         const items = data["Raw Material Details"] || [];
@@ -90,17 +146,27 @@ const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default 
         setHasMore(page * DROPDOWN_PAGE_SIZE < totalItems);
         setShowDropdown(true);
       })
-      .catch(() => { setMenuItems([]); setHasMore(false); })
-      .finally(() => { setLoadingItems(false); setLoadingMore(false); });
+      .catch(() => {
+        setMenuItems([]);
+        setHasMore(false);
+      })
+      .finally(() => {
+        setLoadingItems(false);
+        setLoadingMore(false);
+      });
   };
 
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchQuery.trim()) {
-        setDropdownPage(1); setMenuItems([]); setHasMore(false);
+        setDropdownPage(1);
+        setMenuItems([]);
+        setHasMore(false);
         FetchSearchDropdown(searchQuery, 1, false);
       } else {
-        setMenuItems([]); setShowDropdown(false); setHasMore(false);
+        setMenuItems([]);
+        setShowDropdown(false);
+        setHasMore(false);
       }
     }, 500);
     return () => clearTimeout(timer);
@@ -108,10 +174,13 @@ const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default 
 
   useEffect(() => {
     if (!loaderRef.current) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasMore && !loadingMore)
-        FetchSearchDropdown(searchQuery, dropdownPage + 1, true);
-    }, { threshold: 1.0 });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore)
+          FetchSearchDropdown(searchQuery, dropdownPage + 1, true);
+      },
+      { threshold: 1.0 }
+    );
     observer.observe(loaderRef.current);
     return () => observer.disconnect();
   }, [hasMore, loadingMore, dropdownPage, searchQuery]);
@@ -126,17 +195,22 @@ const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default 
   }, []);
 
   const handleSelectItem = (item) => {
-  setSelectedItem({ id: item.id, name: item.nameEnglish });
-  setSearchQuery(item.nameEnglish || "");
-  setShowDropdown(false);
+    setSelectedItem({ id: item.id, name: item.nameEnglish });
+    setSearchQuery(item.nameEnglish || "");
+    setShowDropdown(false);
+    setPrice(item.supplierRate ?? "");
 
-  
-  setPrice(item.supplierRate ?? "");
-  setUnit(item.unitName ?? "");
+    const options = extractUnits(item?.unitHierarchy, item?.unit);
+    setUnitOptions(options);
 
-  if (form.from_date && form.to_date)
-    fetchLedger(item.id, form.from_date, form.to_date);
-};
+    const defaultUnitId =
+      item?.unit?.id != null
+        ? (options.some((opt) => String(opt.id) === String(item.unit.id))
+            ? item.unit.id
+            : options[0]?.id ?? item.unit.id)
+        : (options[0]?.id ?? "");
+    setSelectedUnitId(defaultUnitId);
+  };
 
   const formatDateForApi = (date) => {
     if (!date) return "";
@@ -146,22 +220,23 @@ const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default 
     return `${d}/${m}/${y}`;
   };
 
-  const fetchLedger = async (itemId, fromDate, toDate) => {
-    if (!itemId || !fromDate || !toDate) return;
+  const fetchLedger = async (itemId, unitId, fromDate, toDate) => {
+    if (!itemId || !unitId || !fromDate || !toDate) return;
     try {
       setLedgerLoading(true);
       const res = await GetStockLedger(
-        formatDateForApi(fromDate), itemId, formatDateForApi(toDate), userId
+        formatDateForApi(fromDate),
+        itemId,
+        formatDateForApi(toDate),
+        userId,
+        unitId
       );
       if (res?.data?.success) {
-  setLedgerData(res.data.data);
-
-  
-  setPrice(res.data.data?.supplierRate ?? "");
-  setUnit(res.data.data?.unitName ?? "");
-}
-      
-      else setLedgerData(null);
+        setLedgerData(res.data.data);
+        setPrice(res.data.data?.supplierRate ?? "");
+      } else {
+        setLedgerData(null);
+      }
     } catch (err) {
       console.error("Error fetching stock ledger:", err);
       setLedgerData(null);
@@ -171,46 +246,46 @@ const [showCompanyDetails, setShowCompanyDetails] = useState(false); // default 
   };
 
   useEffect(() => {
-    if (selectedItem?.id && form.from_date && form.to_date)
-      fetchLedger(selectedItem.id, form.from_date, form.to_date);
-  }, [selectedItem, form.from_date, form.to_date]);
+    if (selectedItem?.id && selectedUnitId && form.from_date && form.to_date) {
+      fetchLedger(selectedItem.id, selectedUnitId, form.from_date, form.to_date);
+    }
+  }, [selectedItem, selectedUnitId, form.from_date, form.to_date]);
 
   const inputCls =
     "w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all";
   const labelCls =
     "block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5";
 
-const handlePrint = () => {
-  if (!selectedItem?.id || !form.from_date || !form.to_date) return;
-  setShowCompanyDetails(false); // reset default off
-  setPrintModalOpen(true);
-};
+  const handlePrint = () => {
+    if (!selectedItem?.id || !form.from_date || !form.to_date) return;
+    setShowCompanyDetails(false); // reset default off
+    setPrintModalOpen(true);
+  };
 
-const handleConfirmPrint = async () => {
-  try {
-    const res = await GetStockLedgerPdfReport(
-      userId,
-      selectedItem.id,
-      formatDateForApi(form.from_date),
-      formatDateForApi(form.to_date),
-      showCompanyDetails ? 1 : 0, // isCompanyDetails — last param, was hardcoded 1
-    );
+  const handleConfirmPrint = async () => {
+    try {
+      const res = await GetStockLedgerPdfReport(
+        userId,
+        selectedItem.id,
+        formatDateForApi(form.from_date),
+        formatDateForApi(form.to_date),
+        showCompanyDetails ? 1 : 0,
+        selectedUnitId
+      );
 
-    const fileUrl = res?.data?.fileUrl;
-    if (fileUrl) {
-      window.open(fileUrl, "_blank");
-      setPrintModalOpen(false);
+      const fileUrl = res?.data?.fileUrl;
+      if (fileUrl) {
+        window.open(fileUrl, "_blank");
+        setPrintModalOpen(false);
+      }
+    } catch (err) {
+      console.error("Failed to generate PDF:", err);
     }
-  } catch (err) {
-    console.error("Failed to generate PDF:", err);
-  }
-};
-
+  };
 
   return (
     <Fragment>
       <Container>
-
         {/* ── Top Header Bar ── */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
@@ -221,16 +296,16 @@ const handleConfirmPrint = async () => {
           </div>
           <div className="flex items-center gap-2">
             <button
-  onClick={handlePrint}
-  disabled={!selectedItem?.id || !form.from_date || !form.to_date}
-  className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-xs font-semibold transition-colors shadow-sm ${
-    selectedItem?.id && form.from_date && form.to_date
-      ? "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-      : "border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed"
-  }`}
->
-  <Printer size={14} /> Print
-</button>
+              onClick={handlePrint}
+              disabled={!selectedItem?.id || !form.from_date || !form.to_date}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-xs font-semibold transition-colors shadow-sm ${
+                selectedItem?.id && form.from_date && form.to_date
+                  ? "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  : "border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed"
+              }`}
+            >
+              <Printer size={14} /> Print
+            </button>
             <button
               onClick={() => navigate(-1)}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 transition-colors shadow-sm"
@@ -242,17 +317,18 @@ const handleConfirmPrint = async () => {
 
         {/* ── Filter Row + OPB Card ── */}
         <div className="flex items-stretch gap-4 mb-5">
-
           {/* Filters */}
           <div className="flex-1 bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-5">
             <div className="grid grid-cols-4 gap-5">
-
               {/* Item Name */}
               <div>
                 <label className={labelCls}>Item Name</label>
                 <div ref={dropdownRef} className="relative">
                   <div className="relative">
-                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <Search
+                      size={13}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    />
                     <input
                       value={searchQuery}
                       onChange={(e) => {
@@ -260,6 +336,8 @@ const handleConfirmPrint = async () => {
                         if (!e.target.value.trim()) {
                           setSelectedItem(null);
                           setLedgerData(null);
+                          setUnitOptions([]);
+                          setSelectedUnitId("");
                         }
                       }}
                       placeholder="Search item name..."
@@ -283,7 +361,9 @@ const handleConfirmPrint = async () => {
                                 onMouseDown={() => handleSelectItem(item)}
                                 className="px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 cursor-pointer transition-colors border-b border-slate-50 last:border-0"
                               >
-                                <span className="font-medium">{item.nameEnglish}</span>
+                                <span className="font-medium">
+                                  {item.nameEnglish}
+                                </span>
                                 {item.rawMaterialCat?.nameEnglish && (
                                   <span className="ml-2 text-xs text-slate-400">
                                     ({item.rawMaterialCat.nameEnglish})
@@ -291,7 +371,10 @@ const handleConfirmPrint = async () => {
                                 )}
                               </li>
                             ))}
-                            <li ref={loaderRef} className="px-4 py-2 text-center">
+                            <li
+                              ref={loaderRef}
+                              className="px-4 py-2 text-center"
+                            >
                               {loadingMore && (
                                 <div className="flex justify-center">
                                   <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
@@ -312,17 +395,28 @@ const handleConfirmPrint = async () => {
                 </div>
               </div>
 
+              {/* Unit Dropdown */}
               <div>
                 <label className={labelCls}>Unit</label>
-                <input
-                  type="text"
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  disabled
+                <select
+                  value={selectedUnitId}
+                  onChange={(e) => setSelectedUnitId(e.target.value)}
+                  disabled={!selectedItem?.id}
                   className={inputCls}
-                />
+                >
+                  {!selectedItem?.id ? (
+                    <option value="">Select item first</option>
+                  ) : unitOptions.length === 0 ? (
+                    <option value="">No units available</option>
+                  ) : (
+                    unitOptions.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.name}
+                      </option>
+                    ))
+                  )}
+                </select>
               </div>
-             
 
               {/* From Date */}
               <div>
@@ -333,12 +427,14 @@ const handleConfirmPrint = async () => {
                     setForm((prev) => ({
                       ...prev,
                       from_date: date,
-                      to_date: prev.to_date && date && prev.to_date < date ? null : prev.to_date,
+                      to_date:
+                        prev.to_date && date && prev.to_date < date
+                          ? null
+                          : prev.to_date,
                     }))
                   }
                   dateFormat="dd/MM/yyyy"
                   placeholderText="DD/MM/YYYY"
-                  
                   className={inputCls}
                   wrapperClassName="w-full"
                   autoComplete="off"
@@ -350,17 +446,17 @@ const handleConfirmPrint = async () => {
                 <label className={labelCls}>To Date</label>
                 <DatePicker
                   selected={form.to_date}
-                  onChange={(date) => setForm((prev) => ({ ...prev, to_date: date }))}
+                  onChange={(date) =>
+                    setForm((prev) => ({ ...prev, to_date: date }))
+                  }
                   dateFormat="dd/MM/yyyy"
                   placeholderText="DD/MM/YYYY"
                   minDate={form.from_date || undefined}
-                  
                   className={inputCls}
                   wrapperClassName="w-full"
                   autoComplete="off"
                 />
               </div>
-
             </div>
           </div>
 
@@ -371,7 +467,9 @@ const handleConfirmPrint = async () => {
                 <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest leading-none">
                   Opening Balance
                 </p>
-                <p className="text-[10px] font-semibold text-blue-300 mt-0.5">(OPB)</p>
+                <p className="text-[10px] font-semibold text-blue-300 mt-0.5">
+                  (OPB)
+                </p>
               </div>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center">
                 <Wallet size={24} className="text-white" />
@@ -381,19 +479,15 @@ const handleConfirmPrint = async () => {
               <span className="text-4xl font-black text-white leading-none">
                 {ledgerData?.opb ?? "0"}
               </span>
-              <span className="ml-1.5 text-sm font-semibold text-blue-200">{unit}</span>
+              <span className="ml-1.5 text-sm font-semibold text-blue-200">
+                {unit}
+              </span>
             </div>
-            {/* <div className="mt-2">
-  <p className="text-[10px] text-blue-200 uppercase">Price</p>
-  <p className="text-lg font-bold text-white">₹ {price || 0}</p>
-</div> */}
           </div>
-
         </div>
 
         {/* ── Stock Details Card ── */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-
           {/* Section Header */}
           <div className="flex items-center gap-2.5 px-6 py-4 border-b border-slate-100">
             <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
@@ -423,7 +517,6 @@ const handleConfirmPrint = async () => {
             )}
             <TableComponent columns={columns()} data={tableData} />
           </div>
-
         </div>
 
         {/* ── Final Closing Stock Card (bottom-right, like screenshot) ── */}
@@ -437,7 +530,9 @@ const handleConfirmPrint = async () => {
                 <span className="text-3xl font-black text-white leading-none">
                   {ledgerData?.closingStock ?? "0"}
                 </span>
-                <span className="text-sm font-semibold text-blue-200">{unit}</span>
+                <span className="text-sm font-semibold text-blue-200">
+                  {unit}
+                </span>
               </div>
             </div>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
@@ -445,36 +540,37 @@ const handleConfirmPrint = async () => {
             </div>
           </div>
         </div>
-<Modal
-  title="Print Stock Ledger"
-  centered
-  open={printModalOpen}
-  onCancel={() => setPrintModalOpen(false)}
-  footer={[
-    <button
-      key="cancel"
-      className="btn btn-light"
-      onClick={() => setPrintModalOpen(false)}
-    >
-      Cancel
-    </button>,
-    <button
-      key="print"
-      className="btn btn-primary ms-2"
-      onClick={handleConfirmPrint}
-    >
-      Print
-    </button>,
-  ]}
->
-  <div className="flex items-center justify-between py-2">
-    <span className="text-sm text-gray-700">Show Company Details</span>
-    <Switch
-      checked={showCompanyDetails}
-      onChange={(checked) => setShowCompanyDetails(checked)}
-    />
-  </div>
-</Modal>
+
+        <Modal
+          title="Print Stock Ledger"
+          centered
+          open={printModalOpen}
+          onCancel={() => setPrintModalOpen(false)}
+          footer={[
+            <button
+              key="cancel"
+              className="btn btn-light"
+              onClick={() => setPrintModalOpen(false)}
+            >
+              Cancel
+            </button>,
+            <button
+              key="print"
+              className="btn btn-primary ms-2"
+              onClick={handleConfirmPrint}
+            >
+              Print
+            </button>,
+          ]}
+        >
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-gray-700">Show Company Details</span>
+            <Switch
+              checked={showCompanyDetails}
+              onChange={(checked) => setShowCompanyDetails(checked)}
+            />
+          </div>
+        </Modal>
       </Container>
     </Fragment>
   );

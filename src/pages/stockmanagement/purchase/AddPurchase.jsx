@@ -141,6 +141,7 @@
     const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
     const [supplier, setSupplier] = useState([]);
     const [items, setItems] = useState([]);
+    const [tableSearch, setTableSearch] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
     const [menuItems, setMenuItems] = useState([]);
     const [loadingItems, setLoadingItems] = useState(false);
@@ -340,6 +341,7 @@
           isAddInStock: d.isAddInStock ?? true,
           expiryDate: fromApiDate(d.expiryDate),
           batchNo: d.batchNo || "",
+          remarks: d.remarks || d.remark || "",
         })),
       );
     }, [editData]);
@@ -381,7 +383,8 @@
           originalQty: d.qty || 0,
           isAddInStock:  d.isAddInStock ?? true,
           batchNo: "",
-  expiryDate: "",
+          expiryDate: "",
+          remarks: d.remarks || d.remark || "",
         };
       }),
     );
@@ -483,8 +486,9 @@ if (rawMaterialId && items.some((it) => it.rawMaterialId === rawMaterialId)) {
         unitId: rawItem.unitId || rawItem.unit?.id || 0,
         isAddInStock: true,
         batchNo: "",
-  expiryDate: "",
-    batches: rawItem.batches || [],
+        expiryDate: "",
+        batches: rawItem.batches || [],
+        remarks: "",
       };
       setItems((prev) => [newRow, ...prev]);
       setFocusQtyIndex(0);
@@ -654,6 +658,7 @@ const isExistingBatch = (item) =>
       othercharge: parseFloat(item.other_charges) || 0,
       total: parseFloat(item.total_price) || 0,
       isAddInStock: item.isAddInStock ?? true,
+      remarks: item.remarks || "",
     });
 
     if (isFromPO) {
@@ -764,12 +769,32 @@ const isExistingBatch = (item) =>
     { key: "other", label: <FormattedMessage id="PURCHASE.OTHER_CHARGES" defaultMessage="Other ₹" /> },
     { key: "gst", label: <FormattedMessage id="PURCHASE.GST_AMOUNT" defaultMessage="GST" /> },
     { key: "total", label: <FormattedMessage id="COMMON.TOTAL" defaultMessage="Total" /> },
+    { key: "remark", label: <FormattedMessage id="COMMON.REMARK" defaultMessage="Remark" /> },
     { key: "del", label: "" },
   ];
     const fieldClass =
       "w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all";
     const labelClass =
       "text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5";
+
+    const filteredItems = items
+      .map((item, originalIndex) => ({ item, originalIndex }))
+      .filter(({ item }) => {
+        if (!tableSearch.trim()) return true;
+        const q = tableSearch.trim().toLowerCase();
+        const name = (item.item_name || "").toLowerCase();
+        const unit = (item.unit || "").toLowerCase();
+        const hsc = (item.hsc_sac || "").toLowerCase();
+        const batch = (item.batchNo || "").toLowerCase();
+        const remarks = (item.remarks || "").toLowerCase();
+        return (
+          name.includes(q) ||
+          unit.includes(q) ||
+          hsc.includes(q) ||
+          batch.includes(q) ||
+          remarks.includes(q)
+        );
+      });
 
     return (
       <div className="min-h-screen w-full overflow-x-hidden p-6 font-sans">
@@ -1057,7 +1082,10 @@ const isExistingBatch = (item) =>
                 </h2>
                 {items.length > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
-                    {items.length} item{items.length !== 1 ? "s" : ""}
+                    {tableSearch.trim()
+                      ? `${filteredItems.length} of ${items.length}`
+                      : items.length}{" "}
+                    item{items.length !== 1 ? "s" : ""}
                   </span>
                 )}
               </div>
@@ -1081,65 +1109,92 @@ const isExistingBatch = (item) =>
             </div>
 
             {/* ── Search Bar ── */}
-            <div className="px-6 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center gap-3">
-              <div className="relative w-full max-w-md">
-                <div className="relative">
-                <Select
-    ref={searchSelectRef}
-    showSearch
-    placeholder={intl.formatMessage({
-      id: "PURCHASE.SEARCH_ITEM",
-      defaultMessage: "Search & add item...",
-    })}
-                    value={undefined}
-                    filterOption={false}
-                    onSearch={handleSearch}
-                    onDropdownVisibleChange={(open) => {
-                      if (open && menuItems.length === 0)
-                        FetchSearchDropdown("", 1, false);
-                    }}
-                    onSelect={(value, option) => {
-                      handleSelectItem(option.raw);
-                      setSearchQuery("");
-                    }}
-                    notFoundContent={
-                      loadingItems
-                        ? "Loading..."
-                        : searchQuery
-                          ? "No items found"
-                          : "Start typing or select item"
-                    }
-                    style={{ width: "100%", maxWidth: "400px" }}
-                    options={menuItems.map((item) => ({
-                      value: item.id,
-                      label: (
-                        <div className="flex justify-between">
-                          <span>{item.nameEnglish}</span>
-                          {item.supplierRate > 0 && (
-                            <span className="text-xs text-gray-400">
-                              ₹{item.supplierRate}
-                            </span>
-                          )}
-                        </div>
-                      ),
-                      raw: item,
-                    }))}
-                    onPopupScroll={(e) => {
-                      const target = e.target;
-                      if (
-                        target.scrollTop + target.offsetHeight >=
-                          target.scrollHeight - 10 &&
-                        hasMore &&
-                        !loadingMore
-                      ) {
-                        FetchSearchDropdown(searchQuery, dropdownPage + 1, true);
+            <div className="px-6 py-3 bg-slate-50/70 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
+                <div className="relative w-full max-w-md">
+                  <div className="relative">
+                    <Select
+                      ref={searchSelectRef}
+                      showSearch
+                      placeholder={intl.formatMessage({
+                        id: "PURCHASE.SEARCH_ITEM",
+                        defaultMessage: "Search & add item...",
+                      })}
+                      value={undefined}
+                      filterOption={false}
+                      onSearch={handleSearch}
+                      onDropdownVisibleChange={(open) => {
+                        if (open && menuItems.length === 0)
+                          FetchSearchDropdown("", 1, false);
+                      }}
+                      onSelect={(value, option) => {
+                        handleSelectItem(option.raw);
+                        setSearchQuery("");
+                      }}
+                      notFoundContent={
+                        loadingItems
+                          ? "Loading..."
+                          : searchQuery
+                            ? "No items found"
+                            : "Start typing or select item"
                       }
-                    }}
+                      style={{ width: "100%", maxWidth: "400px" }}
+                      options={menuItems.map((item) => ({
+                        value: item.id,
+                        label: (
+                          <div className="flex justify-between">
+                            <span>{item.nameEnglish}</span>
+                            {item.supplierRate > 0 && (
+                              <span className="text-xs text-gray-400">
+                                ₹{item.supplierRate}
+                              </span>
+                            )}
+                          </div>
+                        ),
+                        raw: item,
+                      }))}
+                      onPopupScroll={(e) => {
+                        const target = e.target;
+                        if (
+                          target.scrollTop + target.offsetHeight >=
+                            target.scrollHeight - 10 &&
+                          hasMore &&
+                          !loadingMore
+                        ) {
+                          FetchSearchDropdown(searchQuery, dropdownPage + 1, true);
+                        }
+                      }}
+                    />
+                    {loadingItems && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Search Raw Material in Table (next to dropdown) ── */}
+                <div className="relative w-full max-w-xs">
+                  <Search
+                    size={15}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                   />
-                  {loadingItems && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                    </div>
+                  <input
+                    type="text"
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    placeholder="Search raw material in table..."
+                    className="w-full pl-9 pr-8 py-2 text-xs border border-slate-200 rounded-xl bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400 transition"
+                  />
+                  {tableSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setTableSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      title="Clear search"
+                    >
+                      <X size={13} />
+                    </button>
                   )}
                 </div>
               </div>
@@ -1161,7 +1216,7 @@ const isExistingBatch = (item) =>
                   {items.length === 0 ? (
                     <tr>
                       <td
-                      colSpan={14}
+                        colSpan={headers.length}
                         className="px-4 py-14 text-center text-slate-400 text-sm"
                       >
                         <div className="flex flex-col items-center gap-2">
@@ -1175,8 +1230,29 @@ const isExistingBatch = (item) =>
                         </div>
                       </td>
                     </tr>
+                  ) : filteredItems.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={headers.length}
+                        className="px-4 py-12 text-center text-slate-400 text-sm"
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <Search size={32} className="text-slate-300" />
+                          <p className="font-medium text-slate-500">
+                            No raw materials found matching "{tableSearch}"
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setTableSearch("")}
+                            className="text-xs text-blue-600 hover:underline font-semibold"
+                          >
+                            Clear search
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   ) : (
-                    items.map((item, i) => {
+                    filteredItems.map(({ item, originalIndex: i }, displayIdx) => {
                       // ── Per-row GST breakdown for display ──
                       const base =
                         (parseFloat(item.qty) || 0) *
@@ -1195,7 +1271,7 @@ const isExistingBatch = (item) =>
                         >
                           {/* # */}
                           <td className="px-3 py-2 text-xs text-slate-400 font-medium w-8">
-                            {i + 1}
+                            {displayIdx + 1}
                           </td>
                         
     <td className="px-3 py-2 w-16 text-center">
@@ -1389,6 +1465,17 @@ const isExistingBatch = (item) =>
                             </span>
                           </td>
 
+                          {/* Remark */}
+                          <td className="px-1 py-2 w-32 min-w-[120px]">
+                            <EditableCell
+                              value={item.remarks}
+                              onChange={(v) => updateItem(i, "remarks", v)}
+                              type="text"
+                              placeholder="—"
+                              className="text-left"
+                            />
+                          </td>
+
                           {/* Delete */}
                           <td className="px-3 py-2 w-10">
                             <button
@@ -1434,7 +1521,7 @@ const isExistingBatch = (item) =>
                       <tfoot>
     <tr className="bg-slate-50/80 border-t border-slate-200">
       <td
-        colSpan={10}
+        colSpan={form.isBatchWise ? 13 : 11}
         className="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider"
       >
         Totals

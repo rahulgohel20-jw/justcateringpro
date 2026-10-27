@@ -74,7 +74,10 @@ export default function ViewNoteModal({ isOpen, onClose, note }) {
                       <tr key={h.id || i} className="border-b border-gray-50 last:border-0">
                         <td className="px-4 py-3 text-gray-500 font-medium">{i + 1}</td>
                         <td className="px-4 py-3 font-medium text-gray-800">{h.heading || "—"}</td>
-                        <td className="px-4 py-3 text-gray-600">{h.description || "—"}</td>
+                        <td
+                          className="px-4 py-3 text-gray-600 [&_b]:font-bold [&_strong]:font-bold whitespace-pre-wrap"
+                          dangerouslySetInnerHTML={{ __html: h.description || "—" }}
+                        />
                       </tr>
                     ))}
                   </tbody>
