@@ -212,9 +212,11 @@ export const SearchRawMaterial = (
   isPurchaseApproved = false,
   purchaseApproveId = "",
   categoryId = 0,
+  isShowCashAmount = false,
+  isShowChequeAmount = false
 ) => {
   return GET(
-    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=${categoryId}&unitid=0&userid=${Id}&isPurchaseApprove=${isPurchaseApproved}&purchaseApproveId=${purchaseApproveId}`,
+    `rawmaterial/getallbyuserid?isAsc=${isAsc}&pageNo=${page}&pageSize=${pageSize}&rawMaterialName=${itemName}&rawMateriaCatlId=${categoryId}&unitid=0&userid=${Id}&isPurchaseApprove=${isPurchaseApproved}&purchaseApproveId=${purchaseApproveId}&isShowCashAmount=${isShowCashAmount}&isShowChequeAmount=${isShowChequeAmount}`,
     signal,
   );
 };
@@ -282,10 +284,12 @@ export const GetQuotationReport = (
   backOfficeId,
   showLastPage,
   isSignature,
+  isShowCashAmount = 0,
+  isShowChequeAmount = 0,
   invoiceId = 0,
 ) => {
   return POST(
-    `/quotationreport/generatequotation?adminTemplateModuleId=${adminTemplateModuleId}&eventId=${eventId}&lang=${language}&userId=${userId}&isInvoice=${isInvoice}&isQrCode=${isQrCode}&isTermsCond=${isTermsCond}&isAdvance=${isAdvance}&isWithPrice=${isWithPrice}&isCompanyDetails=${isCompanyDetails}&isDecore=${isDecor}&isOnePage=${isOnePage}&isCombo=${isCombo}&isNotes=${isNotes}&exclusiveThemeId=${exclusiveThemeId}&backOfficeId=${backOfficeId}&showLastPage=${showLastPage}&isSignature=${isSignature}&invoiceId=${invoiceId}`,
+    `/quotationreport/generatequotation?adminTemplateModuleId=${adminTemplateModuleId}&eventId=${eventId}&lang=${language}&userId=${userId}&isInvoice=${isInvoice}&isQrCode=${isQrCode}&isTermsCond=${isTermsCond}&isAdvance=${isAdvance}&isWithPrice=${isWithPrice}&isCompanyDetails=${isCompanyDetails}&isDecore=${isDecor}&isOnePage=${isOnePage}&isCombo=${isCombo}&isNotes=${isNotes}&exclusiveThemeId=${exclusiveThemeId}&backOfficeId=${backOfficeId}&showLastPage=${showLastPage}&isSignature=${isSignature}&isShowCashAmount=${isShowCashAmount}&isShowChequeAmount=${isShowChequeAmount}&invoiceId=${invoiceId}`,
   );
 };
 
@@ -2414,9 +2418,9 @@ export const AddOPB = (data) => {
   );
 };
 
-export const GetStockLedger = (fromDate, id, toDate, userId) => {
+export const GetStockLedger = (fromDate, id, toDate, userId, unitId) => {
   return GET(
-    `/stockledger/get?fromDate=${fromDate}&rawMaterialId=${id}&toDate=${toDate}&userId=${userId}`,
+    `/stockledger/get?fromDate=${fromDate}&rawMaterialId=${id}&toDate=${toDate}&userId=${userId}&unitId=${unitId}`,
   );
 };
 
@@ -2444,9 +2448,9 @@ export const GetStockPdfReport = (id, catId, stockId, fromDate, toDate, isCompan
   );
 };
 
-export const GetStockLedgerPdfReport = (id, rawMaterialId, fromDate, toDate, isCompanyDetails) => {
+export const GetStockLedgerPdfReport = (id, rawMaterialId, fromDate, toDate, isCompanyDetails, unitId) => {
   return GET(
-    `stockledger/pdf?rawMaterialId=${rawMaterialId}&userId=${id}&fromDate=${fromDate}&toDate=${toDate}&isCompanyDetails=${isCompanyDetails}`,
+    `stockledger/pdf?rawMaterialId=${rawMaterialId}&userId=${id}&fromDate=${fromDate}&toDate=${toDate}&isCompanyDetails=${isCompanyDetails}&unitId=${unitId}`,
   );
 };
 
@@ -4132,7 +4136,7 @@ export const getAllRawMaterialWithExpiryDates = (page, size, userId, searchName 
   return GET(`/storepo/getAllRawMaterialWithExpiryDates?${query.toString()}`);
 };
 
-export const genratebarcode = (qty, rawMaterialId, userId,rawMaterialCatId) => {
+export const genratebarcode = (qty, rawMaterialId, userId, rawMaterialCatId) => {
   return GET(`/rawmaterial/generate-barcode?qty=${qty}&rawMaterialId=${rawMaterialId}&userId=${userId}&rawMaterialCatId=${rawMaterialCatId}`);
 };
 
@@ -4388,6 +4392,6 @@ export const uploadlogodecorprofile = (file, userId) => {
   });
 };
 
-export const GenerateRecipeExcel = (userId, menuItemId ) => {
+export const GenerateRecipeExcel = (userId, menuItemId) => {
   return GET(`/menuitems/menu-recipe-excel?userId=${userId}&menuItemId=${menuItemId}`);
 };

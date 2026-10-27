@@ -858,7 +858,12 @@ const SearchWithSubCategorySuggestions = ({
   );
 };
 
-
+const cleanSlogan = (v) => (v ?? "").toString().trim();
+const withoutKey = (obj, key) => {
+  if (!obj || !(key in obj)) return obj;
+  const { [key]: _removed, ...rest } = obj;
+  return rest;
+};
 
 const getItemRate = (m) => {
   const p = Number(m?.itemPrice);
@@ -2768,18 +2773,18 @@ categoryMultiImageCatMap[norm.catName] = !!norm.multiImageCat;
           ? b.categoriesOrder
           : [...b.categoriesOrder, categoryName];
 
-       const updatedCategorySlogans = { ...(b.categorySlogans || {}) };
-if (!updatedCategorySlogans[categoryName]) {
-  const masterSlogan =
-    (selectedCategoryId !== 0 && selectedCategory !== "All"
+   const updatedCategorySlogans = { ...(b.categorySlogans || {}) };
+// Seed from master ONLY when the category is brand new in this function.
+// After that, whatever the user saved (even "") is the truth.
+if (!b.categoriesOrder.includes(categoryName)) {
+  const master = (masterCatsRef.current.list || []).find(
+    (m) => Number(m.id) === Number(categoryIdToUse),
+  );
+  const fromInfo =
+    Number(selectedCategoryInfo?.id) === Number(categoryIdToUse)
       ? selectedCategoryInfo?.menuSlogan
-      : "") ||
-    (masterCatsRef.current.list || []).find(
-      (m) => Number(m.id) === Number(categoryIdToUse),
-    )?.menuSlogan ||
-    menuItem.categorySlogan ||
-    "";
-  if (masterSlogan) updatedCategorySlogans[categoryName] = masterSlogan;
+      : "";
+  updatedCategorySlogans[categoryName] = cleanSlogan(master?.menuSlogan ?? fromInfo);
 }
 
         const updatedCategoryIds = { ...(b.categoryIds || {}) };

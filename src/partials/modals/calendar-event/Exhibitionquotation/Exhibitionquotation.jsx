@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Trash2,
   Lock,
@@ -610,6 +610,7 @@ function SectionHeader({ no, title, open, onToggle, right }) {
 }
 
 export default function ExhibitionQuotation() {
+  const navigate = useNavigate();
   const [baseline, setBaseline] = useState(null);
 const [justLoaded, setJustLoaded] = useState(false);
   // eventId comes from the route, e.g. /exhibition-quotation/:eventId
@@ -1386,7 +1387,10 @@ const handleToggleLock = async () => {
 
   
 
-  <button className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5">
+  <button
+    onClick={() => navigate(`/edit-event/${eventId}`)}
+    className="border border-slate-200 rounded-lg px-3 py-1.5 text-[13px] font-medium flex items-center gap-1.5 hover:bg-slate-50 transition-colors"
+  >
     <Pencil size={14} />
     Edit Event
   </button>
