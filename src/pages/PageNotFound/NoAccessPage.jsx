@@ -12,6 +12,7 @@ const NoAccessPage = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
   const isModule = state?.reason === "module";
+  console.log("403 reason:", useLocation().state?.reason);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen w-full text-center px-4">

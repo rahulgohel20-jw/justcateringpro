@@ -70,7 +70,8 @@ const AuthProvider = ({ children }) => {
 
 
 const refreshRights = async () => {
-  const userId = localStorage.getItem("mainId");
+  const token = localStorage.getItem("userToken") || useAuthStore.getState().token;
+  const userId = localStorage.getItem("mainId") || localStorage.getItem("userId");
   if (!userId) return;
 
   try {
@@ -83,7 +84,7 @@ const refreshRights = async () => {
 
       useAuthStore.getState().setAuth(
         user,
-        user.token,
+        user.token || token,
         normalizedRights,
         upgradedModules,
         roleReportRights,

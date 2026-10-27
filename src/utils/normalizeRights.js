@@ -3,18 +3,19 @@ export const normalizeRights = (modules = []) => {
 
   modules.forEach((module) => {
     (module.userRights || []).forEach((page) => {  
-      if (!page.pageName) return;                  
+      const pageKey = (page.pageName || page.pagename || "").trim();
+      if (!pageKey) return;                  
 
-      const existing = rightsMap[page.pageName];
+      const existing = rightsMap[pageKey];
       if (existing) {
-        rightsMap[page.pageName] = {
+        rightsMap[pageKey] = {
           view:   existing.view   || !!page.view,
           add:    existing.add    || !!page.add,
           edit:   existing.edit   || !!page.edit,
           delete: existing.delete || !!page.delete,
         };
       } else {
-        rightsMap[page.pageName] = {
+        rightsMap[pageKey] = {
           view:   !!page.view,
           add:    !!page.add,
           edit:   !!page.edit,

@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { normalizeRights } from "@/utils/normalizeRights";
 import { Alert } from "@/components";
 import { useAuthContext } from "@/auth";
+import { getLandingRoute } from "@/auth/landingRoute";
 import { message } from "antd";
 
 const Loginwithotp = () => {
@@ -101,7 +102,14 @@ const Loginwithotp = () => {
       localStorage.removeItem("otp_phone");
 
       message.success("Login successful!");
-      navigate("/super-dashboard", { replace: true });
+      if (roleId === 1) {
+        navigate("/super-dashboard", { replace: true });
+      } else if (clientId === 1) {
+        const destination = getLandingRoute(userDetails, normalizedRights);
+        navigate(destination, { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     } catch (error) {
       console.error("OTP verify error:", error);
       setAlertMsg(error.message || "Invalid OTP. Please try again.");
