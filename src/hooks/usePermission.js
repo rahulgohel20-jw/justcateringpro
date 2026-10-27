@@ -32,5 +32,12 @@ export const usePermission = (pageName) => {
     };
   }
 
-  return rights[pageName] || DEFAULT_RIGHTS;
+  if (!pageName) return DEFAULT_RIGHTS;
+  const clean = pageName.trim();
+  if (rights?.[clean]) return rights[clean];
+  const lower = clean.toLowerCase();
+  const matchedKey = Object.keys(rights || {}).find(
+    (k) => k.trim().toLowerCase() === lower
+  );
+  return matchedKey ? rights[matchedKey] : DEFAULT_RIGHTS;
 };

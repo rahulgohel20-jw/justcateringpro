@@ -11,14 +11,24 @@ const readAuthState = () => {
 export const useExpensePermission = () => {
   const { isSuperUser, allowedIds, allowedNames } = useMemo(() => {
     const state = readAuthState();
-    const roleId = Number(state?.roleReportRights?.roleId);
+    const roleId = Number(
+      state?.user?.userBasicDetails?.role?.id ?? state?.roleReportRights?.roleId
+    );
+    const clientId = Number(
+      state?.user?.clientId ?? state?.user?.userBasicDetails?.clientId
+    );
 
     const allowed = (state?.expenseRights ?? []).filter(
       (r) => r.isAllow === true,
     );
 
+    const hasSpecificExpenseRights = (state?.expenseRights ?? []).length > 0;
+
     return {
-      isSuperUser: roleId === 1 || roleId === 2,
+      isSuperUser:
+        roleId === 1 ||
+        roleId === 2 ||
+        (clientId === 1 && !hasSpecificExpenseRights),
       allowedIds: new Set(allowed.map((r) => Number(r.expenseId ?? r.id))),
       allowedNames: new Set(
         allowed.map((r) => String(r.expenseName ?? "").trim().toLowerCase()),

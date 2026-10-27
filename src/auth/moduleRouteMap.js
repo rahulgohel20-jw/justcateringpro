@@ -6,6 +6,7 @@ export const MODULE_ROUTES = {
     "/reciptManage", "/accoutbook", "/receivable", "/payable", "/super/payable",
     "/master/accountmaster", "/master/expensetype", "/super-admin/P&l", "/journal-voucher/add", "/account/expense"
   ],
+
   "Purchase Approve": [
     "/purchase-return-request", "/purchase/approval-request",
     "/purchase/approval-request-List", "purchase/approval-request/add"

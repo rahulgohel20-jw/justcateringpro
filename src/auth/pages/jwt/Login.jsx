@@ -8,6 +8,8 @@ import { useAuthContext } from "@/auth";
 import { useLayout } from "@/providers";
 import { Alert } from "@/components";
 import PlanExpire from "../../../partials/modals/planExpire/PlanExpire";
+import { getLandingRoute } from "@/auth/landingRoute";
+import { useAuthStore } from "@/store/useAuthStore";
 
 const loginSchema = Yup.object().shape({
   userCode: Yup.string()
@@ -56,9 +58,11 @@ const Login = () => {
         const plan      = userDetails?.plan ?? null;
         const isApprove = userDetails?.isApprove;
 
-        if (roleId === 1 || clientId === 1) {
+        if (roleId === 1) {
           navigate("/super-dashboard", { replace: true });
-
+        } else if (clientId === 1) {
+          const destination = getLandingRoute(userDetails, useAuthStore.getState().rights);
+          navigate(destination, { replace: true });
         } else if (roleId === 2) {
            const userPlan = userDetails?.plan ?? null;
 

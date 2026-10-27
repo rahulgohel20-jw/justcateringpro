@@ -9,6 +9,7 @@ import { verifyOtp, verifyMobileOtp } from "@/services/apiServices";
 import { message } from "antd";
 import { useAuthStore } from "@/store/useAuthStore";
 import { normalizeRights } from "@/utils/normalizeRights";
+import { getLandingRoute } from "@/auth/landingRoute";
 
 const TwoFactorAuth = () => {
   const { login } = useAuthContext();
@@ -111,8 +112,11 @@ const TwoFactorAuth = () => {
   const plan = userDetails.plan ?? null;
   const isApprove = userDetails.isApprove;
 
-  if (roleId === 1 || clientId === 1) {
+  if (roleId === 1) {
     navigate("/super-dashboard", { replace: true });
+  } else if (clientId === 1) {
+    const destination = getLandingRoute(userDetails, useAuthStore.getState().rights);
+    navigate(destination, { replace: true });
   } else if (roleId === 2) {
     const hasValidPlan =
       userPlan != null &&
