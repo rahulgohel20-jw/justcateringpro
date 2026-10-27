@@ -291,8 +291,19 @@ const permissionExhibitionSetup = usePermission("Exhibition Quotation");
 
 
 const formatEventDate = (date) => {
-  if (!date || typeof date.toLocaleDateString !== "function") return "N/A";
-  return date.toLocaleDateString("en-GB"); // DD/MM/YYYY
+  if (!date) return "N/A";
+  if (typeof date.toLocaleDateString === "function") {
+    return date.toLocaleDateString("en-GB"); // DD/MM/YYYY
+  }
+  if (typeof date === "string") {
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(date)) {
+      const [day, month, year] = date.split(" ")[0].split("/");
+      return `${day.padStart(2, "0")}/${month.padStart(2, "0")}/${year}`;
+    }
+    const d = new Date(date);
+    return isNaN(d.getTime()) ? String(date) : d.toLocaleDateString("en-GB");
+  }
+  return "N/A";
 };
 
   const handleOpenEventHistory = async () => {
@@ -544,15 +555,30 @@ const formatEventDate = (date) => {
               <h3 className="font-semibold text-base mb-2">
                 {eventDataAll?.mobile}
               </h3>
- <p className="text-gray-600">
-  <FormattedMessage
-    id="USER.DASHBOARD.DASHBOARD_CALENDAR_INQUIRY_DATE"
-    defaultMessage="Date"
-  />
-</p>
-<h3 className="font-semibold text-base mb-2">
-  {formatInquiryDate(eventDataAll?.inquiryDate)}
-</h3>
+              <p className="text-gray-600">
+                <FormattedMessage
+                  id="USER.DASHBOARD.DASHBOARD_CALENDAR_EVENT_VIEW_DETAILS_EVENT_DATE"
+                  defaultMessage="Event Date"
+                />
+              </p>
+              <h3 className="font-semibold text-base mb-2">
+                {formatEventDate(
+                  eventData?.event?.start ||
+                    eventData?.start ||
+                    eventDataAll?.start ||
+                    eventDataAll?.eventStartDateTime
+                )}
+              </h3>
+
+              <p className="text-gray-600">
+                <FormattedMessage
+                  id="USER.DASHBOARD.DASHBOARD_CALENDAR_INQUIRY_DATE"
+                  defaultMessage="Inquired Date"
+                />
+              </p>
+              <h3 className="font-semibold text-base mb-2">
+                {formatInquiryDate(eventDataAll?.inquiryDate)}
+              </h3>
 
               <p className="text-gray-600">
                 {eventDataAll?.banquetHallName ? (
