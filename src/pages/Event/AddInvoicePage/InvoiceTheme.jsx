@@ -280,8 +280,7 @@ const ConfigModal = ({
             isNotes: config.isNotes,
             showAddOnLabel: config.showAddOnLabel,
             isSignature: config.isSignature,
-            isShowCashAmount: config.isShowCashAmount,
-            isShowChequeAmount: config.isShowChequeAmount,
+          
           })
             .filter(([, v]) => v)
             .map(([k]) => k);
