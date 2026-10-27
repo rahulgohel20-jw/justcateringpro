@@ -328,7 +328,6 @@ const ConfigModal = ({
               is5Column: config.is5Column === 0,
               isContactNoVisible: config.isContactNoVisible === 0,
               isSignatureVisible: config.isSignatureVisible === 0,
-              isShowChequeAmount: config.isShowChequeAmount === 1,
               isShowPackageLabel: config.isShowPackageLabel === 0,
               isAddMenu: config.isAddMenu === 0,
               isAdvancePayment: config.isAdvancePayment === 0,
