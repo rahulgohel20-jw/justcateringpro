@@ -551,6 +551,7 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
         unitId: d.unitId ?? 0,  
         originalQty: d.qty || 0,
         closingStock: d.closingStock ?? null,
+         closingStockUnit: d.closingStockUnitName || d.unitName || "", 
         isAddInStock: d.isAddInStock ?? true,
       })),
     );
@@ -674,6 +675,8 @@ if (isBatchNoMode) {
       unit: d.unitName || "",
       unitId: d.unitId ?? 0,
       closingStock: d.closingStock ?? null,
+      
+      closingStockUnit: d.closingStockUnitName || d.unitName || "",  
       isAddInStock: d.isAddInStock ?? true,
       batchOptions,
       detailRows: rows,
@@ -685,16 +688,18 @@ if (isBatchNoMode) {
   // Batch OFF → use details
   const rawList = Array.isArray(data) ? data : data.details || [];
 
-  mapped = rawList.map((detail) => ({
-    rawMaterialId: detail.rawMaterialId || detail.materialId || 0,
-    item_name: detail.rawMaterialName || detail.materialName || "",
-    qty: detail.qty ?? "",
-    unit: detail.unitName || detail.unit?.nameEnglish || "",
-     unitId: detail.unitId ?? detail.unit?.id ?? 0,
-    originalQty: detail.qty ?? 0,
-    closingStock: detail.closingStock ?? null,
-    isAddInStock: detail.isAddInStock ?? true,
-  }));
+ mapped = rawList.map((detail) => ({
+  rawMaterialId: detail.rawMaterialId || detail.materialId || 0,
+  item_name: detail.rawMaterialName || detail.materialName || "",
+  qty: detail.qty ?? "",
+  unit: detail.unitName || detail.unit?.nameEnglish || "",
+  unitId: detail.unitId ?? detail.unit?.id ?? 0,
+  originalQty: detail.qty ?? 0,
+  closingStock: detail.closingStock ?? null,
+  closingStockUnit:
+    detail.closingStockUnitName || detail.unitName || detail.unit?.nameEnglish || "",   // ← add
+  isAddInStock: detail.isAddInStock ?? true,
+}));
 }
 
 setItems(mapped);
@@ -795,16 +800,18 @@ if (isBatchNoMode) {
   // Batch OFF → use details
   const rawList = Array.isArray(data) ? data : data.details || [];
 
-  mapped = rawList.map((detail) => ({
-    rawMaterialId: detail.rawMaterialId || detail.materialId || 0,
-    item_name: detail.rawMaterialName || detail.materialName || "",
-    qty: detail.qty ?? "",
-    unit: detail.unitName || detail.unit?.nameEnglish || "",
-     unitId: detail.unitId ?? detail.unit?.id ?? 0,
-    originalQty: detail.qty ?? 0,
-    closingStock: detail.closingStock ?? null,
-    isAddInStock: detail.isAddInStock ?? true,
-  }));
+ mapped = rawList.map((detail) => ({
+  rawMaterialId: detail.rawMaterialId || detail.materialId || 0,
+  item_name: detail.rawMaterialName || detail.materialName || "",
+  qty: detail.qty ?? "",
+  unit: detail.unitName || detail.unit?.nameEnglish || "",
+  unitId: detail.unitId ?? detail.unit?.id ?? 0,
+  originalQty: detail.qty ?? 0,
+  closingStock: detail.closingStock ?? detail.qty ?? null,   
+  closingStockUnit:
+    detail.closingStockUnitName || detail.unitName || detail.unit?.nameEnglish || "",  
+  isAddInStock: detail.isAddInStock ?? true,
+}));
 }
 
 setItems(mapped);

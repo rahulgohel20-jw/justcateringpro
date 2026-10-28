@@ -534,6 +534,28 @@ const handleToggleDiscountMode = () => {
     (incl. ₹{Number(extraTaxTotal).toFixed(2)} Food/Service/VAT Tax)
   </div>
 )}
+{/* ── NEW: Grand Total / Advance / Remaining ── */}
+{/* Grand Total / Advance / Remaining (inline) */}
+<div className="mt-3 pt-3 border-t flex flex-wrap justify-end gap-x-4 gap-y-1 text-sm font-medium">
+  <span className="text-gray-600">
+    Grand Total:{" "}
+    <span className="text-gray-900 font-bold">
+      ₹{Number(grandTotal).toFixed(2)}
+    </span>
+  </span>
+  <span className="text-gray-600">
+    Total Advance:{" "}
+    <span className="text-green-600 font-bold">
+      ₹{Number(totalAdvance).toFixed(2)}
+    </span>
+  </span>
+  <span className="text-gray-600">
+    Remaining Amount:{" "}
+    <span className="text-red-600 font-bold">
+      ₹{Number(remainingAmount).toFixed(2)}
+    </span>
+  </span>
+</div>
           </div>
         </div>
       </div>
