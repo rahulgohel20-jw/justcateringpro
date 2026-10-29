@@ -170,7 +170,8 @@ const captainFinalOutputTotal = captainTableData.reduce(
   0,
 );    
 
-
+const combinedFinalOutputTotal =
+  rawFinalOutputTotal + (canAccesscaptainRecipe ? captainFinalOutputTotal : 0);
   const [captainUnitOptions, setCaptainUnitOptions] = useState([]);
   const [englishInstruction, setEnglishInstruction] = useState("");
   // add these two states
@@ -1888,7 +1889,7 @@ const handleTranslateKitchenInstruction = async (value) => {
 />
 {canAccessPreparation && (
   <div className="flex justify-end mt-2 text-base font-medium text-[#6A7C94]">
-    Total Final Output (100 Pax) :
+     Final Output (100 Pax) :
     <span className="text-primary ml-2">
       {rawFinalOutputTotal.toFixed(2)}
     </span>
@@ -2127,7 +2128,7 @@ const handleTranslateKitchenInstruction = async (value) => {
 />
 {canAccessPreparation && (
   <div className="flex justify-end mt-2 text-base font-medium text-[#6A7C94]">
-    Total Final Output (100 Pax) :
+     Final Output (100 Pax) :
     <span className="text-primary ml-2">
       {captainFinalOutputTotal.toFixed(2)}
     </span>
@@ -2135,17 +2136,27 @@ const handleTranslateKitchenInstruction = async (value) => {
 )}
       </div> 
 )}
-      <div className="flex justify-between mt-4 text-lg font-medium text-[#6A7C94]">
-        <p>
-          Dish Costing :
-          <span className="text-primary ml-2">{dishCosting.toFixed(2)}</span>
-        </p>
-        <p>
-          Total Rate :
-          <span className="text-primary ml-2">{totalRate.toFixed(2)}</span>
-        </p>
-      </div>
+   <div className="flex justify-between items-start mt-4 text-lg font-medium text-[#6A7C94]">
+  <p>
+    Dish Costing :
+    <span className="text-primary ml-2">{dishCosting.toFixed(2)}</span>
+  </p>
 
+  <div className="text-right leading-tight">
+    <p>
+      Total Rate :
+      <span className="text-primary ml-2">{totalRate.toFixed(2)}</span>
+    </p>
+    {canAccessPreparation && (
+      <p>
+        Total Final Output (100 Pax) :
+        <span className="text-primary ml-2">
+          {combinedFinalOutputTotal.toFixed(2)}
+        </span>
+      </p>
+    )}
+  </div>
+</div>
       <div className="flex justify-between gap-4 pt-4">
         <Button
           type="default"
