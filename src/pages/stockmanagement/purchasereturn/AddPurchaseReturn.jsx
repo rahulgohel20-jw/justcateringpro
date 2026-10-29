@@ -158,6 +158,7 @@ useEffect(() => {
     remainingQty: detail.remainingQty ?? 0,
     maxQty: (detail.remainingQty ?? 0) + (detail.returnedQty ?? 0),
     unit: detail.unitName || "",
+    unitId: detail.unitId ?? "",
     price_per_unit: detail.price ?? 0,
     batchNo: detail.batchNo ?? null,
     expiryDate: detail.expiryDate || "",
@@ -214,6 +215,7 @@ isBatchWise:
             remainingQty: detail.remainingQty ?? 0,
             maxQty: detail.remainingQty ?? 0,
             unit: detail.unitName || "",
+            unitId: detail.unitId ?? "",
             price_per_unit: detail.price ?? 0,
             total_price: (1 * (detail.price ?? 0)).toFixed(2),
             expiryDate: detail.expiryDate || "",
@@ -231,6 +233,7 @@ setItems((prev) =>
     ...it,
     expiryDate: it.expiryDate || poMap[it.rawMaterialId]?.expiryDate || "",
     batchNo: it.batchNo || poMap[it.rawMaterialId]?.batchNo || null,
+    unitId: it.unitId || poMap[it.rawMaterialId]?.unitId || "",
   })),
 );
         }
@@ -411,6 +414,7 @@ isBatchWise:
         remainingQty: detail.remainingQty ?? 0,
         maxQty: detail.remainingQty ?? 0,
         unit: detail.unitName || "",
+        unitId: detail.unitId ?? "",
         price_per_unit: detail.price ?? 0,
         expiryDate: detail.expiryDate || "",
         batchNo: detail.batchNo ?? null,
@@ -449,6 +453,7 @@ isBatchWise:
         remainingQty: sel.remainingQty,
         maxQty: sel.maxQty,
         unit: sel.unit,
+        unitId: sel.unitId ?? "",
        price_per_unit: sel.price_per_unit,
 batchNo: sel.batchNo ?? null,
 expiryDate: sel.expiryDate || "",
@@ -548,6 +553,7 @@ total_price: (sel.remainingQty * sel.price_per_unit).toFixed(2),
    try {
 const details = items.map((item) => ({
   rawMaterialId: item.rawMaterialId || 0,
+  unitId: Number(item.unitId) || 0,
   batchNo: form.isBatchWise ? item.batchNo || null : null,
   hsccode: item.hsc_sac || "",
   cgst: Number(item.cgst) || 0,
