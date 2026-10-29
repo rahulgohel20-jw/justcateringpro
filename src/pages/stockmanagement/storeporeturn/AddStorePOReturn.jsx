@@ -114,6 +114,7 @@ const AddStorePOReturn = () => {
     date: null,
     poId: "",
     stock_type_id: "",
+     kitchen_type_id: "",
     party_id: "",
     party_name: "",
     event_id: "",
@@ -213,6 +214,7 @@ const AddStorePOReturn = () => {
     remainingQty: detail.remainingQty ?? 0,
     maxQty:  (detail.returnedQty ?? 0),
     unit: detail.unitName || "",
+    unitId: detail.unitId ?? 0,
     price_per_unit: detail.price ?? 0,
     total_price: ((detail.returnedQty ?? 0) * (detail.price ?? 0)).toFixed(2),
   });
@@ -240,6 +242,7 @@ const AddStorePOReturn = () => {
           : null,
         poId: data.storeIssueId || "",
         stock_type_id: data.stockTypeId || "",
+        kitchen_type_id: data.kitchenTypeId || "",
         party_id: data.partyId || "",
         party_name: data.partyName || "",
         event_id: data.eventId || "",
@@ -293,6 +296,7 @@ const AddStorePOReturn = () => {
           remainingQty: detail.remainingQty ?? 0,
           maxQty:  (detail.returnedQty ?? 0),
           unit: detail.unitName || "",
+          unitId: detail.unitId ?? 0,
           price_per_unit: 0,
           total_price: "0.00",
           isBatchWise: isBatch,
@@ -323,6 +327,7 @@ const AddStorePOReturn = () => {
             remainingQty: detail.remainingQty ?? 0,
             maxQty:  (detail.returnedQty ?? 0),
             unit: detail.unitName || "",
+            unitId: detail.unitId ?? 0,
             price_per_unit: 0,
             total_price: "0.00",
             isBatchWise: !!poData.isBatchWise,
@@ -395,6 +400,7 @@ const AddStorePOReturn = () => {
         voucher_no: data.pocode || pocode,
         poId: data.id,
         stock_type_id: data.stockTypeId || "",
+        kitchen_type_id: data.kitchenTypeId || "",
         party_id: data.partyId || "",
         party_name: data.partyName || "",
         event_id: data.eventId || "",
@@ -415,6 +421,7 @@ const AddStorePOReturn = () => {
         remainingQty: detail.remainingQty ?? 0,
         maxQty: detail.remainingQty ?? 0,
         unit: detail.unitName || "",
+         unitId: detail.unitId ?? 0,
         price_per_unit: detail.price ?? 0,
         total_price: ((detail.remainingQty ?? 0) * (detail.price ?? 0)).toFixed(
           2,
@@ -532,6 +539,7 @@ const AddStorePOReturn = () => {
  availableQty: Number(src.availableQty ?? src.qty) || 0,
   maxQty: Number(src.availableQty ?? src.qty) || 0,
               unit: src.unitName || it.unit || "",
+               unitId: src.unitId ?? it.unitId ?? 0,
             };
           });
         const next = [...rows, ...newRows];
@@ -628,49 +636,58 @@ const AddStorePOReturn = () => {
         total: Number(item.total_price) || 0,
       }));
 
-      const batchPayload = {
-        id: isEdit ? Number(editData.id) : 0,
-        storeIssueId: form.poId,
-        stockTypeId: Number(form.stock_type_id) || null,
-        voucher: form.voucher_no || "",
-        invoicetype: "",
-        partyId: form.party_id || null,
-        eventId: form.event_id || null,
-        remarks: form.remark || "",
-        returndate: formatDate(form.date),
-        userId: Number(userId),
-        details: items
-          .filter((item) => Boolean(item.isBatchWise) || isBatchWisePO(item))
-          .map((item) => ({
-            rawMaterialId: item.rawMaterialId || 0,
-            qty: Number(item.qty) || 0,
-            batchList: (item.detailRows || [])
-              .filter((row) => row.batchNo && Number(row.qty || 0) > 0)
-              .map((row) => ({
-                batchNo: row.batchNo,
-                qty: Number(row.qty || 0),
-              })),
-          }))
-          .filter((item) => item.batchList.length > 0),
-      };
-
-      const payload = {
-        id: isEdit ? Number(editData.id) : -1,
-        storeIssueId: form.poId,
-        stockTypeId: Number(form.stock_type_id) || null,
-        voucher: form.voucher_no || "",
-        invoicetype: "",
-        partyId: form.party_id || null,
-        eventId: form.event_id || null,
-        remarks: form.remark || "",
-        returndate: formatDate(form.date),
-        userId: Number(userId),
-        details: items.map((item) => ({
-          rawMaterialId: item.rawMaterialId || 0,
-          qty: Number(item.qty) || 0,
+     const batchPayload = {
+  id: isEdit ? Number(editData.id) : 0,
+  storeIssueId: form.poId,
+  stockTypeId: Number(form.stock_type_id) || null,
+  kitchenTypeId: Number(form.kitchen_type_id) || null,   // add if the batch API also takes it
+  voucher: form.voucher_no || "",
+  invoicetype: "",
+  partyId: form.party_id || null,
+  eventId: form.event_id || null,
+  remarks: form.remark || "",
+  returndate: formatDate(form.date),
+  userId: Number(userId),
+  details: items
+    .filter((item) => Boolean(item.isBatchWise) || isBatchWisePO(item))
+    .map((item) => ({
+      rawMaterialId: item.rawMaterialId || 0,
+      qty: Number(item.qty) || 0,
+      unitId: Number(item.unitId) || 0,
+      batchList: (item.detailRows || [])
+        .filter((row) => row.batchNo && Number(row.qty || 0) > 0)
+        .map((row) => ({
+          batchNo: row.batchNo,
+          qty: Number(row.qty || 0),
+          unitId: Number(row.unitId ?? item.unitId) || 0,
         })),
-      };
+    }))
+    .filter((item) => item.batchList.length > 0),
+};
 
+   const payload = {
+  id: isEdit ? Number(editData.id) : 0,
+  storeIssueId: form.poId,
+  stockTypeId: Number(form.stock_type_id) || null,
+  kitchenTypeId: Number(form.kitchen_type_id) || null,
+  voucher: form.voucher_no || "",
+  invoicetype: "",
+  partyId: form.party_id || null,
+  eventId: form.event_id || null,
+  remarks: form.remark || "",
+  returndate: formatDate(form.date),
+  userId: Number(userId),
+  details: items.map((item) => {
+    const src = availableItems.find((a) => a.rawMaterialId === item.rawMaterialId);
+    return {
+      rawMaterialId: item.rawMaterialId || 0,
+      unitId: Number(item.unitId ?? src?.unitId) || 0,
+      qty: Number(item.qty) || 0,
+    };
+  }),
+};
+console.log("items before save:", items.map((i) => ({ id: i.rawMaterialId, unitId: i.unitId })));
+console.log("payload:", payload);
       const response = shouldUseBatchSave
         ? await addOrUpdateBatchWisestoreissue(batchPayload)
         : await AddStoreIssueReturn(payload);
