@@ -502,6 +502,7 @@ const [mainUrl, setMainUrl] = useState(null);
 const [shortMenuUrl, setShortMenuUrl] = useState(null);
 const addShortMenu =
   visibleOptions.includes("isAddShortMenu") && !!options.isAddShortMenu;
+  const showFontColors = exclusive === true && mappingType === "Type 26";
 const [headingFontColor, setHeadingFontColor] = useState(null);
 const [descriptionFontColor, setDescriptionFontColor] = useState(null);
 const [contentFontColor, setContentFontColor] = useState(null);
@@ -1360,7 +1361,7 @@ const handleMenuCategoryChange = (ids) => {
     catFontSize: catFontSize || -1,
     itemFontSize: itemFontSize || -1,
     sloganFontSize: sloganFontSize || -1,
-   ...(exclusive === true && {
+  ...(showFontColors && {
   ...(headingFontColor && { headingFontColor }),
   ...(descriptionFontColor && { descriptionFontColor }),
   ...(contentFontColor && { contentFontColor }),
@@ -1726,6 +1727,7 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
 
            
 {(exclusive === true || moduleType === "Decoration Theme") && (
+
   <div className="grid grid-cols-3 gap-4">
     <div>
       <label className="block font-medium mb-2 text-gray-700">
@@ -1830,7 +1832,7 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
   </div>
   
 )}          
-{exclusive === true && (
+{exclusive === true && showFontColors && (
   <div className="grid grid-cols-3 gap-4">
     <div>
       <label className="block font-medium mb-2 text-gray-700">Heading Color</label>
