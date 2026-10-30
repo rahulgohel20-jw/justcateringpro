@@ -441,19 +441,25 @@ const CrockeryCutleryReportModal = ({
       return;
     }
 
-    const formData = new FormData();
-    Object.entries(payload).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        // ✅ Sends as eventFunctionIds[]=1&eventFunctionIds[]=2&...
-        value.forEach((v) => formData.append(`${key}[]`, v));
-      } else {
-        formData.append(
-          key,
-          value === true ? "1" : value === false ? "0" : value,
-        );
-      }
-    });
-    setLoading(true);
+  const formData = new FormData();
+Object.entries(payload).forEach(([key, value]) => {
+  if (Array.isArray(value)) {
+    // ✅ Sends as eventFunctionIds[]=1&eventFunctionIds[]=2&...
+    value.forEach((v) => formData.append(`${key}[]`, v));
+  } else {
+    formData.append(
+      key,
+      value === true ? "1" : value === false ? "0" : value,
+    );
+  }
+});
+
+// ➕ Font colors
+formData.append("headingFontColor", "rgba(0,0,0,1)");
+formData.append("descriptionFontColor", "rgba(0,0,0,1)");
+formData.append("contentFontColor", "rgba(0,0,0,1)");
+
+setLoading(true);
     try {
       const { data } = await AddExclusiveReport(formData);
       if (data?.success && data?.report_path) {

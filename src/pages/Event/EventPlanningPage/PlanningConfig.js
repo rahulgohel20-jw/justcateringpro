@@ -388,6 +388,7 @@ const isPackage = prepMeta.isPackage || false;
   return { 
     catName, catNameHindi, catNameGujarati, 
     catId, notes, slogan, images, space, subCat,catHeading, items, 
+    anyItem,     
     multiImageMenuItemIds,
     multiImageCat, 
     multiImageOrder, 
@@ -414,7 +415,7 @@ const isPackage = prepMeta.isPackage || false;
       categoriesOrder, categories, categoryNotes, categorySlogans,
   categoryRenames, primaryItems, itemRenames,
       categorySubTexts, categoryHeadings, categoryImages, categorySpaces,categoryMultiImageIds,categoryMultiImageCat,categoryMultiImageOrder,     
-      addonState, packageApplied, packageInfo, packageItems,categoryIds,
+      addonState, packageApplied, packageInfo, packageItems,categoryIds, categoryLimits,  
       permissionRawMaterials,
       userId, 
     } = state;
@@ -538,6 +539,7 @@ const multiImageMenuItems = (() => {
         menuNotesGujarati:        noteObj.gujarati || "",
         menuSlogan:               slogan,
         menuSortOrder:            catIndex,
+        anyItem:                  isPackageApplied ? Number(categoryLimits?.[catName] || 0) : 0,   
         startTime:                "",
         isMenuCatAddons:          !!addonState?.[catName]?.cat,
         categoryStatus:           allItems[0]?.categoryStatus || "NORMAL",

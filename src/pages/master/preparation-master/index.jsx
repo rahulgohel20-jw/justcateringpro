@@ -17,7 +17,7 @@ const PreparationMaster = () => {
      const { hasModuleAccess } = useModuleAccess();
     const canAccesspreparation = hasModuleAccess("Preparation Master");
 
-  const permissions = usePermission("Preparation");
+  const permissions = usePermission("Preparation Master");
   const [tableData, setTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);

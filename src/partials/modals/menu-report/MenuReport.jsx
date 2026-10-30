@@ -24,12 +24,19 @@ import "@react-pdf-viewer/core/lib/styles/index.css";
 import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import "react-datepicker/dist/react-datepicker.css";
-import { Select } from "antd";
+import { Select, ColorPicker } from "antd";
 import { TeamOutlined, AppstoreOutlined } from "@ant-design/icons";
 import { useModuleAccess } from "../../../hooks/useModuleAccess";  
 import { WhatsAppPdf } from "../../../services/apiServices";
 import dayjs from "dayjs";
 
+const DEFAULT_FONT_COLOR = "rgba(0,0,0,1)";
+const normalizeColor = (c) => (c && String(c).trim() ? c : DEFAULT_FONT_COLOR);
+
+const toRgbaString = (color) => {
+  const { r, g, b, a } = color.toRgb();
+  return `rgba(${r},${g},${b},${a})`;
+};
 
 const normalizeMobile = (v) => String(v || "").replace(/\D/g, "").slice(-10);
 
@@ -431,7 +438,10 @@ const MenuReport = ({
    functionName,        
   functionDateTime,   
   venueName, 
-  partyMobile,      
+  partyMobile,
+    headingFontColors,
+  descriptionFontColors,
+  contentFontColors,      
 }) => {
   const pdfPlugin = defaultLayoutPlugin();
   const userId = localStorage.getItem("userId");
@@ -492,8 +502,10 @@ const [mainUrl, setMainUrl] = useState(null);
 const [shortMenuUrl, setShortMenuUrl] = useState(null);
 const addShortMenu =
   visibleOptions.includes("isAddShortMenu") && !!options.isAddShortMenu;
-
-
+  const showFontColors = exclusive === true && mappingType === "Type 26";
+const [headingFontColor, setHeadingFontColor] = useState(null);
+const [descriptionFontColor, setDescriptionFontColor] = useState(null);
+const [contentFontColor, setContentFontColor] = useState(null);
 
 const langConfig = getLangConfig();
 const languageOptions = [
@@ -546,8 +558,11 @@ const languageOptions = [
     setcatFontSize(catFontSizes != null && catFontSizes !== -1 ? Number(catFontSizes) : -1);
     setItemFontSize(itemFontSizes != null && itemFontSizes !== -1 ? Number(itemFontSizes) : -1);
     setSloganFontSize(sloganFontSizes != null && sloganFontSizes !== -1 ? Number(sloganFontSizes) : -1);
+      setHeadingFontColor(headingFontColors || null);
+setDescriptionFontColor(descriptionFontColors || null);
+setContentFontColor(contentFontColors || null);
   }
-}, [isModalOpen, catFontIds, catFontSizes, itemFontIds, itemFontSizes, sloganFontIds, sloganFontSizes]);
+}, [isModalOpen, catFontIds, catFontSizes, itemFontIds, itemFontSizes, sloganFontIds, sloganFontSizes ,   headingFontColors, descriptionFontColors, contentFontColors]);
 
   useEffect(() => {
     fetchFonts();
@@ -1339,12 +1354,18 @@ const handleMenuCategoryChange = (ids) => {
   };
 })(),
     ...(showStatusDropdown && { eventStatus: selectedStatus }),
-    catFontId: catFontId || -1,
+    
+      catFontId: catFontId || -1,
     itemFontId: itemFontId || -1,
     sloganFontId: sloganFontId || -1,
     catFontSize: catFontSize || -1,
     itemFontSize: itemFontSize || -1,
     sloganFontSize: sloganFontSize || -1,
+  ...(showFontColors && {
+  ...(headingFontColor && { headingFontColor }),
+  ...(descriptionFontColor && { descriptionFontColor }),
+  ...(contentFontColor && { contentFontColor }),
+}),
     leadAssignId: 0,
     priority: "",
     sourceId: 0,
@@ -1706,6 +1727,7 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
 
            
 {(exclusive === true || moduleType === "Decoration Theme") && (
+
   <div className="grid grid-cols-3 gap-4">
     <div>
       <label className="block font-medium mb-2 text-gray-700">
@@ -1808,8 +1830,42 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
       />
     </div>
   </div>
+  
 )}          
-
+{exclusive === true && showFontColors && (
+  <div className="grid grid-cols-3 gap-4">
+    <div>
+      <label className="block font-medium mb-2 text-gray-700">Heading Color</label>
+      <ColorPicker
+        value={headingFontColor ?? DEFAULT_FONT_COLOR}
+        onChange={(c) => setHeadingFontColor(toRgbaString(c))}
+        showText
+        allowClear={false}
+        getPopupContainer={() => document.body}
+      />
+    </div>
+    <div>
+      <label className="block font-medium mb-2 text-gray-700">Description Color</label>
+      <ColorPicker
+        value={descriptionFontColor ?? DEFAULT_FONT_COLOR}
+        onChange={(c) => setDescriptionFontColor(toRgbaString(c))}
+        showText
+        allowClear={false}
+        getPopupContainer={() => document.body}
+      />
+    </div>
+    <div>
+      <label className="block font-medium mb-2 text-gray-700">Content Color</label>
+      <ColorPicker
+        value={contentFontColor ?? DEFAULT_FONT_COLOR}
+        onChange={(c) => setContentFontColor(toRgbaString(c))}
+        showText
+        allowClear={false}
+        getPopupContainer={() => document.body}
+      />
+    </div>
+  </div>
+)}
              {!isAdminModuleReport && (isDateStatus === 1 ) && (
   <div className="p-5 rounded-xl border-2">
     <div className="grid grid-cols-2 gap-4">

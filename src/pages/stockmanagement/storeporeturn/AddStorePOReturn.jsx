@@ -79,9 +79,45 @@ const getEventType = (status, isEdit) => {
   return status === "SAVE_SUCCESS" ? `${prefix}_Success` : `${prefix}_Error`;
 };
 
-const sumRowsQty = (rows = []) => {
-  const total = rows.reduce((s, r) => s + (parseFloat(r.qty) || 0), 0);
-  return total > 0 ? String(Number(total.toFixed(3))) : "";
+// factor = how many base units (gram / ml) in 1 of this unit
+const UNIT_TABLE = {
+  mg: { group: "w", f: 0.001 },
+  milligram: { group: "w", f: 0.001 },
+  g: { group: "w", f: 1 },
+  gm: { group: "w", f: 1 },
+  gram: { group: "w", f: 1 },
+  grams: { group: "w", f: 1 },
+  kg: { group: "w", f: 1000 },
+  kilo: { group: "w", f: 1000 },
+  kilogram: { group: "w", f: 1000 },
+  quintal: { group: "w", f: 100000 },
+  ton: { group: "w", f: 1000000 },
+  tonne: { group: "w", f: 1000000 },
+
+  ml: { group: "v", f: 1 },
+  millilitre: { group: "v", f: 1 },
+  l: { group: "v", f: 1000 },
+  ltr: { group: "v", f: 1000 },
+  litre: { group: "v", f: 1000 },
+  liter: { group: "v", f: 1000 },
+};
+
+const normUnit = (u) => UNIT_TABLE[String(u || "").trim().toLowerCase()];
+
+// same unit, missing unit, or incompatible units -> qty unchanged
+const convertQty = (qty, fromUnit, toUnit) => {
+  const from = normUnit(fromUnit);
+  const to = normUnit(toUnit);
+  if (!from || !to || from.group !== to.group) return qty;
+  return (qty * from.f) / to.f;
+};
+
+const sumRowsQty = (rows = [], parentUnit = "") => {
+  const total = rows.reduce(
+    (s, r) => s + convertQty(parseFloat(r.qty) || 0, r.unit, parentUnit),
+    0,
+  );
+  return total > 0 ? String(Number(total.toFixed(6))) : "";
 };
 
 const buildNewItem = (sel) =>
@@ -114,6 +150,7 @@ const AddStorePOReturn = () => {
     date: null,
     poId: "",
     stock_type_id: "",
+     kitchen_type_id: "",
     party_id: "",
     party_name: "",
     event_id: "",
@@ -213,6 +250,7 @@ const AddStorePOReturn = () => {
     remainingQty: detail.remainingQty ?? 0,
     maxQty:  (detail.returnedQty ?? 0),
     unit: detail.unitName || "",
+    unitId: detail.unitId ?? 0,
     price_per_unit: detail.price ?? 0,
     total_price: ((detail.returnedQty ?? 0) * (detail.price ?? 0)).toFixed(2),
   });
@@ -240,6 +278,7 @@ const AddStorePOReturn = () => {
           : null,
         poId: data.storeIssueId || "",
         stock_type_id: data.stockTypeId || "",
+        kitchen_type_id: data.kitchenTypeId || "",
         party_id: data.partyId || "",
         party_name: data.partyName || "",
         event_id: data.eventId || "",
@@ -257,13 +296,15 @@ const AddStorePOReturn = () => {
         if (isBatch) {
           const withReturn = batchList.filter((b) => Number(b.returnedQty) > 0);
           if (withReturn.length > 0) {
-            detailRows = withReturn.map((b) => ({
-              batchNo: b.batchNo || "",
-              date: b.expiryDate || "",
-              qty: String(b.returnedQty),
-                 availableQty: Number(b.availableQty ?? 0), 
-              maxQty: Number(b.returnedQty || 0),
-            }));
+        detailRows = withReturn.map((b) => ({
+  batchNo: b.batchNo || "",
+  date: b.expiryDate || "",
+  qty: String(b.returnedQty),
+  availableQty: Number(b.availableQty ?? 0),
+  maxQty: Number(b.returnedQty || 0),
+  unit: b.unitName || detail.unitName || "",
+  unitId: b.unitId ?? detail.unitId ?? 0,
+}));
           } else if (batchList.length === 1 && Number(detail.returnedQty) > 0) {
             // only one batch, so the whole returned qty belongs to it
             const b = batchList[0];
@@ -288,11 +329,12 @@ const AddStorePOReturn = () => {
           sgst: 0,
           igst: 0,
           totalqty: detail.qty ?? 0,
-          qty: isBatch ? sumRowsQty(detailRows) : (detail.returnedQty ?? 0),
+qty: isBatch ? sumRowsQty(detailRows, detail.unitName || "") : (detail.returnedQty ?? 0),
           returnedQty: detail.returnedQty ?? 0,
           remainingQty: detail.remainingQty ?? 0,
           maxQty:  (detail.returnedQty ?? 0),
           unit: detail.unitName || "",
+          unitId: detail.unitId ?? 0,
           price_per_unit: 0,
           total_price: "0.00",
           isBatchWise: isBatch,
@@ -323,6 +365,7 @@ const AddStorePOReturn = () => {
             remainingQty: detail.remainingQty ?? 0,
             maxQty:  (detail.returnedQty ?? 0),
             unit: detail.unitName || "",
+            unitId: detail.unitId ?? 0,
             price_per_unit: 0,
             total_price: "0.00",
             isBatchWise: !!poData.isBatchWise,
@@ -395,6 +438,7 @@ const AddStorePOReturn = () => {
         voucher_no: data.pocode || pocode,
         poId: data.id,
         stock_type_id: data.stockTypeId || "",
+        kitchen_type_id: data.kitchenTypeId || "",
         party_id: data.partyId || "",
         party_name: data.partyName || "",
         event_id: data.eventId || "",
@@ -415,6 +459,7 @@ const AddStorePOReturn = () => {
         remainingQty: detail.remainingQty ?? 0,
         maxQty: detail.remainingQty ?? 0,
         unit: detail.unitName || "",
+         unitId: detail.unitId ?? 0,
         price_per_unit: detail.price ?? 0,
         total_price: ((detail.remainingQty ?? 0) * (detail.price ?? 0)).toFixed(
           2,
@@ -532,10 +577,11 @@ const AddStorePOReturn = () => {
  availableQty: Number(src.availableQty ?? src.qty) || 0,
   maxQty: Number(src.availableQty ?? src.qty) || 0,
               unit: src.unitName || it.unit || "",
+               unitId: src.unitId ?? it.unitId ?? 0,
             };
           });
         const next = [...rows, ...newRows];
-        return { ...it, detailRows: next, qty: sumRowsQty(next) };
+        return { ...it, detailRows: next, qty: sumRowsQty(next, it.unit) }; 
       }),
     );
     setBatchAddSelection((p) => ({ ...p, [index]: [] }));
@@ -550,7 +596,7 @@ const AddStorePOReturn = () => {
         const rows = it.detailRows.map((r, idx) =>
           idx === rowIdx ? { ...r, qty: value } : r,
         );
-        return { ...it, detailRows: rows, qty: sumRowsQty(rows) };
+return { ...it, detailRows: rows, qty: sumRowsQty(rows, it.unit) };
       }),
     );
   };
@@ -560,7 +606,7 @@ const AddStorePOReturn = () => {
       prev.map((it, i) => {
         if (i !== itemIdx) return it;
         const rows = it.detailRows.filter((_, idx) => idx !== rowIdx);
-        return { ...it, detailRows: rows, qty: sumRowsQty(rows) };
+return { ...it, detailRows: rows, qty: sumRowsQty(rows, it.unit) };
       }),
     );
   };
@@ -628,49 +674,58 @@ const AddStorePOReturn = () => {
         total: Number(item.total_price) || 0,
       }));
 
-      const batchPayload = {
-        id: isEdit ? Number(editData.id) : 0,
-        storeIssueId: form.poId,
-        stockTypeId: Number(form.stock_type_id) || null,
-        voucher: form.voucher_no || "",
-        invoicetype: "",
-        partyId: form.party_id || null,
-        eventId: form.event_id || null,
-        remarks: form.remark || "",
-        returndate: formatDate(form.date),
-        userId: Number(userId),
-        details: items
-          .filter((item) => Boolean(item.isBatchWise) || isBatchWisePO(item))
-          .map((item) => ({
-            rawMaterialId: item.rawMaterialId || 0,
-            qty: Number(item.qty) || 0,
-            batchList: (item.detailRows || [])
-              .filter((row) => row.batchNo && Number(row.qty || 0) > 0)
-              .map((row) => ({
-                batchNo: row.batchNo,
-                qty: Number(row.qty || 0),
-              })),
-          }))
-          .filter((item) => item.batchList.length > 0),
-      };
-
-      const payload = {
-        id: isEdit ? Number(editData.id) : -1,
-        storeIssueId: form.poId,
-        stockTypeId: Number(form.stock_type_id) || null,
-        voucher: form.voucher_no || "",
-        invoicetype: "",
-        partyId: form.party_id || null,
-        eventId: form.event_id || null,
-        remarks: form.remark || "",
-        returndate: formatDate(form.date),
-        userId: Number(userId),
-        details: items.map((item) => ({
-          rawMaterialId: item.rawMaterialId || 0,
-          qty: Number(item.qty) || 0,
+     const batchPayload = {
+  id: isEdit ? Number(editData.id) : 0,
+  storeIssueId: form.poId,
+  stockTypeId: Number(form.stock_type_id) || null,
+  kitchenTypeId: Number(form.kitchen_type_id) || null,   // add if the batch API also takes it
+  voucher: form.voucher_no || "",
+  invoicetype: "",
+  partyId: form.party_id || null,
+  eventId: form.event_id || null,
+  remarks: form.remark || "",
+  returndate: formatDate(form.date),
+  userId: Number(userId),
+  details: items
+    .filter((item) => Boolean(item.isBatchWise) || isBatchWisePO(item))
+    .map((item) => ({
+      rawMaterialId: item.rawMaterialId || 0,
+      qty: Number(item.qty) || 0,
+      unitId: Number(item.unitId) || 0,
+      batchList: (item.detailRows || [])
+        .filter((row) => row.batchNo && Number(row.qty || 0) > 0)
+        .map((row) => ({
+          batchNo: row.batchNo,
+          qty: Number(row.qty || 0),
+          unitId: Number(row.unitId ?? item.unitId) || 0,
         })),
-      };
+    }))
+    .filter((item) => item.batchList.length > 0),
+};
 
+   const payload = {
+  id: isEdit ? Number(editData.id) : 0,
+  storeIssueId: form.poId,
+  stockTypeId: Number(form.stock_type_id) || null,
+  kitchenTypeId: Number(form.kitchen_type_id) || null,
+  voucher: form.voucher_no || "",
+  invoicetype: "",
+  partyId: form.party_id || null,
+  eventId: form.event_id || null,
+  remarks: form.remark || "",
+  returndate: formatDate(form.date),
+  userId: Number(userId),
+  details: items.map((item) => {
+    const src = availableItems.find((a) => a.rawMaterialId === item.rawMaterialId);
+    return {
+      rawMaterialId: item.rawMaterialId || 0,
+      unitId: Number(item.unitId ?? src?.unitId) || 0,
+      qty: Number(item.qty) || 0,
+    };
+  }),
+};
+console.log("items before save:", items.map((i) => ({ id: i.rawMaterialId, unitId: i.unitId })));
+console.log("payload:", payload);
       const response = shouldUseBatchSave
         ? await addOrUpdateBatchWisestoreissue(batchPayload)
         : await AddStoreIssueReturn(payload);

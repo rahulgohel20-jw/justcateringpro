@@ -280,8 +280,7 @@ const ConfigModal = ({
             isNotes: config.isNotes,
             showAddOnLabel: config.showAddOnLabel,
             isSignature: config.isSignature,
-            isShowCashAmount: config.isShowCashAmount,
-            isShowChequeAmount: config.isShowChequeAmount,
+          
           })
             .filter(([, v]) => v)
             .map(([k]) => k);
@@ -328,7 +327,6 @@ const ConfigModal = ({
               is5Column: config.is5Column === 0,
               isContactNoVisible: config.isContactNoVisible === 0,
               isSignatureVisible: config.isSignatureVisible === 0,
-              isShowChequeAmount: config.isShowChequeAmount === 1,
               isShowPackageLabel: config.isShowPackageLabel === 0,
               isAddMenu: config.isAddMenu === 0,
               isAdvancePayment: config.isAdvancePayment === 0,
@@ -1074,19 +1072,24 @@ const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobi
 
 
 
-        const formData = new FormData();
-        Object.entries(payload).forEach(([key, value]) => {
-          if (Array.isArray(value)) {
-            value.forEach((v) => formData.append(`${key}[]`, v));
-          } else {
-            formData.append(
-              key,
-              value === true ? "1" : value === false ? "0" : (value ?? ""),
-            );
-          }
-        });
+       const formData = new FormData();
+Object.entries(payload).forEach(([key, value]) => {
+  if (Array.isArray(value)) {
+    value.forEach((v) => formData.append(`${key}[]`, v));
+  } else {
+    formData.append(
+      key,
+      value === true ? "1" : value === false ? "0" : (value ?? ""),
+    );
+  }
+});
 
-        const { data } = await AddExclusiveReport(formData);
+// ➕ Font colors
+formData.append("headingFontColor", "rgba(0,0,0,1)");
+formData.append("descriptionFontColor", "rgba(0,0,0,1)");
+formData.append("contentFontColor", "rgba(0,0,0,1)");
+
+const { data } = await AddExclusiveReport(formData);
         if (data?.success && data?.report_path) return data.report_path;
         throw new Error(data?.msg || "Failed");
       }),

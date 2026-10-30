@@ -2425,7 +2425,7 @@ const handleToggleDecor = async () => {
               )}
 
               {/* Summary */}
-              <div className="mt-4 flex flex-col sm:flex-row gap-4 justify-end text-sm font-medium">
+              {/* <div className="mt-4 flex flex-col sm:flex-row gap-4 justify-end text-sm font-medium">
   <span className="text-gray-600">
     Grand Total:{" "}
     <span className="text-gray-900 font-bold">
@@ -2444,7 +2444,7 @@ const handleToggleDecor = async () => {
       ₹{finalRemainingAmount.toFixed(2)}
     </span>
   </span>
-</div>
+</div> */}
             </div>
 
              {(isTaxUser || isVatUser) && (
