@@ -339,8 +339,9 @@
           total_price: String(d.total || 0),
           originalQty: d.qty || 0,
           isAddInStock: d.isAddInStock ?? true,
-          expiryDate: fromApiDate(d.expiryDate),
           batchNo: d.batchNo || "",
+          expiryDate: fromApiDate(d.expiryDate),
+          isBatchLocked: !!d.batchNo,
           remarks: d.remarks || d.remark || "",
         })),
       );
@@ -1393,7 +1394,7 @@ const isExistingBatch = (item) =>
     <td className="px-1 py-2 w-40">
       <AutoComplete
         value={item.batchNo || ""}
-        disabled={isEdit}
+          disabled={item.isBatchLocked}
         allowClear
         placeholder="Select / type batch"
         style={{ width: "100%" }}
@@ -1425,7 +1426,7 @@ const isExistingBatch = (item) =>
       <input
         type="date"
         value={item.expiryDate || ""}
-        disabled={isEdit || isExistingBatch(item)}
+       disabled={item.isBatchLocked || isExistingBatch(item)}
         onChange={(e) => updateItem(i, "expiryDate", e.target.value)}
         className={`w-full px-2 py-1.5 text-sm border rounded-lg text-center transition-all focus:outline-none focus:ring-1
         ${isEdit || isExistingBatch(item)

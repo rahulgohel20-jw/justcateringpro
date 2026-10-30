@@ -263,10 +263,47 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
     return status === "SAVE_SUCCESS" ? `${prefix}_Success` : `${prefix}_Error`;
   };
 
-  const sumRowsQty = (rows = []) => {
-    const total = rows.reduce((s, r) => s + (parseFloat(r.qty) || 0), 0);
-    return total > 0 ? String(Number(total.toFixed(3))) : "";
-  };
+  // factor = how many base units (gram / ml) in 1 of this unit
+const UNIT_TABLE = {
+  mg: { group: "w", f: 0.001 },
+  milligram: { group: "w", f: 0.001 },
+  g: { group: "w", f: 1 },
+  gm: { group: "w", f: 1 },
+  gram: { group: "w", f: 1 },
+  grams: { group: "w", f: 1 },
+  kg: { group: "w", f: 1000 },
+  kilo: { group: "w", f: 1000 },
+  kilogram: { group: "w", f: 1000 },
+  quintal: { group: "w", f: 100000 },
+  ton: { group: "w", f: 1000000 },
+  tonne: { group: "w", f: 1000000 },
+
+  ml: { group: "v", f: 1 },
+  millilitre: { group: "v", f: 1 },
+  l: { group: "v", f: 1000 },
+  ltr: { group: "v", f: 1000 },
+  litre: { group: "v", f: 1000 },
+  liter: { group: "v", f: 1000 },
+};
+
+const normUnit = (u) => UNIT_TABLE[String(u || "").trim().toLowerCase()];
+
+// converts qty from one unit to another; if units are the same or
+// unknown/incompatible, qty is returned unchanged
+const convertQty = (qty, fromUnit, toUnit) => {
+  const from = normUnit(fromUnit);
+  const to = normUnit(toUnit);
+  if (!from || !to || from.group !== to.group) return qty;
+  return (qty * from.f) / to.f;
+};
+
+const sumRowsQty = (rows = [], parentUnit = "") => {
+  const total = rows.reduce(
+    (s, r) => s + convertQty(parseFloat(r.qty) || 0, r.unit, parentUnit),
+    0,
+  );
+  return total > 0 ? String(Number(total.toFixed(6))) : "";
+};
 
   // ── Main Component ───────────────────────────────────────────────────────────
   const AddStorePO = () => {
@@ -524,7 +561,7 @@ const getTypeValue = (t) => t?.stocktypeid ?? t?.stockTypeId ?? t?.id;
         return {
           rawMaterialId: d.rawMaterialId || 0,
           item_name: d.rawMaterialName || "",
-          qty: sumRowsQty(rows),
+qty: sumRowsQty(rows, d.unitName || ""),
           unit: d.unitName || "",
           unitId: d.unitId || 0,
           closingStock: d.closingStock ?? null,
@@ -671,7 +708,7 @@ if (isBatchNoMode) {
     return {
       rawMaterialId: d.rawMaterialId || 0,
       item_name: d.rawMaterialName || "",
-      qty: sumRowsQty(rows),
+    qty: sumRowsQty(rows, d.unitName || ""),
       unit: d.unitName || "",
       unitId: d.unitId ?? 0,
       closingStock: d.closingStock ?? null,
@@ -780,7 +817,7 @@ if (isBatchNoMode) {
     return {
       rawMaterialId: d.rawMaterialId || 0,
       item_name: d.rawMaterialName || "",
-      qty: sumRowsQty(rows),
+     qty: sumRowsQty(rows, d.unitName || ""),
       unit: d.unitName || "",
       unitId: d.unitId ?? 0,
       closingStock: d.closingStock ?? null,
@@ -931,9 +968,9 @@ const updateQty = useCallback((index, value) => {
             return { ...it, expiryDate: value };
           }
 
-        if (field === "detailRows") {
-    return { ...it, detailRows: value, qty: sumRowsQty(value) };
-  }
+       if (field === "detailRows") {
+  return { ...it, detailRows: value, qty: sumRowsQty(value, it.unit) };
+}
 
           return it;
         }),
@@ -965,7 +1002,7 @@ const updateQty = useCallback((index, value) => {
         });
 
       const nextRows = [...rows, ...newRows];
-      return { ...it, detailRows: nextRows, qty: sumRowsQty(nextRows) };
+return { ...it, detailRows: nextRows, qty: sumRowsQty(nextRows, it.unit) };
     }),
   );
 
