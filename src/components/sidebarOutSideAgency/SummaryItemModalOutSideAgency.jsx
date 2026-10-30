@@ -274,6 +274,9 @@ const allCategoryIds =
  formData.append("withVendor",0);
  formData.append("isAllItemTogether",0);
  formData.append("isShowRoomDetails",0);
+ formData.append("headingFontColor", "rgba(0,0,0,1)");
+formData.append("descriptionFontColor", "rgba(0,0,0,1)");
+formData.append("contentFontColor", "rgba(0,0,0,1)");
  formData.append("isShowFunctionDetails",0);
  formData.append("isShowFunctionImg",0);
   formData.append("showAddOnLabel",0);

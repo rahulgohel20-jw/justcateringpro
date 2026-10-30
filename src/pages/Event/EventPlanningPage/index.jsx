@@ -2161,6 +2161,7 @@ const getMasterCats = useCallback(async () => {
       const categoryHeadingsMap = {};
       const loadedAddonState = {};
       const categoryIdsMap = {};
+      const categoryAnyItemMap = {}; 
 const categoryMultiImageIdsMap = {};
 const categoryMultiImageCatMap = {};  
 const categoryMultiImageOrderMap = {};   // ✅ add
@@ -2181,6 +2182,7 @@ const norm = cfg.normaliseCategory(rawCat, allItemsForPrice, prepMeta, masterCat
         categorySpacesMap[norm.catName] = norm.space;
         subCatTextMap[norm.catName] = norm.subCat;
         categoryIdsMap[norm.catName] = norm.catId;
+        categoryAnyItemMap[norm.catName] = norm.anyItem; 
         categoryHeadingsMap[norm.catName] = norm.catHeading;
 categoryMultiImageIdsMap[norm.catName] = norm.multiImageMenuItemIds || [];
 categoryMultiImageCatMap[norm.catName] = !!norm.multiImageCat;
@@ -2262,11 +2264,7 @@ categoryMultiImageCatMap[norm.catName] = !!norm.multiImageCat;
         const pkgPrice = prepMeta?.packagePrice || 0;
 
         // Fallback: limits from the saved response
-        const limits = {};
-        rawSelectedCats.forEach((c) => {
-          if (c.menuCategoryName) limits[c.menuCategoryName] = Number(c.anyItem || 0);
-        });
-
+        const limits = { ...categoryAnyItemMap };
         // Source of truth: the package's own limits, so the highlight survives save/reload
         if (currentUserId === 757) {
           try {
@@ -3610,6 +3608,7 @@ if (!b.categoriesOrder.includes(categoryName)) {
       packageApplied: packageAppliedForFunction[selectedFunction] || false,
       packageInfo: packageInfoByFunction[selectedFunction] || null,
       packageItems: packageItemsByFunction[selectedFunction] || [],
+      categoryLimits: packageCategoryLimitsByFunction[selectedFunction] || {},   
       permissionRawMaterials,
       userId,
     });
