@@ -68,7 +68,9 @@ export default function SelectMenureport({
   const [sloganFontSize, setSloganFontSize] = useState(null);
   const [templateType, setTemplateType] = useState(null);
 const [selectedNamePlateImages, setSelectedNamePlateImages] = useState(null);
-
+const [headingFontColor, setHeadingFontColor] = useState(null);
+const [descriptionFontColor, setDescriptionFontColor] = useState(null);
+const [contentFontColor, setContentFontColor] = useState(null);
 
   
 const PACKAGE_TYPE1_ONLY_USER_IDS = ["233", "811"];
@@ -248,9 +250,7 @@ else if (mode === "allocation" && !ischef && !isOutside) {
             id: item.id,
             templateMasterId: item.templateMaster.id,
             name: item.templateMaster.name || "",
-            description: item.templateMaster.description || "",
-            headingFontColor: item.templateMaster.headingFontColor,
-            contentFontColor: item.templateMaster.contentFontColor,
+           
             frontPage: item.templateMaster.frontPage,
             secondFrontPage: item.templateMaster.secondFrontPage,
             watermark: item.templateMaster.watermark,
@@ -270,6 +270,9 @@ else if (mode === "allocation" && !ischef && !isOutside) {
             itemFontSize: item.itemFontSize,
             sloganFontId: item.sloganFontId,
             sloganFontSize: item.sloganFontSize,
+           headingFontColor: item.headingFontColor ?? null,
+descriptionFontColor: item.descriptionFontColor ?? null,
+contentFontColor: item.contentFontColor ?? null,
           }));
         }
 
@@ -329,7 +332,9 @@ else if (mode === "allocation" && !ischef && !isOutside) {
     setSelectedTemplateName(template.name);
     setmappingId(template.mappingId);
     setSelectedModuleId(activeTab);
-
+setHeadingFontColor(template.headingFontColor);
+setDescriptionFontColor(template.descriptionFontColor);
+setContentFontColor(template.contentFontColor);
     setCatFontId(template.catFontId);
     setCatFontSize(template.catFontSize);
     setItemFontId(template.itemFontId);
@@ -865,6 +870,9 @@ if (mode === "package" && PACKAGE_TYPE1_ONLY_USER_IDS.includes(String(userId))) 
          functionName={selectedFunctionName}       
   functionDateTime={selectedFunctionDateTime} 
   venueName={selectedFunctionVenue} 
+headingFontColors={headingFontColor}
+descriptionFontColors={descriptionFontColor}
+contentFontColors={contentFontColor}
       />
 
       <CounterNameplate

@@ -79,9 +79,45 @@ const getEventType = (status, isEdit) => {
   return status === "SAVE_SUCCESS" ? `${prefix}_Success` : `${prefix}_Error`;
 };
 
-const sumRowsQty = (rows = []) => {
-  const total = rows.reduce((s, r) => s + (parseFloat(r.qty) || 0), 0);
-  return total > 0 ? String(Number(total.toFixed(3))) : "";
+// factor = how many base units (gram / ml) in 1 of this unit
+const UNIT_TABLE = {
+  mg: { group: "w", f: 0.001 },
+  milligram: { group: "w", f: 0.001 },
+  g: { group: "w", f: 1 },
+  gm: { group: "w", f: 1 },
+  gram: { group: "w", f: 1 },
+  grams: { group: "w", f: 1 },
+  kg: { group: "w", f: 1000 },
+  kilo: { group: "w", f: 1000 },
+  kilogram: { group: "w", f: 1000 },
+  quintal: { group: "w", f: 100000 },
+  ton: { group: "w", f: 1000000 },
+  tonne: { group: "w", f: 1000000 },
+
+  ml: { group: "v", f: 1 },
+  millilitre: { group: "v", f: 1 },
+  l: { group: "v", f: 1000 },
+  ltr: { group: "v", f: 1000 },
+  litre: { group: "v", f: 1000 },
+  liter: { group: "v", f: 1000 },
+};
+
+const normUnit = (u) => UNIT_TABLE[String(u || "").trim().toLowerCase()];
+
+// same unit, missing unit, or incompatible units -> qty unchanged
+const convertQty = (qty, fromUnit, toUnit) => {
+  const from = normUnit(fromUnit);
+  const to = normUnit(toUnit);
+  if (!from || !to || from.group !== to.group) return qty;
+  return (qty * from.f) / to.f;
+};
+
+const sumRowsQty = (rows = [], parentUnit = "") => {
+  const total = rows.reduce(
+    (s, r) => s + convertQty(parseFloat(r.qty) || 0, r.unit, parentUnit),
+    0,
+  );
+  return total > 0 ? String(Number(total.toFixed(6))) : "";
 };
 
 const buildNewItem = (sel) =>
@@ -260,13 +296,15 @@ const AddStorePOReturn = () => {
         if (isBatch) {
           const withReturn = batchList.filter((b) => Number(b.returnedQty) > 0);
           if (withReturn.length > 0) {
-            detailRows = withReturn.map((b) => ({
-              batchNo: b.batchNo || "",
-              date: b.expiryDate || "",
-              qty: String(b.returnedQty),
-                 availableQty: Number(b.availableQty ?? 0), 
-              maxQty: Number(b.returnedQty || 0),
-            }));
+        detailRows = withReturn.map((b) => ({
+  batchNo: b.batchNo || "",
+  date: b.expiryDate || "",
+  qty: String(b.returnedQty),
+  availableQty: Number(b.availableQty ?? 0),
+  maxQty: Number(b.returnedQty || 0),
+  unit: b.unitName || detail.unitName || "",
+  unitId: b.unitId ?? detail.unitId ?? 0,
+}));
           } else if (batchList.length === 1 && Number(detail.returnedQty) > 0) {
             // only one batch, so the whole returned qty belongs to it
             const b = batchList[0];
@@ -291,7 +329,7 @@ const AddStorePOReturn = () => {
           sgst: 0,
           igst: 0,
           totalqty: detail.qty ?? 0,
-          qty: isBatch ? sumRowsQty(detailRows) : (detail.returnedQty ?? 0),
+qty: isBatch ? sumRowsQty(detailRows, detail.unitName || "") : (detail.returnedQty ?? 0),
           returnedQty: detail.returnedQty ?? 0,
           remainingQty: detail.remainingQty ?? 0,
           maxQty:  (detail.returnedQty ?? 0),
@@ -543,7 +581,7 @@ const AddStorePOReturn = () => {
             };
           });
         const next = [...rows, ...newRows];
-        return { ...it, detailRows: next, qty: sumRowsQty(next) };
+        return { ...it, detailRows: next, qty: sumRowsQty(next, it.unit) }; 
       }),
     );
     setBatchAddSelection((p) => ({ ...p, [index]: [] }));
@@ -558,7 +596,7 @@ const AddStorePOReturn = () => {
         const rows = it.detailRows.map((r, idx) =>
           idx === rowIdx ? { ...r, qty: value } : r,
         );
-        return { ...it, detailRows: rows, qty: sumRowsQty(rows) };
+return { ...it, detailRows: rows, qty: sumRowsQty(rows, it.unit) };
       }),
     );
   };
@@ -568,7 +606,7 @@ const AddStorePOReturn = () => {
       prev.map((it, i) => {
         if (i !== itemIdx) return it;
         const rows = it.detailRows.filter((_, idx) => idx !== rowIdx);
-        return { ...it, detailRows: rows, qty: sumRowsQty(rows) };
+return { ...it, detailRows: rows, qty: sumRowsQty(rows, it.unit) };
       }),
     );
   };
