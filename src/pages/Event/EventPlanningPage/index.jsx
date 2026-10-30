@@ -873,7 +873,7 @@ const getItemRate = (m) => {
   return Number(m?.categoryPrice) || 0;
 };
 
- const ITEM_USAGE_CHECK_USER_IDS = [768, 233];
+const ITEM_USAGE_CHECK_USER_IDS = [768, 233];
 const AI_TEMPLATE_ID = 8;
 
 const EventPlanningPage = ({ mode = "menu" }) => {
@@ -1024,19 +1024,19 @@ const EventPlanningPage = ({ mode = "menu" }) => {
   const cfg = getPlanningConfig(mode);
   const masterCatsRef = useRef({ mode: null, list: null });
 
-const getMasterCats = useCallback(async () => {
-  if (masterCatsRef.current.mode === mode && masterCatsRef.current.list) {
-    return masterCatsRef.current.list;
-  }
-  try {
-    const list = await cfg.api.getAllCategories(localStorage.getItem("userId"));
-    masterCatsRef.current = { mode, list: Array.isArray(list) ? list : [] };
-    return masterCatsRef.current.list;
-  } catch (e) {
-    console.error("Failed to load master categories", e);
-    return [];
-  }
-}, [mode, cfg]);
+  const getMasterCats = useCallback(async () => {
+    if (masterCatsRef.current.mode === mode && masterCatsRef.current.list) {
+      return masterCatsRef.current.list;
+    }
+    try {
+      const list = await cfg.api.getAllCategories(localStorage.getItem("userId"));
+      masterCatsRef.current = { mode, list: Array.isArray(list) ? list : [] };
+      return masterCatsRef.current.list;
+    } catch (e) {
+      console.error("Failed to load master categories", e);
+      return [];
+    }
+  }, [mode, cfg]);
   const [showAdvancePayment, setShowAdvancePayment] = useState(false);
   const [showSelectedSheet, setShowSelectedSheet] = useState(false);
   const [permissionRawMaterials, setPermissionRawMaterials] = useState(null);
@@ -1059,6 +1059,10 @@ const getMasterCats = useCallback(async () => {
     nameHindi: "सभी",
     nameGujarati: "બધા",
   });
+
+
+  const [shareStep, setShareStep] = useState("select");
+  const [shareFunctionIds, setShareFunctionIds] = useState([]);
 
 
   const [navigatingMode, setNavigatingMode] = useState(null);
@@ -1277,34 +1281,67 @@ const getMasterCats = useCallback(async () => {
     [selectedFunction],
   );
 
+  const allFunctionIds = useMemo(
+    () => (eventData?.eventFunctions || []).map((f) => f.id),
+    [eventData],
+  );
+
+  const openShareModal = () => {
+    const ids = (eventData?.eventFunctions || []).map((f) => f.id);
+    setShareLink("");
+    setShareAccessCode("");
+    setShareFunctionIds(ids);
+    setShareStep("select");
+    setShowShareModal(true);
+  };
+
+  const closeShareModal = () => {
+    setShowShareModal(false);
+    setShareLink("");
+    setShareAccessCode("");
+    setShareStep("select");
+  };
+
+  const toggleShareFunction = (id) =>
+    setShareFunctionIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  const toggleAllShareFunctions = () =>
+    setShareFunctionIds((prev) =>
+      prev.length === allFunctionIds.length ? [] : allFunctionIds,
+    );
+
   const handleGenerateShareLink = async () => {
+    if (shareFunctionIds.length === 0 || shareLoading) return;
+
     const payload = {
-      eventFunctionId: Number(selectedFunction),
       eventId: Number(eventId),
-      packageId: Number(packageInfoByFunction[selectedFunction]?.packageId || 0),
+      functions: shareFunctionIds.map((fnId) => ({
+        eventFunctionId: Number(fnId),
+        packageId: Number(packageInfoByFunction[fnId]?.packageId || 0),
+      })),
       userId: Number(userId),
     };
 
     try {
       setShareLoading(true);
+      setShareStep("result");
       const res = await GenerateMenuLink(payload);
       if (res?.data?.success) {
-        const shareToken = res.data.data.token;
-        const accessCode = res.data.data.accessCode || "";
-
-
-        const currentUserToken = localStorage.getItem("userToken");
-
-
-        const frontendLink = `${window.location.origin}/menu-share/verify?token=${shareToken}&ut=${encodeURIComponent(currentUserToken)}`;
-
-        setShareLink(frontendLink);
+        const { token, accessCode = "" } = res.data.data;
+        const ut = localStorage.getItem("userToken") || "";
+        setShareLink(
+          `${window.location.origin}/menu-share/verify?token=${token}&ut=${encodeURIComponent(ut)}`
+        );
         setShareAccessCode(accessCode);
       } else {
         Swal.fire({ icon: "error", title: res?.data?.msg || "Failed to generate link" });
+        setShareStep("select");
       }
     } catch (err) {
       Swal.fire({ icon: "error", title: err?.response?.data?.msg || "Something went wrong" });
+      setShareStep("select");
     } finally {
       setShareLoading(false);
     }
@@ -2135,10 +2172,10 @@ const getMasterCats = useCallback(async () => {
     setIsPrepLoading(true);
 
     try {
-  const { rawItems, rawSelectedCats, prepMeta } =
-    await cfg.api.getItems(selectedFunction, "", 0, 1, 200, userIdLocal);
+      const { rawItems, rawSelectedCats, prepMeta } =
+        await cfg.api.getItems(selectedFunction, "", 0, 1, 200, userIdLocal);
 
-  const masterCats = await getMasterCats();
+      const masterCats = await getMasterCats();
       // if (prepMeta?.permissionRawMaterials) {
       // setPermissionRawMaterials({
       // ...prepMeta.permissionRawMaterials,
@@ -2161,16 +2198,16 @@ const getMasterCats = useCallback(async () => {
       const categoryHeadingsMap = {};
       const loadedAddonState = {};
       const categoryIdsMap = {};
-      const categoryAnyItemMap = {}; 
-const categoryMultiImageIdsMap = {};
-const categoryMultiImageCatMap = {};  
-const categoryMultiImageOrderMap = {};   // ✅ add
+      const categoryAnyItemMap = {};
+      const categoryMultiImageIdsMap = {};
+      const categoryMultiImageCatMap = {};
+      const categoryMultiImageOrderMap = {};   // ✅ add
 
 
       const categoryRenamesMap = {};
 
       rawSelectedCats.forEach((rawCat) => {
-const norm = cfg.normaliseCategory(rawCat, allItemsForPrice, prepMeta, masterCats);
+        const norm = cfg.normaliseCategory(rawCat, allItemsForPrice, prepMeta, masterCats);
         // const isPackageCat = Number(rawCat.anyItem || 0) > 0;
         // if (norm.items.length === 0 && !isPackageCat) return;
 
@@ -2182,10 +2219,10 @@ const norm = cfg.normaliseCategory(rawCat, allItemsForPrice, prepMeta, masterCat
         categorySpacesMap[norm.catName] = norm.space;
         subCatTextMap[norm.catName] = norm.subCat;
         categoryIdsMap[norm.catName] = norm.catId;
-        categoryAnyItemMap[norm.catName] = norm.anyItem; 
+        categoryAnyItemMap[norm.catName] = norm.anyItem;
         categoryHeadingsMap[norm.catName] = norm.catHeading;
-categoryMultiImageIdsMap[norm.catName] = norm.multiImageMenuItemIds || [];
-categoryMultiImageCatMap[norm.catName] = !!norm.multiImageCat;
+        categoryMultiImageIdsMap[norm.catName] = norm.multiImageMenuItemIds || [];
+        categoryMultiImageCatMap[norm.catName] = !!norm.multiImageCat;
 
         if (
           norm.nicknames?.english?.trim() ||
@@ -2231,9 +2268,9 @@ categoryMultiImageCatMap[norm.catName] = !!norm.multiImageCat;
         categoryHeadings: categoryHeadingsMap,
         categoryRenames: categoryRenamesMap,
         categoryIds: categoryIdsMap,
-         categoryMultiImageIds: categoryMultiImageIdsMap,  
-         categoryMultiImageCat: categoryMultiImageCatMap,
-         categoryMultiImageOrder: categoryMultiImageOrderMap
+        categoryMultiImageIds: categoryMultiImageIdsMap,
+        categoryMultiImageCat: categoryMultiImageCatMap,
+        categoryMultiImageOrder: categoryMultiImageOrderMap
       };
 
       setSelectedByFunction((prev) => ({
@@ -2323,7 +2360,7 @@ categoryMultiImageCatMap[norm.catName] = !!norm.multiImageCat;
       setIsPrepLoading(false);
       loadSavedMenuPrepInFlightRef.current = null;
     }
-  }, [selectedFunction, cfg, eventId, mode , getMasterCats]);
+  }, [selectedFunction, cfg, eventId, mode, getMasterCats]);
 
   useEffect(() => {
 
@@ -2771,19 +2808,19 @@ categoryMultiImageCatMap[norm.catName] = !!norm.multiImageCat;
           ? b.categoriesOrder
           : [...b.categoriesOrder, categoryName];
 
-   const updatedCategorySlogans = { ...(b.categorySlogans || {}) };
-// Seed from master ONLY when the category is brand new in this function.
-// After that, whatever the user saved (even "") is the truth.
-if (!b.categoriesOrder.includes(categoryName)) {
-  const master = (masterCatsRef.current.list || []).find(
-    (m) => Number(m.id) === Number(categoryIdToUse),
-  );
-  const fromInfo =
-    Number(selectedCategoryInfo?.id) === Number(categoryIdToUse)
-      ? selectedCategoryInfo?.menuSlogan
-      : "";
-  updatedCategorySlogans[categoryName] = cleanSlogan(master?.menuSlogan ?? fromInfo);
-}
+        const updatedCategorySlogans = { ...(b.categorySlogans || {}) };
+        // Seed from master ONLY when the category is brand new in this function.
+        // After that, whatever the user saved (even "") is the truth.
+        if (!b.categoriesOrder.includes(categoryName)) {
+          const master = (masterCatsRef.current.list || []).find(
+            (m) => Number(m.id) === Number(categoryIdToUse),
+          );
+          const fromInfo =
+            Number(selectedCategoryInfo?.id) === Number(categoryIdToUse)
+              ? selectedCategoryInfo?.menuSlogan
+              : "";
+          updatedCategorySlogans[categoryName] = cleanSlogan(master?.menuSlogan ?? fromInfo);
+        }
 
         const updatedCategoryIds = { ...(b.categoryIds || {}) };
         Object.entries(cats).forEach(([cat, items]) => {
@@ -3599,7 +3636,7 @@ if (!b.categoriesOrder.includes(categoryName)) {
       categoryRenames: selectedByFunction[selectedFunction]?.categoryRenames || {},
       categoryIds: bucket.categoryIds || {},
       categoryMultiImageIds: bucket.categoryMultiImageIds || {},
-      
+
       categoryMultiImageOrder: bucket.categoryMultiImageOrder || {},
       primaryItems: primaryItemsByFunction[selectedFunction] || {},
       itemRenames: selectedByFunction[selectedFunction]?.itemRenames || {},
@@ -3608,7 +3645,7 @@ if (!b.categoriesOrder.includes(categoryName)) {
       packageApplied: packageAppliedForFunction[selectedFunction] || false,
       packageInfo: packageInfoByFunction[selectedFunction] || null,
       packageItems: packageItemsByFunction[selectedFunction] || [],
-      categoryLimits: packageCategoryLimitsByFunction[selectedFunction] || {},   
+      categoryLimits: packageCategoryLimitsByFunction[selectedFunction] || {},
       permissionRawMaterials,
       userId,
     });
@@ -3616,38 +3653,38 @@ if (!b.categoriesOrder.includes(categoryName)) {
   };
 
   const animateProgress = (to, duration = 600) => {
-  return new Promise((resolve) => {
-    if (progressAnimRef.current) {
-      clearInterval(progressAnimRef.current);
-      progressAnimRef.current = null;
-    }
-
-    const from = saveProgressRef.current;
-    const steps = to - from;
-
-    if (steps <= 0) {
-      setSaveProgress(to);
-      saveProgressRef.current = to;
-      resolve();
-      return;
-    }
-
-    const intervalMs = Math.max(10, Math.floor(duration / steps));
-    let current = from;
-
-    progressAnimRef.current = setInterval(() => {
-      current += 1;
-      setSaveProgress(current);
-      saveProgressRef.current = current;
-
-      if (current >= to) {
+    return new Promise((resolve) => {
+      if (progressAnimRef.current) {
         clearInterval(progressAnimRef.current);
         progressAnimRef.current = null;
-        resolve();
       }
-    }, intervalMs);
-  });
-};
+
+      const from = saveProgressRef.current;
+      const steps = to - from;
+
+      if (steps <= 0) {
+        setSaveProgress(to);
+        saveProgressRef.current = to;
+        resolve();
+        return;
+      }
+
+      const intervalMs = Math.max(10, Math.floor(duration / steps));
+      let current = from;
+
+      progressAnimRef.current = setInterval(() => {
+        current += 1;
+        setSaveProgress(current);
+        saveProgressRef.current = current;
+
+        if (current >= to) {
+          clearInterval(progressAnimRef.current);
+          progressAnimRef.current = null;
+          resolve();
+        }
+      }, intervalMs);
+    });
+  };
 
 
 
@@ -3872,7 +3909,7 @@ if (!b.categoriesOrder.includes(categoryName)) {
     setIsSaving(true);
     setIsSubmitting(true);
     setSaveProgress(0);
-    saveProgressRef.current = 0; 
+    saveProgressRef.current = 0;
 
     try {
       const bucket = selectedByFunction[selectedFunction];
@@ -3917,7 +3954,7 @@ if (!b.categoriesOrder.includes(categoryName)) {
       const resp = await cfg.api.saveOrUpdate(payload);
 
       if (resp?.data?.success === true) {
-         animateProgress(90, 300); 
+        animateProgress(90, 300);
         setIsDirty(false);
         clearDraft();
         const newId = resp?.data?.data?.id || payload.id;
@@ -3983,8 +4020,8 @@ if (!b.categoriesOrder.includes(categoryName)) {
           user: getUserEmail(),
         }).catch((err) => console.error("Failed to save log:", err));
         useMenuPrepStore.getState().bumpMenuPrepNotify();
-         await animateProgress(100, 400);   
-  await new Promise((r) => setTimeout(r, 250)); 
+        await animateProgress(100, 400);
+        await new Promise((r) => setTimeout(r, 250));
 
         Swal.fire({
           icon: "success",
@@ -4009,18 +4046,18 @@ if (!b.categoriesOrder.includes(categoryName)) {
         text: err?.response?.data?.msg,
       });
     } finally {
-  setTimeout(() => {
-    if (progressAnimRef.current) {
-      clearInterval(progressAnimRef.current);
-      progressAnimRef.current = null;
+      setTimeout(() => {
+        if (progressAnimRef.current) {
+          clearInterval(progressAnimRef.current);
+          progressAnimRef.current = null;
+        }
+        isSavingRef.current = false;
+        setIsSaving(false);
+        setIsSubmitting(false);
+        setSaveProgress(0);
+        saveProgressRef.current = 0;
+      }, 600);
     }
-    isSavingRef.current = false;
-    setIsSaving(false);
-    setIsSubmitting(false);
-    setSaveProgress(0);
-    saveProgressRef.current = 0;
-  }, 600);
-}
   };
 
 
@@ -4506,59 +4543,59 @@ if (!b.categoriesOrder.includes(categoryName)) {
               </h2>
 
               <div className="flex gap-2 flex-wrap items-center">
-  {canEdit && (
-    <button
-      className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
-      onClick={handleOpenEditFunction}
-    >
-      <Pencil size={15} />
-      <FormattedMessage id="USER.EVENT_PLANNING.EDIT_PERSON" defaultMessage="Edit Function" />
-    </button>
-  )}
+                {canEdit && (
+                  <button
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+                    onClick={handleOpenEditFunction}
+                  >
+                    <Pencil size={15} />
+                    <FormattedMessage id="USER.EVENT_PLANNING.EDIT_PERSON" defaultMessage="Edit Function" />
+                  </button>
+                )}
 
-  {mode === "menu" && permMenuExecution.view && (
-    <button
-      onClick={() => navigate(`/menu-allocation/${eventId}`)}
-      disabled={shouldDisableNavButtons}
-      className={`${NAV_BTN} ${shouldDisableNavButtons ? NAV_BTN_DISABLED : ""}`}
-    >
-      <Truck size={15} className="text-primary" />
-      <FormattedMessage id="USER.EVENT_PLANNING.MENU_EXECUTION_STEP" defaultMessage="3. Menu Execution" />
-    </button>
-  )}
+                {mode === "menu" && permMenuExecution.view && (
+                  <button
+                    onClick={() => navigate(`/menu-allocation/${eventId}`)}
+                    disabled={shouldDisableNavButtons}
+                    className={`${NAV_BTN} ${shouldDisableNavButtons ? NAV_BTN_DISABLED : ""}`}
+                  >
+                    <Truck size={15} className="text-primary" />
+                    <FormattedMessage id="USER.EVENT_PLANNING.MENU_EXECUTION_STEP" defaultMessage="3. Menu Execution" />
+                  </button>
+                )}
 
-  {mode === "menu" && permRawMaterial.view && (
-    <button
-      disabled={shouldDisableNavButtons}
-      className={`${NAV_BTN} ${shouldDisableNavButtons ? NAV_BTN_DISABLED : ""}`}
-      onClick={() => navigate(`/raw-material-allocation/${eventId}`)}
-    >
-      <ClipboardList size={15} className="text-primary" />
-      <FormattedMessage id="USER.EVENT_PLANNING.RAW_MATERIAL_STEP" defaultMessage="4. Raw Material Distribution" />
-    </button>
-  )}
+                {mode === "menu" && permRawMaterial.view && (
+                  <button
+                    disabled={shouldDisableNavButtons}
+                    className={`${NAV_BTN} ${shouldDisableNavButtons ? NAV_BTN_DISABLED : ""}`}
+                    onClick={() => navigate(`/raw-material-allocation/${eventId}`)}
+                  >
+                    <ClipboardList size={15} className="text-primary" />
+                    <FormattedMessage id="USER.EVENT_PLANNING.RAW_MATERIAL_STEP" defaultMessage="4. Raw Material Distribution" />
+                  </button>
+                )}
 
-  {mode === "menu" && permRawMaterial.view && (
-    <button
-      disabled={shouldDisableNavButtons}
-      className={`${NAV_BTN} ${shouldDisableNavButtons ? NAV_BTN_DISABLED : ""}`}
-      onClick={() => navigate(`/labour-and-other-management/${eventId}`)}
-    >
-      <Users size={15} className="text-primary" />
-      <FormattedMessage id="USER.EVENT_PLANNING.AGENCY_STEP" defaultMessage="5. Agency Distribution" />
-    </button>
-  )}
+                {mode === "menu" && permRawMaterial.view && (
+                  <button
+                    disabled={shouldDisableNavButtons}
+                    className={`${NAV_BTN} ${shouldDisableNavButtons ? NAV_BTN_DISABLED : ""}`}
+                    onClick={() => navigate(`/labour-and-other-management/${eventId}`)}
+                  >
+                    <Users size={15} className="text-primary" />
+                    <FormattedMessage id="USER.EVENT_PLANNING.AGENCY_STEP" defaultMessage="5. Agency Distribution" />
+                  </button>
+                )}
 
-  {permQuotation.view && (
-    <button
-      className={NAV_BTN}
-      onClick={() => navigate(`/quotation/${eventId}?type=${mode}`)}
-    >
-      <FileText size={15} className="text-primary" />
-      <FormattedMessage id="USER.EVENT_PLANNING.QUOTATION_STEP" defaultMessage="6. Quotation" />
-    </button>
-  )}
-</div>
+                {permQuotation.view && (
+                  <button
+                    className={NAV_BTN}
+                    onClick={() => navigate(`/quotation/${eventId}?type=${mode}`)}
+                  >
+                    <FileText size={15} className="text-primary" />
+                    <FormattedMessage id="USER.EVENT_PLANNING.QUOTATION_STEP" defaultMessage="6. Quotation" />
+                  </button>
+                )}
+              </div>
 
               <button
                 onClick={() => navigate("/")}
@@ -4572,249 +4609,249 @@ if (!b.categoriesOrder.includes(categoryName)) {
           </div>
 
           <div className="border rounded mb-4 w-full">
-  <div className="card w-full">
-    <div className="w-full border-b p-3">
+            <div className="card w-full">
+              <div className="w-full border-b p-3">
 
-      {/* Row 1 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-2">
-        <div className="flex items-center gap-2">
-          <Ticket size={18} className="text-primary" />
-          <span className="text-sm font-semibold text-gray-900">
-            <FormattedMessage id="USER.EVENT_PLANNING.EVENT_NO_LABEL" defaultMessage="Event No:" />
-          </span>
-          <span
-            className={`underline cursor-pointer ${isHighlightUser ? "font-extrabold text-lg px-1 rounded text-[#863232]" : "font-semibold text-sm text-primary"}`}
-            onClick={() => setIsAllCustomerToogleOpen(true)}
-          >
-            {eventData?.eventNo}
-          </span>
-        </div>
+                {/* Row 1 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Ticket size={18} className="text-primary" />
+                    <span className="text-sm font-semibold text-gray-900">
+                      <FormattedMessage id="USER.EVENT_PLANNING.EVENT_NO_LABEL" defaultMessage="Event No:" />
+                    </span>
+                    <span
+                      className={`underline cursor-pointer ${isHighlightUser ? "font-extrabold text-lg px-1 rounded text-[#863232]" : "font-semibold text-sm text-primary"}`}
+                      onClick={() => setIsAllCustomerToogleOpen(true)}
+                    >
+                      {eventData?.eventNo}
+                    </span>
+                  </div>
 
-        <div className="flex items-center gap-2">
-          <User size={18} className="text-primary" />
-          <span className="text-sm font-semibold text-gray-900">
-            <FormattedMessage id="USER.EVENT_PLANNING.PERSON_LABEL" defaultMessage="Person:" />
-          </span>
-          <input
-            type="tel" min={1} readOnly
-            className={`input input-sm w-28 ${isHighlightUser ? "font-extrabold text-primary text-base" : "text-gray-800"}`}
-            value={personCount}
-            onChange={(e) => setPersonCount(e.target.value)}
-          />
-        </div>
+                  <div className="flex items-center gap-2">
+                    <User size={18} className="text-primary" />
+                    <span className="text-sm font-semibold text-gray-900">
+                      <FormattedMessage id="USER.EVENT_PLANNING.PERSON_LABEL" defaultMessage="Person:" />
+                    </span>
+                    <input
+                      type="tel" min={1} readOnly
+                      className={`input input-sm w-28 ${isHighlightUser ? "font-extrabold text-primary text-base" : "text-gray-800"}`}
+                      value={personCount}
+                      onChange={(e) => setPersonCount(e.target.value)}
+                    />
+                  </div>
 
-        <div className="flex items-center gap-2">
-          <Ticket size={18} className="text-primary" />
-          <span className="text-sm font-semibold text-gray-900">
-            <FormattedMessage id="USER.EVENT_PLANNING.EVENT_NAME_LABEL" defaultMessage="Event Name:" />
-          </span>
-          <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-primary text-sm font-semibold"}>
-            {eventData?.eventType?.nameEnglish}
-          </span>
-        </div>
-      </div>
+                  <div className="flex items-center gap-2">
+                    <Ticket size={18} className="text-primary" />
+                    <span className="text-sm font-semibold text-gray-900">
+                      <FormattedMessage id="USER.EVENT_PLANNING.EVENT_NAME_LABEL" defaultMessage="Event Name:" />
+                    </span>
+                    <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-primary text-sm font-semibold"}>
+                      {eventData?.eventType?.nameEnglish}
+                    </span>
+                  </div>
+                </div>
 
-      <hr className="border-t-2 border-gray-300 my-3" />
+                <hr className="border-t-2 border-gray-300 my-3" />
 
-      {/* Row 2 */}
-      <div>
-        <div className="flex items-center gap-2">
-          <User size={18} className="text-primary" />
-          <span className="text-sm font-semibold text-gray-900">
-            <FormattedMessage id="USER.EVENT_PLANNING.CUSTOMER_LABEL" defaultMessage="Customer:" />
-          </span>
-          <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
-            {eventData?.party?.nameEnglish}
-          </span>
-        </div>
+                {/* Row 2 */}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <User size={18} className="text-primary" />
+                    <span className="text-sm font-semibold text-gray-900">
+                      <FormattedMessage id="USER.EVENT_PLANNING.CUSTOMER_LABEL" defaultMessage="Customer:" />
+                    </span>
+                    <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
+                      {eventData?.party?.nameEnglish}
+                    </span>
+                  </div>
 
-        <div className="mt-4 flex items-center gap-2">
-          <MapPin size={18} className="text-primary" />
-          <span className="text-sm font-semibold text-gray-900">
-            <FormattedMessage id="USER.EVENT_PLANNING.VENUE_LABEL" defaultMessage="Venue/Banquet:" />
-          </span>
-          <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
-            {eventData?.venue?.nameEnglish || eventData?.banquetHallName}
-          </span>
-        </div>
+                  <div className="mt-4 flex items-center gap-2">
+                    <MapPin size={18} className="text-primary" />
+                    <span className="text-sm font-semibold text-gray-900">
+                      <FormattedMessage id="USER.EVENT_PLANNING.VENUE_LABEL" defaultMessage="Venue/Banquet:" />
+                    </span>
+                    <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
+                      {eventData?.venue?.nameEnglish || eventData?.banquetHallName}
+                    </span>
+                  </div>
 
-        {/* Buttons (left) + Status (right) */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mt-5">
-          <div className="flex flex-wrap items-center gap-2">
-            {canAccessDecor && (
-              <button
-                type="button"
-                disabled={navigatingMode === "menu"}
-                onClick={() => {
-                  setNavigatingMode("menu");
-                  navigate(`/menu-preparation/${eventId}`);
-                }}
-                className={PLAN_BTN}
-              >
-                {navigatingMode === "menu" ? (
-                  <Loader2 size={18} className="animate-spin text-primary" />
-                ) : (
-                  <ChefHat size={18} className="text-primary" />
-                )}
-                <FormattedMessage id="USER.EVENT_PLANNING.MENU_PLANNING_BTN" defaultMessage="Menu Planning" />
-              </button>
-            )}
+                  {/* Buttons (left) + Status (right) */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 mt-5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {canAccessDecor && (
+                        <button
+                          type="button"
+                          disabled={navigatingMode === "menu"}
+                          onClick={() => {
+                            setNavigatingMode("menu");
+                            navigate(`/menu-preparation/${eventId}`);
+                          }}
+                          className={PLAN_BTN}
+                        >
+                          {navigatingMode === "menu" ? (
+                            <Loader2 size={18} className="animate-spin text-primary" />
+                          ) : (
+                            <ChefHat size={18} className="text-primary" />
+                          )}
+                          <FormattedMessage id="USER.EVENT_PLANNING.MENU_PLANNING_BTN" defaultMessage="Menu Planning" />
+                        </button>
+                      )}
 
-            {canAccessDecor && (
-              <button
-                type="button"
-                disabled={navigatingMode === "decor"}
-                onClick={() => {
-                  setNavigatingMode("decor");
-                  navigate(`/decor-preparation/${eventId}`);
-                }}
-                className={PLAN_BTN}
-              >
-                {navigatingMode === "decor" ? (
-                  <Loader2 size={18} className="animate-spin text-primary" />
-                ) : (
-                  <Sparkles size={18} className="text-primary" />
-                )}
-                <FormattedMessage id="USER.EVENT_PLANNING.DECOR_PLANNING_BTN" defaultMessage="Decor Planning" />
-              </button>
-            )}
+                      {canAccessDecor && (
+                        <button
+                          type="button"
+                          disabled={navigatingMode === "decor"}
+                          onClick={() => {
+                            setNavigatingMode("decor");
+                            navigate(`/decor-preparation/${eventId}`);
+                          }}
+                          className={PLAN_BTN}
+                        >
+                          {navigatingMode === "decor" ? (
+                            <Loader2 size={18} className="animate-spin text-primary" />
+                          ) : (
+                            <Sparkles size={18} className="text-primary" />
+                          )}
+                          <FormattedMessage id="USER.EVENT_PLANNING.DECOR_PLANNING_BTN" defaultMessage="Decor Planning" />
+                        </button>
+                      )}
 
-            <button
-              type="button"
-              onClick={() => {
-                fetchRawMaterials();
-                fetchRawMaterialCategories();
-                setShowPermissableModal(true);
-              }}
-              className={NAV_BTN}
-            >
-              <FileCheck2 size={15} className="text-primary" />
-              Permissable / Non Permissable
-            </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          fetchRawMaterials();
+                          fetchRawMaterialCategories();
+                          setShowPermissableModal(true);
+                        }}
+                        className={NAV_BTN}
+                      >
+                        <FileCheck2 size={15} className="text-primary" />
+                        Permissable / Non Permissable
+                      </button>
 
-            {canAccessMenuExtraFeature && (
-              <button type="button" onClick={() => setShowAdvancePayment(true)} className={NAV_BTN}>
-                <IndianRupee size={15} className="text-primary" />
-                <FormattedMessage id="USER.EVENT_PLANNING.PAYMENT_RECEIPT_BTN" defaultMessage="Payment Receipt" />
-              </button>
-            )}
+                      {canAccessMenuExtraFeature && (
+                        <button type="button" onClick={() => setShowAdvancePayment(true)} className={NAV_BTN}>
+                          <IndianRupee size={15} className="text-primary" />
+                          <FormattedMessage id="USER.EVENT_PLANNING.PAYMENT_RECEIPT_BTN" defaultMessage="Payment Receipt" />
+                        </button>
+                      )}
 
-            {canAccessMenuExtraFeature && (
-              <button type="button" onClick={() => setShowRevisionHistory(true)} className={NAV_BTN}>
-                <History size={15} className="text-primary" />
-                <FormattedMessage id="USER.EVENT_PLANNING.REVISION_HISTORY_BTN" defaultMessage="Revision History" />
-              </button>
-            )}
-          </div>
+                      {canAccessMenuExtraFeature && (
+                        <button type="button" onClick={() => setShowRevisionHistory(true)} className={NAV_BTN}>
+                          <History size={15} className="text-primary" />
+                          <FormattedMessage id="USER.EVENT_PLANNING.REVISION_HISTORY_BTN" defaultMessage="Revision History" />
+                        </button>
+                      )}
+                    </div>
 
-          {canAccessMenuExtraFeature && (
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-semibold text-gray-700">
-                <FormattedMessage id="USER.EVENT_PLANNING.STATUS_LABEL" defaultMessage="Status:" />
-              </label>
-              <select
-                value={prepStatus ?? ""}
-                disabled={prepStatusLoading}
-                onChange={(e) => handlePrepStatusChange(e.target.value)}
-                className={`border rounded-lg px-3 py-1.5 text-sm font-semibold outline-none transition
+                    {canAccessMenuExtraFeature && (
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-semibold text-gray-700">
+                          <FormattedMessage id="USER.EVENT_PLANNING.STATUS_LABEL" defaultMessage="Status:" />
+                        </label>
+                        <select
+                          value={prepStatus ?? ""}
+                          disabled={prepStatusLoading}
+                          onChange={(e) => handlePrepStatusChange(e.target.value)}
+                          className={`border rounded-lg px-3 py-1.5 text-sm font-semibold outline-none transition
                   ${prepStatus === "PENDING" ? "border-yellow-400 bg-yellow-50 text-yellow-700"
-                    : prepStatus === "RUNNING" ? "border-blue-400 bg-blue-50 text-blue-700"
-                    : prepStatus === "COMPLETED" ? "border-green-400 bg-green-50 text-green-700"
-                    : "border-gray-300 bg-white text-gray-600"}`}
-              >
-                <option value="">
-                  {intl.formatMessage({ id: "USER.EVENT_PLANNING.SELECT_STATUS_OPTION", defaultMessage: "— Select Status —" })}
-                </option>
-                <option value="PENDING">{intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_PENDING", defaultMessage: "Pending" })}</option>
-                <option value="RUNNING">{intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_RUNNING", defaultMessage: "Running" })}</option>
-                <option value="COMPLETED">{intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_COMPLETE", defaultMessage: "Complete" })}</option>
-              </select>
-              {prepStatusLoading && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
-              )}
+                              : prepStatus === "RUNNING" ? "border-blue-400 bg-blue-50 text-blue-700"
+                                : prepStatus === "COMPLETED" ? "border-green-400 bg-green-50 text-green-700"
+                                  : "border-gray-300 bg-white text-gray-600"}`}
+                        >
+                          <option value="">
+                            {intl.formatMessage({ id: "USER.EVENT_PLANNING.SELECT_STATUS_OPTION", defaultMessage: "— Select Status —" })}
+                          </option>
+                          <option value="PENDING">{intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_PENDING", defaultMessage: "Pending" })}</option>
+                          <option value="RUNNING">{intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_RUNNING", defaultMessage: "Running" })}</option>
+                          <option value="COMPLETED">{intl.formatMessage({ id: "USER.EVENT_PLANNING.STATUS_COMPLETE", defaultMessage: "Complete" })}</option>
+                        </select>
+                        {prepStatusLoading && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <hr className="border-t-2 border-gray-300 my-3" />
+
+                {/* Row 3 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={18} className="text-primary" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-gray-900">
+                        <FormattedMessage id="USER.EVENT_PLANNING.EVENT_START_DATE_LABEL" defaultMessage="Event Start Date :" />
+                      </span>
+                      <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
+                        {eventData?.eventStartDateTime?.split(" ")[0]}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Calendar size={18} className="text-primary" />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-gray-900">
+                        <FormattedMessage id="USER.EVENT_PLANNING.EVENT_END_DATE_LABEL" defaultMessage="Event End Date :" />
+                      </span>
+                      <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
+                        {eventData?.eventEndDateTime?.split(" ")[0]}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <IndianRupee size={18} className="text-primary" />
+                    <span className="text-sm font-semibold text-gray-900">
+                      <FormattedMessage id="USER.EVENT_PLANNING.RATE_LABEL" defaultMessage="Rate:" />
+                    </span>
+                    <input
+                      type="text" min={0} readOnly
+                      className={`input input-sm w-28 ${isHighlightUser ? "font-extrabold text-primary border-primary" : "text-gray-800"}`}
+                      value={defaultRate}
+                      onChange={(e) => { setDefaultRate(e.target.value); setIsDirty(true); }}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      className={TOOL_BTN}
+                      onClick={() => {
+                        setExtraChargesData(null);
+                        fetchExtraCharges();
+                        setShowExtraChargesModal(true);
+                      }}
+                    >
+                      <IndianRupee size={16} className="text-primary" />
+                      <FormattedMessage id="USER.EVENT_PLANNING.EXTRA_CHARGE_BTN" defaultMessage="Extra Charge" />
+                    </button>
+
+                    <Tooltip title={intl.formatMessage({ id: "USER.EVENT_PLANNING.TERMS_TOOLTIP", defaultMessage: "Terms & Conditions" })}>
+                      <button
+                        type="button"
+                        onClick={() => setShowTermsModal(true)}
+                        className="w-10 h-10 rounded-lg bg-white hover:bg-gray-50 border-2 border-gray-500 text-gray-600 flex items-center justify-center transition-colors"
+                      >
+                        <FileText size={18} strokeWidth={2.5} />
+                      </button>
+                    </Tooltip>
+                  </div>
+
+                  {canEdit && (
+                    <button className={TOOL_BTN} onClick={() => setIsCopyMenuModalOpen(true)}>
+                      <NotebookPen size={16} className="text-primary" />
+                      {mode === "decor"
+                        ? intl.formatMessage({ id: "USER.EVENT_PLANNING.COPY_DECOR_PLANNING_BTN", defaultMessage: "Copy Decor Planning" })
+                        : intl.formatMessage({ id: "USER.EVENT_PLANNING.COPY_MENU_PLANNING_BTN", defaultMessage: "Copy Menu Planning" })}
+                    </button>
+                  )}
+                </div>
+
+              </div>
             </div>
-          )}
-        </div>
-      </div>
-
-      <hr className="border-t-2 border-gray-300 my-3" />
-
-      {/* Row 3 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2">
-        <div className="flex items-center gap-2">
-          <Calendar size={18} className="text-primary" />
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-gray-900">
-              <FormattedMessage id="USER.EVENT_PLANNING.EVENT_START_DATE_LABEL" defaultMessage="Event Start Date :" />
-            </span>
-            <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
-              {eventData?.eventStartDateTime?.split(" ")[0]}
-            </span>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Calendar size={18} className="text-primary" />
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-gray-900">
-              <FormattedMessage id="USER.EVENT_PLANNING.EVENT_END_DATE_LABEL" defaultMessage="Event End Date :" />
-            </span>
-            <span className={isHighlightUser ? "font-extrabold text-lg text-[#863232]" : "text-sm text-primary font-semibold"}>
-              {eventData?.eventEndDateTime?.split(" ")[0]}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <IndianRupee size={18} className="text-primary" />
-          <span className="text-sm font-semibold text-gray-900">
-            <FormattedMessage id="USER.EVENT_PLANNING.RATE_LABEL" defaultMessage="Rate:" />
-          </span>
-          <input
-            type="text" min={0} readOnly
-            className={`input input-sm w-28 ${isHighlightUser ? "font-extrabold text-primary border-primary" : "text-gray-800"}`}
-            value={defaultRate}
-            onChange={(e) => { setDefaultRate(e.target.value); setIsDirty(true); }}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            className={TOOL_BTN}
-            onClick={() => {
-              setExtraChargesData(null);
-              fetchExtraCharges();
-              setShowExtraChargesModal(true);
-            }}
-          >
-            <IndianRupee size={16} className="text-primary" />
-            <FormattedMessage id="USER.EVENT_PLANNING.EXTRA_CHARGE_BTN" defaultMessage="Extra Charge" />
-          </button>
-
-          <Tooltip title={intl.formatMessage({ id: "USER.EVENT_PLANNING.TERMS_TOOLTIP", defaultMessage: "Terms & Conditions" })}>
-            <button
-              type="button"
-              onClick={() => setShowTermsModal(true)}
-              className="w-10 h-10 rounded-lg bg-white hover:bg-gray-50 border-2 border-gray-500 text-gray-600 flex items-center justify-center transition-colors"
-            >
-              <FileText size={18} strokeWidth={2.5} />
-            </button>
-          </Tooltip>
-        </div>
-
-        {canEdit && (
-          <button className={TOOL_BTN} onClick={() => setIsCopyMenuModalOpen(true)}>
-            <NotebookPen size={16} className="text-primary" />
-            {mode === "decor"
-              ? intl.formatMessage({ id: "USER.EVENT_PLANNING.COPY_DECOR_PLANNING_BTN", defaultMessage: "Copy Decor Planning" })
-              : intl.formatMessage({ id: "USER.EVENT_PLANNING.COPY_MENU_PLANNING_BTN", defaultMessage: "Copy Menu Planning" })}
-          </button>
-        )}
-      </div>
-
-    </div>
-  </div>
-</div>
 
           {/* functions + package controls */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 mb-1">
@@ -4858,82 +4895,75 @@ if (!b.categoriesOrder.includes(categoryName)) {
 
             <div className="flex flex-wrap items-center gap-2 p-2 border rounded bg-gray-200">
               <div className="flex gap-2 flex-wrap">
-  <button
-    type="button"
-    onClick={handleSaveOrUpdate}
-    disabled={isSubmitting || isSaving || !isDirty || !canEdit}
-    className="min-w-[90px] px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold text-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-  >
-    {hasExistingData
-      ? intl.formatMessage({ id: "USER.EVENT_PLANNING.UPDATE_MENU_BTN", defaultMessage: "Update Menu" })
-      : intl.formatMessage({ id: "USER.EVENT_PLANNING.SAVE_MENU_BTN", defaultMessage: "Save Menu" })}
-  </button>
+                <button
+                  type="button"
+                  onClick={handleSaveOrUpdate}
+                  disabled={isSubmitting || isSaving || !isDirty || !canEdit}
+                  className="min-w-[90px] px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold text-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                >
+                  {hasExistingData
+                    ? intl.formatMessage({ id: "USER.EVENT_PLANNING.UPDATE_MENU_BTN", defaultMessage: "Update Menu" })
+                    : intl.formatMessage({ id: "USER.EVENT_PLANNING.SAVE_MENU_BTN", defaultMessage: "Save Menu" })}
+                </button>
 
-  {canEdit && (
-    <button
-      className={ACTION_BTN}
-      onClick={() => {
-        setPackageAppliedForFunction((prev) => ({ ...prev, [selectedFunction]: false }));
-        setPackageCategoryLimitsByFunction((prev) => ({ ...prev, [selectedFunction]: {} }));
-        setPackageCategoriesByFunction((prev) => ({ ...prev, [selectedFunction]: [] }));
-        setPackageItemsByFunction((prev) => ({ ...prev, [selectedFunction]: [] }));
-        setPackageInfoByFunction((prev) => ({ ...prev, [selectedFunction]: null }));
+                {canEdit && (
+                  <button
+                    className={ACTION_BTN}
+                    onClick={() => {
+                      setPackageAppliedForFunction((prev) => ({ ...prev, [selectedFunction]: false }));
+                      setPackageCategoryLimitsByFunction((prev) => ({ ...prev, [selectedFunction]: {} }));
+                      setPackageCategoriesByFunction((prev) => ({ ...prev, [selectedFunction]: [] }));
+                      setPackageItemsByFunction((prev) => ({ ...prev, [selectedFunction]: [] }));
+                      setPackageInfoByFunction((prev) => ({ ...prev, [selectedFunction]: null }));
 
-        const cached = savedMenuPrepCacheRef.current[selectedFunction];
-        setSelectedByFunction((prev) => ({
-          ...prev,
-          [selectedFunction]: cached || {
-            categoriesOrder: [],
-            categories: {},
-            categoryNotes: {},
-            categorySlogans: {},
-            categorySubTexts: {},
-          },
-        }));
-        setIsDirty(false);
-      }}
-    >
-      <FormattedMessage id="USER.EVENT_PLANNING.A_LA_CARTE_BTN" defaultMessage="A La Carte" />
-    </button>
-  )}
+                      const cached = savedMenuPrepCacheRef.current[selectedFunction];
+                      setSelectedByFunction((prev) => ({
+                        ...prev,
+                        [selectedFunction]: cached || {
+                          categoriesOrder: [],
+                          categories: {},
+                          categoryNotes: {},
+                          categorySlogans: {},
+                          categorySubTexts: {},
+                        },
+                      }));
+                      setIsDirty(false);
+                    }}
+                  >
+                    <FormattedMessage id="USER.EVENT_PLANNING.A_LA_CARTE_BTN" defaultMessage="A La Carte" />
+                  </button>
+                )}
 
-  {canEdit && (
-    <button className={ACTION_BTN} onClick={() => setShowCustomPackageModal(true)}>
-      <FormattedMessage id="USER.EVENT_PLANNING.MENU_PACKAGE_BTN" defaultMessage="Menu Package" />
-    </button>
-  )}
+                {canEdit && (
+                  <button className={ACTION_BTN} onClick={() => setShowCustomPackageModal(true)}>
+                    <FormattedMessage id="USER.EVENT_PLANNING.MENU_PACKAGE_BTN" defaultMessage="Menu Package" />
+                  </button>
+                )}
 
-<button
-  className={`  min-w-[90px] px-4 py-2.5 rounded-xl  text-white text-sm font-semibold text-center border border-gray-200 hover:border-gray-300 transition-colors";
+                <button
+                  className={`  min-w-[90px] px-4 py-2.5 rounded-xl  text-white text-sm font-semibold text-center border border-gray-200 hover:border-gray-300 transition-colors";
  bg-success text-black disabled:opacity-50 disabled:cursor-not-allowed`}
-  onClick={() => {
-    setMenuReportEventId(eventId);
-    setIsSelectMenuReport(true);
-  }}
-  disabled={!hasSelectedItems || isDirty}
->
-  <FormattedMessage id="USER.EVENT_PLANNING.REPORT_BTN" defaultMessage="Report" />
-</button>
+                  onClick={() => {
+                    setMenuReportEventId(eventId);
+                    setIsSelectMenuReport(true);
+                  }}
+                  disabled={!hasSelectedItems || isDirty}
+                >
+                  <FormattedMessage id="USER.EVENT_PLANNING.REPORT_BTN" defaultMessage="Report" />
+                </button>
 
-  {canAccessMenuLink && packageAppliedForFunction[selectedFunction] && (
-    <button
-      className={ACTION_BTN}
-      onClick={() => {
-        setShareLink("");
-        setShowShareModal(true);
-        handleGenerateShareLink();
-      }}
-    >
-      <FormattedMessage id="USER.EVENT_PLANNING.SHARE_MENU_BTN" defaultMessage="Share Menu" />
-    </button>
-  )}
+                {canAccessMenuLink && packageAppliedForFunction[selectedFunction] && (
+                  <button className={ACTION_BTN} onClick={openShareModal}>
+                    <FormattedMessage id="USER.EVENT_PLANNING.SHARE_MENU_BTN" defaultMessage="Share Menu" />
+                  </button>
+                )}
 
-  {canAccessFoodFestival && (
-    <button className={ACTION_BTN} onClick={() => setShowFoodFestivalModal(true)}>
-      <FormattedMessage id="USER.EVENT_PLANNING.FOOD_FESTIVAL_BTN" defaultMessage="Food Festival" />
-    </button>
-  )}
-</div>
+                {canAccessFoodFestival && (
+                  <button className={ACTION_BTN} onClick={() => setShowFoodFestivalModal(true)}>
+                    <FormattedMessage id="USER.EVENT_PLANNING.FOOD_FESTIVAL_BTN" defaultMessage="Food Festival" />
+                  </button>
+                )}
+              </div>
 
               {packageAppliedForFunction[selectedFunction] &&
                 selectedPkgInfo && (
@@ -5107,7 +5137,7 @@ if (!b.categoriesOrder.includes(categoryName)) {
               {/* SelectedItems already has its own internal overflow-y-auto.no-scrollbar wrapper —
               this outer div just needs to be the flexed, sized container that constrains it */}
 
-         
+
 
               <div className="flex-1 min-h-0 flex flex-col ">
                 <SelectedItems
@@ -5178,7 +5208,7 @@ if (!b.categoriesOrder.includes(categoryName)) {
               </span>
             )}
           </button>
-{/* Bottom-sheet overlay — mobile/tablet only
+          {/* Bottom-sheet overlay — mobile/tablet only
 {showSelectedSheet && (
   <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
     <div
@@ -5265,8 +5295,8 @@ if (!b.categoriesOrder.includes(categoryName)) {
     `}</style>
   </div>
 )} */}
-         
-           
+
+
         </div>
         <div className="fixed bottom-20 right-4 z-40">
           {canAccessStock && (
@@ -5564,8 +5594,8 @@ if (!b.categoriesOrder.includes(categoryName)) {
         </div>
       )}
       {isSaving && (
-  <div
-    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center"
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] flex items-center justify-center"
           onClickCapture={(e) => e.stopPropagation()}
           style={{ cursor: "not-allowed" }}
         >
@@ -5878,7 +5908,7 @@ if (!b.categoriesOrder.includes(categoryName)) {
           <div
             className="fixed inset-0 z-50"
             style={{ background: "rgba(0,0,0,.45)", backdropFilter: "blur(4px)" }}
-            onClick={() => { setShowShareModal(false); setShareLink(""); setShareAccessCode(""); }}
+            onClick={closeShareModal}
           />
           <div
             className="fixed top-1/2 left-1/2 z-50 bg-white rounded-2xl"
@@ -5904,18 +5934,60 @@ if (!b.categoriesOrder.includes(categoryName)) {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => { setShowShareModal(false); setShareLink(""); setShareAccessCode(""); }}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-                style={{ background: "rgba(255,255,255,.15)" }}
-              >
+              <button onClick={closeShareModal} className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ background: "rgba(255,255,255,.15)" }}>
                 <X size={16} />
               </button>
             </div>
 
             {/* Body */}
             <div className="px-6 py-5 flex flex-col gap-4">
-              {shareLoading ? (
+              {shareStep === "select" ? (
+                <>
+                  <p className="text-sm font-semibold text-gray-800">
+                    Select the functions to include in the shared menu
+                  </p>
+
+                  <label className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 accent-primary"
+                      checked={allFunctionIds.length > 0 && shareFunctionIds.length === allFunctionIds.length}
+                      onChange={toggleAllShareFunctions}
+                    />
+                    <span className="text-sm font-semibold text-gray-700">Select All</span>
+                  </label>
+
+                  <div className="border border-gray-200 rounded-lg overflow-y-auto" style={{ maxHeight: 260 }}>
+                    {(eventData?.eventFunctions || []).map((func) => {
+                      const name = func.function?.nameEnglish || func.nameEnglish || `Function #${func.id}`;
+                      return (
+                        <label
+                          key={func.id}
+                          className="flex items-center gap-3 px-3 py-2.5 border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50"
+                        >
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 accent-primary"
+                            checked={shareFunctionIds.includes(func.id)}
+                            onChange={() => toggleShareFunction(func.id)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 truncate">{name}</p>
+                            {func.functionStartDateTime && (
+                              <p className="text-[11px] text-gray-400 truncate">{func.functionStartDateTime}</p>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  <p className="text-[11px] text-gray-400">
+                    {shareFunctionIds.length} of {allFunctionIds.length} function
+                    {allFunctionIds.length === 1 ? "" : "s"} selected
+                  </p>
+                </>
+              ) : shareLoading ? (
                 <div className="flex flex-col items-center justify-center py-8 gap-3">
                   <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
                   <p className="text-sm text-gray-500">Generating link...</p>
@@ -6022,10 +6094,20 @@ if (!b.categoriesOrder.includes(categoryName)) {
             <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
               <button
                 className="h-9 px-4 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-500 hover:text-gray-700"
-                onClick={() => { setShowShareModal(false); setShareLink(""); setShareAccessCode(""); }}
+                onClick={closeShareModal}
               >
-                Close
+                {shareStep === "select" ? "Cancel" : "Close"}
               </button>
+
+              {shareStep === "select" && (
+                <button
+                  disabled={shareFunctionIds.length === 0 || shareLoading}
+                  onClick={handleGenerateShareLink}
+                  className="h-9 px-5 rounded-lg bg-primary text-white text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Generate Link
+                </button>
+              )}
             </div>
           </div>
 
