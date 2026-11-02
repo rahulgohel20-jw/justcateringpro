@@ -37,6 +37,10 @@ import { getNewToken } from "../../../services/axiosInstance";
 const swalClean = Swal.mixin({
   background: "#ffffff",
   color: "#1f2937",
+  didOpen: () => {
+    const c = Swal.getContainer();
+    if (c) c.style.zIndex = "30000"; // above page (9990), sidebars (10000) and SaveLoader (20000)
+  },
   customClass: {
     popup: "border border-gray-100 rounded-3xl shadow-2xl p-6",
     title: "text-gray-900 font-bold text-xl",
@@ -490,6 +494,40 @@ const SaveLoader = ({ open }) => {
 
 
 
+const EMPTY_SET = new Set();
+const isNormalStatus = (s) => !s || String(s).toUpperCase() === "NORMAL";
+const setsEqual = (a, b) => a.size === b.size && [...a].every((x) => b.has(x));
+
+const FunctionSelect = ({ functions, value, onChange, savedFnIds, disabled }) => (
+  <div className="flex items-center gap-2 min-w-0">
+    <label className="text-[10px] font-bold text-primary uppercase tracking-widest shrink-0 hidden sm:block">
+      Function
+    </label>
+    <div className="relative min-w-0 flex-1 sm:flex-none">
+      <select
+        value={value ?? ""}
+        disabled={disabled}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full sm:min-w-[260px] h-10 pl-3 pr-8 rounded-xl border border-gray-200 bg-white text-sm font-bold text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {functions.map((f) => {
+          const fn = f.menuPreparation?.eventFunction || {};
+          const label = [fn.nameEnglish, fn.functionStartDateTime].filter(Boolean).join(" · ");
+          return (
+            <option key={f.eventFunctionId} value={f.eventFunctionId}>
+              {savedFnIds.has(f.eventFunctionId) ? "✓ " : ""}
+              {label || `Function #${f.eventFunctionId}`}
+            </option>
+          );
+        })}
+      </select>
+      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+    </div>
+  </div>
+);
+
+
+
 
 // ─── Main MenuViewPage Component (White & Primary Theme) ───────────────────────
 const MenuViewPage = () => {
@@ -498,10 +536,13 @@ const MenuViewPage = () => {
   const ut = searchParams.get("ut");
   const [ready, setReady] = useState(false);
   const [menuData, setMenuData] = useState(null);
-  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [functions, setFunctions] = useState([]);
+  const [activeFnId, setActiveFnId] = useState(null);
+  const [selectedByFn, setSelectedByFn] = useState({});
+  const [savedFnIds, setSavedFnIds] = useState(new Set());
   const [showImage, setShowImage] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
+  const [savedByFn, setSavedByFn] = useState({});
 
   const [activeCatName, setActiveCatName] = useState("");
   const [showSelections, setShowSelections] = useState(false);
@@ -566,16 +607,63 @@ const MenuViewPage = () => {
   }, [ut, token]);
 
   const handleVerified = (data) => {
+    const fns = data?.functions || [];
     setMenuData(data);
-    setSelectedIds(new Set()); // every item starts unselected
-    setIsDirty(false);
+    setFunctions(fns);
+    setActiveFnId(fns[0]?.eventFunctionId ?? null);
+    setSelectedByFn({});
+    setSavedByFn({});
+    setSavedFnIds(new Set());
   };
 
-  // Group items by category
+  const activeFn = useMemo(
+    () => functions.find((f) => f.eventFunctionId === activeFnId) || null,
+    [functions, activeFnId],
+  );
+  const selectedIds = selectedByFn[activeFnId] || EMPTY_SET;
+
+  const isDirty = useMemo(
+    () => !setsEqual(selectedIds, savedByFn[activeFnId] || EMPTY_SET),
+    [selectedIds, savedByFn, activeFnId],
+  );
+
+
   const grouped = useMemo(() => {
-    if (!menuData) return [];
+    if (!activeFn) return [];
+
+    // ── Build status lookups from the saved/selected list ──
+    const catHasNormal = new Map();   // categoryId -> true if any NORMAL entry exists
+    const itemHasNormal = new Map();  // menuItemId -> true if any NORMAL entry exists
+
+    (activeFn.selectedMenuPreparationItems || []).forEach((c) => {
+      const cid = Number(c.menuCategoryId);
+      if (cid) {
+        catHasNormal.set(cid, (catHasNormal.get(cid) || false) || isNormalStatus(c.categoryStatus));
+      }
+      (c.selectedMenuPreparationItems || []).forEach((it) => {
+        const iid = Number(it.menuItemId);
+        if (iid) {
+          itemHasNormal.set(iid, (itemHasNormal.get(iid) || false) || isNormalStatus(it.itemStatus));
+        }
+      });
+    });
+
+    // Hidden only if the id is known AND has no NORMAL entry
+    const isCategoryVisible = (catGroup) => {
+      if (!isNormalStatus(catGroup.categoryStatus)) return false; // in case flat list ever carries it
+      const cid = Number(catGroup.categoryId);
+      return !catHasNormal.has(cid) || catHasNormal.get(cid);
+    };
+    const isItemVisible = (it) => {
+      if (!isNormalStatus(it.itemStatus)) return false;
+      const iid = Number(it.menuItemId);
+      return !itemHasNormal.has(iid) || itemHasNormal.get(iid);
+    };
+
     const map = new Map();
-    (menuData.menuPreparationItems || []).forEach((catGroup) => {
+    (activeFn.menuPreparationItems || []).forEach((catGroup) => {
+      if (!isCategoryVisible(catGroup)) return;
+
       const key = catGroup.nameEnglish || "Other";
       if (!map.has(key)) {
         map.set(key, {
@@ -588,6 +676,7 @@ const MenuViewPage = () => {
         });
       }
       (catGroup.items || []).forEach((it) => {
+        if (!isItemVisible(it)) return;
         map.get(key).allItems.push({
           menuItemId: it.menuItemId,
           menuItemName: it.menuItemName,
@@ -606,8 +695,10 @@ const MenuViewPage = () => {
         });
       });
     });
-    return Array.from(map.values());
-  }, [menuData]);
+
+    // Drop categories left with no visible items
+    return Array.from(map.values()).filter((g) => g.allItems.length > 0);
+  }, [activeFn]);
 
   // Set default active category
   useEffect(() => {
@@ -644,23 +735,41 @@ const MenuViewPage = () => {
   }, [activeGroup, searchQuery]);
 
   const handleToggle = (id) => {
-    setIsDirty(true);
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
+    setSelectedByFn((prev) => {
+      const next = new Set(prev[activeFnId] || []);
       next.has(id) ? next.delete(id) : next.add(id);
-      return next;
+      return { ...prev, [activeFnId]: next };
     });
+  };
+
+  const handleFunctionChange = async (newId) => {
+    if (newId === activeFnId) return;
+
+    if (isDirty) {
+      await swalClean.fire({
+        icon: "warning",
+        title: "Unsaved Changes",
+        text: "First save changes of this function.",
+        confirmButtonText: "OK",
+      });
+      return; // the select stays on the current function
+    }
+    switchFunction(newId);
+  };
+  const switchFunction = (id) => {
+    setActiveFnId(id);
+    setActiveCatName("");
+    setSearchQuery("");
   };
 
   // Build exact save payload
   const buildPayload = () => {
-    if (!menuData) return null;
-    const prep = menuData.menuPreparation || {};
+    if (!activeFn) return null;
+    const prep = activeFn.menuPreparation || {};
 
     return {
       id: prep.id || 0,
-      // token, // remove if the backend doesn't need it
-      eventFunctionId: menuData.eventFunctionId || 0,
+      eventFunctionId: Number(activeFn.eventFunctionId || prep.eventFunction?.id || 0),
       pax: prep.pax || 0,
       defaultPrice: prep.defaultPrice || 0,
       price: prep.price || 0,
@@ -669,13 +778,11 @@ const MenuViewPage = () => {
       packageId: prep.packageId || 0,
       packageName: prep.packageName || "",
       packagePrice: prep.packagePrice || 0,
-
       permissionRawMaterials: {
         permissables: [],
         notPermissables: [],
         userId: Number(localStorage.getItem("userId")) || 0,
       },
-
       selectedMenuPreparation: grouped.map((group, ci) => ({
         anyItem: 0,
         bgImgId: 0,
@@ -739,31 +846,33 @@ const MenuViewPage = () => {
   };
 
   const handleSave = async () => {
-    if (saving) return;
+    if (saving) return false;
     const payload = buildPayload();
-    if (!payload) return;
+    if (!payload) return false;
 
     try {
       setSaving(true);
       const res = await AddMenuprep(payload);
 
       if (res?.data?.success) {
-        setIsDirty(false);
+        setSavedByFn((prev) => ({ ...prev, [activeFnId]: new Set(selectedIds) }));
+        setSavedFnIds((prev) => new Set(prev).add(activeFnId));
         await swalClean.fire({
           icon: "success",
           title: "Menu Saved Successfully",
           text: res?.data?.msg || res?.data?.message || "Your selected menu has been submitted.",
-          timer: 2200,
+          timer: 1800,
           timerProgressBar: true,
           showConfirmButton: false,
         });
-      } else {
-        swalClean.fire({
-          icon: "error",
-          title: "Save Failed",
-          text: res?.data?.msg || res?.data?.message || "Failed to save menu preparation.",
-        });
+        return true;
       }
+      swalClean.fire({
+        icon: "error",
+        title: "Save Failed",
+        text: res?.data?.msg || res?.data?.message || "Failed to save menu preparation.",
+      });
+      return false;
     } catch (err) {
       swalClean.fire({
         icon: "error",
@@ -773,6 +882,7 @@ const MenuViewPage = () => {
           err?.response?.data?.message ||
           "Something went wrong while saving your menu.",
       });
+      return false;
     } finally {
       setSaving(false);
     }
@@ -790,7 +900,7 @@ const MenuViewPage = () => {
     return <VerifyModal token={token} onVerified={handleVerified} />;
   }
 
-  const prep = menuData.menuPreparation || {};
+  const prep = activeFn?.menuPreparation || {};
   const func = prep.eventFunction || {};
 
   const eventFields = [
@@ -866,6 +976,24 @@ const MenuViewPage = () => {
           />
         </div>
       </header>
+
+
+      {functions.length > 0 && (
+        <div className="shrink-0 bg-white border-b border-gray-200/90 px-3.5 sm:px-6 py-2 flex items-center justify-between gap-3 z-20">
+          <FunctionSelect
+            functions={functions}
+            value={activeFnId}
+            onChange={handleFunctionChange}
+            savedFnIds={savedFnIds}
+            disabled={saving}
+          />
+          {isDirty && (
+            <span className="text-[11px] font-semibold text-amber-600 whitespace-nowrap">
+              Unsaved changes
+            </span>
+          )}
+        </div>
+      )}
 
       {/* ─── 2. MAIN LAYOUT: CategoryRail + Content Area ────────────────────── */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
