@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback, useRef } from "react";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { columns, getRowClassName } from "./constant";
@@ -449,7 +449,8 @@ const StorePo = () => {
   const [reportLoading, setReportLoading] = useState(false);
   const [printModalItem, setPrintModalItem] = useState(null);
   const [printLoading, setPrintLoading] = useState(false);
-
+  const [tableLoading, setTableLoading] = useState(true); // true from the first render, so no placeholder flash
+  const fetchIdRef = useRef(0);
   // We keep a reference to the currently-loaded page's rows only for
   // things like handleDelete's Swal confirmation message (party name, etc).
   // TableComponent (serverSide) owns the actual table data/pagination/loading.
@@ -462,17 +463,24 @@ const StorePo = () => {
 
   const handleFetchData = useCallback(
     async ({ pageIndex, pageSize }) => {
-      const res = await GetAllStorePO(userId, pageIndex, pageSize, debouncedSearch);
-      const payload = res?.data;
-      const data = (payload?.data || []).map((item, index) => ({
-        ...item,
-        issueid: item.id,
-        sr_no: pageIndex * pageSize + index + 1,
-      }));
-      setCurrentPageData(data); // keep a copy for handleDelete to look up party info
-      return { data, totalCount: payload?.totalElements ?? 0 };
+      const myId = ++fetchIdRef.current;
+      setTableLoading(true);
+      try {
+        const res = await GetAllStorePO(userId, pageIndex, pageSize, debouncedSearch);
+        const payload = res?.data;
+        const data = (payload?.data || []).map((item, index) => ({
+          ...item,
+          issueid: item.id,
+          sr_no: pageIndex * pageSize + index + 1,
+        }));
+        setCurrentPageData(data);
+        return { data, totalCount: payload?.totalElements ?? 0 };
+      } finally {
+        // only the latest request turns the loader off
+        if (myId === fetchIdRef.current) setTableLoading(false);
+      }
     },
-    [userId, debouncedSearch],
+    [userId, debouncedSearch, refreshKey],
   );
 
   const handleSearch = (e) => setSearchQuery(e.target.value);
@@ -487,9 +495,9 @@ const StorePo = () => {
       const description =
         status === "DELETE_SUCCESS"
           ? `Store Issue Deleted — PO Code: ${poCode} (ID: ${poId}) | Party: ${party} | ` +
-            `Items: ${totalItems} | Deleted By: ${getUserEmail() || "Unknown User"}`
+          `Items: ${totalItems} | Deleted By: ${getUserEmail() || "Unknown User"}`
           : `Store Issue Delete FAILED — PO Code: ${poCode} (ID: ${poId}) | Party: ${party} | ` +
-            `Attempted By: ${getUserEmail() || "Unknown User"}`;
+          `Attempted By: ${getUserEmail() || "Unknown User"}`;
 
       await AddLogs({
         description,
@@ -533,62 +541,62 @@ const StorePo = () => {
     }
   };
 
- const handleDelete = (issueid) => {
-  const targetItem = currentPageData.find((i) => i.issueid === issueid) || {};
+  const handleDelete = (issueid) => {
+    const targetItem = currentPageData.find((i) => i.issueid === issueid) || {};
 
-  Swal.fire({
-    title: "Are you sure?",
-    text: "This store issue entry will be deleted.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#d33",
-    cancelButtonColor: "#3085d6",
-    confirmButtonText: "Yes, delete it!",
-  }).then(async (result) => {
-    if (!result.isConfirmed) return;
+    Swal.fire({
+      title: "Are you sure?",
+      text: "This store issue entry will be deleted.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+    }).then(async (result) => {
+      if (!result.isConfirmed) return;
 
-    try {
-      const res = await DeleteIssue(issueid);
-      const data = res?.data;
+      try {
+        const res = await DeleteIssue(issueid);
+        const data = res?.data;
 
-      // Backend rejected the delete (HTTP 200 with success: false)
-      if (data?.success === false) {
+        // Backend rejected the delete (HTTP 200 with success: false)
+        if (data?.success === false) {
+          await sendLog("DELETE_ERROR", targetItem);
+          await Swal.fire({
+            icon: "error",
+            title: "Cannot Delete",
+            text: data?.msg || "Failed to delete store issue.",
+            confirmButtonColor: "#d33",
+          });
+          setRefreshKey((k) => k + 1); // refetch list
+          return;
+        }
+
+        await sendLog("DELETE_SUCCESS", targetItem);
+        await Swal.fire({
+          icon: "success",
+          title: "Deleted!",
+          text: data?.msg || "Store issue entry deleted.",
+          confirmButtonColor: "#005BA8",
+        });
+        setRefreshKey((k) => k + 1); // refetch list
+      } catch (error) {
+        console.error("Delete failed:", error);
         await sendLog("DELETE_ERROR", targetItem);
+
+        // HTTP 4xx/5xx: axios throws, message is in error.response.data.msg
         await Swal.fire({
           icon: "error",
           title: "Cannot Delete",
-          text: data?.msg || "Failed to delete store issue.",
+          text:
+            error?.response?.data?.msg ||
+            "Failed to delete store issue. Please try again.",
           confirmButtonColor: "#d33",
         });
         setRefreshKey((k) => k + 1); // refetch list
-        return;
       }
-
-      await sendLog("DELETE_SUCCESS", targetItem);
-      await Swal.fire({
-        icon: "success",
-        title: "Deleted!",
-        text: data?.msg || "Store issue entry deleted.",
-        confirmButtonColor: "#005BA8",
-      });
-      setRefreshKey((k) => k + 1); // refetch list
-    } catch (error) {
-      console.error("Delete failed:", error);
-      await sendLog("DELETE_ERROR", targetItem);
-
-      // HTTP 4xx/5xx: axios throws, message is in error.response.data.msg
-      await Swal.fire({
-        icon: "error",
-        title: "Cannot Delete",
-        text:
-          error?.response?.data?.msg ||
-          "Failed to delete store issue. Please try again.",
-        confirmButtonColor: "#d33",
-      });
-      setRefreshKey((k) => k + 1); // refetch list
-    }
-  });
-};
+    });
+  };
 
   const handleEdit = (item) => {
     navigate("/stock-management/storepo/add", { state: { editData: item } });
@@ -868,20 +876,30 @@ const StorePo = () => {
           </div>
         </div>
 
-        <TableComponent
-          key={`${refreshKey}-${debouncedSearch}`}
-          columns={columns(
-            permissions.edit ? handleEdit : null,
-            permissions.delete ? handleDelete : null,
-            handlePrint,
-            handleExcel,
-            handleStorePoPdf,
+        <div className="relative">
+          <TableComponent
+            columns={columns(
+              permissions.edit ? handleEdit : null,
+              permissions.delete ? handleDelete : null,
+              handlePrint,
+              handleExcel,
+              handleStorePoPdf,
+            )}
+            serverSide
+            onFetchData={handleFetchData}
+            paginationSize={10}
+            getRowClassName={getRowClassName}
+          />
+
+          {tableLoading && (
+            <div className="absolute inset-0 z-10 flex items-start justify-center bg-white pt-24">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                <p className="text-sm font-medium text-gray-600">Loading...</p>
+              </div>
+            </div>
           )}
-          serverSide
-          onFetchData={handleFetchData}
-          paginationSize={10}
-          getRowClassName={getRowClassName}
-        />
+        </div>
       </Container>
 
       {/* Print Options Modal */}
@@ -900,7 +918,7 @@ const StorePo = () => {
           loading={reportLoading}
         />
       )}
-      
+
     </Fragment>
   );
 };
