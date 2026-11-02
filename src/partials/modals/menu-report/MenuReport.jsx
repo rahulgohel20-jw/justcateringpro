@@ -14,9 +14,9 @@ import {
   GetRawMaterialcategory,
   GetActiveFonts,
   CustomPackagePdf,
-    getallmenuselecteditem,
-    GettemplatebyuserId,                    
-  GetAllCustomThemeByUserIdAndModuleId, 
+  getallmenuselecteditem,
+  GettemplatebyuserId,
+  GetAllCustomThemeByUserIdAndModuleId,
 } from "@/services/apiServices";
 import { successMsgPopup, errorMsgPopup } from "../../../underConstruction";
 import { Worker, Viewer } from "@react-pdf-viewer/core";
@@ -26,7 +26,7 @@ import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import "react-datepicker/dist/react-datepicker.css";
 import { Select, ColorPicker } from "antd";
 import { TeamOutlined, AppstoreOutlined } from "@ant-design/icons";
-import { useModuleAccess } from "../../../hooks/useModuleAccess";  
+import { useModuleAccess } from "../../../hooks/useModuleAccess";
 import { WhatsAppPdf } from "../../../services/apiServices";
 import dayjs from "dayjs";
 
@@ -251,12 +251,12 @@ const mergePdfs = async (urls) => {
 };
 
 
-  const SHORT_MENU_MODULE_NAME = "Back Office Theme";
+const SHORT_MENU_MODULE_NAME = "Back Office Theme";
 const SHORT_MENU_TEMPLATE_NAME = "Short Menu Report";
 
 const isFlagOn = (v) => v === true || v === 1 || v === "1" || v === "true";   // NEW
 
-const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock , canShowRoomDetails  }) => ({
+const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails }) => ({
   categorySlogan: config.isCategorySlogan === 0,
   categoryInstruction: config.isCategoryInstruction === 1,
   categoryImage: config.isCategoryImage === 0,
@@ -277,7 +277,7 @@ const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock , c
   size3: { label: config.size3, enabled: Boolean(config.size3 === 0) },
   isWithPrice: config.isWithPrice === 0,
   isFunctionWise: config.isFunctionWise === 1,
-  
+
   isContinuous: config.isContinuous === 1,
   isHalfPax: isDefaultHalfPaxOn ? true : config.isHalfPax === 0,
   is3Column: config.is3Column === 0,
@@ -287,7 +287,7 @@ const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock , c
   isShowEventRemarks: config.isShowEventRemarks === 0,
   showAdditional: config.showAdditional === 0,
   isAgencyNextPage: config.isAgencyNextPage === 1,
-  isItemShow : config.isItemShow === 1,
+  isItemShow: config.isItemShow === 1,
   storeIssueWise: canAccessStock ? config.storeIssueWise === 0 : false,
   isAddStoreIssue: canAccessStock ? config.isAddStoreIssue === 0 : false,
   is5Column: config.is5Column === 0,
@@ -300,14 +300,14 @@ const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock , c
   withOutBg: config.withOutBg === 0,
   withVendor: config.withVendor === 0,
   isAllItemTogether: config.isAllItemTogether === 0,
- isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails === 0 : false,
- isShowFunctionDetails: config.isShowFunctionDetails === 1,
-  isShowFunctionImg:config.isShowFunctionImg === 0,
+  isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails === 0 : false,
+  isShowFunctionDetails: config.isShowFunctionDetails === 1,
+  isShowFunctionImg: config.isShowFunctionImg === 0,
   isNotes: config.isNotes === 0,
   showLastPage: false,
 });
 
-const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock  , canShowRoomDetails }) =>
+const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails }) =>
   Object.entries({
     CompanyInfo: config.isCompanyDetails,
     categorySlogan: config.isCategorySlogan,
@@ -352,10 +352,10 @@ const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock  , ca
     withOutBg: config.withOutBg,
     withVendor: config.withVendor,
     isAllItemTogether: config.isAllItemTogether,
- isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails : false,
- isShowFunctionDetails: config.isShowFunctionDetails,
-     isShowFunctionImg: config.isShowFunctionImg,
-    isAddShortMenu: isFlagOn(config.isAddShortMenu),  
+    isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails : false,
+    isShowFunctionDetails: config.isShowFunctionDetails,
+    isShowFunctionImg: config.isShowFunctionImg,
+    isAddShortMenu: isFlagOn(config.isAddShortMenu),
   })
     .filter(([, value]) => value)
     .map(([key]) => key);
@@ -407,6 +407,15 @@ const extractMenuCategories = (data = []) =>
     .filter((cat) => (cat.menuItems || []).length > 0)
     .map((cat) => ({ id: cat.menuCategoryId, name: cat.menuCategoryName }));
 
+const PercentLoader = ({ percent, label }) => (
+  <div className="flex flex-col items-center justify-center py-16">
+    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+    <p className="mt-4 text-gray-600 font-medium">
+      {label} {Math.round(percent)}%
+    </p>
+  </div>
+);
+
 const MenuReport = ({
   isModalOpen,
   setIsModalOpen,
@@ -433,26 +442,41 @@ const MenuReport = ({
   sloganFontIds,
   sloganFontSizes,
   preSelectedAgencyId,
-    customPackageId,                
+  customPackageId,
   customPackageTemplateMasterId,
-   functionName,        
-  functionDateTime,   
-  venueName, 
+  functionName,
+  functionDateTime,
+  venueName,
   partyMobile,
-    headingFontColors,
+  headingFontColors,
   descriptionFontColors,
-  contentFontColors,      
+  contentFontColors,
 }) => {
   const pdfPlugin = defaultLayoutPlugin();
   const userId = localStorage.getItem("userId");
-  const canShowRoomDetails = String(userId) === "757"; 
+  const canShowRoomDetails = String(userId) === "757";
   const defaultHalfPaxOnUserIds = ["298", "299"];
-const isDefaultHalfPaxOn = defaultHalfPaxOnUserIds.includes(String(userId)); 
+  const isDefaultHalfPaxOn = defaultHalfPaxOnUserIds.includes(String(userId));
   const [visibleOptions, setVisibleOptions] = useState([]);
   const [reportType, setReportType] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("english");
   const [loading, setLoading] = useState(false);
+  const [reportProgress, setReportProgress] = useState(0);
+  const [reportStep, setReportStep] = useState("");
+  const progressCapRef = useRef(90);
   const [pdfUrl, setPdfUrl] = useState(null);
+
+  useEffect(() => {
+    if (!loading) return;
+    const t = setInterval(() => {
+      setReportProgress((p) => {
+        const cap = progressCapRef.current;
+        if (p >= cap) return p;
+        return Math.min(cap, p + Math.max(0.3, (cap - p) * 0.06));
+      });
+    }, 300);
+    return () => clearInterval(t);
+  }, [loading]);
   const [options, setOptions] = useState({});
   const [showNamePlateUI, setShowNamePlateUI] = useState(false);
   const [isDropdownStatus, setisDropdownStatus] = useState();
@@ -469,7 +493,7 @@ const isDefaultHalfPaxOn = defaultHalfPaxOnUserIds.includes(String(userId));
   const [selectedCategory, setSelectedCategory] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
   const [menuCategories, setMenuCategories] = useState([]);
-const [selectedMenuCategories, setSelectedMenuCategories] = useState([]);
+  const [selectedMenuCategories, setSelectedMenuCategories] = useState([]);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [loadingFilters, setLoadingFilters] = useState(false);
@@ -483,36 +507,36 @@ const [selectedMenuCategories, setSelectedMenuCategories] = useState([]);
   const [catFontId, setcatFontId] = useState(-1);
   const [itemFontId, setItemFontId] = useState(-1);
   const [sloganFontId, setSloganFontId] = useState(-1);
-const [catFontSize, setcatFontSize] = useState(-1);   
-const [itemFontSize, setItemFontSize] = useState(-1); 
-const [sloganFontSize, setSloganFontSize] = useState(-1); 
-const [mappingType, setMappingType] = useState(null);
-const [moduleType, setModuleType] = useState(null);
-const { hasModuleAccess } = useModuleAccess();          
-  const canAccessStock = hasModuleAccess("Stock"); 
+  const [catFontSize, setcatFontSize] = useState(-1);
+  const [itemFontSize, setItemFontSize] = useState(-1);
+  const [sloganFontSize, setSloganFontSize] = useState(-1);
+  const [mappingType, setMappingType] = useState(null);
+  const [moduleType, setModuleType] = useState(null);
+  const { hasModuleAccess } = useModuleAccess();
+  const canAccessStock = hasModuleAccess("Stock");
   const [autoAgencyContact, setAutoAgencyContact] = useState(null);
 
-const [shortMenuTemplate, setShortMenuTemplate] = useState(null); // { id, name, type }
-const [shortMenuOptions, setShortMenuOptions] = useState({});
-const [shortMenuVisibleOptions, setShortMenuVisibleOptions] = useState([]);
-const [shortMenuHasItems, setShortMenuHasItems] = useState(false);
-const [shortMenuItems, setShortMenuItems] = useState([]);
-const [shortMenuSelectedItems, setShortMenuSelectedItems] = useState([]);
-const [mainUrl, setMainUrl] = useState(null);
-const [shortMenuUrl, setShortMenuUrl] = useState(null);
-const addShortMenu =
-  visibleOptions.includes("isAddShortMenu") && !!options.isAddShortMenu;
+  const [shortMenuTemplate, setShortMenuTemplate] = useState(null); // { id, name, type }
+  const [shortMenuOptions, setShortMenuOptions] = useState({});
+  const [shortMenuVisibleOptions, setShortMenuVisibleOptions] = useState([]);
+  const [shortMenuHasItems, setShortMenuHasItems] = useState(false);
+  const [shortMenuItems, setShortMenuItems] = useState([]);
+  const [shortMenuSelectedItems, setShortMenuSelectedItems] = useState([]);
+  const [mainUrl, setMainUrl] = useState(null);
+  const [shortMenuUrl, setShortMenuUrl] = useState(null);
+  const addShortMenu =
+    visibleOptions.includes("isAddShortMenu") && !!options.isAddShortMenu;
   const showFontColors = exclusive === true && mappingType === "Type 26";
-const [headingFontColor, setHeadingFontColor] = useState(null);
-const [descriptionFontColor, setDescriptionFontColor] = useState(null);
-const [contentFontColor, setContentFontColor] = useState(null);
+  const [headingFontColor, setHeadingFontColor] = useState(null);
+  const [descriptionFontColor, setDescriptionFontColor] = useState(null);
+  const [contentFontColor, setContentFontColor] = useState(null);
 
-const langConfig = getLangConfig();
-const languageOptions = [
-  { value: "english", label: "English" },
-  { value: "hindi", label: "Hindi" },
-  { value: "regional", label: langConfig.script }, 
-];
+  const langConfig = getLangConfig();
+  const languageOptions = [
+    { value: "english", label: "English" },
+    { value: "hindi", label: "Hindi" },
+    { value: "regional", label: langConfig.script },
+  ];
   const optionDisplayLabels = {
     isExtraCharges: "Is Extra Charges",
     isExcel: "Is Excel",
@@ -522,18 +546,18 @@ const languageOptions = [
     isWithQty: "With Quantity",
     isTermsCond: "Terms & Condition",
     isContactNoVisible: "Contact No Visible",
-    isAddMenu : "is Add Menu",
-    isAdvancePayment : "is Advance Payment",
-    isNotes : "is Notes",
-    showLastPage :"show Last Page",
-    showAddOnLabel : "Show Add On Label",
-    withOutBg : "With Out Background",
-    withVendor : "With Vendor",
-    isAllItemTogether :"All Item Together",
-    isShowRoomDetails : "Show Room Details",
+    isAddMenu: "is Add Menu",
+    isAdvancePayment: "is Advance Payment",
+    isNotes: "is Notes",
+    showLastPage: "show Last Page",
+    showAddOnLabel: "Show Add On Label",
+    withOutBg: "With Out Background",
+    withVendor: "With Vendor",
+    isAllItemTogether: "All Item Together",
+    isShowRoomDetails: "Show Room Details",
     isShowFunctionDetails: "show Function Details",
     isShowFunctionImg: "Show Function Img",
-     isAddShortMenu: "Add Short Menu", 
+    isAddShortMenu: "Add Short Menu",
   };
 
   const fetchFonts = async () => {
@@ -548,31 +572,31 @@ const languageOptions = [
     }
   };
 
- useEffect(() => {
-  if (isModalOpen) {
-    fetchFonts();
-    setcatFontId(catFontIds ?? -1);
-    setItemFontId(itemFontIds ?? -1);
-    setSloganFontId(sloganFontIds ?? -1);
-    // Convert to number; use -1 if null/undefined/invalid
-    setcatFontSize(catFontSizes != null && catFontSizes !== -1 ? Number(catFontSizes) : -1);
-    setItemFontSize(itemFontSizes != null && itemFontSizes !== -1 ? Number(itemFontSizes) : -1);
-    setSloganFontSize(sloganFontSizes != null && sloganFontSizes !== -1 ? Number(sloganFontSizes) : -1);
+  useEffect(() => {
+    if (isModalOpen) {
+      fetchFonts();
+      setcatFontId(catFontIds ?? -1);
+      setItemFontId(itemFontIds ?? -1);
+      setSloganFontId(sloganFontIds ?? -1);
+      // Convert to number; use -1 if null/undefined/invalid
+      setcatFontSize(catFontSizes != null && catFontSizes !== -1 ? Number(catFontSizes) : -1);
+      setItemFontSize(itemFontSizes != null && itemFontSizes !== -1 ? Number(itemFontSizes) : -1);
+      setSloganFontSize(sloganFontSizes != null && sloganFontSizes !== -1 ? Number(sloganFontSizes) : -1);
       setHeadingFontColor(headingFontColors || null);
-setDescriptionFontColor(descriptionFontColors || null);
-setContentFontColor(contentFontColors || null);
-  }
-}, [isModalOpen, catFontIds, catFontSizes, itemFontIds, itemFontSizes, sloganFontIds, sloganFontSizes ,   headingFontColors, descriptionFontColors, contentFontColors]);
+      setDescriptionFontColor(descriptionFontColors || null);
+      setContentFontColor(contentFontColors || null);
+    }
+  }, [isModalOpen, catFontIds, catFontSizes, itemFontIds, itemFontSizes, sloganFontIds, sloganFontSizes, headingFontColors, descriptionFontColors, contentFontColors]);
 
   useEffect(() => {
     fetchFonts();
   }, [isModalOpen, exclusive]);
 
   useEffect(() => {
-  if (!isModalOpen) return;
-  if (adminStartDate) setStartDate(adminStartDate);
-  if (adminEndDate) setEndDate(adminEndDate);
-}, [isModalOpen, adminStartDate, adminEndDate]);
+    if (!isModalOpen) return;
+    if (adminStartDate) setStartDate(adminStartDate);
+    if (adminEndDate) setEndDate(adminEndDate);
+  }, [isModalOpen, adminStartDate, adminEndDate]);
 
   useEffect(() => {
     if (!pdfUrl) return;
@@ -692,76 +716,76 @@ setContentFontColor(contentFontColors || null);
       try {
         const res = await GetReportConfiguration(mappingId, moduleId);
         const config = res?.data?.data?.[0];
-if (!config) {
-        // NEW: no configuration found — fall back to all-off defaults
-        setReportType(null);
-        setMappingType(null);
-        setModuleType(null);
-        setisDropdownStatus(0);
-        setShowAgencyDropdown(false);
-        setShowItemDropdown(false);
-        setShowCategoryDropdown(false);
-        setisDateStatus(0);
-        setShowStatusDropdown(false);
-        setSelectedStatus([]);
-        setOptions({
-          categorySlogan: false,
-          categoryInstruction: false,
-          categoryImage: false,
-          itemSlogan: false,
-          itemInstruction: false,
-          CompanyInfo: false,
-          companyLogo: false,
-          itemImage: false,
-          isCombo: false,
-          partyDetails: false,
-          isWithQty: false,
-          isExtraCharges: false,
-          isExcel: false,
-          isDoc: false,
-          isTermsCond: false,
-          size1: { label: null, enabled: false },
-          size2: { label: null, enabled: false },
-          size3: { label: null, enabled: false },
-          isWithPrice: false,
-          isFunctionWise: false,
-          isContinuous: false,
-          isHalfPax: false,
-          is3Column: false,
-          isFunctionNextPage: false,
-          isAddDecoration: false,
-          isOnePage: false,
-          isShowEventRemarks: false,
-          showAdditional: false,
-          isAgencyNextPage: false,
-          isItemShow: false,
-          storeIssueWise: false,
-          isAddStoreIssue:false,
-          is5Column:false,
-          isContactNoVisible: false,
-          isSignatureVisible: false,
-          isShowPackageLabel: false,
-          isAddMenu:false,
-          isAdvancePayment:false,
-          isNotes : false,
-          showLastPage: false,
-          showAddOnLabel: false,
-          withOutBg: false,
-          withVendor: false,
-          isAllItemTogether: false,
-          isShowRoomDetails: false,
-          isShowFunctionDetails: false,
-          isShowFunctionImg: false,
-        });
-        setVisibleOptions([]);
-        return;
-      }
+        if (!config) {
+          // NEW: no configuration found — fall back to all-off defaults
+          setReportType(null);
+          setMappingType(null);
+          setModuleType(null);
+          setisDropdownStatus(0);
+          setShowAgencyDropdown(false);
+          setShowItemDropdown(false);
+          setShowCategoryDropdown(false);
+          setisDateStatus(0);
+          setShowStatusDropdown(false);
+          setSelectedStatus([]);
+          setOptions({
+            categorySlogan: false,
+            categoryInstruction: false,
+            categoryImage: false,
+            itemSlogan: false,
+            itemInstruction: false,
+            CompanyInfo: false,
+            companyLogo: false,
+            itemImage: false,
+            isCombo: false,
+            partyDetails: false,
+            isWithQty: false,
+            isExtraCharges: false,
+            isExcel: false,
+            isDoc: false,
+            isTermsCond: false,
+            size1: { label: null, enabled: false },
+            size2: { label: null, enabled: false },
+            size3: { label: null, enabled: false },
+            isWithPrice: false,
+            isFunctionWise: false,
+            isContinuous: false,
+            isHalfPax: false,
+            is3Column: false,
+            isFunctionNextPage: false,
+            isAddDecoration: false,
+            isOnePage: false,
+            isShowEventRemarks: false,
+            showAdditional: false,
+            isAgencyNextPage: false,
+            isItemShow: false,
+            storeIssueWise: false,
+            isAddStoreIssue: false,
+            is5Column: false,
+            isContactNoVisible: false,
+            isSignatureVisible: false,
+            isShowPackageLabel: false,
+            isAddMenu: false,
+            isAdvancePayment: false,
+            isNotes: false,
+            showLastPage: false,
+            showAddOnLabel: false,
+            withOutBg: false,
+            withVendor: false,
+            isAllItemTogether: false,
+            isShowRoomDetails: false,
+            isShowFunctionDetails: false,
+            isShowFunctionImg: false,
+          });
+          setVisibleOptions([]);
+          return;
+        }
 
         setReportType(config.type);
         setMappingType(config.mappingNameEnglish || null);
         setModuleType(config.moduleNameEnglish || null);
-       
-        
+
+
         if (config.isRawMaterialCat === 1) {
           setisDropdownStatus(1);
           setShowCategoryDropdown(true);
@@ -769,33 +793,33 @@ if (!config) {
           setShowItemDropdown(false);
         }
 
-      if (isAdminModuleReport) {
-  setisDropdownStatus(0);
-  setShowAgencyDropdown(false);
-  setShowItemDropdown(false);
-  setShowCategoryDropdown(false);
-} else if (config.isRawMaterialCat === 1) {
-  setisDropdownStatus(1);
-  setShowCategoryDropdown(true);
-  setShowAgencyDropdown(false);
-  setShowItemDropdown(false);
-} else {
-  // Agency dropdown only makes sense when we actually have an agencyType
-  // to filter by — it stays independent of Item/Category below.
-  const canShowAgency = config.isAgency === 1 && agencyType != null;
-  const canShowItem = config.isItem === 1;
+        if (isAdminModuleReport) {
+          setisDropdownStatus(0);
+          setShowAgencyDropdown(false);
+          setShowItemDropdown(false);
+          setShowCategoryDropdown(false);
+        } else if (config.isRawMaterialCat === 1) {
+          setisDropdownStatus(1);
+          setShowCategoryDropdown(true);
+          setShowAgencyDropdown(false);
+          setShowItemDropdown(false);
+        } else {
+          // Agency dropdown only makes sense when we actually have an agencyType
+          // to filter by — it stays independent of Item/Category below.
+          const canShowAgency = config.isAgency === 1 && agencyType != null;
+          const canShowItem = config.isItem === 1;
 
-  setShowAgencyDropdown(canShowAgency);
-  setShowItemDropdown(canShowItem);
-  setShowCategoryDropdown(false);
-  setisDropdownStatus(canShowAgency || canShowItem ? 1 : 0);
-}
+          setShowAgencyDropdown(canShowAgency);
+          setShowItemDropdown(canShowItem);
+          setShowCategoryDropdown(false);
+          setisDropdownStatus(canShowAgency || canShowItem ? 1 : 0);
+        }
 
-if (config.isDate === 1 || config.isStartDate === 1 || config.isEndDate === 1) {
-  setisDateStatus(1);
-} else {
-  setisDateStatus(0);
-}if (config.isStatus == 1) {
+        if (config.isDate === 1 || config.isStartDate === 1 || config.isEndDate === 1) {
+          setisDateStatus(1);
+        } else {
+          setisDateStatus(0);
+        } if (config.isStatus == 1) {
           setShowStatusDropdown(true);
           setSelectedStatus([0, 1, 2, 3]);
           setShowAgencyDropdown(false);
@@ -828,33 +852,33 @@ if (config.isDate === 1 || config.isStartDate === 1 || config.isEndDate === 1) {
           isWithPrice: config.isWithPrice === 0,
           isFunctionWise: config.isFunctionWise === 1,
           isContinuous: config.isContinuous === 1,
-         isHalfPax: isDefaultHalfPaxOn ? true : config.isHalfPax === 0,
-          is3Column:config.is3Column === 0 ,
-          isFunctionNextPage:config.isFunctionNextPage === 1 , 
-          isAddDecoration:config.isAddDecoration === 0,
-          isOnePage:config.isOnePage === 0 ,
-          isShowEventRemarks:config.isShowEventRemarks === 0 , 
-          showAdditional:config.showAdditional === 0 ,
-          isAgencyNextPage:config.isAgencyNextPage === 1, 
+          isHalfPax: isDefaultHalfPaxOn ? true : config.isHalfPax === 0,
+          is3Column: config.is3Column === 0,
+          isFunctionNextPage: config.isFunctionNextPage === 1,
+          isAddDecoration: config.isAddDecoration === 0,
+          isOnePage: config.isOnePage === 0,
+          isShowEventRemarks: config.isShowEventRemarks === 0,
+          showAdditional: config.showAdditional === 0,
+          isAgencyNextPage: config.isAgencyNextPage === 1,
           isItemShow: config.isItemShow === 1,
           storeIssueWise: canAccessStock ? config.storeIssueWise === 0 : false,
-          isAddStoreIssue:canAccessStock ? config.isAddStoreIssue ===0 : false,
-          is5Column:config.is5Column === 0 , 
+          isAddStoreIssue: canAccessStock ? config.isAddStoreIssue === 0 : false,
+          is5Column: config.is5Column === 0,
           isContactNoVisible: config.isContactNoVisible === 0,
-          isSignatureVisible : config.isSignatureVisible === 0,
+          isSignatureVisible: config.isSignatureVisible === 0,
           isShowPackageLabel: config.isShowPackageLabel === 0,
-          isAddMenu  : config.isAddMenu === 1,
-          isAdvancePayment : config.isAdvancePayment === 1,
-          showAddOnLabel : config.showAddOnLabel === 0,
-          withOutBg : config.withOutBg === 0,
-          withVendor : config.withVendor === 0,
+          isAddMenu: config.isAddMenu === 1,
+          isAdvancePayment: config.isAdvancePayment === 1,
+          showAddOnLabel: config.showAddOnLabel === 0,
+          withOutBg: config.withOutBg === 0,
+          withVendor: config.withVendor === 0,
           isAllItemTogether: config.isAllItemTogether === 0,
-            isShowFunctionImg: config.isShowFunctionImg === 0,
-           isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails === 0 : false,
-           isShowFunctionDetails: config.isShowFunctionDetails === 1 , 
-          isNotes : config.isNotes === 0,
-          isAddShortMenu: false,        
-  showLastPage:  false,
+          isShowFunctionImg: config.isShowFunctionImg === 0,
+          isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails === 0 : false,
+          isShowFunctionDetails: config.isShowFunctionDetails === 1,
+          isNotes: config.isNotes === 0,
+          isAddShortMenu: false,
+          showLastPage: false,
         });
 
         setVisibleOptions(
@@ -880,33 +904,33 @@ if (config.isDate === 1 || config.isStartDate === 1 || config.isEndDate === 1) {
             isExcel: config.isExcel,
             isTermsCond: config.isTermsCond,
             isDoc: config.isDoc,
-             isHalfPax: isDefaultHalfPaxOn ? true : config.isHalfPax, 
-            is3Column:config.is3Column,
-            isFunctionNextPage :config.isFunctionNextPage ,
-            isAddDecoration:config.isAddDecoration, 
-            isOnePage:config.isOnePage,
-            isShowEventRemarks:config.isShowEventRemarks, 
-            showAdditional:config.showAdditional,
-            isAgencyNextPage:config.isAgencyNextPage, 
+            isHalfPax: isDefaultHalfPaxOn ? true : config.isHalfPax,
+            is3Column: config.is3Column,
+            isFunctionNextPage: config.isFunctionNextPage,
+            isAddDecoration: config.isAddDecoration,
+            isOnePage: config.isOnePage,
+            isShowEventRemarks: config.isShowEventRemarks,
+            showAdditional: config.showAdditional,
+            isAgencyNextPage: config.isAgencyNextPage,
             isItemShow: config.isItemShow,
-storeIssueWise: canAccessStock ? config.storeIssueWise : false,
-isAddStoreIssue : canAccessStock ? config.isAddStoreIssue : false,
-is5Column :config.is5Column,
-isContactNoVisible: config.isContactNoVisible,     
-isSignatureVisible : config.isSignatureVisible ,
-isShowPackageLabel: config.isShowPackageLabel,
-isAddMenu : config.isAddMenu, 
-isAdvancePayment : config.isAdvancePayment,
-isNotes : config.isNotes,
-showAddOnLabel : config.showAddOnLabel,
-withOutBg : config.withOutBg,
-withVendor : config.withVendor,
-isAllItemTogether: config.isAllItemTogether,
-isShowFunctionImg: config.isShowFunctionImg,
-  isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails : false, 
-  isShowFunctionDetails: config.isShowFunctionDetails,
-isAddShortMenu: isFlagOn(config.isAddShortMenu),
- })
+            storeIssueWise: canAccessStock ? config.storeIssueWise : false,
+            isAddStoreIssue: canAccessStock ? config.isAddStoreIssue : false,
+            is5Column: config.is5Column,
+            isContactNoVisible: config.isContactNoVisible,
+            isSignatureVisible: config.isSignatureVisible,
+            isShowPackageLabel: config.isShowPackageLabel,
+            isAddMenu: config.isAddMenu,
+            isAdvancePayment: config.isAdvancePayment,
+            isNotes: config.isNotes,
+            showAddOnLabel: config.showAddOnLabel,
+            withOutBg: config.withOutBg,
+            withVendor: config.withVendor,
+            isAllItemTogether: config.isAllItemTogether,
+            isShowFunctionImg: config.isShowFunctionImg,
+            isShowRoomDetails: canShowRoomDetails ? config.isShowRoomDetails : false,
+            isShowFunctionDetails: config.isShowFunctionDetails,
+            isAddShortMenu: isFlagOn(config.isAddShortMenu),
+          })
             .filter(([_, value]) => value)
             .map(([key]) => key),
         );
@@ -915,7 +939,7 @@ isAddShortMenu: isFlagOn(config.isAddShortMenu),
       }
     };
     fetchConfig();
-  }, [isModalOpen, mappingId, moduleId, isAdminModuleReport, agencyType , isDefaultHalfPaxOn]);
+  }, [isModalOpen, mappingId, moduleId, isAdminModuleReport, agencyType, isDefaultHalfPaxOn]);
 
   useEffect(() => {
     if (!isModalOpen || isDropdownStatus !== 1 || isAdminModuleReport) return;
@@ -925,17 +949,17 @@ isAddShortMenu: isFlagOn(config.isAddShortMenu),
       try {
         const userId = localStorage.getItem("userId");
         const functionIds = Array.isArray(eventFunctionId)
-  ? eventFunctionId.filter((id) => id !== -1)
-  : eventFunctionId === -1
-    ? []
-    : [eventFunctionId];
+          ? eventFunctionId.filter((id) => id !== -1)
+          : eventFunctionId === -1
+            ? []
+            : [eventFunctionId];
 
-const agencyRes = await GetAgenciesForReportFilter(
-  functionIds,
-  eventId,
-  agencyType,
-  userId,
-);
+        const agencyRes = await GetAgenciesForReportFilter(
+          functionIds,
+          eventId,
+          agencyType,
+          userId,
+        );
         if (agencyRes?.data?.success && agencyRes?.data?.data) {
           const agencyList = agencyRes.data.data;
           setAgencies(agencyList);
@@ -959,14 +983,14 @@ const agencyRes = await GetAgenciesForReportFilter(
 
     fetchAgencies();
   }, [
-     isModalOpen,
-  showAgencyDropdown,
-  eventFunctionId,
-  eventId,
-  agencyType,
-  isAdminModuleReport,
-  preSelectedAgencyId,
-]);
+    isModalOpen,
+    showAgencyDropdown,
+    eventFunctionId,
+    eventId,
+    agencyType,
+    isAdminModuleReport,
+    preSelectedAgencyId,
+  ]);
 
   useEffect(() => {
     if (!isModalOpen || isAdminModuleReport) return;
@@ -994,221 +1018,221 @@ const agencyRes = await GetAgenciesForReportFilter(
     Fetchmanagers();
   }, [isModalOpen, eventFunctionId, eventId, isAdminModuleReport]);
 
-useEffect(() => {
-  if (!isModalOpen || isDropdownStatus !== 1) return;
+  useEffect(() => {
+    if (!isModalOpen || isDropdownStatus !== 1) return;
 
-  const isRawMaterialTab = agencyType === "raw_material" ;
+    const isRawMaterialTab = agencyType === "raw_material";
 
-  const fetchcategory = async () => {
-    setLoadingFilters(true);
-    try {
-      const categoryres = isRawMaterialTab
-        ? await GetRawMaterialcategory(userId)
-        : await GetAllRawMaterialAllocationCategory(eventId);
+    const fetchcategory = async () => {
+      setLoadingFilters(true);
+      try {
+        const categoryres = isRawMaterialTab
+          ? await GetRawMaterialcategory(userId)
+          : await GetAllRawMaterialAllocationCategory(eventId);
 
-      if (categoryres?.data?.success && categoryres?.data?.data) {
-        const categoryList = isRawMaterialTab
-          ? categoryres.data.data["Raw Material Category Details"] 
-          : categoryres.data.data["Raw Material Category Details"];
+        if (categoryres?.data?.success && categoryres?.data?.data) {
+          const categoryList = isRawMaterialTab
+            ? categoryres.data.data["Raw Material Category Details"]
+            : categoryres.data.data["Raw Material Category Details"];
 
-        setCategory(categoryList || []);
-        setSelectedCategory((categoryList || []).map((a) => a.id));
-      } else {
+          setCategory(categoryList || []);
+          setSelectedCategory((categoryList || []).map((a) => a.id));
+        } else {
+          setCategory([]);
+          setSelectedCategory([]);
+        }
+      } catch (err) {
+        errorMsgPopup("Failed to load category");
         setCategory([]);
-        setSelectedCategory([]);
+      } finally {
+        setLoadingFilters(false);
       }
-    } catch (err) {
-      errorMsgPopup("Failed to load category");
-      setCategory([]);
-    } finally {
-      setLoadingFilters(false);
-    }
-  };
+    };
 
-  fetchcategory();
-}, [isModalOpen, isDropdownStatus, eventId, agencyType, userId]);
+    fetchcategory();
+  }, [isModalOpen, isDropdownStatus, eventId, agencyType, userId]);
 
   useEffect(() => {
-if (!isModalOpen || isDropdownStatus !== 1 || !showItemDropdown || isAdminModuleReport) {
-  setItems([]);
-  setSelectedItems([]);
-  setMenuCategories([]);
-  setSelectedMenuCategories([]);
-  return;
-}
-
-  // No Agency dropdown (e.g. date-driven configs, or any isItem-only config)
-  // → fetch all items via the simpler menu-preparation endpoint, no party filter.
-  const fetchWithoutAgencyFilter = !showAgencyDropdown;
-
-  if (!fetchWithoutAgencyFilter && selectedAgency.length === 0) {
-    setItems([]);
-    setSelectedItems([]);
-    return;
-  }
-
-  // const singleFunctionId = Array.isArray(eventFunctionId)
-  //   ? (eventFunctionId.find((id) => id !== -1) ?? -1)
-  //   : (eventFunctionId ?? -1);
-
-const fetchItems = async () => {
-  setLoadingFilters(true);
-  try {
-    let itemsRes;
-
-    if (fetchWithoutAgencyFilter) {
-      const { sd, ed } = getRangeDates();
-     if (!sd || !ed) {
-  setItems([]);
-  setSelectedItems([]);
-  setMenuCategories([]);
-  setSelectedMenuCategories([]);
-  return;
-}
-      itemsRes = await getallmenuselecteditem(sd, ed, userId);
-    } else {
-      itemsRes = await GetSelectedItemsForReportFilter(eventFunctionId, eventId, selectedAgency);
+    if (!isModalOpen || isDropdownStatus !== 1 || !showItemDropdown || isAdminModuleReport) {
+      setItems([]);
+      setSelectedItems([]);
+      setMenuCategories([]);
+      setSelectedMenuCategories([]);
+      return;
     }
 
-   if (itemsRes?.data?.success && itemsRes?.data?.data) {
-  if (fetchWithoutAgencyFilter) {
-    const cats = extractMenuCategories(itemsRes.data.data);
-    const flat = flattenMenuItems(itemsRes.data.data);
-    setMenuCategories(cats);
-    setSelectedMenuCategories(cats.map((c) => c.id)); // all selected by default
-    setItems(flat);
-    setSelectedItems(flat.map((i) => i.id));
-  } else {
-    setMenuCategories([]);
-    setSelectedMenuCategories([]);
-    setItems(itemsRes.data.data);
-  }
-} else {
-  setItems([]);
-  setMenuCategories([]);
-  setSelectedMenuCategories([]);
-}
-  } catch (err) {
-    errorMsgPopup("Failed to load items");
-    setItems([]);
-  } finally {
-    setLoadingFilters(false);
-  }
-};
-  fetchItems();
-}, [
-  isModalOpen,
-  isDropdownStatus,
-  showItemDropdown,
-  showAgencyDropdown,
-  selectedAgency,
-  eventFunctionId,
-  eventId,
-  isAdminModuleReport,
-  startDate,
-  endDate,
-  adminStartDate,
-  adminEndDate,
-  userId,
-]);
-// Load Short Menu template + its configuration when the flag is on
-useEffect(() => {
-  if (!isModalOpen || !addShortMenu) {
-    setShortMenuTemplate(null);
-    return;
-  }
-  let cancelled = false;
+    // No Agency dropdown (e.g. date-driven configs, or any isItem-only config)
+    // → fetch all items via the simpler menu-preparation endpoint, no party filter.
+    const fetchWithoutAgencyFilter = !showAgencyDropdown;
 
-  const loadShortMenu = async () => {
-    try {
-      const modRes = await GettemplatebyuserId();
-      const backOffice = modRes?.data?.data?.find(
-        (m) => m.nameEnglish === SHORT_MENU_MODULE_NAME && m.isActive && !m.isDelete,
-      );
-      if (!backOffice) {
-        errorMsgPopup("Back Office Theme not found for Short Menu Report");
-        return;
-      }
-
-      const themeRes = await GetAllCustomThemeByUserIdAndModuleId(userId, backOffice.id);
-      const theme = themeRes?.data?.data?.find(
-        (t) => t.templateMaster?.name === SHORT_MENU_TEMPLATE_NAME,
-        // or: t.templateMappingResponseDto?.nameEnglish === "Type 5"
-      );
-      if (!theme) {
-        errorMsgPopup("Short Menu Report template not found");
-        return;
-      }
-
-      const shortMappingId = theme.templateMappingResponseDto?.id || theme.id;
-      const cfgRes = await GetReportConfiguration(shortMappingId, backOffice.id);
-      const cfg = cfgRes?.data?.data?.[0];
-      if (!cfg || cancelled) return;
-
-      const ctx = { isDefaultHalfPaxOn, canAccessStock , canShowRoomDetails  };
-      setShortMenuOptions(buildOptionsFromConfig(cfg, ctx));
-      setShortMenuVisibleOptions(getVisibleOptionKeys(cfg, ctx));
-      setShortMenuHasItems(cfg.isItem === 1);
-      setShortMenuTemplate({
-        id: theme.id, // this is the adminTemplateModuleId (5146 in your sample)
-        name: theme.templateMaster?.name || SHORT_MENU_TEMPLATE_NAME,
-        type: cfg.type || null,
-      });
-    } catch (err) {
-      console.error("Short menu config error", err);
-      errorMsgPopup("Failed to load Short Menu Report configuration");
+    if (!fetchWithoutAgencyFilter && selectedAgency.length === 0) {
+      setItems([]);
+      setSelectedItems([]);
+      return;
     }
+
+    // const singleFunctionId = Array.isArray(eventFunctionId)
+    //   ? (eventFunctionId.find((id) => id !== -1) ?? -1)
+    //   : (eventFunctionId ?? -1);
+
+    const fetchItems = async () => {
+      setLoadingFilters(true);
+      try {
+        let itemsRes;
+
+        if (fetchWithoutAgencyFilter) {
+          const { sd, ed } = getRangeDates();
+          if (!sd || !ed) {
+            setItems([]);
+            setSelectedItems([]);
+            setMenuCategories([]);
+            setSelectedMenuCategories([]);
+            return;
+          }
+          itemsRes = await getallmenuselecteditem(sd, ed, userId);
+        } else {
+          itemsRes = await GetSelectedItemsForReportFilter(eventFunctionId, eventId, selectedAgency);
+        }
+
+        if (itemsRes?.data?.success && itemsRes?.data?.data) {
+          if (fetchWithoutAgencyFilter) {
+            const cats = extractMenuCategories(itemsRes.data.data);
+            const flat = flattenMenuItems(itemsRes.data.data);
+            setMenuCategories(cats);
+            setSelectedMenuCategories(cats.map((c) => c.id)); // all selected by default
+            setItems(flat);
+            setSelectedItems(flat.map((i) => i.id));
+          } else {
+            setMenuCategories([]);
+            setSelectedMenuCategories([]);
+            setItems(itemsRes.data.data);
+          }
+        } else {
+          setItems([]);
+          setMenuCategories([]);
+          setSelectedMenuCategories([]);
+        }
+      } catch (err) {
+        errorMsgPopup("Failed to load items");
+        setItems([]);
+      } finally {
+        setLoadingFilters(false);
+      }
+    };
+    fetchItems();
+  }, [
+    isModalOpen,
+    isDropdownStatus,
+    showItemDropdown,
+    showAgencyDropdown,
+    selectedAgency,
+    eventFunctionId,
+    eventId,
+    isAdminModuleReport,
+    startDate,
+    endDate,
+    adminStartDate,
+    adminEndDate,
+    userId,
+  ]);
+  // Load Short Menu template + its configuration when the flag is on
+  useEffect(() => {
+    if (!isModalOpen || !addShortMenu) {
+      setShortMenuTemplate(null);
+      return;
+    }
+    let cancelled = false;
+
+    const loadShortMenu = async () => {
+      try {
+        const modRes = await GettemplatebyuserId();
+        const backOffice = modRes?.data?.data?.find(
+          (m) => m.nameEnglish === SHORT_MENU_MODULE_NAME && m.isActive && !m.isDelete,
+        );
+        if (!backOffice) {
+          errorMsgPopup("Back Office Theme not found for Short Menu Report");
+          return;
+        }
+
+        const themeRes = await GetAllCustomThemeByUserIdAndModuleId(userId, backOffice.id);
+        const theme = themeRes?.data?.data?.find(
+          (t) => t.templateMaster?.name === SHORT_MENU_TEMPLATE_NAME,
+          // or: t.templateMappingResponseDto?.nameEnglish === "Type 5"
+        );
+        if (!theme) {
+          errorMsgPopup("Short Menu Report template not found");
+          return;
+        }
+
+        const shortMappingId = theme.templateMappingResponseDto?.id || theme.id;
+        const cfgRes = await GetReportConfiguration(shortMappingId, backOffice.id);
+        const cfg = cfgRes?.data?.data?.[0];
+        if (!cfg || cancelled) return;
+
+        const ctx = { isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails };
+        setShortMenuOptions(buildOptionsFromConfig(cfg, ctx));
+        setShortMenuVisibleOptions(getVisibleOptionKeys(cfg, ctx));
+        setShortMenuHasItems(cfg.isItem === 1);
+        setShortMenuTemplate({
+          id: theme.id, // this is the adminTemplateModuleId (5146 in your sample)
+          name: theme.templateMaster?.name || SHORT_MENU_TEMPLATE_NAME,
+          type: cfg.type || null,
+        });
+      } catch (err) {
+        console.error("Short menu config error", err);
+        errorMsgPopup("Failed to load Short Menu Report configuration");
+      }
+    };
+
+    loadShortMenu();
+    return () => {
+      cancelled = true;
+    };
+  }, [isModalOpen, addShortMenu, userId, isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails]);
+
+  // Load items for the Short Menu (its config has isItem = 1)
+  useEffect(() => {
+    if (!isModalOpen || !addShortMenu || !shortMenuHasItems) {
+      setShortMenuItems([]);
+      setShortMenuSelectedItems([]);
+      return;
+    }
+
+    (async () => {
+      try {
+        const { sd, ed } = getRangeDates();
+        if (!sd || !ed) {
+          setShortMenuItems([]);
+          setShortMenuSelectedItems([]);
+          return;
+        }
+        const res = await getallmenuselecteditem(sd, ed, userId);
+        if (res?.data?.success && res?.data?.data) {
+          const list = flattenMenuItems(res.data.data);
+          setShortMenuItems(list);
+          setShortMenuSelectedItems(list.map((i) => i.id));
+        }
+      } catch {
+        errorMsgPopup("Failed to load Short Menu items");
+      }
+    })();
+  }, [isModalOpen, addShortMenu, shortMenuHasItems, startDate, endDate, adminStartDate, adminEndDate, userId]);
+
+
+  const openWebWhatsApp = (mobile, recipientName) => {
+    const greeting = recipientName || eventName || "there";
+    const message = buildWaMessage({
+      greeting,
+      functionName,
+      functionDateTime,
+      venueName,
+      pdfUrl,
+    });
+    const cleanedMobile = mobile.replace(/\D/g, "");
+    const waUrl = `https://wa.me/${cleanedMobile}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+    setShowWhatsAppModal(false);
   };
-
-  loadShortMenu();
-  return () => {
-    cancelled = true;
-  };
-}, [isModalOpen, addShortMenu, userId, isDefaultHalfPaxOn, canAccessStock , canShowRoomDetails]);
-
-// Load items for the Short Menu (its config has isItem = 1)
-useEffect(() => {
-  if (!isModalOpen || !addShortMenu || !shortMenuHasItems) {
-    setShortMenuItems([]);
-    setShortMenuSelectedItems([]);
-    return;
-  }
-
-  (async () => {
-    try {
-      const { sd, ed } = getRangeDates();
-      if (!sd || !ed) {
-        setShortMenuItems([]);
-        setShortMenuSelectedItems([]);
-        return;
-      }
-      const res = await getallmenuselecteditem(sd, ed, userId);
-      if (res?.data?.success && res?.data?.data) {
-        const list = flattenMenuItems(res.data.data);
-        setShortMenuItems(list);
-        setShortMenuSelectedItems(list.map((i) => i.id));
-      }
-    } catch {
-      errorMsgPopup("Failed to load Short Menu items");
-    }
-  })();
-}, [isModalOpen, addShortMenu, shortMenuHasItems, startDate, endDate, adminStartDate, adminEndDate, userId]);
-
-
-const openWebWhatsApp = (mobile, recipientName) => {
-  const greeting = recipientName || eventName || "there";
-  const message = buildWaMessage({
-    greeting,
-    functionName,
-    functionDateTime,
-    venueName,
-    pdfUrl,
-  });
-  const cleanedMobile = mobile.replace(/\D/g, "");
-  const waUrl = `https://wa.me/${cleanedMobile}?text=${encodeURIComponent(message)}`;
-  window.open(waUrl, "_blank", "noopener,noreferrer");
-  setShowWhatsAppModal(false);
-};
 
   const formatAdminDate = (dateString) => {
     if (!dateString) return null;
@@ -1217,13 +1241,13 @@ const openWebWhatsApp = (mobile, recipientName) => {
   };
 
   const getRangeDates = () => {
-  const s = startDate || adminStartDate;
-  const e = endDate || adminEndDate;
-  return {
-    sd: s ? formatAdminDate(s) : null,
-    ed: e ? formatAdminDate(e) : null,
+    const s = startDate || adminStartDate;
+    const e = endDate || adminEndDate;
+    return {
+      sd: s ? formatAdminDate(s) : null,
+      ed: e ? formatAdminDate(e) : null,
+    };
   };
-};
 
   const toggleAll = (checked) => {
     setOptions((prev) => {
@@ -1238,293 +1262,309 @@ const openWebWhatsApp = (mobile, recipientName) => {
 
   const toggleOne = (key) => setOptions((prev) => applyToggle(prev, key));
 
-const toggleShortMenuOne = (key) =>
-  setShortMenuOptions((prev) => applyToggle(prev, key));
+  const toggleShortMenuOne = (key) =>
+    setShortMenuOptions((prev) => applyToggle(prev, key));
 
-const toggleAllShortMenu = (checked) =>
-  setShortMenuOptions((prev) => {
-    const updated = { ...prev };
-    shortMenuVisibleOptions.forEach((key) => {
-      if (key !== "size1" && key !== "size2" && key !== "size3") updated[key] = checked;
+  const toggleAllShortMenu = (checked) =>
+    setShortMenuOptions((prev) => {
+      const updated = { ...prev };
+      shortMenuVisibleOptions.forEach((key) => {
+        if (key !== "size1" && key !== "size2" && key !== "size3") updated[key] = checked;
+      });
+      return updated;
     });
-    return updated;
-  });
 
-const isShortMenuCheckAll =
-  shortMenuVisibleOptions.length > 0 &&
-  shortMenuVisibleOptions.every((key) => shortMenuOptions[key]);
+  const isShortMenuCheckAll =
+    shortMenuVisibleOptions.length > 0 &&
+    shortMenuVisibleOptions.every((key) => shortMenuOptions[key]);
 
   const isCheckAll =
     visibleOptions.length > 0 && visibleOptions.every((key) => options[key]);
 
-    const showMenuCategoryDropdown =
-  showItemDropdown && !showAgencyDropdown && !isAdminModuleReport;
+  const showMenuCategoryDropdown =
+    showItemDropdown && !showAgencyDropdown && !isAdminModuleReport;
 
-const visibleItems = showMenuCategoryDropdown
-  ? items.filter((i) => selectedMenuCategories.includes(i.categoryId))
-  : items;
+  const visibleItems = showMenuCategoryDropdown
+    ? items.filter((i) => selectedMenuCategories.includes(i.categoryId))
+    : items;
 
-const handleMenuCategoryChange = (ids) => {
-  setSelectedMenuCategories(ids);
-  // select every item belonging to the chosen categories
-  setSelectedItems(
-    items.filter((i) => ids.includes(i.categoryId)).map((i) => i.id),
-  );
-};
-
- const buildPayload = (opts, visible, overrides = {}) => {
-  const pageSize = opts.size1?.enabled
-    ? opts.size1.label
-    : opts.size2?.enabled
-      ? opts.size2.label
-      : opts.size3?.enabled
-        ? opts.size3.label
-        : "";
-
-  return {
-    eventId: eventId || -1,
-    customPackageId: customPackageId || 0,
-    partyId: selectedParty || -1,
-    eventFunctionId: Array.isArray(eventFunctionId)
-      ? (eventFunctionId[0] ?? -1)
-      : (eventFunctionId ?? -1),
-    eventFunctionIds: Array.isArray(eventFunctionId)
-      ? eventFunctionId.filter((id) => id !== -1)
-      : [],
-    adminTemplateModuleId: isAdminModuleReport
-      ? (selectedTemplateId ?? mappingId)
-      : (selectedTemplateId ?? 0),
-    type: reportType || null,
-    userId,
-    lang: selectedLanguage === "english" ? 0 : selectedLanguage === "hindi" ? 1 : 2,
-    isCategoryImage: opts.categoryImage,
-    isCategoryInstruction: opts.categoryInstruction,
-    isCategorySlogan: opts.categorySlogan,
-    isItemImage: opts.itemImage,
-    isCombo: opts.isCombo,
-    isItemInstruction: opts.itemInstruction,
-    isItemSlogan: opts.itemSlogan,
-    isCompanyDetails: opts.CompanyInfo,
-    isCompanyLogo: opts.companyLogo,
-    isPartyDetails: opts.partyDetails,
-    isWithQty: opts.isWithQty,
-    isDoc: visible.includes("isDoc") ? opts.isDoc : false,
-    isExcel: visible.includes("isExcel") ? opts.isExcel : false,
-    pageSize,
-    isWithPrice: opts.isWithPrice,
-    isFunctionWise: opts.isFunctionWise,
-    isContinuous: opts.isContinuous,
-    isExtraCharges: opts.isExtraCharges,
-    isTermsCond: opts.isTermsCond,
-    isHalfPax: opts.isHalfPax,
-    is3Column: opts.is3Column,
-    isFunctionNextPage: opts.isFunctionNextPage,
-    isAddDecoration: opts.isAddDecoration,
-    isOnePage: opts.isOnePage,
-    isShowEventRemarks: opts.isShowEventRemarks,
-    showAdditional: opts.showAdditional,
-    isAgencyNextPage: opts.isAgencyNextPage,
-    isItemShow: opts.isItemShow,
-    storeIssueWise: opts.storeIssueWise,
-    isAddStoreIssue: opts.isAddStoreIssue,
-    is5Column: opts.is5Column,
-    isContactNoVisible: opts.isContactNoVisible,
-    isAddMenu: opts.isAddMenu,
-    isAdvancePayment: opts.isAdvancePayment,
-    withOutBg: opts.withOutBg,
-    withVendor: opts.withVendor,
-    isAllItemTogether: opts.isAllItemTogether,
-    isShowFunctionImg: opts.isShowFunctionImg,
-     isShowRoomDetails: opts.isShowRoomDetails,
-     isShowFunctionDetails: opts.isShowFunctionDetails,
-    isNotes: opts.isNotes,
-    showAddOnLabel: opts.showAddOnLabel,
-    showLastPage: 1,
-    isSignatureVisible: opts.isSignatureVisible,
-    isShowPackageLabel: opts.isShowPackageLabel,
-    agencyId: selectedAgency,
-    managerIds: selectedManager,
-    itemId: selectedItems,
-    rawMaterialCatIds: selectedCategory,
-   ...(() => {
-  const { sd, ed } = getRangeDates();
-  return {
-    ...(sd ? { startDate: sd } : {}),
-    ...(ed ? { endDate: ed } : {}),
-  };
-})(),
-    ...(showStatusDropdown && { eventStatus: selectedStatus }),
-    
-      catFontId: catFontId || -1,
-    itemFontId: itemFontId || -1,
-    sloganFontId: sloganFontId || -1,
-    catFontSize: catFontSize || -1,
-    itemFontSize: itemFontSize || -1,
-    sloganFontSize: sloganFontSize || -1,
-  ...(showFontColors && {
-  ...(headingFontColor && { headingFontColor }),
-  ...(descriptionFontColor && { descriptionFontColor }),
-  ...(contentFontColor && { contentFontColor }),
-}),
-    leadAssignId: 0,
-    priority: "",
-    sourceId: 0,
-    statusId: 0,
-    ...overrides,
-  };
-};
-
-const submitReport = async (payload) => {
-  const formData = new FormData();
-  Object.entries(payload).forEach(([key, value]) => {
-    if (Array.isArray(value)) {
-      value.forEach((v) => formData.append(`${key}[]`, v));
-    } else {
-      formData.append(key, value === true ? "1" : value === false ? "0" : value);
-    }
-  });
-  const { data } = await AddExclusiveReport(formData);
-  return data;
-};
-
-const handleReport = async () => {
-  if (isNamePlateTheme) {
-    setShowNamePlateUI(true);
-    return;
-  }
-
-  const payload = buildPayload(options, visibleOptions);
-
-  if (!customPackageId && !payload.eventId) {
-    errorMsgPopup("Missing required data");
-    return;
-  }
-  if (!payload.adminTemplateModuleId) {
-    errorMsgPopup("Missing required data");
-    return;
-  }
-
-  // Short Menu payload (only when isAddShortMenu = 1)
-  let shortMenuPayload = null;
-  if (addShortMenu) {
-    if (!shortMenuTemplate) {
-      errorMsgPopup("Short Menu Report is still loading, please try again");
-      return;
-    }
-    if (shortMenuHasItems && shortMenuSelectedItems.length === 0) {
-      errorMsgPopup("Please select items for Short Menu Report");
-      return;
-    }
-    shortMenuPayload = buildPayload(shortMenuOptions, shortMenuVisibleOptions, {
-      adminTemplateModuleId: shortMenuTemplate.id,
-      type: shortMenuTemplate.type,
-      isDoc: false,   // short menu is always a PDF
-      isExcel: false,
-      agencyId: [],
-      rawMaterialCatIds: [],
-      itemId: shortMenuSelectedItems,
-    });
-  }
-
-  setLoading(true);
-  try {
-    const data = await submitReport(payload);
-
-    if (data?.success && data?.report_path) {
-      successMsgPopup(data?.msg || "Report generated");
-
-      const agencyContact =
-        Array.isArray(data?.data) && data.data.length === 1 && data.data[0]?.contactNo
-          ? data.data[0]
-          : null;
-      setAutoAgencyContact(agencyContact);
-
-      const fileName = data.report_path.split("/").pop() || "";
-      const isPdf = fileName.toLowerCase().endsWith(".pdf");
-      const isFileDownload = (options.isDoc || options.isExcel) && !isPdf;
-
-      if (isFileDownload) {
-        try {
-          const response = await fetch(data.report_path);
-          const blob = await response.blob();
-          const blobUrl = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = blobUrl;
-          link.setAttribute(
-            "download",
-            fileName || (options.isExcel ? "report.xlsx" : "report.docx"),
-          );
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
-        } catch {
-          window.open(data.report_path, "_blank");
-        }
-      } else {
-        setPdfUrl(data.report_path);
-        setMainUrl(data.report_path);
-
-        if (agencyContact?.contactNo) {
-          await handleWhatsAppSend(
-            `+91${agencyContact.contactNo.replace(/\D/g, "")}`,
-            agencyContact.nameEnglish || "",
-            data.report_path,
-          );
-        }
-      }
-
-      // ---- NEW: second API call for Short Menu Report ----
-      if (shortMenuPayload) {
-  try {
-    const shortData = await submitReport(shortMenuPayload);
-
-    if (shortData?.success && shortData?.report_path) {
-      if (isFileDownload) {
-        // main was an Excel/Doc download, so just show the short menu
-        setShortMenuUrl(shortData.report_path);
-        setPdfUrl(shortData.report_path);
-      } else {
-        try {
-          // Raw Material first, Short Menu appended after it
-          const mergedUrl = await mergePdfs([
-            data.report_path,
-            shortData.report_path,
-          ]);
-          setPdfUrl(mergedUrl);
-        } catch (mergeErr) {
-          console.error("PDF merge failed", mergeErr);
-          setShortMenuUrl(shortData.report_path); // fallback: tabs
-          errorMsgPopup("Could not combine the reports, showing them separately");
-        }
-      }
-    } else {
-      errorMsgPopup(shortData?.msg || "Failed to generate Short Menu Report");
-    }
-  } catch (err) {
-    errorMsgPopup(
-      err?.response?.data?.msg || "Failed to generate Short Menu Report",
+  const handleMenuCategoryChange = (ids) => {
+    setSelectedMenuCategories(ids);
+    // select every item belonging to the chosen categories
+    setSelectedItems(
+      items.filter((i) => ids.includes(i.categoryId)).map((i) => i.id),
     );
-  }
-}
-    } else {
-      errorMsgPopup(data?.msg || "Failed to generate report");
+  };
+
+  const buildPayload = (opts, visible, overrides = {}) => {
+    const pageSize = opts.size1?.enabled
+      ? opts.size1.label
+      : opts.size2?.enabled
+        ? opts.size2.label
+        : opts.size3?.enabled
+          ? opts.size3.label
+          : "";
+
+    return {
+      eventId: eventId || -1,
+      customPackageId: customPackageId || 0,
+      partyId: selectedParty || -1,
+      eventFunctionId: Array.isArray(eventFunctionId)
+        ? (eventFunctionId[0] ?? -1)
+        : (eventFunctionId ?? -1),
+      eventFunctionIds: Array.isArray(eventFunctionId)
+        ? eventFunctionId.filter((id) => id !== -1)
+        : [],
+      adminTemplateModuleId: isAdminModuleReport
+        ? (selectedTemplateId ?? mappingId)
+        : (selectedTemplateId ?? 0),
+      type: reportType || null,
+      userId,
+      lang: selectedLanguage === "english" ? 0 : selectedLanguage === "hindi" ? 1 : 2,
+      isCategoryImage: opts.categoryImage,
+      isCategoryInstruction: opts.categoryInstruction,
+      isCategorySlogan: opts.categorySlogan,
+      isItemImage: opts.itemImage,
+      isCombo: opts.isCombo,
+      isItemInstruction: opts.itemInstruction,
+      isItemSlogan: opts.itemSlogan,
+      isCompanyDetails: opts.CompanyInfo,
+      isCompanyLogo: opts.companyLogo,
+      isPartyDetails: opts.partyDetails,
+      isWithQty: opts.isWithQty,
+      isDoc: visible.includes("isDoc") ? opts.isDoc : false,
+      isExcel: visible.includes("isExcel") ? opts.isExcel : false,
+      pageSize,
+      isWithPrice: opts.isWithPrice,
+      isFunctionWise: opts.isFunctionWise,
+      isContinuous: opts.isContinuous,
+      isExtraCharges: opts.isExtraCharges,
+      isTermsCond: opts.isTermsCond,
+      isHalfPax: opts.isHalfPax,
+      is3Column: opts.is3Column,
+      isFunctionNextPage: opts.isFunctionNextPage,
+      isAddDecoration: opts.isAddDecoration,
+      isOnePage: opts.isOnePage,
+      isShowEventRemarks: opts.isShowEventRemarks,
+      showAdditional: opts.showAdditional,
+      isAgencyNextPage: opts.isAgencyNextPage,
+      isItemShow: opts.isItemShow,
+      storeIssueWise: opts.storeIssueWise,
+      isAddStoreIssue: opts.isAddStoreIssue,
+      is5Column: opts.is5Column,
+      isContactNoVisible: opts.isContactNoVisible,
+      isAddMenu: opts.isAddMenu,
+      isAdvancePayment: opts.isAdvancePayment,
+      withOutBg: opts.withOutBg,
+      withVendor: opts.withVendor,
+      isAllItemTogether: opts.isAllItemTogether,
+      isShowFunctionImg: opts.isShowFunctionImg,
+      isShowRoomDetails: opts.isShowRoomDetails,
+      isShowFunctionDetails: opts.isShowFunctionDetails,
+      isNotes: opts.isNotes,
+      showAddOnLabel: opts.showAddOnLabel,
+      showLastPage: 1,
+      isSignatureVisible: opts.isSignatureVisible,
+      isShowPackageLabel: opts.isShowPackageLabel,
+      agencyId: selectedAgency,
+      managerIds: selectedManager,
+      itemId: selectedItems,
+      rawMaterialCatIds: selectedCategory,
+      ...(() => {
+        const { sd, ed } = getRangeDates();
+        return {
+          ...(sd ? { startDate: sd } : {}),
+          ...(ed ? { endDate: ed } : {}),
+        };
+      })(),
+      ...(showStatusDropdown && { eventStatus: selectedStatus }),
+
+      catFontId: catFontId || -1,
+      itemFontId: itemFontId || -1,
+      sloganFontId: sloganFontId || -1,
+      catFontSize: catFontSize || -1,
+      itemFontSize: itemFontSize || -1,
+      sloganFontSize: sloganFontSize || -1,
+     headingFontColor: normalizeColor(headingFontColor),
+descriptionFontColor: normalizeColor(descriptionFontColor),
+contentFontColor: normalizeColor(contentFontColor),
+      leadAssignId: 0,
+      priority: "",
+      sourceId: 0,
+      statusId: 0,
+      ...overrides,
+    };
+  };
+
+  const submitReport = async (payload) => {
+    const formData = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach((v) => formData.append(`${key}[]`, v));
+      } else {
+        formData.append(key, value === true ? "1" : value === false ? "0" : value);
+      }
+    });
+    const { data } = await AddExclusiveReport(formData);
+    return data;
+  };
+
+  const handleReport = async () => {
+    if (isNamePlateTheme) {
+      setShowNamePlateUI(true);
+      return;
     }
-  } catch (err) {
-    errorMsgPopup(err?.response?.data?.msg || "Something went wrong");
-  } finally {
-    setLoading(false);
-  }
-};
+
+    const payload = buildPayload(options, visibleOptions);
+
+    if (!customPackageId && !payload.eventId) {
+      errorMsgPopup("Missing required data");
+      return;
+    }
+    if (!payload.adminTemplateModuleId) {
+      errorMsgPopup("Missing required data");
+      return;
+    }
+
+    // Short Menu payload (only when isAddShortMenu = 1)
+    let shortMenuPayload = null;
+    if (addShortMenu) {
+      if (!shortMenuTemplate) {
+        errorMsgPopup("Short Menu Report is still loading, please try again");
+        return;
+      }
+      if (shortMenuHasItems && shortMenuSelectedItems.length === 0) {
+        errorMsgPopup("Please select items for Short Menu Report");
+        return;
+      }
+      shortMenuPayload = buildPayload(shortMenuOptions, shortMenuVisibleOptions, {
+        adminTemplateModuleId: shortMenuTemplate.id,
+        type: shortMenuTemplate.type,
+        isDoc: false,   // short menu is always a PDF
+        isExcel: false,
+        agencyId: [],
+        rawMaterialCatIds: [],
+        itemId: shortMenuSelectedItems,
+      });
+    }
+
+    setLoading(true);
+    setReportProgress(0);
+    setReportStep("Generating report...");
+    progressCapRef.current = shortMenuPayload ? 45 : 90;
+    try {
+      const data = await submitReport(payload);
+      if (shortMenuPayload) {
+        setReportProgress((p) => Math.max(p, 50));
+        progressCapRef.current = 85;
+        setReportStep("Generating Short Menu Report...");
+      } else {
+        setReportStep("Finishing up...");
+      }
+
+      if (data?.success && data?.report_path) {
+        successMsgPopup(data?.msg || "Report generated");
+
+        const agencyContact =
+          Array.isArray(data?.data) && data.data.length === 1 && data.data[0]?.contactNo
+            ? data.data[0]
+            : null;
+        setAutoAgencyContact(agencyContact);
+
+        const fileName = data.report_path.split("/").pop() || "";
+        const isPdf = fileName.toLowerCase().endsWith(".pdf");
+        const isFileDownload = (options.isDoc || options.isExcel) && !isPdf;
+
+        if (isFileDownload) {
+          try {
+            const response = await fetch(data.report_path);
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            link.setAttribute(
+              "download",
+              fileName || (options.isExcel ? "report.xlsx" : "report.docx"),
+            );
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+          } catch {
+            window.open(data.report_path, "_blank");
+          }
+        } else {
+          if (!shortMenuPayload) setPdfUrl(data.report_path);
+          setMainUrl(data.report_path);
+
+          if (agencyContact?.contactNo) {
+            await handleWhatsAppSend(
+              `+91${agencyContact.contactNo.replace(/\D/g, "")}`,
+              agencyContact.nameEnglish || "",
+              data.report_path,
+            );
+          }
+        }
+
+        // ---- NEW: second API call for Short Menu Report ----
+        if (shortMenuPayload) {
+          try {
+            const shortData = await submitReport(shortMenuPayload);
+
+            if (shortData?.success && shortData?.report_path) {
+              if (isFileDownload) {
+                // main was an Excel/Doc download, so just show the short menu
+                setShortMenuUrl(shortData.report_path);
+                setPdfUrl(shortData.report_path);
+              } else {
+                try {
+                  progressCapRef.current = 97;
+                  setReportStep("Merging reports...");
+                  // Raw Material first, Short Menu appended after it
+                  const mergedUrl = await mergePdfs([
+                    data.report_path,
+                    shortData.report_path,
+                  ]);
+                  setPdfUrl(mergedUrl);
+                } catch (mergeErr) {
+                  console.error("PDF merge failed", mergeErr);
+                  setShortMenuUrl(shortData.report_path); // fallback: tabs
+                  setPdfUrl(data.report_path);
+                  errorMsgPopup("Could not combine the reports, showing them separately");
+                }
+              }
+            } else {
+              if (!isFileDownload) setPdfUrl(data.report_path);
+              errorMsgPopup(shortData?.msg || "Failed to generate Short Menu Report");
+            }
+          } catch (err) {
+            if (!isFileDownload) setPdfUrl(data.report_path);
+            errorMsgPopup(
+              err?.response?.data?.msg || "Failed to generate Short Menu Report",
+            );
+          }
+        }
+      } else {
+        errorMsgPopup(data?.msg || "Failed to generate report");
+      }
+    } catch (err) {
+      errorMsgPopup(err?.response?.data?.msg || "Something went wrong");
+    } finally {
+      setReportProgress(100);
+      setLoading(false);
+    }
+  };
 
   const handleClose = () => {
     if (isPrintingRef.current || document.hidden) return;
     if (pdfUrl?.startsWith("blob:")) URL.revokeObjectURL(pdfUrl);
     setPdfUrl(null);
     setMainUrl(null);
-setShortMenuUrl(null);
-setShortMenuTemplate(null);
-setShortMenuSelectedItems([]);
+    setReportProgress(0);
+    setReportStep("");
+    setShortMenuUrl(null);
+    setShortMenuTemplate(null);
+    setShortMenuSelectedItems([]);
     setShowNamePlateUI(false);
     setIsModalOpen(false);
     setSelectedAgency([]);
@@ -1535,7 +1575,7 @@ setShortMenuSelectedItems([]);
     setEndDate(null);
     setSelectedStatus([]);
     setMenuCategories([]);
-setSelectedMenuCategories([]);
+    setSelectedMenuCategories([]);
     setShowStatusDropdown(false);
     setcatFontId(null);
     setItemFontId(null);
@@ -1544,101 +1584,99 @@ setSelectedMenuCategories([]);
     setItemFontSize(null);
     setSloganFontSize(null);
     setAutoAgencyContact(null);
-     setWhatsAppSendMode("api");
+    setWhatsAppSendMode("api");
   };
 
-const handleWhatsAppShare = (mode = "api") => {
-  setWhatsAppSendMode(mode);
+  const handleWhatsAppShare = (mode = "api") => {
+    setWhatsAppSendMode(mode);
 
- 
-  if (selectedAgency.length === 1) {
-    const agency = agencies.find((a) => a.id === selectedAgency[0]);
-    if (agency?.contactNo) {
-      const fullNumber = `+91${agency.contactNo.replace(/\D/g, "")}`;
-      if (mode === "web") {
-        openWebWhatsApp(fullNumber, agency.nameEnglish || "");
-      } else {
-        handleWhatsAppSend(fullNumber, agency.nameEnglish || "");
+
+    if (selectedAgency.length === 1) {
+      const agency = agencies.find((a) => a.id === selectedAgency[0]);
+      if (agency?.contactNo) {
+        const fullNumber = `+91${agency.contactNo.replace(/\D/g, "")}`;
+        if (mode === "web") {
+          openWebWhatsApp(fullNumber, agency.nameEnglish || "");
+        } else {
+          handleWhatsAppSend(fullNumber, agency.nameEnglish || "");
+        }
+        return;
       }
+    }
+
+
+    const clientMobile = normalizeMobile(partyMobile);
+    if (mode === "api" && clientMobile.length === 10) {
+      handleWhatsAppSend(`+91${clientMobile}`, eventName || "");
       return;
     }
-  }
 
+    // 3) Web mode, or no client number on the event -> modal (prefilled with client details)
+    setShowWhatsAppModal(true);
+  };
 
-  const clientMobile = normalizeMobile(partyMobile);
-  if (mode === "api" && clientMobile.length === 10) {
-    handleWhatsAppSend(`+91${clientMobile}`, eventName || "");
-    return;
-  }
-
-  // 3) Web mode, or no client number on the event -> modal (prefilled with client details)
-  setShowWhatsAppModal(true);
-};
-
-const handleWhatsAppSend = async (mobile, recipientName) => {
-  const greeting = recipientName || eventName || "there";
-  const message = buildWaMessage({
-    greeting,
-    functionName,
-    functionDateTime,
-    venueName,
-    pdfUrl,
-  });
-
-  try {
-    const { companyMobileNo, companyName } = getCompanyAuthInfo();
-    const cleanedMobile = mobile.replace(/\D/g, "");
-    const res = await WhatsAppPdf({
-      companyMobileNo,
-      companyName,
-      mobileNo: cleanedMobile,
-      moduleName: "Menu Report",
-      partyName: recipientName || "",
-      url: pdfUrl,
-      userId: Number(userId) || 0,
+  const handleWhatsAppSend = async (mobile, recipientName) => {
+    const greeting = recipientName || eventName || "there";
+    const message = buildWaMessage({
+      greeting,
+      functionName,
+      functionDateTime,
+      venueName,
+      pdfUrl,
     });
 
-    if (res?.data?.success) {
-      successMsgPopup("Report sent successfully!");
-    } else {
-      errorMsgPopup(res?.data?.msg || "Failed to send report");
-    }
-  } catch (err) {
-    console.error("WhatsAppPdf notify failed:", err);
-    errorMsgPopup(err?.response?.data?.msg || "Failed to send report");
-  }
+    try {
+      const { companyMobileNo, companyName } = getCompanyAuthInfo();
+      const cleanedMobile = mobile.replace(/\D/g, "");
+      const res = await WhatsAppPdf({
+        companyMobileNo,
+        companyName,
+        mobileNo: cleanedMobile,
+        moduleName: "Menu Report",
+        partyName: recipientName || "",
+        url: pdfUrl,
+        userId: Number(userId) || 0,
+      });
 
-  setShowWhatsAppModal(false); 
-};
+      if (res?.data?.success) {
+        successMsgPopup("Report sent successfully!");
+      } else {
+        errorMsgPopup(res?.data?.msg || "Failed to send report");
+      }
+    } catch (err) {
+      console.error("WhatsAppPdf notify failed:", err);
+      errorMsgPopup(err?.response?.data?.msg || "Failed to send report");
+    }
+
+    setShowWhatsAppModal(false);
+  };
 
   const Toggle = ({ checked, onChange, disabled }) => (
-  <button
-    type="button"
-    onClick={disabled ? undefined : onChange}
-    disabled={disabled}
-    className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-      checked ? "bg-blue-600" : "bg-gray-300"
-    } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-  >
-    <span
-      className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
-        checked ? "translate-x-5" : "translate-x-1"
-      }`}
-    />
-  </button>
-);
+    <button
+      type="button"
+      onClick={disabled ? undefined : onChange}
+      disabled={disabled}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${checked ? "bg-blue-600" : "bg-gray-300"
+        } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+    >
+      <span
+        className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${checked ? "translate-x-5" : "translate-x-1"
+          }`}
+      />
+    </button>
+  );
 
   return (
     <>
       <WhatsAppModal
-  isOpen={showWhatsAppModal}
-  onClose={() => setShowWhatsAppModal(false)}
-  onSend={whatsAppSendMode === "web" ? openWebWhatsApp : handleWhatsAppSend}
-  mobileNumber={mobileNumber}
-  defaultName={eventName}          
-  defaultMobile={partyMobile}
-  mode={whatsAppSendMode}
-/>
+        isOpen={showWhatsAppModal}
+        onClose={() => setShowWhatsAppModal(false)}
+        onSend={whatsAppSendMode === "web" ? openWebWhatsApp : handleWhatsAppSend}
+        mobileNumber={mobileNumber}
+        defaultName={eventName}
+        defaultMobile={partyMobile}
+        mode={whatsAppSendMode}
+      />
       <CustomModal
         open={isModalOpen}
         title={selectedTemplateName || "Report"}
@@ -1655,36 +1693,35 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
               >
                 Close
               </button>
-              
-{pdfUrl && !pdfUrl.toLowerCase().endsWith(".docx") && !pdfUrl.toLowerCase().endsWith(".xlsx") && (
-  <>
-    <button
-      onClick={() => handleWhatsAppShare("api")}
-      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-    >
-      Share on WhatsApp
-    </button>
-    <button
-      onClick={() => handleWhatsAppShare("web")}
-      className="px-4 py-2 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition"
-      title="Opens web.whatsapp.com with the message pre-filled — you send it manually"
-    >
-      Web WhatsApp
-    </button>
-  </>
-)}
+
+              {pdfUrl && !pdfUrl.toLowerCase().endsWith(".docx") && !pdfUrl.toLowerCase().endsWith(".xlsx") && (
+                <>
+                  <button
+                    onClick={() => handleWhatsAppShare("api")}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                  >
+                    Share on WhatsApp
+                  </button>
+                  <button
+                    onClick={() => handleWhatsAppShare("web")}
+                    className="px-4 py-2 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition"
+                    title="Opens web.whatsapp.com with the message pre-filled — you send it manually"
+                  >
+                    Web WhatsApp
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <button
               onClick={handleReport}
               disabled={loading}
-              className={`px-6 py-2 text-white rounded transition ${
-                loading
+              className={`px-6 py-2 text-white rounded transition ${loading
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-[#005BA8] hover:bg-[#004a8d]"
-              }`}
+                }`}
             >
-              {loading ? "Generating..." : "Generate Report"}
+              {loading ? `Generating... ${Math.round(reportProgress)}%` : "Generate Report"}
             </button>
           )
         }
@@ -1692,27 +1729,29 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
         {showNamePlateUI ? (
           <NamePlateReport onClose={() => setShowNamePlateUI(false)} />
         ) : !pdfUrl ? (
-          <div className="space-y-6">
-            <div>
-              <label className="block font-medium mb-2 text-gray-700">
-                Select Language
-              </label>
-              <div className="flex border rounded-lg overflow-hidden shadow-sm">
-  {languageOptions.map((lang) => (
-    <button
-      key={lang.value}
-      onClick={() => setSelectedLanguage(lang.value)}
-      className={`flex-1 py-2.5 font-medium transition ${
-        selectedLanguage === lang.value
-          ? "bg-[#005BA8] text-white"
-          : "bg-white text-gray-700 hover:bg-gray-50"
-      }`}
-    >
-      {lang.label}
-    </button>
-  ))}
-</div>
-              {/* <div className="flex border rounded-lg overflow-hidden shadow-sm">
+          loading ? (
+            <PercentLoader percent={reportProgress} label={reportStep} />
+          ) : (
+            <div className="space-y-6">
+              <div>
+                <label className="block font-medium mb-2 text-gray-700">
+                  Select Language
+                </label>
+                <div className="flex border rounded-lg overflow-hidden shadow-sm">
+                  {languageOptions.map((lang) => (
+                    <button
+                      key={lang.value}
+                      onClick={() => setSelectedLanguage(lang.value)}
+                      className={`flex-1 py-2.5 font-medium transition ${selectedLanguage === lang.value
+                          ? "bg-[#005BA8] text-white"
+                          : "bg-white text-gray-700 hover:bg-gray-50"
+                        }`}
+                    >
+                      {lang.label}
+                    </button>
+                  ))}
+                </div>
+                {/* <div className="flex border rounded-lg overflow-hidden shadow-sm">
                 {["english", "hindi", "gujarati"].map((lang) => (
                   <button
                     key={lang}
@@ -1723,489 +1762,490 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
                   </button>
                 ))}
               </div> */}
-            </div>
-
-           
-{(exclusive === true || moduleType === "Decoration Theme") && (
-
-  <div className="grid grid-cols-3 gap-4">
-    <div>
-      <label className="block font-medium mb-2 text-gray-700">
-        Category Font Family
-      </label>
-      <Select
-        className="w-full"
-        value={catFontId ?? undefined}
-        onChange={(val) => setcatFontId(val)}
-        options={[
-          { value: -1, label: "Default" },
-          ...fonts.map((f) => ({ value: f.fontId, label: f.fontName })),
-        ]}
-      />
-    </div>
-    <div>
-      <label className="block font-medium mb-2 text-gray-700">
-        Item Font Family
-      </label>
-      <Select
-        className="w-full"
-        value={itemFontId ?? undefined}
-        onChange={(val) => setItemFontId(val)}
-        options={[
-          { value: -1, label: "Default" },
-          ...fonts.map((f) => ({ value: f.fontId, label: f.fontName })),
-        ]}
-      />
-    </div>
-    <div>
-      <label className="block font-medium mb-2 text-gray-700">
-        Slogan Font Family
-      </label>
-      <Select
-        className="w-full"
-        value={sloganFontId ?? undefined}
-        onChange={(val) => setSloganFontId(val)}
-        options={[
-          { value: -1, label: "Default" },
-          ...fonts.map((f) => ({ value: f.fontId, label: f.fontName })),
-        ]}
-      />
-    </div>
-  </div>
-)}
-
-{(exclusive === true ||
-  moduleType === "Decoration Theme" ||
-  (moduleType === "Back Office Theme" && mappingType === "Type 12")) && (
-  <div className="grid grid-cols-3 gap-4">
-    <div>
-      <label className="block font-medium mb-2 text-gray-700">Category Font Size</label>
-      <Select
-        className="w-full"
-        value={catFontSize ?? -1}
-        onChange={(val) => setcatFontSize(val)}
-        options={[
-          { value: -1, label: "Default" },
-          { value: 9, label: "9" }, { value: 10, label: "10" },
-          { value: 11, label: "11" }, { value: 12, label: "12" },
-          { value: 14, label: "14" }, { value: 16, label: "16" },
-          { value: 18, label: "18" }, { value: 20, label: "20" },
-          { value: 22, label: "22" }, { value: 23, label: "23" },
-          { value: 24, label: "24" }, { value: 26, label: "26" },
-        ]}
-      />
-    </div>
-    <div>
-      <label className="block font-medium mb-2 text-gray-700">Item Font Size</label>
-      <Select
-        className="w-full"
-        value={itemFontSize ?? -1}
-        onChange={(val) => setItemFontSize(val)}
-        options={[
-          { value: -1, label: "Default" },
-          { value: 9, label: "9" }, { value: 10, label: "10" },
-          { value: 11, label: "11" }, { value: 12, label: "12" },
-          { value: 14, label: "14" }, { value: 16, label: "16" },
-          { value: 18, label: "18" }, { value: 20, label: "20" },
-          { value: 22, label: "22" }, { value: 23, label: "23" },
-          { value: 24, label: "24" }, { value: 26, label: "26" },
-        ]}
-      />
-    </div>
-    <div>
-      <label className="block font-medium mb-2 text-gray-700">Slogan Font Size</label>
-      <Select
-        className="w-full"
-        value={sloganFontSize ?? -1}
-        onChange={(val) => setSloganFontSize(val)}
-        options={[
-          { value: -1, label: "Default" },
-          { value: 9, label: "9" }, { value: 10, label: "10" },
-          { value: 11, label: "11" }, { value: 12, label: "12" },
-          { value: 14, label: "14" }, { value: 16, label: "16" },
-          { value: 18, label: "18" }, { value: 20, label: "20" },
-          { value: 22, label: "22" }, { value: 23, label: "23" },
-          { value: 24, label: "24" }, { value: 26, label: "26" },
-        ]}
-      />
-    </div>
-  </div>
-  
-)}          
-{exclusive === true && showFontColors && (
-  <div className="grid grid-cols-3 gap-4">
-    <div>
-      <label className="block font-medium mb-2 text-gray-700">Heading Color</label>
-      <ColorPicker
-        value={headingFontColor ?? DEFAULT_FONT_COLOR}
-        onChange={(c) => setHeadingFontColor(toRgbaString(c))}
-        showText
-        allowClear={false}
-        getPopupContainer={() => document.body}
-      />
-    </div>
-    <div>
-      <label className="block font-medium mb-2 text-gray-700">Description Color</label>
-      <ColorPicker
-        value={descriptionFontColor ?? DEFAULT_FONT_COLOR}
-        onChange={(c) => setDescriptionFontColor(toRgbaString(c))}
-        showText
-        allowClear={false}
-        getPopupContainer={() => document.body}
-      />
-    </div>
-    <div>
-      <label className="block font-medium mb-2 text-gray-700">Content Color</label>
-      <ColorPicker
-        value={contentFontColor ?? DEFAULT_FONT_COLOR}
-        onChange={(c) => setContentFontColor(toRgbaString(c))}
-        showText
-        allowClear={false}
-        getPopupContainer={() => document.body}
-      />
-    </div>
-  </div>
-)}
-             {!isAdminModuleReport && (isDateStatus === 1 ) && (
-  <div className="p-5 rounded-xl border-2">
-    <div className="grid grid-cols-2 gap-4">
-      <div>
-        <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-            Start Date <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="date"
-          value={startDate || ""}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-            End Date <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="date"
-          value={endDate || ""}
-          onChange={(e) => setEndDate(e.target.value)}
-          min={startDate || undefined}
-          disabled={!startDate}
-          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-        />
-      </div>
-    </div>
-  </div>
-)}
-            {!isAdminModuleReport &&
-              (
-                showAgencyDropdown ||
-                showItemDropdown ||
-                showCategoryDropdown) && (
-                <div className="p-5 rounded-xl border-2">
-                  <div className="grid grid-cols-2 gap-4">
-                   {showAgencyDropdown && (
-  <div>
-    <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-      <TeamOutlined className="mr-1" />
-      Agency
-    </label>
-    <Select
-      mode="multiple"
-      value={selectedAgency}
-      onChange={setSelectedAgency}
-      placeholder="Select agencies..."
-      className="w-full"
-      size="large"
-      loading={loadingFilters}
-      showSearch
-      optionFilterProp="children"
-      filterOption={(input, option) =>
-        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-      }
-      options={agencies.map((a) => ({ value: a.id, label: a.nameEnglish }))}
-      getPopupContainer={() => document.body}
-      dropdownStyle={{ zIndex: 10000 }}
-      maxTagCount="responsive"
-      allowClear
-    />
-  </div>
-)}
-{showMenuCategoryDropdown && (
-  <div>
-    <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-      <AppstoreOutlined className="mr-1" />
-      Menu Category
-    </label>
-    <Select
-      mode="multiple"
-      value={selectedMenuCategories}
-      onChange={handleMenuCategoryChange}
-      placeholder="Select categories..."
-      className="w-full"
-      size="large"
-      loading={loadingFilters}
-      showSearch
-      optionFilterProp="children"
-      filterOption={(input, option) =>
-        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-      }
-      options={menuCategories.map((c) => ({ value: c.id, label: c.name }))}
-      getPopupContainer={() => document.body}
-      dropdownStyle={{ zIndex: 10000 }}
-      maxTagCount="responsive"
-      allowClear
-    />
-  </div>
-)}
-{showItemDropdown && (
-  <div>
-    <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-      <AppstoreOutlined className="mr-1" />
-      Items <span className="text-red-500">*</span>
-    </label>
-    <Select
-      mode="multiple"
-      value={selectedItems}
-      onChange={setSelectedItems}
-      placeholder="Select items..."
-      className="w-full"
-      size="large"
-      loading={loadingFilters}
-      showSearch
-      optionFilterProp="children"
-      filterOption={(input, option) =>
-        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-      }
-      options={visibleItems.map((i) => ({ value: i.id, label: i.nameEnglish }))}
-      getPopupContainer={() => document.body}
-      dropdownStyle={{ zIndex: 10000 }}
-      maxTagCount="responsive"
-      allowClear
-      disabled={showAgencyDropdown && selectedAgency.length === 0}
-    />
-  </div>
-)}
-                    {showCategoryDropdown && (
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-                          <AppstoreOutlined className="mr-1" />
-                          Category
-                        </label>
-                        <Select
-                          mode="multiple"
-                          value={selectedCategory}
-                          onChange={setSelectedCategory}
-                          placeholder="Select items..."
-                          className="w-full"
-                          size="large"
-                          loading={loadingFilters}
-                          showSearch
-                          optionFilterProp="children"
-                          filterOption={(input, option) =>
-                            (option?.label ?? "")
-                              .toLowerCase()
-                              .includes(input.toLowerCase())
-                          }
-                          options={category.map((i) => ({
-                            value: i.id,
-                            label: i.nameEnglish,
-                          }))}
-                          getPopupContainer={() => document.body}
-  dropdownStyle={{ zIndex: 10000 }}
-                          maxTagCount="responsive"
-                          allowClear
-                          disabled={setSelectedCategory.length === 0}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-            {!isAdminModuleReport &&
-              isManager &&
-              !(
-                isDateStatus === 1 ||
-                showAgencyDropdown ||
-                showItemDropdown ||
-                showCategoryDropdown
-              ) && (
-                <div className="p-5 rounded-xl border-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    {isManager && (
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-                          <TeamOutlined className="mr-1" />
-                          Manager
-                        </label>
-                        <Select
-                          mode="multiple"
-                          value={selectedManager}
-                          onChange={setSelectedManager}
-                          placeholder="Select manager..."
-                          className="w-full"
-                          size="large"
-                          loading={loadingFilters}
-                          showSearch
-                          optionFilterProp="children"
-                          filterOption={(input, option) =>
-                            (option?.label ?? "")
-                              .toLowerCase()
-                              .includes(input.toLowerCase())
-                          }
-                          options={manager.map((a) => ({
-                            value: a.id,
-                            label: a.firstName,
-                          }))}
-                          getPopupContainer={() => document.body}
-                            dropdownStyle={{ zIndex: 10000 }}
-                          maxTagCount="responsive"
-                          allowClear
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-            {showStatusDropdown && (
-              <div className="grid grid-cols-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-                    Status
-                  </label>
-                  <Select
-                    mode="multiple"
-                    value={selectedStatus}
-                    onChange={setSelectedStatus}
-                    placeholder="Select status..."
-                    className="w-full"
-                    size="large"
-                    options={[
-                      { value: 0, label: "Inquiry" },
-                      { value: 3, label: "Tentative" },
-                      { value: 1, label: "Confirm" },
-                      { value: 2, label: "Cancel" },
-                    ]}
-                    allowClear
-                    maxTagCount="responsive"
-                    getPopupContainer={(trigger) => trigger.parentNode}
-                    dropdownStyle={{ zIndex: 9999 }}
-                  />
-                </div>
               </div>
-            )}
 
-            {!isNamePlateTheme && (
-              <>
-                <div className="flex justify-between items-center border-b pb-3 mb-3">
-                  <span className="font-semibold text-gray-700">
-                    Check All Options
-                  </span>
-                  <Toggle
-                    checked={isCheckAll}
-                    onChange={() => toggleAll(!isCheckAll)}
-                  />
+
+              {(exclusive === true || moduleType === "Decoration Theme") && (
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700">
+                      Category Font Family
+                    </label>
+                    <Select
+                      className="w-full"
+                      value={catFontId ?? undefined}
+                      onChange={(val) => setcatFontId(val)}
+                      options={[
+                        { value: -1, label: "Default" },
+                        ...fonts.map((f) => ({ value: f.fontId, label: f.fontName })),
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700">
+                      Item Font Family
+                    </label>
+                    <Select
+                      className="w-full"
+                      value={itemFontId ?? undefined}
+                      onChange={(val) => setItemFontId(val)}
+                      options={[
+                        { value: -1, label: "Default" },
+                        ...fonts.map((f) => ({ value: f.fontId, label: f.fontName })),
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700">
+                      Slogan Font Family
+                    </label>
+                    <Select
+                      className="w-full"
+                      value={sloganFontId ?? undefined}
+                      onChange={(val) => setSloganFontId(val)}
+                      options={[
+                        { value: -1, label: "Default" },
+                        ...fonts.map((f) => ({ value: f.fontId, label: f.fontName })),
+                      ]}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                  {visibleOptions.map((key) => (
-                    <div
-                      key={key}
-                      className="flex justify-between items-center py-2 px-3 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      <span className="capitalize text-gray-700">
-                        {key === "size1" || key === "size2" || key === "size3"
-                          ? `Size ${options[key]?.label}`
-                          : optionDisplayLabels[key] ||
-                            key.replace(/([A-Z])/g, " $1")}
-                      </span>
-                     <Toggle
-  checked={
-    key === "size1" || key === "size2" || key === "size3"
-      ? options[key]?.enabled
-      : options[key]
-  }
-  disabled={key === "showLastPage" && exclusive}
-  onChange={() => toggleOne(key)}
-/>
+              )}
+
+              {(exclusive === true ||
+                moduleType === "Decoration Theme" ||
+                (moduleType === "Back Office Theme" && mappingType === "Type 12")) && (
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block font-medium mb-2 text-gray-700">Category Font Size</label>
+                      <Select
+                        className="w-full"
+                        value={catFontSize ?? -1}
+                        onChange={(val) => setcatFontSize(val)}
+                        options={[
+                          { value: -1, label: "Default" },
+                          { value: 9, label: "9" }, { value: 10, label: "10" },
+                          { value: 11, label: "11" }, { value: 12, label: "12" },
+                          { value: 14, label: "14" }, { value: 16, label: "16" },
+                          { value: 18, label: "18" }, { value: 20, label: "20" },
+                          { value: 22, label: "22" }, { value: 23, label: "23" },
+                          { value: 24, label: "24" }, { value: 26, label: "26" },
+                        ]}
+                      />
                     </div>
-                  ))}
+                    <div>
+                      <label className="block font-medium mb-2 text-gray-700">Item Font Size</label>
+                      <Select
+                        className="w-full"
+                        value={itemFontSize ?? -1}
+                        onChange={(val) => setItemFontSize(val)}
+                        options={[
+                          { value: -1, label: "Default" },
+                          { value: 9, label: "9" }, { value: 10, label: "10" },
+                          { value: 11, label: "11" }, { value: 12, label: "12" },
+                          { value: 14, label: "14" }, { value: 16, label: "16" },
+                          { value: 18, label: "18" }, { value: 20, label: "20" },
+                          { value: 22, label: "22" }, { value: 23, label: "23" },
+                          { value: 24, label: "24" }, { value: 26, label: "26" },
+                        ]}
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-medium mb-2 text-gray-700">Slogan Font Size</label>
+                      <Select
+                        className="w-full"
+                        value={sloganFontSize ?? -1}
+                        onChange={(val) => setSloganFontSize(val)}
+                        options={[
+                          { value: -1, label: "Default" },
+                          { value: 9, label: "9" }, { value: 10, label: "10" },
+                          { value: 11, label: "11" }, { value: 12, label: "12" },
+                          { value: 14, label: "14" }, { value: 16, label: "16" },
+                          { value: 18, label: "18" }, { value: 20, label: "20" },
+                          { value: 22, label: "22" }, { value: 23, label: "23" },
+                          { value: 24, label: "24" }, { value: 26, label: "26" },
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                )}
+              {exclusive === true && showFontColors && (
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700">Heading Color</label>
+                    <ColorPicker
+                      value={headingFontColor ?? DEFAULT_FONT_COLOR}
+                      onChange={(c) => setHeadingFontColor(toRgbaString(c))}
+                      showText
+                      allowClear={false}
+                      getPopupContainer={() => document.body}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700">Description Color</label>
+                    <ColorPicker
+                      value={descriptionFontColor ?? DEFAULT_FONT_COLOR}
+                      onChange={(c) => setDescriptionFontColor(toRgbaString(c))}
+                      showText
+                      allowClear={false}
+                      getPopupContainer={() => document.body}
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-medium mb-2 text-gray-700">Content Color</label>
+                    <ColorPicker
+                      value={contentFontColor ?? DEFAULT_FONT_COLOR}
+                      onChange={(c) => setContentFontColor(toRgbaString(c))}
+                      showText
+                      allowClear={false}
+                      getPopupContainer={() => document.body}
+                    />
+                  </div>
                 </div>
-              </>
-              
-            )}
+              )}
+              {!isAdminModuleReport && (isDateStatus === 1) && (
+                <div className="p-5 rounded-xl border-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                        Start Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={startDate || ""}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                        End Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={endDate || ""}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        min={startDate || undefined}
+                        disabled={!startDate}
+                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!isAdminModuleReport &&
+                (
+                  showAgencyDropdown ||
+                  showItemDropdown ||
+                  showCategoryDropdown) && (
+                  <div className="p-5 rounded-xl border-2">
+                    <div className="grid grid-cols-2 gap-4">
+                      {showAgencyDropdown && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                            <TeamOutlined className="mr-1" />
+                            Agency
+                          </label>
+                          <Select
+                            mode="multiple"
+                            value={selectedAgency}
+                            onChange={setSelectedAgency}
+                            placeholder="Select agencies..."
+                            className="w-full"
+                            size="large"
+                            loading={loadingFilters}
+                            showSearch
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                            }
+                            options={agencies.map((a) => ({ value: a.id, label: a.nameEnglish }))}
+                            getPopupContainer={() => document.body}
+                            dropdownStyle={{ zIndex: 10000 }}
+                            maxTagCount="responsive"
+                            allowClear
+                          />
+                        </div>
+                      )}
+                      {showMenuCategoryDropdown && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                            <AppstoreOutlined className="mr-1" />
+                            Menu Category
+                          </label>
+                          <Select
+                            mode="multiple"
+                            value={selectedMenuCategories}
+                            onChange={handleMenuCategoryChange}
+                            placeholder="Select categories..."
+                            className="w-full"
+                            size="large"
+                            loading={loadingFilters}
+                            showSearch
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                            }
+                            options={menuCategories.map((c) => ({ value: c.id, label: c.name }))}
+                            getPopupContainer={() => document.body}
+                            dropdownStyle={{ zIndex: 10000 }}
+                            maxTagCount="responsive"
+                            allowClear
+                          />
+                        </div>
+                      )}
+                      {showItemDropdown && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                            <AppstoreOutlined className="mr-1" />
+                            Items <span className="text-red-500">*</span>
+                          </label>
+                          <Select
+                            mode="multiple"
+                            value={selectedItems}
+                            onChange={setSelectedItems}
+                            placeholder="Select items..."
+                            className="w-full"
+                            size="large"
+                            loading={loadingFilters}
+                            showSearch
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                            }
+                            options={visibleItems.map((i) => ({ value: i.id, label: i.nameEnglish }))}
+                            getPopupContainer={() => document.body}
+                            dropdownStyle={{ zIndex: 10000 }}
+                            maxTagCount="responsive"
+                            allowClear
+                            disabled={showAgencyDropdown && selectedAgency.length === 0}
+                          />
+                        </div>
+                      )}
+                      {showCategoryDropdown && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                            <AppstoreOutlined className="mr-1" />
+                            Category
+                          </label>
+                          <Select
+                            mode="multiple"
+                            value={selectedCategory}
+                            onChange={setSelectedCategory}
+                            placeholder="Select items..."
+                            className="w-full"
+                            size="large"
+                            loading={loadingFilters}
+                            showSearch
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                              (option?.label ?? "")
+                                .toLowerCase()
+                                .includes(input.toLowerCase())
+                            }
+                            options={category.map((i) => ({
+                              value: i.id,
+                              label: i.nameEnglish,
+                            }))}
+                            getPopupContainer={() => document.body}
+                            dropdownStyle={{ zIndex: 10000 }}
+                            maxTagCount="responsive"
+                            allowClear
+                            disabled={setSelectedCategory.length === 0}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {!isAdminModuleReport &&
+                isManager &&
+                !(
+                  isDateStatus === 1 ||
+                  showAgencyDropdown ||
+                  showItemDropdown ||
+                  showCategoryDropdown
+                ) && (
+                  <div className="p-5 rounded-xl border-2">
+                    <div className="grid grid-cols-2 gap-4">
+                      {isManager && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                            <TeamOutlined className="mr-1" />
+                            Manager
+                          </label>
+                          <Select
+                            mode="multiple"
+                            value={selectedManager}
+                            onChange={setSelectedManager}
+                            placeholder="Select manager..."
+                            className="w-full"
+                            size="large"
+                            loading={loadingFilters}
+                            showSearch
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                              (option?.label ?? "")
+                                .toLowerCase()
+                                .includes(input.toLowerCase())
+                            }
+                            options={manager.map((a) => ({
+                              value: a.id,
+                              label: a.firstName,
+                            }))}
+                            getPopupContainer={() => document.body}
+                            dropdownStyle={{ zIndex: 10000 }}
+                            maxTagCount="responsive"
+                            allowClear
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {showStatusDropdown && (
+                <div className="grid grid-cols-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                      Status
+                    </label>
+                    <Select
+                      mode="multiple"
+                      value={selectedStatus}
+                      onChange={setSelectedStatus}
+                      placeholder="Select status..."
+                      className="w-full"
+                      size="large"
+                      options={[
+                        { value: 0, label: "Inquiry" },
+                        { value: 3, label: "Tentative" },
+                        { value: 1, label: "Confirm" },
+                        { value: 2, label: "Cancel" },
+                      ]}
+                      allowClear
+                      maxTagCount="responsive"
+                      getPopupContainer={(trigger) => trigger.parentNode}
+                      dropdownStyle={{ zIndex: 9999 }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!isNamePlateTheme && (
+                <>
+                  <div className="flex justify-between items-center border-b pb-3 mb-3">
+                    <span className="font-semibold text-gray-700">
+                      Check All Options
+                    </span>
+                    <Toggle
+                      checked={isCheckAll}
+                      onChange={() => toggleAll(!isCheckAll)}
+                    />
+                  </div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                    {visibleOptions.map((key) => (
+                      <div
+                        key={key}
+                        className="flex justify-between items-center py-2 px-3 rounded-lg hover:bg-gray-50 transition"
+                      >
+                        <span className="capitalize text-gray-700">
+                          {key === "size1" || key === "size2" || key === "size3"
+                            ? `Size ${options[key]?.label}`
+                            : optionDisplayLabels[key] ||
+                            key.replace(/([A-Z])/g, " $1")}
+                        </span>
+                        <Toggle
+                          checked={
+                            key === "size1" || key === "size2" || key === "size3"
+                              ? options[key]?.enabled
+                              : options[key]
+                          }
+                          disabled={key === "showLastPage" && exclusive}
+                          onChange={() => toggleOne(key)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </>
+
+              )}
 
 
-            {!isNamePlateTheme && addShortMenu && (
-  <div className="p-5 rounded-xl border-2 space-y-4">
-    <h3 className="font-semibold text-gray-800">Short Menu Report Configuration</h3>
+              {!isNamePlateTheme && addShortMenu && (
+                <div className="p-5 rounded-xl border-2 space-y-4">
+                  <h3 className="font-semibold text-gray-800">Short Menu Report Configuration</h3>
 
-    {!shortMenuTemplate ? (
-      <p className="text-sm text-gray-500">Loading Short Menu configuration...</p>
-    ) : (
-      <>
-        {shortMenuHasItems && (
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
-              <AppstoreOutlined className="mr-1" />
-              Items <span className="text-red-500">*</span>
-            </label>
-            <Select
-              mode="multiple"
-              value={shortMenuSelectedItems}
-              onChange={setShortMenuSelectedItems}
-              placeholder="Select items..."
-              className="w-full"
-              size="large"
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-              }
-              options={shortMenuItems.map((i) => ({ value: i.id, label: i.nameEnglish }))}
-              getPopupContainer={() => document.body}
-              dropdownStyle={{ zIndex: 10000 }}
-              maxTagCount="responsive"
-              allowClear
-            />
-          </div>
-        )}
+                  {!shortMenuTemplate ? (
+                    <p className="text-sm text-gray-500">Loading Short Menu configuration...</p>
+                  ) : (
+                    <>
+                      {shortMenuHasItems && (
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                            <AppstoreOutlined className="mr-1" />
+                            Items <span className="text-red-500">*</span>
+                          </label>
+                          <Select
+                            mode="multiple"
+                            value={shortMenuSelectedItems}
+                            onChange={setShortMenuSelectedItems}
+                            placeholder="Select items..."
+                            className="w-full"
+                            size="large"
+                            showSearch
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                            }
+                            options={shortMenuItems.map((i) => ({ value: i.id, label: i.nameEnglish }))}
+                            getPopupContainer={() => document.body}
+                            dropdownStyle={{ zIndex: 10000 }}
+                            maxTagCount="responsive"
+                            allowClear
+                          />
+                        </div>
+                      )}
 
-        <div className="flex justify-between items-center border-b pb-3">
-          <span className="font-semibold text-gray-700">Check All Options</span>
-          <Toggle
-            checked={isShortMenuCheckAll}
-            onChange={() => toggleAllShortMenu(!isShortMenuCheckAll)}
-          />
-        </div>
+                      <div className="flex justify-between items-center border-b pb-3">
+                        <span className="font-semibold text-gray-700">Check All Options</span>
+                        <Toggle
+                          checked={isShortMenuCheckAll}
+                          onChange={() => toggleAllShortMenu(!isShortMenuCheckAll)}
+                        />
+                      </div>
 
-        <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-          {shortMenuVisibleOptions.map((key) => (
-            <div
-              key={key}
-              className="flex justify-between items-center py-2 px-3 rounded-lg hover:bg-gray-50 transition"
-            >
-              <span className="capitalize text-gray-700">
-                {key === "size1" || key === "size2" || key === "size3"
-                  ? `Size ${shortMenuOptions[key]?.label}`
-                  : optionDisplayLabels[key] || key.replace(/([A-Z])/g, " $1")}
-              </span>
-              <Toggle
-                checked={
-                  key === "size1" || key === "size2" || key === "size3"
-                    ? shortMenuOptions[key]?.enabled
-                    : shortMenuOptions[key]
-                }
-                onChange={() => toggleShortMenuOne(key)}
-              />
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                        {shortMenuVisibleOptions.map((key) => (
+                          <div
+                            key={key}
+                            className="flex justify-between items-center py-2 px-3 rounded-lg hover:bg-gray-50 transition"
+                          >
+                            <span className="capitalize text-gray-700">
+                              {key === "size1" || key === "size2" || key === "size3"
+                                ? `Size ${shortMenuOptions[key]?.label}`
+                                : optionDisplayLabels[key] || key.replace(/([A-Z])/g, " $1")}
+                            </span>
+                            <Toggle
+                              checked={
+                                key === "size1" || key === "size2" || key === "size3"
+                                  ? shortMenuOptions[key]?.enabled
+                                  : shortMenuOptions[key]
+                              }
+                              onChange={() => toggleShortMenuOne(key)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      </>
-    )}
-  </div>
-)}
-          </div>
+          )
         ) : (
           // <div style={{ height: "80vh" }}>
           //   <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
@@ -2238,45 +2278,44 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
 </div> */
 
           <>
-  {mainUrl && shortMenuUrl && (
-    <div className="flex gap-2 mb-3">
-      {[
-        { label: selectedTemplateName || "Report", url: mainUrl },
-        { label: "Short Menu Report", url: shortMenuUrl },
-      ].map((t) => (
-        <button
-          key={t.label}
-          onClick={() => setPdfUrl(t.url)}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-            pdfUrl === t.url
-              ? "bg-[#005BA8] text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
-  )}
+            {mainUrl && shortMenuUrl && (
+              <div className="flex gap-2 mb-3">
+                {[
+                  { label: selectedTemplateName || "Report", url: mainUrl },
+                  { label: "Short Menu Report", url: shortMenuUrl },
+                ].map((t) => (
+                  <button
+                    key={t.label}
+                    onClick={() => setPdfUrl(t.url)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${pdfUrl === t.url
+                        ? "bg-[#005BA8] text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
-  <div style={{ height: "75vh" }}>
-    <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-      <Viewer
-        key={pdfUrl}
-        fileUrl={pdfUrl}
-        plugins={[pdfPlugin]}
-        renderLoader={(percentages) => (
-          <div className="flex flex-col items-center justify-center h-full">
-            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-600 font-medium">
-              Loading PDF... {Math.round(percentages)}%
-            </p>
-          </div>
-        )}
-      />
-    </Worker>
-  </div>
-</>
+            <div style={{ height: "75vh" }}>
+              <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
+                <Viewer
+                  key={pdfUrl}
+                  fileUrl={pdfUrl}
+                  plugins={[pdfPlugin]}
+                  renderLoader={(percentages) => (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <p className="mt-4 text-gray-600 font-medium">
+                        Loading PDF... {Math.round(percentages)}%
+                      </p>
+                    </div>
+                  )}
+                />
+              </Worker>
+            </div>
+          </>
         )}
       </CustomModal>
     </>
