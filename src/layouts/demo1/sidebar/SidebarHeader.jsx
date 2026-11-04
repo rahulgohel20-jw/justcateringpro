@@ -27,11 +27,12 @@ const LOGO_MAP = {
     monogramWhite: "/images/just_banq_monogram_white.svg",
   },
   jcxpro: {
-    default: "/images/logo.svg",
-    monogram: "/images/monogram.svg",
+    default: "/images/just-catering-diwali-logo-sidebar.gif",
+    monogram: "/images/monogram-diwali.gif",
     defaultWhite: "/images/logo_white.svg",
     monogramWhite: "/images/monogram_white.svg",
   },
+  
 };
 
 const getLogoSet = () => LOGO_MAP[getSoftType()] || LOGO_MAP.jcx;

@@ -4,6 +4,9 @@ import { FormattedMessage } from "react-intl";
 import { toAbsoluteUrl } from "@/utils";
 import { GetOutsideSummary, AddExclusiveReport, WhatsAppPdf } from "@/services/apiServices";
 import { Tooltip } from "antd";
+import WhatsAppShareModal from "../../partials/modals/menu-report/WhatsAppShareModal";
+import { useModuleAccess } from "../../hooks/useModuleAccess";
+
 
 const WhatsAppIcon = () => (
   <svg
@@ -51,7 +54,8 @@ export default function SummaryItemModalInHousecook({
   const [apiData, setApiData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
+  const { hasModuleAccess } = useModuleAccess();
+    const candirectsharewhatapp = hasModuleAccess("Direct Share on Whatsapp");
   // ── WhatsApp state ────────────────────────────────────────────────────────
   const [whatsAppLoading, setWhatsAppLoading] = useState(false);
   const [whatsAppLoadingIndex, setWhatsAppLoadingIndex] = useState(null);
@@ -59,6 +63,7 @@ export default function SummaryItemModalInHousecook({
   const [successMessage, setSuccessMessage] = useState("");
   const [webWhatsAppLoading, setWebWhatsAppLoading] = useState(false);
 const [webWhatsAppLoadingIndex, setWebWhatsAppLoadingIndex] = useState(null);
+const [shareTarget, setShareTarget] = useState(null); // { contact, index }
   // ──────────────────────────────────────────────────────────────────────────
 
   const isShowingAllFunctions = eventFunctionId === -1;
@@ -150,28 +155,28 @@ const [webWhatsAppLoadingIndex, setWebWhatsAppLoadingIndex] = useState(null);
     }
   };
 
-  const handleWebWhatsApp = async (contact, index) => {
-  const mobile = (contact.number || "").replace(/\D/g, "");
-  if (!mobile || mobile.length < 10) {
-    console.error("No valid WhatsApp number found for this contact.");
-    return;
-  }
+//   const handleWebWhatsApp = async (contact, index) => {
+//   const mobile = (contact.number || "").replace(/\D/g, "");
+//   if (!mobile || mobile.length < 10) {
+//     console.error("No valid WhatsApp number found for this contact.");
+//     return;
+//   }
 
-  setWebWhatsAppLoading(true);
-  setWebWhatsAppLoadingIndex(index);
+//   setWebWhatsAppLoading(true);
+//   setWebWhatsAppLoadingIndex(index);
 
-  try {
-    const pdfUrl = await handlereport(contact);
-    if (!pdfUrl) return;
+//   try {
+//     const pdfUrl = await handlereport(contact);
+//     if (!pdfUrl) return;
 
-    const greeting = contact.contactName || "there";
-    const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${pdfUrl}`;
-    window.open(`https://wa.me/${mobile}?text=${encodeURIComponent(message)}`, "_blank");
-  } finally {
-    setWebWhatsAppLoading(false);
-    setWebWhatsAppLoadingIndex(null);
-  }
-};
+//     const greeting = contact.contactName || "there";
+//     const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${pdfUrl}`;
+//     window.open(`https://wa.me/${mobile}?text=${encodeURIComponent(message)}`, "_blank");
+//   } finally {
+//     setWebWhatsAppLoading(false);
+//     setWebWhatsAppLoadingIndex(null);
+//   }
+// };
 
   // PDF button — open in new tab
   const handlePdfClick = async (contact, index) => {
@@ -184,49 +189,96 @@ const [webWhatsAppLoadingIndex, setWebWhatsAppLoadingIndex] = useState(null);
   };
 
   // WhatsApp button — generate PDF, notify via WhatsAppPdf, then open wa.me directly
-  const handleWhatsApp = async (contact, index) => {
-    const mobile = (contact.number || "").replace(/\D/g, "");
-    if (!mobile || mobile.length < 10) {
-      console.error("No valid WhatsApp number found for this contact.");
-      return;
-    }
+  // const handleWhatsApp = async (contact, index) => {
+  //   const mobile = (contact.number || "").replace(/\D/g, "");
+  //   if (!mobile || mobile.length < 10) {
+  //     console.error("No valid WhatsApp number found for this contact.");
+  //     return;
+  //   }
 
-    setWhatsAppLoading(true);
-    setWhatsAppLoadingIndex(index);
+  //   setWhatsAppLoading(true);
+  //   setWhatsAppLoadingIndex(index);
 
-    try {
-      const pdfUrl = await handlereport(contact);
-      if (!pdfUrl) return;
+  //   try {
+  //     const pdfUrl = await handlereport(contact);
+  //     if (!pdfUrl) return;
 
-      const userId = localStorage.getItem("userId");
-      const { companyMobileNo, companyName } = getCompanyAuthInfo();
+  //     const userId = localStorage.getItem("userId");
+  //     const { companyMobileNo, companyName } = getCompanyAuthInfo();
 
-      try {
-        const wres = await WhatsAppPdf({
-          companyMobileNo,
-          companyName,
-          mobileNo: mobile,
-          moduleName: "Order Report",
-          partyName: contact.contactName || "",
-          url: pdfUrl,
-          userId: Number(userId) || 0,
-        });
-        if(wres?.data?.success) {
-        setSuccessMessage("Report sent successfully!");
-        } else {
-          setSuccessMessage("Report not sent!");
-        }
-      } catch (err) {
-        console.error("WhatsAppPdf notify failed:", err);
-      }
+  //     try {
+  //       const wres = await WhatsAppPdf({
+  //         companyMobileNo,
+  //         companyName,
+  //         mobileNo: mobile,
+  //         moduleName: "Order Report",
+  //         partyName: contact.contactName || "",
+  //         url: pdfUrl,
+  //         userId: Number(userId) || 0,
+  //       });
+  //       if(wres?.data?.success) {
+  //       setSuccessMessage("Report sent successfully!");
+  //       } else {
+  //         setSuccessMessage("Report not sent!");
+  //       }
+  //     } catch (err) {
+  //       console.error("WhatsAppPdf notify failed:", err);
+  //     }
 
      
-    } finally {
-      setWhatsAppLoading(false);
-      setWhatsAppLoadingIndex(null);
-    }
-  };
+  //   } finally {
+  //     setWhatsAppLoading(false);
+  //     setWhatsAppLoadingIndex(null);
+  //   }
+  // };
+const handleShareSubmit = async ({ method, name, mobile }) => {
+  const contact = shareTarget?.contact;
+  if (!contact) return;
 
+  // direct  -> contact's own number
+  // details -> number typed in the modal
+  const targetMobile =
+    method === "details"
+      ? mobile.replace(/\D/g, "")
+      : (contact.number || "").replace(/\D/g, "");
+
+  if (!targetMobile || targetMobile.length < 10) {
+    setSuccessMessage("No valid WhatsApp number found!");
+    return;
+  }
+
+  const pdfUrl = await handlereport(contact);
+  if (!pdfUrl) {
+    setSuccessMessage("Failed to generate report!");
+    return;
+  }
+
+  const userId = localStorage.getItem("userId");
+  const { companyMobileNo, companyName } = getCompanyAuthInfo();
+
+  try {
+    const wres = await WhatsAppPdf({
+      companyMobileNo,
+      companyName,
+      mobileNo: targetMobile,
+      moduleName: "Order Report",
+      partyName:
+        method === "details" ? name || "" : contact.contactName || "",
+      url: pdfUrl,
+      userId: Number(userId) || 0,
+    });
+
+    if (wres?.data?.success) {
+      setSuccessMessage("Report sent successfully!");
+      setShareTarget(null); // close modal on success
+    } else {
+      setSuccessMessage("Report not sent!");
+    }
+  } catch (err) {
+    console.error("WhatsAppPdf failed:", err);
+    setSuccessMessage("Report not sent!");
+  }
+};
   const toggleRowExpansion = (index) => {
     setExpandedRows((prev) => ({ ...prev, [index]: !prev[index] }));
   };
@@ -430,23 +482,16 @@ const [webWhatsAppLoadingIndex, setWebWhatsAppLoadingIndex] = useState(null);
                                 {/* Actions */}
                                 <div className="flex justify-start gap-5 p-2 rounded-md transition-all duration-300">
                                   <div className="flex gap-2">
-                                    
-                                    <Tooltip title="Send via WhatsApp">
+                                     {candirectsharewhatapp && (
+                                <Tooltip title="Share via WhatsApp">
   <button
-    onClick={() => handleWhatsApp(contact, index)}
-    disabled={whatsAppLoading && whatsAppLoadingIndex === index}
-    className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    onClick={() => setShareTarget({ contact, index })}
+    className="p-1.5 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors"
   >
-    {whatsAppLoading && whatsAppLoadingIndex === index ? (
-      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-      </svg>
-    ) : (
-      <WhatsAppIcon />
-    )}
+    <WhatsAppIcon />
   </button>
 </Tooltip>
+                                     )}
 
 <Tooltip title="Open in Web WhatsApp">
   <button
@@ -508,7 +553,18 @@ const [webWhatsAppLoadingIndex, setWebWhatsAppLoadingIndex] = useState(null);
                                   </div>
                                 </div>
                               </div>
-
+<WhatsAppShareModal
+  isOpen={!!shareTarget}
+  onClose={() => setShareTarget(null)}
+  onShare={handleShareSubmit}
+  defaultName={shareTarget?.contact?.contactName || ""}
+  defaultMobile={shareTarget?.contact?.number || ""}
+  directHint={
+    shareTarget?.contact?.number
+      ? `Will be sent to ${shareTarget.contact.number}`
+      : ""
+  }
+/>
                               {/* Expandable Items Section */}
                               <AnimatePresence>
                                 {expandedRows[index] && (

@@ -103,7 +103,26 @@ const [loadingEvents, setLoadingEvents] = useState(false);
 const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
 const isInquiryVisible = authStorage?.state?.user?.isInquiryVisible ?? false;
 
+const authUser = authStorage?.state?.user ?? {};
+const roleId = Number(authUser?.role?.id ?? authUser?.roleId ?? authStorage?.state?.roleReportRights?.roleId);
+const roleName = String(authUser?.role?.name ?? authStorage?.state?.roleReportRights?.roleName ?? "").toLowerCase();
 
+// Admin / super admin see everything
+const isAdminUser = roleId === 1 || roleId === 2 || roleName === "admin";
+
+const banquetRights =
+  authUser?.banquetRights ??
+  authStorage?.state?.banquetRights ??
+  [];
+
+const allowedBanquetIds = new Set(
+  banquetRights.filter((r) => r.isAllow === true).map((r) => Number(r.banquetHallId))
+);
+
+const visibleBanquets =
+  isAdminUser || banquetRights.length === 0
+    ? banquetList
+    : banquetList.filter((b) => allowedBanquetIds.has(Number(b.id)));
   const { isRTL, locale } = useLanguage();
 
 const { isHallAllowed } = useBanquetPermission()
@@ -739,10 +758,10 @@ const legendItems = [
           setSelectedBanquet(v);
           if (v !== -1) setSelectedVenue(-1);
         }}
-        options={[
-          { value: -1, label: "All Banquets" },
-          ...banquetList.map((b) => ({ value: b.id, label: b.hallName })),
-        ]}
+       options={[
+  { value: -1, label: "All Banquets" },
+  ...visibleBanquets.map((b) => ({ value: b.id, label: b.hallName })),
+]}  
       />
     )}
   </Fragment>

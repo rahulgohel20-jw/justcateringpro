@@ -4,6 +4,7 @@ import { PDFDocument } from "pdf-lib";
 import { getLangConfig } from "@/utils/langConfig";
 import { CustomModal } from "../../../components/custom-modal/CustomModal";
 import NamePlateReport from "./NamePlateReport";
+import WhatsAppShareModal from "./WhatsAppShareModal"; // adjust path
 import {
   AddExclusiveReport,
   GetReportConfiguration,
@@ -477,6 +478,8 @@ const MenuReport = ({
     }, 300);
     return () => clearInterval(t);
   }, [loading]);
+  const { hasModuleAccess } = useModuleAccess();
+    const candirectsharewhatapp = hasModuleAccess("Direct Share on Whatsapp");
   const [options, setOptions] = useState({});
   const [showNamePlateUI, setShowNamePlateUI] = useState(false);
   const [isDropdownStatus, setisDropdownStatus] = useState();
@@ -512,7 +515,6 @@ const MenuReport = ({
   const [sloganFontSize, setSloganFontSize] = useState(-1);
   const [mappingType, setMappingType] = useState(null);
   const [moduleType, setModuleType] = useState(null);
-  const { hasModuleAccess } = useModuleAccess();
   const canAccessStock = hasModuleAccess("Stock");
   const [autoAgencyContact, setAutoAgencyContact] = useState(null);
 
@@ -530,6 +532,7 @@ const MenuReport = ({
   const [headingFontColor, setHeadingFontColor] = useState(null);
   const [descriptionFontColor, setDescriptionFontColor] = useState(null);
   const [contentFontColor, setContentFontColor] = useState(null);
+
 
   const langConfig = getLangConfig();
   const languageOptions = [
@@ -1587,33 +1590,32 @@ contentFontColor: normalizeColor(contentFontColor),
     setWhatsAppSendMode("api");
   };
 
-  const handleWhatsAppShare = (mode = "api") => {
-    setWhatsAppSendMode(mode);
+ // Direct Share: find a recipient automatically, no input asked
+const resolveDirectRecipient = () => {
+  if (selectedAgency.length === 1) {
+    const agency = agencies.find((a) => a.id === selectedAgency[0]);
+    if (agency?.contactNo)
+      return { mobile: agency.contactNo, name: agency.nameEnglish || "" };
+  }
+  if (autoAgencyContact?.contactNo)
+    return { mobile: autoAgencyContact.contactNo, name: autoAgencyContact.nameEnglish || "" };
+  const client = normalizeMobile(partyMobile);
+  if (client.length === 10) return { mobile: client, name: eventName || "" };
+  return null;
+};
 
-
-    if (selectedAgency.length === 1) {
-      const agency = agencies.find((a) => a.id === selectedAgency[0]);
-      if (agency?.contactNo) {
-        const fullNumber = `+91${agency.contactNo.replace(/\D/g, "")}`;
-        if (mode === "web") {
-          openWebWhatsApp(fullNumber, agency.nameEnglish || "");
-        } else {
-          handleWhatsAppSend(fullNumber, agency.nameEnglish || "");
-        }
-        return;
-      }
-    }
-
-
-    const clientMobile = normalizeMobile(partyMobile);
-    if (mode === "api" && clientMobile.length === 10) {
-      handleWhatsAppSend(`+91${clientMobile}`, eventName || "");
-      return;
-    }
-
-    // 3) Web mode, or no client number on the event -> modal (prefilled with client details)
-    setShowWhatsAppModal(true);
-  };
+const handleWhatsAppConfirm = async ({ method, name, mobile }) => {
+  if (method === "details") {
+    await handleWhatsAppSend(mobile, name);   // calls WhatsAppPdf API
+    return;
+  }
+  const r = resolveDirectRecipient();
+  if (!r) {
+    errorMsgPopup("No saved WhatsApp number found. Please use 'Share with Details'.");
+    return;
+  }
+  await handleWhatsAppSend(`+91${String(r.mobile).replace(/\D/g, "")}`, r.name);
+};
 
   const handleWhatsAppSend = async (mobile, recipientName) => {
     const greeting = recipientName || eventName || "there";
@@ -1668,15 +1670,18 @@ contentFontColor: normalizeColor(contentFontColor),
 
   return (
     <>
-      <WhatsAppModal
-        isOpen={showWhatsAppModal}
-        onClose={() => setShowWhatsAppModal(false)}
-        onSend={whatsAppSendMode === "web" ? openWebWhatsApp : handleWhatsAppSend}
-        mobileNumber={mobileNumber}
-        defaultName={eventName}
-        defaultMobile={partyMobile}
-        mode={whatsAppSendMode}
-      />
+   <WhatsAppShareModal
+  isOpen={showWhatsAppModal}
+  onClose={() => setShowWhatsAppModal(false)}
+  onShare={handleWhatsAppConfirm}
+  defaultName={eventName}
+  defaultMobile={partyMobile}
+  directHint={
+    resolveDirectRecipient()
+      ? ""
+      : "No saved number found, please use 'Share with Details'."
+  }
+/>
       <CustomModal
         open={isModalOpen}
         title={selectedTemplateName || "Report"}
@@ -1696,12 +1701,14 @@ contentFontColor: normalizeColor(contentFontColor),
 
               {pdfUrl && !pdfUrl.toLowerCase().endsWith(".docx") && !pdfUrl.toLowerCase().endsWith(".xlsx") && (
                 <>
+                {candirectsharewhatapp && (
                   <button
-                    onClick={() => handleWhatsAppShare("api")}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-                  >
-                    Share on WhatsApp
-                  </button>
+  onClick={() => setShowWhatsAppModal(true)}
+  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+>
+  Share on WhatsApp
+</button>
+                )}
                   <button
                     onClick={() => handleWhatsAppShare("web")}
                     className="px-4 py-2 bg-emerald-500 text-white rounded hover:bg-emerald-600 transition"

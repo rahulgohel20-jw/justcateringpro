@@ -22,6 +22,7 @@ import { useReportPermission } from "@/hooks/useReportPermission";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.js?url";
 import { Send } from "lucide-react";
 import { WhatsAppOutlined } from "@ant-design/icons";
+import WhatsAppShareModal from "../../../partials/modals/menu-report/WhatsAppShareModal";
 
 
 
@@ -1264,67 +1265,94 @@ const { data } = await AddExclusiveReport(formData);
   };
 
   const handleWhatsAppClick = (mode = "api") => {
-    if (mode === "web" && pdfUrl?.startsWith("blob:")) {
+  if (pdfUrl?.startsWith("blob:")) {
+    Swal.fire({
+      title: "Can't share this link",
+      text: "A merged preview only exists in your browser. Select a single theme to share a link.",
+      icon: "warning",
+      confirmButtonColor: "#005BA8",
+    });
+    return;
+  }
+  setWhatsAppSendMode(mode);
+  setShowWhatsAppModal(true);
+};
+
+const handleShareSubmit = async ({ method, name, mobile }) => {
+  let fullNumber;
+  let recipientName;
+
+  if (method === "details") {
+    fullNumber = mobile;                       // "+91XXXXXXXXXX" from the modal
+    recipientName = name;
+  } else {
+    const last10 = normalizeMobile(mobileNumber);
+    if (last10.length !== 10) {
+      setShowWhatsAppModal(false);             // close first so Swal isn't hidden behind it
       Swal.fire({
-        title: "Can't share this link",
-        text: "A merged preview only exists in your browser. Select a single theme to share a link.",
+        title: "No number found",
+        text: "This party has no valid mobile number. Use 'Share with Details' instead.",
         icon: "warning",
         confirmButtonColor: "#005BA8",
       });
       return;
     }
+    fullNumber = `+91${last10}`;
+    recipientName = partyName;
+  }
 
-    setWhatsAppSendMode(mode);
-    const last10 = normalizeMobile(mobileNumber);
-    if (mode === "api" && last10.length === 10) {
-      handleWhatsAppSend(`+91${last10}`, partyName);
-      return;
-    }
-    setShowWhatsAppModal(true);
-  };
+  if (whatsAppSendMode === "web") {
+    openWebWhatsApp(fullNumber, recipientName);
+  } else {
+    await handleWhatsAppSend(fullNumber, recipientName);
+  }
+};
 
-  const handleWhatsAppSend = async (mobile, recipientName) => {
-    const cleanedMobile = mobile.replace(/\D/g, "");
+const handleWhatsAppSend = async (mobile, recipientName) => {
+  const cleanedMobile = mobile.replace(/\D/g, "");
 
-    try {
-      const { companyMobileNo, companyName } = getCompanyAuthInfo();
-      const res = await WhatsAppPdf({
-        companyMobileNo,
-        companyName,
-        mobileNo: cleanedMobile,
-        moduleName: isinvoice === 0 ? "Invoice Report" : "Quotation Report",
-        partyName: recipientName || "",
-        url: pdfUrl,
-        userId: Number(userId) || 0,
+  try {
+    const { companyMobileNo, companyName } = getCompanyAuthInfo();
+    const res = await WhatsAppPdf({
+      companyMobileNo,
+      companyName,
+      mobileNo: cleanedMobile,
+      moduleName: isinvoice === 0 ? "Invoice Report" : "Quotation Report",
+      partyName: recipientName || "",
+      url: pdfUrl,
+      userId: Number(userId) || 0,
+    });
+
+    setShowWhatsAppModal(false);
+
+    if (res?.data?.success) {
+      Swal.fire({
+        title: "Success",
+        text: "Report sent successfully!",
+        icon: "success",
+        confirmButtonColor: "#005BA8",
       });
-
-      if (res?.data?.success) {
-        Swal.fire({
-          title: "Success",
-          text: "Report sent successfully!",
-          icon: "success",
-          confirmButtonColor: "#005BA8",
-        });
-      } else {
-        Swal.fire({
-          title: "Error",
-          text: res?.data?.msg || "Failed to send report",
-          icon: "error",
-          confirmButtonColor: "#d33",
-        });
-      }
-    } catch (err) {
-      console.error("WhatsAppPdf notify failed:", err);
+    } else {
       Swal.fire({
         title: "Error",
-        text: err?.response?.data?.msg || "Failed to send report",
+        text: res?.data?.msg || "Failed to send report",
         icon: "error",
         confirmButtonColor: "#d33",
       });
     }
-
+  } catch (err) {
+    console.error("WhatsAppPdf notify failed:", err);
     setShowWhatsAppModal(false);
-  };
+    Swal.fire({
+      title: "Error",
+      text: err?.response?.data?.msg || "Failed to send report",
+      icon: "error",
+      confirmButtonColor: "#d33",
+    });
+  }
+};
+
+ 
 
   const exclusiveModulesSelected = modules
     .filter((m) => selectedThemes[m.id] !== undefined)
@@ -1340,14 +1368,26 @@ const { data } = await AddExclusiveReport(formData);
 
   return (
     <>
-      <WhatsAppModal
+    <WhatsAppShareModal
+  isOpen={showWhatsAppModal}
+  onClose={() => setShowWhatsAppModal(false)}
+  onShare={handleShareSubmit}
+  defaultName={partyName}
+  defaultMobile={mobileNumber}
+  directHint={
+    normalizeMobile(mobileNumber).length === 10
+      ? `Will be sent to +91${normalizeMobile(mobileNumber)}`
+      : "No number on file for this party"
+  }
+/>
+      {/* <WhatsAppModal
         isOpen={showWhatsAppModal}
         onClose={() => setShowWhatsAppModal(false)}
         onSend={whatsAppSendMode === "web" ? openWebWhatsApp : handleWhatsAppSend}
         defaultName={partyName}
         defaultMobile={mobileNumber}
         mode={whatsAppSendMode}
-      />
+      /> */}
 
       <Modal
         title={
