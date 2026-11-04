@@ -49,9 +49,32 @@ const Login = () => {
 
         if (!auth?.userId) throw new Error("User ID not found after login.");
 
-        const userDetails = auth?.userDetails;
-        if (!userDetails) throw new Error("Failed to fetch user details.");
+      const userDetails = auth?.userDetails;
 
+if (!userDetails) {
+  throw new Error("Failed to fetch user details.");
+}
+
+// Allow only JCX software types
+const normalizeSoftType = (type) =>
+  String(type || "")
+    .toLowerCase()
+    .replace(/[\s_-]/g, "");
+
+const allowedSoftTypes = [
+  "jcx",
+  "jcxplus",
+  "jcxpro",
+  "jcxproplus",
+];
+
+const softType = normalizeSoftType(userDetails?.softType);
+
+if (!allowedSoftTypes.includes(softType)) {
+  throw new Error(
+    "Access denied: your account is not registered for this software."
+  );
+}
         const clientId  = userDetails?.clientId;
         const roleId    = Number(userDetails?.userBasicDetails?.role?.id);
         const userPlan  = userDetails?.userPlan?.plan ?? null;
