@@ -1,6 +1,5 @@
 import { Tooltip } from "antd";
-import { Eye, Pencil, Trash2, StickyNote } from "lucide-react";
-
+import { Eye, Pencil, Trash2, StickyNote, FileText } from "lucide-react";
 
 const STATUS_STYLES = {
   pending: "badge-warning",
@@ -8,7 +7,7 @@ const STATUS_STYLES = {
   completed: "badge-success",
 };
 
-export const columns = (onView, onEdit, onDelete, permissions, intl) => [
+export const columns = (onView, onEdit, onDelete, onGenerateReport, permissions, intl) => [
   {
     accessorKey: "sr_no",
     header: intl.formatMessage({ id: "NOTES.COL.SR_NO", defaultMessage: "Sr No." }),
@@ -75,6 +74,20 @@ export const columns = (onView, onEdit, onDelete, permissions, intl) => [
             onClick={() => onEdit(row.original)}
           >
             <i className="ki-filled ki-notepad-edit text-primary"></i>
+          </button>
+        </Tooltip>
+      )}
+
+      {onGenerateReport && (
+        <Tooltip
+          title={intl.formatMessage({ id: "NOTES.ACTION.PDF", defaultMessage: "Generate PDF" })}
+        >
+          <button
+            className="btn btn-sm btn-icon btn-clear"
+            title="Generate PDF"
+            onClick={() => onGenerateReport(row.original)}
+          >
+            <FileText className="w-4 h-4 text-warning" />
           </button>
         </Tooltip>
       )}

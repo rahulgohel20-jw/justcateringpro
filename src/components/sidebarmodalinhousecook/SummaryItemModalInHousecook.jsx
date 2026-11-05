@@ -187,7 +187,45 @@ const [shareTarget, setShareTarget] = useState(null); // { contact, index }
       window.open(pdfUrl, "_blank");
     }
   };
+const handleWebWhatsApp = async (contact, index) => {
+  const mobile = (contact.number || "").replace(/\D/g, "");
+  if (!mobile || mobile.length < 10) {
+    setSuccessMessage("No valid WhatsApp number found!");
+    return;
+  }
 
+  // Open the tab synchronously (inside the click) so popup blockers allow it
+  const waWindow = window.open("", "_blank");
+
+  setWebWhatsAppLoading(true);
+  setWebWhatsAppLoadingIndex(index);
+
+  try {
+    const pdfUrl = await handlereport(contact);
+    if (!pdfUrl) {
+      waWindow?.close();
+      setSuccessMessage("Failed to generate report!");
+      return;
+    }
+
+    const greeting = contact.contactName || "there";
+    const message = `Hi ${greeting},\nPlease find the attached PDF.\n\n${pdfUrl}`;
+    const waUrl = `https://wa.me/${mobile}?text=${encodeURIComponent(message)}`;
+
+    if (waWindow) {
+      waWindow.location.href = waUrl;
+    } else {
+      window.location.href = waUrl; // fallback if popup was blocked
+    }
+  } catch (err) {
+    waWindow?.close();
+    console.error("Web WhatsApp failed:", err);
+    setSuccessMessage("Something went wrong!");
+  } finally {
+    setWebWhatsAppLoading(false);
+    setWebWhatsAppLoadingIndex(null);
+  }
+};
   // WhatsApp button — generate PDF, notify via WhatsAppPdf, then open wa.me directly
   // const handleWhatsApp = async (contact, index) => {
   //   const mobile = (contact.number || "").replace(/\D/g, "");
