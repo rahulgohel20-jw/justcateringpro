@@ -11,6 +11,7 @@ import {
   GetAllNotes,
   GetNoteById,
   DeleteNoteById,
+  generatereportnotes,
 } from "../../../services/apiServices";
 import { FormattedMessage } from "react-intl";
 import { useIntl } from "react-intl";
@@ -110,6 +111,26 @@ const NotesManagement = () => {
     setAddModalOpen(true);
   };
 
+  const handleGenerateReport = async (note) => {
+    const noteId = note?.id || note?.notesId;
+    const fallbackUrl = `${import.meta.env.VITE_API_BASE_URL}/notes/generate-report?notesId=${noteId}&userId=${userId}`;
+
+    try {
+      const res = await generatereportnotes(noteId, userId);
+      const reportUrl = [
+        res?.data?.fileUrl,
+        res?.data?.data,
+        res?.data?.report_path,
+        res?.request?.responseURL,
+      ].find((value) => typeof value === "string" && value);
+
+      window.open(reportUrl || fallbackUrl, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      console.error("Failed to generate note report:", error);
+      window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
   const handleDelete = async (id) => {
     const result = await Swal.fire({
       title: "Are you sure?",
@@ -183,7 +204,7 @@ const NotesManagement = () => {
 
         {/* Table */}
         <TableComponent
-          columns={columns(handleView, handleEdit, handleDelete, permissions, intl)}
+          columns={columns(handleView, handleEdit, handleDelete, handleGenerateReport, permissions, intl)}
           data={tableData}
           paginationSize={10}
           loading={loading}

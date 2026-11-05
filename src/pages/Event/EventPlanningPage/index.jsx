@@ -1697,12 +1697,15 @@ const EventPlanningPage = ({ mode = "menu" }) => {
       const res = await GetPermissableNonPermissable(selectedFunction, eventId, userId);
       const data = res?.data?.data;
       if (data) {
-        const enrich = (list = []) =>
-          list.map((item) => ({
-            rawMaterialId: item.rawMaterialId,
-            rawMaterialName: item.rawMaterialNameEnglish || `RM #${item.rawMaterialId}`,
-            categoryName: item.categoryName || "—",
-          }));
+       const enrich = (list = []) =>
+  list.map((item) => ({
+    rawMaterialId: item.rawMaterialId,
+    rawMaterialName: item.rawMaterialNameEnglish || `RM #${item.rawMaterialId}`,
+    rawMaterialNameGujarati: item.rawMaterialNameGujarati || "",
+    rawMaterialNameHindi: item.rawMaterialNameHindi || "",
+    categoryId: item.rawCatId,
+    categoryName: item.rawCatNameEnglish || "—",
+  }));
         const enriched = {
           permissables: enrich(data.permissables),
           notPermissables: enrich(data.notPermissables),

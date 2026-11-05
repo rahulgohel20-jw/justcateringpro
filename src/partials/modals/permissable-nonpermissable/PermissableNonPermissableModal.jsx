@@ -42,6 +42,35 @@ const PermissableNonPermissableModal = ({
   const [dataLoading, setDataLoading] = useState(false);
   const fetchAbortRef = useRef(null);
 
+  const getRawMaterialName = (item) =>
+    item?.rawMaterialNameEnglish ||
+    item?.rawMaterialName ||
+    item?.nameEnglish ||
+    item?.name ||
+    item?.materialName ||
+    `RM #${item?.rawMaterialId || ""}`;
+
+const getCategoryName = (item) =>
+  item?.rawCatNameEnglish ||            // ← what the API actually returns
+  item?.categoryName ||
+  item?.categoryNameEnglish ||
+  item?.rawMaterialCatNameEnglish ||
+  item?.rawMaterialCat?.nameEnglish ||
+  item?.rawMaterialCategory?.nameEnglish ||
+  item?.rawMaterialCatName ||
+  item?.rawMaterialCategoryName ||
+  "—";
+
+// const mapItems = (list = []) =>
+//   list.map((item) => ({
+//     rawMaterialId: item.rawMaterialId,
+//     rawMaterialName: getRawMaterialName(item),
+//     rawMaterialNameGujarati: item.rawMaterialNameGujarati || "",
+//     rawMaterialNameHindi: item.rawMaterialNameHindi || "",
+//     categoryId: item.rawCatId,
+//     categoryName: getCategoryName(item),
+//   }));
+
   const fetchPermissableData = useCallback(async () => {
     if (!eventFunctionId || !eventId) return;
 
@@ -59,12 +88,12 @@ const PermissableNonPermissableModal = ({
       );
       const data = res?.data?.data;
 
-      const mapItems = (list = []) =>
-        list.map((item) => ({
-          rawMaterialId: item.rawMaterialId,
-          rawMaterialName: item.rawMaterialNameEnglish || "",
-          categoryName: item.categoryName || "—",
-        }));
+      // const mapItems = (list = []) =>
+      //   list.map((item) => ({
+      //     rawMaterialId: item.rawMaterialId,
+      //     rawMaterialName: getRawMaterialName(item),
+      //     categoryName: getCategoryName(item),
+      //   }));
 
       setPermissables(mapItems(data?.permissables));
       setNotPermissables(mapItems(data?.notPermissables));
@@ -137,6 +166,7 @@ const PermissableNonPermissableModal = ({
     if (!isOpen) return;
 
     if (justOpened) {
+      console.log("initialData:", initialData); 
       setActiveTab("permissables");
       setSelectedRawMaterialIds([]);
       setShowRmDropdown(false);
@@ -250,8 +280,19 @@ const PermissableNonPermissableModal = ({
         rawMaterials.find((rm) => Number(rm.id) === Number(rmId));
       newItems.push({
         rawMaterialId: Number(rmId),
-        rawMaterialName: rawMat?.nameEnglish || rawMat?.name || "",
-        categoryName: rawMat?.rawMaterialCat?.nameEnglish || selectedCatObj?.nameEnglish || "—",
+        rawMaterialName:
+          rawMat?.nameEnglish ||
+          rawMat?.name ||
+          rawMat?.rawMaterialNameEnglish ||
+          rawMat?.rawMaterialName ||
+          `RM #${rmId}`,
+        categoryName:
+          rawMat?.rawMaterialCat?.nameEnglish ||
+          rawMat?.rawMaterialCatNameEnglish ||
+          rawMat?.categoryName ||
+          rawMat?.category?.nameEnglish ||
+          selectedCatObj?.nameEnglish ||
+          "—",
       });
     });
 
@@ -519,8 +560,12 @@ const PermissableNonPermissableModal = ({
                     currentList.map((item, idx) => (
                       <tr key={item.rawMaterialId} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                         <td className="px-4 py-2.5 text-gray-500">{idx + 1}</td>
-                        <td className="px-4 py-2.5 font-medium text-gray-800">{item.rawMaterialName}</td>
-                        <td className="px-4 py-2.5 text-gray-500">{item.categoryName}</td>
+<td className="px-4 py-2.5 font-medium text-gray-800">
+  {item.rawMaterialName}
+  {item.rawMaterialNameGujarati && (
+    <div className="text-xs font-normal text-gray-500">{item.rawMaterialNameGujarati}</div>
+  )}
+</td>                        <td className="px-4 py-2.5 text-gray-500">{item.categoryName}</td>
                         <td className="px-4 py-2.5 text-center">
                           <button onClick={() => handleRemove(item.rawMaterialId)} className="text-red-500 hover:text-red-700 transition">
                             <Trash2 size={15} />

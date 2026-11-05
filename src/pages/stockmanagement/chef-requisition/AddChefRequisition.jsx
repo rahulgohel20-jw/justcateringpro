@@ -94,6 +94,7 @@ const AddChefRequisition = () => {
   const [menuItems, setMenuItems] = useState([]);
   const [loadingItems, setLoadingItems] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [enteredSearchQuery, setEnteredSearchQuery] = useState("");
   const [dropdownPage, setDropdownPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -382,6 +383,17 @@ const typeOptions = allowedStockTypes.map((t) => ({
   label: getLocalizedName(t),
   value: t.stocktypeid ?? t.stockTypeId ?? t.id,
 }));
+
+  const matchesItemSearch = (item, term = searchQuery) => {
+    const query = (term || "").trim().toLowerCase();
+    if (!query) return true;
+
+    const name = getLocalizedName(item).toLowerCase();
+    const unit = String(item?.unit?.nameEnglish || item?.unit || "").toLowerCase();
+    return name.includes(query) || unit.includes(query);
+  };
+
+  const matchesEnteredItemSearch = (item) => matchesItemSearch(item, enteredSearchQuery);
 
   const formatDateForApi = (date) => {
     if (!date) return "";
@@ -723,6 +735,7 @@ const typeOptions = allowedStockTypes.map((t) => ({
                   onSearch={(value) => setSearchQuery(value)}
                   onSelect={(value, option) => {
                     handleSelectItem(option.raw);
+                    setSearchQuery("");
                   }}
                   notFoundContent={loadingItems ? "Loading..." : searchQuery.trim() ? "No items found" : "Type to search"}
                   style={{ width: "100%" }}
@@ -759,6 +772,29 @@ const typeOptions = allowedStockTypes.map((t) => ({
             )}
           </div>
 
+          {items.length > 0 && (
+            <div className="px-6 pb-3">
+              <div className="relative max-w-md">
+                <input
+                  type="text"
+                  value={enteredSearchQuery}
+                  onChange={(e) => setEnteredSearchQuery(e.target.value)}
+                  placeholder="Search entered items..."
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                />
+                {enteredSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setEnteredSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ── Grid: full catalog for a specific category ── */}
           {selectedCategoryId && selectedCategoryId !== "ALL" && (
             <div className="px-6 py-3 border-b border-slate-100">
@@ -767,8 +803,8 @@ const typeOptions = allowedStockTypes.map((t) => ({
                   <div className="w-3.5 h-3.5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
                   Loading items...
                 </div>
-              ) : menuItems.length === 0 ? (
-                <p className="text-slate-400 text-sm py-4">No items found.</p>
+              ) : menuItems.filter((item) => matchesItemSearch(item)).length === 0 ? (
+                <p className="text-slate-400 text-sm py-4">No matching items found.</p>
               ) : (
                 <div className="rounded-xl border border-slate-100 overflow-hidden">
                   <div className="grid grid-cols-1 md:grid-cols-3 bg-slate-50 border-b border-slate-100">
@@ -798,7 +834,7 @@ const typeOptions = allowedStockTypes.map((t) => ({
                     }}
                   >
                     <div className="grid grid-cols-1 md:grid-cols-3">
-                      {menuItems.map((rawItem, i) => {
+                      {menuItems.filter((item) => matchesItemSearch(item)).map((rawItem, i) => {
                         const qtyVal = getGridQty(rawItem);
                         const isFilled = qtyVal !== "" && parseFloat(qtyVal) > 0;
                         const col = i % 3;
@@ -849,22 +885,28 @@ const typeOptions = allowedStockTypes.map((t) => ({
           {/* ── Grid: "All" mode — only items the user has explicitly searched & added ── */}
           {selectedCategoryId === "ALL" && (
             <div className="px-6 py-3 border-b border-slate-100">
-              {items.length === 0 ? (
+              {items.filter((item) => matchesEnteredItemSearch(item)).length === 0 ? (
                 <div className="px-4 py-14 text-center text-slate-400 text-sm">
                   <div className="flex flex-col items-center gap-2">
                     <Package size={36} className="text-slate-200" />
                     <p className="font-medium text-slate-400">
-                      <FormattedMessage 
-                      id="COMMON.NO_ITEMS_ADDED_YET" 
-                      defaultMessage="No items added yet" 
-                      />
+                      {enteredSearchQuery.trim()
+                        ? "No matching entered items found"
+                        : (
+                            <FormattedMessage 
+                            id="COMMON.NO_ITEMS_ADDED_YET" 
+                            defaultMessage="No items added yet" 
+                            />
+                          )}
                     </p>
-                    <p className="text-xs text-slate-300">
-                      <FormattedMessage
-                        id="COMMON.SEARCH_AND_ADD_ITEMS"
-                        defaultMessage="Search and add items from the dropdown above"
-                      />
-                    </p>
+                    {!enteredSearchQuery.trim() && (
+                      <p className="text-xs text-slate-300">
+                        <FormattedMessage
+                          id="COMMON.SEARCH_AND_ADD_ITEMS"
+                          defaultMessage="Search and add items from the dropdown above"
+                        />
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -887,7 +929,7 @@ const typeOptions = allowedStockTypes.map((t) => ({
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3">
-                    {items.map((item, i) => {
+                    {items.filter((item) => matchesEnteredItemSearch(item)).map((item, i) => {
                       const qtyVal = item.qty ?? "";
                       const isFilled = qtyVal !== "" && parseFloat(qtyVal) > 0;
                       const col = i % 3;

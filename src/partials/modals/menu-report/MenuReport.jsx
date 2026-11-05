@@ -1603,6 +1603,33 @@ const resolveDirectRecipient = () => {
   if (client.length === 10) return { mobile: client, name: eventName || "" };
   return null;
 };
+const handleWhatsAppShare = (mode) => {
+  if (mode !== "web") return;
+
+  // a blob: URL only opens in this browser tab, so share the real server URL
+  const shareUrl = pdfUrl?.startsWith("blob:") ? mainUrl : pdfUrl;
+  if (!shareUrl) {
+    errorMsgPopup("No report available to share");
+    return;
+  }
+
+  const recipient = resolveDirectRecipient();
+  const message = buildWaMessage({
+    greeting: recipient?.name || eventName || "there",
+    functionName,
+    functionDateTime,
+    venueName,
+    pdfUrl: shareUrl,
+  });
+
+  const phone = recipient ? `91${normalizeMobile(recipient.mobile)}` : "";
+  const waUrl =
+    `https://web.whatsapp.com/send?` +
+    (phone ? `phone=${phone}&` : "") +
+    `text=${encodeURIComponent(message)}`;
+
+  window.open(waUrl, "_blank", "noopener,noreferrer");
+};
 
 const handleWhatsAppConfirm = async ({ method, name, mobile }) => {
   if (method === "details") {

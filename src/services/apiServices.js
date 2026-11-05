@@ -4395,3 +4395,7 @@ export const uploadlogodecorprofile = (file, userId) => {
 export const GenerateRecipeExcel = (userId, menuItemId) => {
   return GET(`/menuitems/menu-recipe-excel?userId=${userId}&menuItemId=${menuItemId}`);
 };
+
+export const generatereportnotes = (notesId, userId) => {
+  return GET(`/notes/generate-report?notesId=${notesId}&userId=${userId}`);
+};
