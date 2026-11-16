@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
+import { DefaultTooltip } from "@/components";
 import { Container } from "@/components/container";
 import RecivePayment from "./components/RecivePayment";
 import PayablePayment from "./components/PayablePayment";
@@ -203,12 +204,24 @@ const RecivedPayments = () => {
                 <FormattedMessage id="COMMON.PAYMENTS" defaultMessage="Payments" />
               </h1>
 
-              <p className="text-[13px] text-[#6b7280] mt-[2px]">
-                <FormattedMessage
-                  id="COMMON.PAYMENTS_DESCRIPTION"
-                  defaultMessage="Manage and track your incoming and outgoing funds."
-                />
-              </p>
+              <div className="flex items-center gap-2 mt-[2px]">
+                <p className="text-[13px] text-[#6b7280]">
+                  <FormattedMessage
+                    id="COMMON.PAYMENTS_DESCRIPTION"
+                    defaultMessage="Manage and track your incoming and outgoing funds."
+                  />
+                </p>
+
+                <DefaultTooltip
+                  title="Only confirmed entries are shown here. Unconfirmed entries are not included."
+                  placement="top"
+                  className="max-w-56"
+                >
+                  <span className="inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-gray-300 bg-gray-100 text-[10px] font-semibold text-gray-500">
+                    i
+                  </span>
+                </DefaultTooltip>
+              </div>
             </div>
 
             {/* <button

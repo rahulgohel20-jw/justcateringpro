@@ -752,7 +752,7 @@ const ProfitnLoss = () => {
       iconBg: "bg-red-50",
     },
     {
-      title: "Net Profit",
+      title: "Net Profit/Loss",
       value:
         dashboardData?.netProfit != null
           ? dashboardData.netProfit < 0

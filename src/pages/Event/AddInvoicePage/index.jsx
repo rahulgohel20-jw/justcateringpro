@@ -1372,32 +1372,19 @@ isDiscountPercent: footerData.isDiscountPercentage || false,
   chequePayment: footerData.chequePayment || 0,
         duedate: dueDate ? dueDate.format("DD/MM/YYYY") : "",
         eventId: eventId,
-        eventInvoiceFunctionPayments:
-  payments.length > 0
-    ? payments.map((p) => ({
-        advancePayment: Number(p.advancePayment) || 0,
-        advancePaymentDate:
-          p.advancePaymentDate || formatDateForAPI(new Date()),
-        advancePaymentNotes: p.advancePaymentNotes || "",
-        paymentMode: p.paymentMode || "",
-        bankId: p.paymentMode === "Bank Transfer" ? Number(p.bankId) || null : null,
-        cashAccountId: p.paymentMode === "Cash" ? Number(p.cashAccountId) || null : null,
-        id: p.id || 0,
-        vendorCode: p.vendorCode || "",
-     
-      }))
-    : [
-        {
-          advancePayment: 0,
-          advancePaymentDate: formatDateForAPI(new Date()),
-          advancePaymentNotes: "",
-          id: 0,
-          paymentMode: "",
-          bankId: null,
-          cashAccountId: null,
-          vendorCode: "",
-        },
-      ],
+          
+        eventInvoiceFunctionPayments: payments
+          .filter((p) => (p.id && p.id > 0) || Number(p.advancePayment) > 0)
+          .map((p) => ({
+            advancePayment: Number(p.advancePayment) || 0,
+            advancePaymentDate: p.advancePaymentDate || formatDateForAPI(new Date()),
+            advancePaymentNotes: p.advancePaymentNotes || "",
+            paymentMode: p.paymentMode || "",
+            bankId: p.paymentMode === "Bank Transfer" ? Number(p.bankId) || null : null,
+            cashAccountId: p.paymentMode === "Cash" ? Number(p.cashAccountId) || null : null,
+            id: p.id || 0,
+            vendorCode: p.vendorCode || "",
+          })),
         grandTotal: combinedGrandTotal,
   remainingAmount: combinedRemaining,
   totalAmount: combinedGrandTotal - combinedRemaining,

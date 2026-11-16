@@ -25,6 +25,39 @@ const normalizeStatus = (raw) => {
   return STATUS_OPTIONS.some((o) => o.value === key) ? key : "PENDING";
 };
 
+const sanitizeDescription = (html) => {
+  if (!html) return "";
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+
+  const walk = (node) => {
+    let out = "";
+    node.childNodes.forEach((child) => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        out += child.textContent
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        const tag = child.tagName.toLowerCase();
+        const inner = walk(child);
+        if (tag === "b" || tag === "strong") {
+          out += inner.trim() ? `<b>${inner}</b>` : inner;
+        } else if (tag === "br") {
+          out += "<br>";
+        } else if (tag === "div" || tag === "p") {
+          out += (out && !out.endsWith("<br>") ? "<br>" : "") + inner;
+        } else {
+          out += inner;
+        }
+      }
+    });
+    return out;
+  };
+
+  return walk(tmp).replace(/(<br>)+$/, "").trim();
+};
+
 // Each row gets a stable client-side key so drag/reorder doesn't mix up inputs
 let rowUid = 0;
 const newHeading = () => ({
@@ -62,12 +95,11 @@ const DescriptionRichInput = ({
     }
   };
 
-  const triggerChange = () => {
-    if (!editorRef.current) return;
-    const html = editorRef.current.innerHTML;
-    const text = editorRef.current.textContent.trim();
-    onChange(text === "" ? "" : html);
-  };
+const triggerChange = () => {
+  if (!editorRef.current) return;
+  const text = editorRef.current.textContent.trim();
+  onChange(text === "" ? "" : sanitizeDescription(editorRef.current.innerHTML));
+};
 
   const handleToggleBold = (e) => {
     if (e) e.preventDefault();
@@ -378,16 +410,15 @@ const resetDrag = () => {
     setSaving(true);
     try {
       // sequence = position in the list (1, 2, 3…) after blank rows are dropped
-      const filteredHeadings = headings
-        .filter((h) => h.heading.trim())
-        .map((h, idx) => ({
-          id: h.id || null,
-          heading: h.heading,
-          description: h.description,
-          status: h.status,
-          sequence: idx + 1,
-        }));
-
+    const filteredHeadings = headings
+  .filter((h) => h.heading.trim())
+  .map((h, idx) => ({
+    id: h.id || null,
+    heading: h.heading,
+    description: sanitizeDescription(h.description),  // ⬅️ changed
+    status: h.status,
+    sequence: idx + 1,
+  }));
       const payload = {
         title: form.title.trim(),
         status: form.status,

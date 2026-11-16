@@ -564,7 +564,7 @@ const sumRowsQty = (rows = [], parentUnit = "") => {
 qty: sumRowsQty(rows, d.unitName || ""),
           unit: d.unitName || "",
           unitId: d.unitId || 0,
-          closingStock: d.closingStock ?? null,
+       closingStock: d.closingStock ?? d.qty ?? null,   // ← changed
           isAddInStock: d.isAddInStock ?? true,
           batchOptions: rows.map((r) => ({
             batchNo: r.batchNo,
@@ -732,7 +732,7 @@ if (isBatchNoMode) {
   unit: detail.unitName || detail.unit?.nameEnglish || "",
   unitId: detail.unitId ?? detail.unit?.id ?? 0,
   originalQty: detail.qty ?? 0,
-  closingStock: detail.closingStock ?? null,
+  closingStock: detail.closingStock ?? detail.qty ?? null, 
   closingStockUnit:
     detail.closingStockUnitName || detail.unitName || detail.unit?.nameEnglish || "",   // ← add
   isAddInStock: detail.isAddInStock ?? true,

@@ -62,6 +62,7 @@ import { useModuleAccess } from "../../../hooks/useModuleAccess";
 import { AddLogs, WhatsAppPdf } from "../../../services/apiServices";
 import ViewLabourKyc from "./component/ViewLabourKyc";
 import FunctionCard from "../EventPlanningPage/components/FunctionCard";
+import WhatsAppShareModal from "../../../partials/modals/menu-report/WhatsAppShareModal";
 
 dayjs.extend(customParseFormat);
 
@@ -291,7 +292,7 @@ const LabourOtherManagementPage = ({ mode }) => {
   const [shiftOptions, setShiftOptions] = useState([]);
   const [selectedcontactType, setSelectedcontactType] = useState(null);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-
+const [showShareModal, setShowShareModal] = useState(false);
   const [labourData, setLabourData] = useState([]);
   const [labourCategories, setLabourCategories] = useState([]);
   const [allContacts, setAllContacts] = useState({});
@@ -367,11 +368,12 @@ const scroll = (direction) => {
   })();
   const [checklistData, setChecklistData] = useState([]);
   const [checklistLoading, setChecklistLoading] = useState(false);
-
+  
   const permMenuPlanning = usePermission("Menu Planning");
   const { hasModuleAccess } = useModuleAccess();
   const canAccessAccounting = hasModuleAccess("Account");
-    const canAccesskyc = hasModuleAccess("kyc");
+  const canAccesskyc = hasModuleAccess("kyc");
+  const candirectsharewhatapp = hasModuleAccess("Direct Share on Whatsapp");
 
   const permMenuExecution = usePermission("Menu Execution");
   const permRawMaterial = usePermission("Raw Material Distribution");
@@ -572,11 +574,19 @@ const scroll = (direction) => {
     [eventData, activeTab],
   );
 
-  const handleWhatsAppClick = useCallback((row, shift) => {
-    setPendingWhatsAppData({ row, shift });
-    setShowLangModal(true);
-  }, []);
+ const handleWhatsAppClick = useCallback((row, shift) => {
+  setPendingWhatsAppData({ row, shift });
+  setShowShareModal(true);          // was: setShowLangModal(true)
+}, []);
 
+// Called when the user clicks "Share" inside the modal
+const handleShareMethodSelected = useCallback(({ method, name, mobile }) => {
+  setPendingWhatsAppData((prev) =>
+    prev ? { ...prev, method, recipientName: name, recipientMobile: mobile } : prev,
+  );
+  setShowShareModal(false);
+  setShowLangModal(true);           // continue to the language picker
+}, []);
  const handleLangSelectedForWhatsApp = useCallback(
   async (lang) => {
     setShowLangModal(false);
@@ -2124,6 +2134,7 @@ className="flex gap-3 border rounded overflow-x-auto py-2 px-10 text-gray-500 bg
               setIsAddVenueModalOpen(true);
             }}
             canAccesskyc={canAccesskyc}
+              candirectsharewhatapp={candirectsharewhatapp}
           />
         )}
         {/* Modals */}
@@ -2234,6 +2245,21 @@ className="flex gap-3 border rounded overflow-x-auto py-2 px-10 text-gray-500 bg
           }}
           onSelect={handleLangSelectedForWhatsApp}
         />
+        <WhatsAppShareModal
+  isOpen={showShareModal}
+  onClose={() => {
+    setShowShareModal(false);
+    setPendingWhatsAppData(null);
+  }}
+  onShare={handleShareMethodSelected}
+  defaultName={pendingWhatsAppData?.row?.contact || ""}
+  defaultMobile=""
+  directHint={
+    pendingWhatsAppData?.row?.contact
+      ? `Will send to ${pendingWhatsAppData.row.contact}'s saved number`
+      : ""
+  }
+/>
         <AddVenueType
           isModalOpen={isAddVenueModalOpen}
           setIsModalOpen={setIsAddVenueModalOpen}
@@ -2425,6 +2451,7 @@ const LabourTable = ({
   onOpenAddVenue,
   onKycClick,
   canAccesskyc,
+  candirectsharewhatapp,
 }) => {
   const intl = useIntl();
 
@@ -2781,6 +2808,7 @@ const LabourTable = ({
                 </div>
 
                 <div className="col-span-2 flex items-center justify-center gap-2">
+                   {candirectsharewhatapp && (
   <Tooltip title="Send via WhatsApp">
     <button
       className="p-2 hover:bg-gray-200 rounded-full transition"
@@ -2795,7 +2823,7 @@ const LabourTable = ({
       </svg>
     </button>
   </Tooltip>
-
+                   )}
   <Tooltip title="Send via Web WhatsApp">
     <button
       className="p-2 hover:bg-emerald-100 rounded-full transition"

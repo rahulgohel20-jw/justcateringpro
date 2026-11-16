@@ -14,6 +14,8 @@ import { WhatsAppPdf } from "../../services/apiServices";
 import { Tooltip } from "antd";
 import dayjs from "dayjs";
 import { errorMsgPopup } from "../../underConstruction";
+import WhatsAppShareModal from "../../partials/modals/menu-report/WhatsAppShareModal";
+import { useModuleAccess } from "../../hooks/useModuleAccess";
 
 
 
@@ -281,7 +283,8 @@ export default function SummaryItemModalchefoutside({
   const mode = "allocation";
   const [isSelectMenureport, setIsSelectMenuReport] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-
+const [showShareModal, setShowShareModal] = useState(false);
+const [shareChoice, setShareChoice] = useState(null);
   // ── WhatsApp + Preview state ──────────────────────────────────────────────
   const [whatsAppItem, setWhatsAppItem] = useState(null);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -292,7 +295,8 @@ export default function SummaryItemModalchefoutside({
 const [selectedItemForLang, setSelectedItemForLang] = useState(null);
 const [selectedIndexForLang, setSelectedIndexForLang] = useState(null);
 const [waSendMode, setWaSendMode] = useState("api");
-
+  const { hasModuleAccess } = useModuleAccess();
+    const candirectsharewhatapp = hasModuleAccess("Direct Share on Whatsapp");
   const userId = localStorage.getItem("userId");
 
    console.log("eventFunctionsFromParent:", eventFunctionsFromParent);
@@ -358,6 +362,11 @@ const formatWaTime = (dateTimeStr) => {
   return parsed.isValid() ? parsed.format("hh:mm A") : "";
 };
 
+const handleShareMethodSelected = ({ method, name, mobile }) => {
+  setShareChoice({ method, name, mobile });
+  setShowShareModal(false);
+  setShowLangSelect(true);        // continue to language picker
+};
 
  const handleLangSelect = (lang) => {
   setShowLangSelect(false);
@@ -420,8 +429,7 @@ const singleFunctionInfo =
   const toggleItems = (index) => {
     setExpandedItems((prev) => ({ ...prev, [index]: !prev[index] }));
   };
-const handleWhatsAppClick = async (item, index, lang = 0, mode = "api") => {
-  
+const handleWhatsAppClick = async (item, index, lang = 0, mode = "api", share = null) => {  
 
  
 //  if (item._cachedPdfUrl) {
@@ -606,36 +614,39 @@ const venueName =
     `https://wa.me/${phoneRaw.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
     "_blank"
   );
-} else {
+}  else {
+      const useTyped = share?.method === "details";
+      const apiMobile = (useTyped ? share.mobile : phoneRaw).replace(/\D/g, "");
+
+      if (!apiMobile) {
+        errorMsgPopup("No saved mobile number found. Please use 'Share with Details'.");
+      } else {
         try {
           const { companyMobileNo, companyName } = getCompanyAuthInfo();
           const wres = await WhatsAppPdf({
             companyMobileNo,
             companyName,
-            mobileNo: phoneRaw.replace(/\D/g, ""),
+            mobileNo: apiMobile,
             moduleName: "Order Report",
-            partyName: item.contactName || "",
+            partyName: useTyped && share.name ? share.name : item.contactName || "",
             url: data?.data?.report_path,
             userId: Number(userId) || 0,
           });
-          if (wres?.data?.success) {
-            setSuccessMessage("Report sent successfully!");
-          } else {
-            setSuccessMessage("Report not sent!");
-          }
-        } catch (whatsAppErr) {
+          setSuccessMessage(wres?.data?.success ? "Report sent successfully!" : "Report not sent!");
+                } catch (whatsAppErr) {
           console.error("WhatsAppPdf notify failed:", whatsAppErr);
         }
       }
-    } else {
-      errorMsgPopup(data?.data?.msg || "Failed to generate report");
     }
-  } catch (err) {
-    errorMsgPopup(err?.response?.data?.msg || "Something went wrong");
-  } finally {
-    setGeneratingPdf(false);
-    setGeneratingRowIndex(null);
+  } else {
+    errorMsgPopup(data?.data?.msg || "Failed to generate report");
   }
+} catch (err) {
+  errorMsgPopup(err?.response?.data?.msg || "Something went wrong");
+} finally {
+  setGeneratingPdf(false);
+  setGeneratingRowIndex(null);
+}
 };
 
 
@@ -809,14 +820,15 @@ const venueName =
 
                                 <div className="flex items-center justify-center space-x-2">
                                   {/* ── WhatsApp: generate PDF → preview → send ── */}
+                                   {candirectsharewhatapp && (
                                   <Tooltip title="Send via WhatsApp (API)">
   <button
-    onClick={() => {
-      setWaSendMode("api");
-      setSelectedItemForLang(item);
-      setSelectedIndexForLang(index);
-      setShowLangSelect(true);
-    }}
+   onClick={() => {
+  setWaSendMode("api");
+  setSelectedItemForLang(item);
+  setSelectedIndexForLang(index);
+  setShowShareModal(true);        // was: setShowLangSelect(true)
+}}
     disabled={generatingPdf}
     className="p-2 rounded-full bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
   >
@@ -830,7 +842,7 @@ const venueName =
     )}
   </button>
 </Tooltip>
-
+                                   )}
 <Tooltip title="Open in Web WhatsApp">
   <button
     onClick={() => {
@@ -948,6 +960,7 @@ const venueName =
               </div>
             </motion.div>
           </div>
+
                     {showLangSelect && (
   <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
     <div className="bg-white rounded-xl shadow-xl p-6 w-[300px]">
@@ -994,7 +1007,21 @@ const venueName =
             onClose={() => setShowWhatsAppModal(false)}
             onSend={handleWhatsAppSend}
           />
-
+<WhatsAppShareModal
+  isOpen={showShareModal}
+  onClose={() => {
+    setShowShareModal(false);
+    setSelectedItemForLang(null);
+  }}
+  onShare={handleShareMethodSelected}
+  defaultName={selectedItemForLang?.contactName || ""}
+  defaultMobile=""
+  directHint={
+    selectedItemForLang?.contactName
+      ? `Will send to ${selectedItemForLang.contactName}'s saved number`
+      : ""
+  }
+/>
           {/* PDF button → SelectMenureport */}
           <SelectMenureport
             isSelectMenureport={isSelectMenureport}

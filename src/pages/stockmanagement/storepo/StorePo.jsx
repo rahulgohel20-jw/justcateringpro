@@ -877,28 +877,29 @@ const StorePo = () => {
         </div>
 
         <div className="relative">
-          <TableComponent
-            columns={columns(
-              permissions.edit ? handleEdit : null,
-              permissions.delete ? handleDelete : null,
-              handlePrint,
-              handleExcel,
-              handleStorePoPdf,
-            )}
-            serverSide
-            onFetchData={handleFetchData}
-            paginationSize={10}
-            getRowClassName={getRowClassName}
-          />
-
-          {tableLoading && (
-            <div className="absolute inset-0 z-10 flex items-start justify-center bg-white pt-24">
-              <div className="flex flex-col items-center gap-3">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                <p className="text-sm font-medium text-gray-600">Loading...</p>
-              </div>
-            </div>
-          )}
+          <div className="relative">
+  <TableComponent
+    columns={columns(
+      permissions.edit ? handleEdit : null,
+      permissions.delete ? handleDelete : null,
+      handlePrint,
+      handleExcel,
+      handleStorePoPdf,
+    )}
+    serverSide
+    onFetchData={handleFetchData}
+    paginationSize={10}
+    getRowClassName={getRowClassName}
+  />
+</div>
+         {tableLoading && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/70">
+    <div className="flex flex-col items-center gap-3">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <p className="text-sm font-medium text-gray-600">Loading...</p>
+    </div>
+  </div>
+)}
         </div>
       </Container>
 

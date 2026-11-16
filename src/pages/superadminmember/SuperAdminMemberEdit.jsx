@@ -1087,9 +1087,16 @@ const SuperAdminMemberEdit = () => {
         <div className="bg-white shadow rounded-md p-4 space-y-6">
           {/* MEMBER DETAILS */}
           <section className="border rounded-md">
-            <div className="bg-gray-100 px-4 py-2 font-semibold text-gray-700 border-b">
-              Member Details
-            </div>
+            <div className="bg-gray-100 px-4 py-2 font-semibold text-gray-700 border-b flex items-center justify-between">
+  <span>Member Details</span>
+
+  <div className="flex justify-end items-center gap-3">
+    <Button type="primary" onClick={handleSubmit} loading={submitting}>
+      Update
+    </Button>
+    <Button onClick={() => navigate(-1)}>Cancel</Button>
+  </div>
+</div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
               <div>
@@ -1259,6 +1266,8 @@ const SuperAdminMemberEdit = () => {
       { label: "Jcx Plus", value: "jcxplus" },
       { label: "Jcx Pro", value: "jcxpro" },
       { label: "Jcx Pro Plus", value: "jcxproplus" },
+      { label: "banq", value: "banq" },
+
     ]}
   />
 </div>

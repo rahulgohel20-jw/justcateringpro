@@ -13,6 +13,8 @@ import { WhatsAppPdf } from "../../services/apiServices";
 import { Tooltip } from "antd";
 import dayjs from "dayjs";
 import { errorMsgPopup } from "../../underConstruction";
+import WhatsAppShareModal from "../../partials/modals/menu-report/WhatsAppShareModal";
+import { useModuleAccess } from "../../hooks/useModuleAccess";
 
 
 const WhatsAppIcon = () => (
@@ -128,9 +130,11 @@ export default function SummaryItemModalOutsideAgency({
   const [selectedItemForLang, setSelectedItemForLang] = useState(null);
   const [selectedIndexForLang, setSelectedIndexForLang] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
-
+const [shareTarget, setShareTarget] = useState(null);   // { item, index } -> share modal
+const [pendingShare, setPendingShare] = useState(null); // { method, name, mobile } -> carried through lang modal
   const userId = localStorage.getItem("userId");
-
+  const { hasModuleAccess } = useModuleAccess();
+    const candirectsharewhatapp = hasModuleAccess("Direct Share on Whatsapp");
 
   useEffect(() => {
   if (!successMessage) return;
@@ -332,12 +336,38 @@ const handleWhatsAppWebClick = (item, index) => {
 };
 
   // ── WhatsApp: open lang modal ─────────────────────────────────────────────
-  const handleWhatsAppClick = (item, index) => {
-    setSelectedItemForLang(item);
-    setSelectedIndexForLang(index);
-    setGeneratingType("whatsapp");
-    setShowLangSelect(true);
-  };
+  // const handleWhatsAppClick = (item, index) => {
+  //   setSelectedItemForLang(item);
+  //   setSelectedIndexForLang(index);
+  //   setGeneratingType("whatsapp");
+  //   setShowLangSelect(true);
+  // };
+
+  // WhatsApp button now opens the share modal
+const handleWhatsAppClick = (item, index) => {
+  setShareTarget({ item, index });
+};
+
+// Share modal -> remember choice -> open language modal
+const handleShareSubmit = async ({ method, name, mobile }) => {
+  const { item, index } = shareTarget || {};
+  if (!item) return;
+
+  if (method === "direct") {
+    const direct = (item.number || item.mobile || item.contactNumber || "").replace(/\D/g, "");
+    if (direct.length < 10) {
+      errorMsgPopup("No valid WhatsApp number found for this contact.");
+      return;
+    }
+  }
+
+  setPendingShare({ method, name, mobile });
+  setSelectedItemForLang(item);
+  setSelectedIndexForLang(index);
+  setGeneratingType("whatsapp");
+  setShareTarget(null);
+  setShowLangSelect(true);
+};
 
   // ── PDF: open lang modal ──────────────────────────────────────────────────
   const handlePdfClick = (item, index) => {
@@ -358,23 +388,30 @@ const handleWhatsAppWebClick = (item, index) => {
 const notifyWhatsApp = async (url) => {
   try {
     const { companyMobileNo, companyName } = getCompanyAuthInfo();
-    const phoneRaw = item.number || item.mobile || item.contactNumber || "";
-   const wres = await WhatsAppPdf({
+    const share = pendingShare;
+
+    const phoneRaw =
+      share?.method === "details"
+        ? share.mobile
+        : item.number || item.mobile || item.contactNumber || "";
+
+    const wres = await WhatsAppPdf({
       companyMobileNo,
       companyName,
       mobileNo: phoneRaw.replace(/\D/g, ""),
       moduleName: "Order Report",
-      partyName: item.contactName || "",
+      partyName:
+        share?.method === "details" ? share.name || "" : item.contactName || "",
       url,
       userId: Number(userId) || 0,
     });
-    if(wres?.data?.success) {
-        setSuccessMessage("Report sent successfully!");
-        } else {
-          setSuccessMessage("Report not sent!");
-        }
+
+    setSuccessMessage(
+      wres?.data?.success ? "Report sent successfully!" : "Report not sent!"
+    );
   } catch (err) {
     console.error("WhatsAppPdf notify failed:", err);
+    setSuccessMessage("Report not sent!");
   }
 };
 
@@ -467,10 +504,11 @@ const venueName =
   console.error("handleWhatsAppClick failed:", err, err?.response);
   setSuccessMessage(err?.response?.data?.msg || "Something went wrong");
 } finally {
-    setGeneratingPdf(false);
-    setGeneratingRowIndex(null);
-    setGeneratingType(null);
-  }
+  setGeneratingPdf(false);
+  setGeneratingRowIndex(null);
+  setGeneratingType(null);
+  setPendingShare(null);
+}
 };
 
   return (
@@ -639,6 +677,7 @@ const venueName =
                                 {/* Action Buttons */}
                                 <div className="flex justify-center gap-2">
                                   {/* WhatsApp Button */}
+                                   {candirectsharewhatapp && (
                                  <Tooltip title="Send via WhatsApp">
   <button
     onClick={() => handleWhatsAppClick(agency, index)}
@@ -655,6 +694,7 @@ const venueName =
     )}
   </button>
 </Tooltip>
+                                   )}
 
 <Tooltip title="Open in Web WhatsApp">
   <button
@@ -788,11 +828,31 @@ const venueName =
           </div>
 
           {/* ── Language Select Modal ── */}
-          <LangSelectModal
-            isOpen={showLangSelect}
-            onClose={() => setShowLangSelect(false)}
-            onSelect={handleLangSelect}
-          />
+        <LangSelectModal
+  isOpen={showLangSelect}
+  onClose={() => {
+    setShowLangSelect(false);
+    setPendingShare(null);
+    setGeneratingType(null);
+  }}
+  onSelect={handleLangSelect}
+/>
+<WhatsAppShareModal
+  isOpen={!!shareTarget}
+  onClose={() => setShareTarget(null)}
+  onShare={handleShareSubmit}
+  defaultName={shareTarget?.item?.contactName || ""}
+  defaultMobile={
+    shareTarget?.item?.number ||
+    shareTarget?.item?.mobile ||
+    shareTarget?.item?.contactNumber ||
+    ""
+  }
+  directHint={
+    shareTarget?.item?.number ? `Will be sent to ${shareTarget.item.number}` : ""
+  }
+/>
+
         </div>
       )}
     </AnimatePresence>

@@ -364,6 +364,52 @@ const HeaderMenuDropdown = ({ menu, isOpen, onToggle, onClose }) => {
   );
 };
 
+const SOFTWARE_BADGE_STYLES = {
+  JCX: {
+    wrap: "bg-slate-50 border-slate-300 text-slate-700",
+    icon: "bg-slate-500",
+  },
+  "JCX PLUS": {
+    wrap: "bg-emerald-50 border-emerald-300 text-emerald-700",
+    icon: "bg-emerald-500",
+  },
+  "JCX PRO": {
+    wrap: "bg-indigo-50 border-indigo-300 text-indigo-700",
+    icon: "bg-indigo-500",
+  },
+  "JCX PRO PLUS": {
+    wrap: "bg-amber-50 border-amber-400 text-amber-800",
+    icon: "bg-gradient-to-br from-amber-400 to-orange-500",
+  },
+};
+
+const SoftwareBadge = ({ label }) => {
+  if (!label) return null;
+  const s = SOFTWARE_BADGE_STYLES[label] || SOFTWARE_BADGE_STYLES["JCX"];
+
+  return (
+    <span
+      className={`
+        inline-flex items-stretch h-5 overflow-hidden
+        rounded-md border shadow-sm select-none whitespace-nowrap
+        transition-transform duration-200 hover:scale-105
+        ${s.wrap}
+      `}
+    >
+      {/* icon block */}
+      <span className={`flex items-center justify-center w-5 text-white ${s.icon}`}>
+        <i className="ki-filled ki-verify" style={{ fontSize: 11 }} />
+      </span>
+
+      {/* label */}
+      <span className="flex items-center px-1.5 text-[9px] font-bold uppercase tracking-wider leading-none">
+        {label}
+      </span>
+    </span>
+  );
+};
+
+
 const HeaderTopbar = () => {
   const { currentUser } = useAuthContext();
   const roleId      = Number(currentUser?.userBasicDetails?.role?.id);
@@ -647,7 +693,23 @@ useEffect(() => {
 
   useEffect(() => { refreshUser(); }, [refreshUser]);
 
-  const companyName  = user?.userBasicDetails?.companyName || "Company";
+  const companyName =
+  user?.userBasicDetails?.companyName || "Company";
+
+const softwareType = String(
+  storeUser?.softType || user?.softType || ""
+)
+  .toLowerCase()
+  .replace(/[\s_-]/g, "");
+
+const softwareLabels = {
+  jcx: "JCX",
+  jcxplus: "JCX PLUS",
+  jcxpro: "JCX PRO",
+  jcxproplus: "JCX PRO PLUS",
+};
+
+const softwareLabel = softwareLabels[softwareType] || null;
   const services     = user?.userBasicDetails?.services    || "";
   const planValidity = user?.userPlan?.endDate?.split(" ")?.[0] || "";
   const userLogo     = user?.logo;
@@ -734,17 +796,23 @@ const fetchFollowUps = useCallback(() => {
   return (
     <div className="flex items-center justify-between w-full gap-2 min-w-0">
 
-   
-      {!isVisible && (
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="font-semibold text-black text-lg truncate hidden sm:inline">
-            {companyName}
-          </span>
-          <span className="font-semibold text-black text-xl hidden sm:inline">
-            {getServiceIcon()}
-          </span>
-        </div>
-      )}
+   {!isVisible && (
+  <div className="flex items-center gap-2 shrink-0 min-w-0">
+    {/* Company Name */}
+    <span className="font-semibold text-black text-lg truncate hidden sm:inline">
+      {companyName}
+    </span>
+
+    {/* Software Type Badge */}
+   {/* Software Type Badge */}
+
+    {/* Service Quality */}
+    <span className="font-semibold text-black text-xl hidden sm:inline">
+      {getServiceIcon()}
+    </span>
+{/* <SoftwareBadge label={softwareLabel} /> */}
+  </div>
+)}
 
 
       {isVisible && (
