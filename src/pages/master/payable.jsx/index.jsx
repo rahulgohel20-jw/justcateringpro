@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { cashPaymentColumns, bankPaymentColumns } from "./constant";
@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import Swal from "sweetalert2";
 import AddPayable from "../../../partials/modals/add-cash-account/AddPayable";
 import { useCloseDateAll } from "@/hooks/useCloseDate";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const MONTHS = [
   "Jan",
@@ -45,7 +46,7 @@ const Payable = () => {
   const [year, setYear] = useState(new Date().getFullYear());
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [yearRangeStart, setYearRangeStart] = useState(
-    Math.floor(new Date().getFullYear() / 12) * 12,
+    Math.floor(new Date().getFullYear() / 12) * 12
   );
 
   const [modalState, setModalState] = useState({
@@ -61,10 +62,17 @@ const Payable = () => {
   const [tableLoading, setTableLoading] = useState(false);
   const { monthCloseDates } = useCloseDateAll(year);
 
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const searchBoxRef = useRef(null);
+  const skipSuggestRef = useRef(false);
+
   const formatCloseDate = (dateStr) => {
     if (!dateStr) return "";
     return dayjs(dateStr, "DD/MM/YYYY").format("D MMM");
   };
+
   // ── Load sub-tabs when main tab changes ──
   useEffect(() => {
     const loadSubTabs = async () => {
@@ -103,7 +111,7 @@ const Payable = () => {
             allOption,
             ...accounts.map((b) => ({
               key: String(b.id),
-              label: b.bankName || b.name,
+              label: b.bankName || b.accountName || b.name,
               id: b.id,
             })),
           ]);
@@ -111,37 +119,29 @@ const Payable = () => {
           setSubTab("all");
         }
       } catch (err) {
-        console.error("❌ SubTabs load error →", err);
+        console.error("❌ Failed to load sub-tabs →", err);
       }
     };
+
     loadSubTabs();
   }, [tab]);
 
-  useEffect(() => {
-    setPaymentMode(tab === "cash" ? "CASH" : ""); // "" = All for bank
-  }, [tab]);
-
-  const fetchPayments = async () => {
+  // ── Fetch payments ──
+  const fetchPayments = useCallback(async () => {
+    setTableLoading(true);
     try {
-      setTableLoading(true);
-      const start = new Date(year, month, 1);
-      const end = new Date(year, month + 1, 0);
-      const fmt = (d) => dayjs(d).format("DD/MM/YYYY");
-      const selectedTab = subTabs.find((s) => s.key === subTab);
-      const selectedId = selectedTab?.id === -1 ? -1 : selectedTab?.id || "";
-      const res = await GETallbytypereciptpayment({
-        accountType: tab === "cash" ? "CASH" : "BANK",
-        bankAccountId: tab === "bank" ? selectedId : "",
-        cashTypeId: tab === "cash" ? selectedId : "",
-        endDate: fmt(end),
-        entryType: "PAYMENT",
-        paymentMode: paymentMode, // ← pass selected mode
-        startDate: fmt(start),
-        userId: 1,
-        voucherNo: "",
-        partyName: "",
-      });
+      const selected = subTabs.find((s) => s.key === subTab);
+      const accountId = selected?.id ?? -1;
 
+      const payload = {
+        month: month + 1,
+        year,
+        type: tab.toUpperCase(),
+        accountId,
+        paymentMode,
+      };
+
+      const res = await GETallbytypereciptpayment(payload);
       setTableData(res?.data?.data || []);
     } catch (err) {
       console.error("❌ Fetch payments error →", err);
@@ -149,11 +149,85 @@ const Payable = () => {
     } finally {
       setTableLoading(false);
     }
-  };
+  }, [subTabs, subTab, month, year, tab, paymentMode]);
 
   useEffect(() => {
     if (subTab) fetchPayments();
-  }, [tab, subTab, month, year, paymentMode]);
+  }, [subTab, fetchPayments]);
+
+  const dictWords = useMemo(
+    () =>
+      extractDictWords(tableData, [
+        "partyName",
+        "voucherNo",
+        "referenceNo",
+        "paymentMode",
+      ]),
+    [tableData]
+  );
+
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(search, dictWords);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [search, dictWords]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearch(word);
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) => (prev + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev <= 0 ? spellSuggestions.length - 1 : prev - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
+
+  const filteredData = useMemo(() => {
+    if (!search.trim()) return tableData;
+    const q = search.toLowerCase().trim();
+    return tableData.filter(
+      (item) =>
+        item.partyName?.toLowerCase().includes(q) ||
+        item.voucherNo?.toLowerCase().includes(q) ||
+        item.referenceNo?.toLowerCase().includes(q) ||
+        item.paymentMode?.toLowerCase().includes(q)
+    );
+  }, [tableData, search]);
 
   // ── Handle view / edit / delete ──
   const handleAction = async (rowData, mode) => {
@@ -246,7 +320,7 @@ const Payable = () => {
                   <div className="grid grid-cols-3 gap-2">
                     {Array.from(
                       { length: 12 },
-                      (_, i) => yearRangeStart + i,
+                      (_, i) => yearRangeStart + i
                     ).map((y) => (
                       <button
                         key={y}
@@ -254,10 +328,10 @@ const Payable = () => {
                           setYear(y);
                           setShowYearPicker(false);
                         }}
-                        className={`py-2 rounded-xl text-sm font-semibold border-0 cursor-pointer transition ${
+                        className={`py-2 rounded-xl text-sm font-semibold transition ${
                           y === year
-                            ? "bg-primary text-white"
-                            : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                            ? "bg-primary text-white shadow"
+                            : "hover:bg-gray-100 text-gray-700 border-0 bg-transparent cursor-pointer"
                         }`}
                       >
                         {y}
@@ -269,135 +343,119 @@ const Payable = () => {
             )}
           </div>
 
-          {MONTHS.slice(0, 6).map((m, i) => {
-            const key = `${year}-${i + 1}`; // for first block (i = 0–5)
-            // const key = `${year}-${realIndex + 1}`;  // for second block (use realIndex)
-            const entry = monthCloseDates?.[key];
-            const startLabel = entry
-              ? formatCloseDate(entry.startDate)
-              : getMonthRange(i, year).startLabel;
+          <div className="col-span-6 grid grid-cols-6 gap-2">
+            {MONTHS.map((m, idx) => {
+              const { startLabel, endLabel } = getMonthRange(idx, year);
+              const isSelected = month === idx;
+              const closeDateRaw = monthCloseDates[idx + 1];
+              const closeDateFmt = formatCloseDate(closeDateRaw);
 
-            const endLabel = entry
-              ? formatCloseDate(entry.closeDate)
-              : getMonthRange(i, year).endLabel;
-            const isSelected = month === i;
-            return (
-              <button
-                key={m}
-                onClick={() => setMonth(i)}
-                className={`relative flex flex-col items-start px-3 py-2 rounded-2xl border transition-all text-left ${
-                  isSelected
-                    ? "bg-primary text-white border-primary shadow-md"
-                    : "bg-white text-gray-800 border-gray-200 hover:border-primary hover:shadow-sm"
-                }`}
-              >
-                <span className="font-bold text-sm">{m}</span>
-                <span
-                  className={`text-[11px] mt-1 ${isSelected ? "text-blue-100" : "text-black"}`}
+              return (
+                <button
+                  key={m}
+                  onClick={() => setMonth(idx)}
+                  className={`relative p-3 rounded-2xl border text-left transition-all ${
+                    isSelected
+                      ? "bg-primary text-white border-primary shadow-md"
+                      : "bg-white text-gray-700 border-gray-200 hover:border-gray-300"
+                  }`}
                 >
-                  {startLabel} → {endLabel}
-                </span>
-              </button>
-            );
-          })}
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-sm">{m}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                        isSelected
+                          ? "bg-white/20 text-white"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      {idx + 1}
+                    </span>
+                  </div>
 
-          <div />
+                  <p
+                    className={`text-[10px] leading-tight ${
+                      isSelected ? "text-white/80" : "text-gray-400"
+                    }`}
+                  >
+                    {startLabel} – {endLabel}
+                  </p>
 
-          {MONTHS.slice(6, 12).map((m, i) => {
-            const realIndex = i + 6;
-            const key = `${year}-${i + 1}`; // for first block (i = 0–5)
-            // const key = `${year}-${realIndex + 1}`;  // for second block (use realIndex)
-            const entry = monthCloseDates?.[key];
-            const startLabel = entry
-              ? formatCloseDate(entry.startDate)
-              : getMonthRange(i, year).startLabel;
-
-            const endLabel = entry
-              ? formatCloseDate(entry.closeDate)
-              : getMonthRange(i, year).endLabel;
-            const isSelected = month === realIndex;
-            return (
-              <button
-                key={m}
-                onClick={() => setMonth(realIndex)}
-                className={`relative flex flex-col items-start px-3 py-2 rounded-2xl border transition-all text-left ${
-                  isSelected
-                    ? "bg-primary text-white border-primary shadow-md"
-                    : "bg-white text-gray-800 border-gray-200 hover:border-primary hover:shadow-sm"
-                }`}
-              >
-                <span className="font-bold text-sm">{m}</span>
-                <span
-                  className={`text-[11px] mt-1 ${isSelected ? "text-blue-100" : "text-black"}`}
-                >
-                  {startLabel} → {endLabel}
-                </span>
-              </button>
-            );
-          })}
+                  <div className="mt-1 flex items-center gap-1">
+                    <span
+                      className={`inline-block w-1.5 h-1.5 rounded-full ${
+                        closeDateFmt ? "bg-red-600" : "bg-emerald-400"
+                      }`}
+                    />
+                    <span
+                      className={`text-[9px] font-medium ${
+                        isSelected
+                          ? closeDateFmt
+                            ? "text-red-600"
+                            : "text-emerald-300"
+                          : closeDateFmt
+                            ? "text-red-600"
+                            : "text-emerald-600"
+                      }`}
+                    >
+                      {closeDateFmt ? `${closeDateFmt}` : "Open"}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* ── Page Header ── */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Payments</h2>
-            <p className="text-sm text-black mt-0.5">
-              Manage and audit institutional capital outflows
-            </p>
+        {/* ── Main Tab Navigation ── */}
+        <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+          <div className="flex items-center gap-2">
+            {[
+              { key: "cash", label: "Cash Payment" },
+              { key: "bank", label: "Bank Payment" },
+            ].map((t) => (
+              <button
+                key={t.key}
+                onClick={() => {
+                  setTab(t.key);
+                  setPaymentMode(t.key === "cash" ? "CASH" : "BANK_TRANSFER");
+                }}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                  tab === t.key
+                    ? "bg-primary text-white shadow-md shadow-primary/20"
+                    : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
+
           <button
             onClick={() =>
               setModalState({ open: true, mode: "add", data: null })
             }
-            className="flex items-center gap-2 bg-primary hover:bg-blue-800 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl text-sm font-semibold shadow-sm transition"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            New Payment
+            <i className="ki-filled ki-plus text-xs" />
+            Add {tab === "cash" ? "Cash" : "Bank"} Payment
           </button>
         </div>
 
-        {/* ── Filters + Tabs ── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          {/* Sub tabs */}
-
-          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-            <div className="flex items-center gap-1">
-              {[
-                { key: "cash", label: "Cash Payments", icon: "ki-dollar" },
-                { key: "bank", label: "Bank Payments", icon: "ki-bank" },
-              ].map((t) => (
-                <button
-                  key={t.key}
-                  onClick={() => {
-                    setTab(t.key);
-                    setSubTab("");
-                  }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    tab === t.key
-                      ? "bg-primary text-white shadow-sm"
-                      : "text-black hover:bg-gray-100"
-                  }`}
-                >
-                  <i className={`ki-filled ${t.icon} text-base`}></i>
-                  {t.label}
-                </button>
-              ))}
+        {/* ── Content Card ── */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          {/* Card Top: Title + Search */}
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+            <div>
+              <span className="font-bold text-gray-800 text-sm">
+                {tab === "cash" ? "Cash Payment" : "Bank Payment"}
+              </span>
+              <span className="ml-2 text-xs text-gray-400">
+                ({filteredData.length} entries)
+              </span>
             </div>
 
-            <div className="relative">
+            <div ref={searchBoxRef} className="relative">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -415,9 +473,35 @@ const Payable = () => {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
                 placeholder="Search payments..."
                 className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 w-52 transition"
               />
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">Suggestions:</div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
@@ -472,7 +556,7 @@ const Payable = () => {
                 ? cashPaymentColumns(handleAction)
                 : bankPaymentColumns(handleAction)
             }
-            data={tableData}
+            data={filteredData}
             loading={tableLoading}
           />
         </div>

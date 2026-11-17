@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { cashReceiptColumns, bankReceiptColumns } from "./constant";
@@ -13,6 +13,7 @@ import {
 import dayjs from "dayjs";
 import ReceiptModal from "../../../../partials/modals/add-cash-account/ReceiptModal";
 import useCloseDate from "@/hooks/useCloseDate";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const MONTHS = [
   "Jan",
@@ -60,6 +61,14 @@ const ReceiptManagement = () => {
   const [tableData, setTableData] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
   const userId = JSON.parse(localStorage.getItem("userId"));
+
+  // Suggestions state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
 
   const { monthCloseDates, isLoading: closeDateLoading } = useCloseDate(
     month,
@@ -111,7 +120,7 @@ const ReceiptManagement = () => {
     };
 
     loadSubTabs();
-  }, [tab]);
+  }, [tab, userId]);
 
   const fetchReceipts = async () => {
     const startDate = activeDateEntry?.startDate
@@ -126,8 +135,6 @@ const ReceiptManagement = () => {
       setTableLoading(true);
 
       const selectedTab = subTabs.find((s) => s.key === subTab);
-
-      // ✅ If subTabs not loaded yet or "all" selected, use -1
       const selectedId =
         !selectedTab || selectedTab?.id === -1 ? -1 : selectedTab?.id || "";
 
@@ -144,7 +151,14 @@ const ReceiptManagement = () => {
         partyName: "",
       });
 
-      setTableData(res?.data?.data || []);
+      const list = res?.data?.data || [];
+      setTableData(list);
+      const words = extractDictWords(list, [
+        "partyName",
+        "voucherNo",
+        "referenceNo",
+      ]);
+      setDictWords(words);
     } catch (err) {
       console.error("❌ Fetch receipts error →", err);
       setTableData([]);
@@ -165,6 +179,66 @@ const ReceiptManagement = () => {
     subTabs,
     paymentMode,
   ]);
+
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (search || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [search, dictWords]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearch(word);
+    setShowSpell(false);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev < spellSuggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev > 0 ? prev - 1 : spellSuggestions.length - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
 
   const handleAction = async (rowData, mode) => {
     if (mode === "delete") {
@@ -215,6 +289,17 @@ const ReceiptManagement = () => {
     fetchReceipts();
   };
 
+  const filteredData = tableData.filter((item) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      item.voucherNo?.toLowerCase().includes(q) ||
+      item.partyName?.toLowerCase().includes(q) ||
+      item.referenceNo?.toLowerCase().includes(q) ||
+      item.date?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <Container>
       <div className="space-y-5">
@@ -262,11 +347,10 @@ const ReceiptManagement = () => {
                           setYear(y);
                           setShowYearPicker(false);
                         }}
-                        className={`py-2 rounded-xl text-sm font-semibold border-0 cursor-pointer transition ${
-                          y === year
+                        className={`py-2 rounded-xl text-sm font-semibold border-0 cursor-pointer transition ${y === year
                             ? "bg-primary text-white"
                             : "bg-gray-50 text-gray-700 hover:bg-gray-100"
-                        }`}
+                          }`}
                       >
                         {y}
                       </button>
@@ -280,17 +364,15 @@ const ReceiptManagement = () => {
           {MONTHS.slice(0, 6).map((m, i) => {
             const { startLabel, endLabel } = getMonthRange(i, year);
             const isSelected = month === i;
-            // ✅ Show close date range on month button if available
             const entry = monthCloseDates[`${year}-${i + 1}`];
             return (
               <button
                 key={m}
                 onClick={() => setMonth(i)}
-                className={`relative flex flex-col items-start px-3 py-2 rounded-2xl border transition-all text-left ${
-                  isSelected
+                className={`relative flex flex-col items-start px-3 py-2 rounded-2xl border transition-all text-left ${isSelected
                     ? "bg-primary text-white border-primary shadow-md"
                     : "bg-white text-gray-800 border-gray-200 hover:border-primary hover:shadow-sm"
-                }`}
+                  }`}
               >
                 <span className="font-bold text-sm">{m}</span>
                 <span
@@ -310,17 +392,15 @@ const ReceiptManagement = () => {
             const realIndex = i + 6;
             const { startLabel, endLabel } = getMonthRange(realIndex, year);
             const isSelected = month === realIndex;
-            // ✅ Show close date range on month button if available
             const entry = monthCloseDates[`${year}-${realIndex + 1}`];
             return (
               <button
                 key={m}
                 onClick={() => setMonth(realIndex)}
-                className={`relative flex flex-col items-start px-3 py-2 rounded-2xl border transition-all text-left ${
-                  isSelected
+                className={`relative flex flex-col items-start px-3 py-2 rounded-2xl border transition-all text-left ${isSelected
                     ? "bg-primary text-white border-primary shadow-md"
                     : "bg-white text-gray-800 border-gray-200 hover:border-primary hover:shadow-sm"
-                }`}
+                  }`}
               >
                 <span className="font-bold text-sm">{m}</span>
                 <span
@@ -382,18 +462,17 @@ const ReceiptManagement = () => {
                     setSubTab("all");
                     setPaymentMode("");
                   }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                    tab === t.key
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === t.key
                       ? "bg-primary text-white shadow-sm"
                       : "text-black hover:bg-gray-100"
-                  }`}
+                    }`}
                 >
                   <i className={`ki-filled ${t.icon} text-base`}></i>
                   {t.label}
                 </button>
               ))}
             </div>
-            <div className="relative">
+            <div className="relative" ref={searchBoxRef}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -411,9 +490,36 @@ const ReceiptManagement = () => {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
                 placeholder="Search receipts..."
                 className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 w-52 transition"
               />
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                          }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
@@ -422,11 +528,10 @@ const ReceiptManagement = () => {
               <button
                 key={s.key}
                 onClick={() => setSubTab(s.key)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  subTab === s.key
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${subTab === s.key
                     ? "bg-white text-primary shadow-sm border border-gray-200"
                     : "text-black hover:text-gray-700 hover:bg-white"
-                }`}
+                  }`}
               >
                 {s.label}
               </button>
@@ -440,20 +545,19 @@ const ReceiptManagement = () => {
             {(tab === "cash"
               ? [{ key: "CASH", label: "Cash" }]
               : [
-                  { key: "BANK_TRANSFER", label: "Bank Transfer" },
-                  { key: "UPI", label: "UPI" },
-                  { key: "CHEQUE", label: "Cheque" },
-                  { key: "IMPS_NEFT", label: "NEFT" },
-                ]
+                { key: "BANK_TRANSFER", label: "Bank Transfer" },
+                { key: "UPI", label: "UPI" },
+                { key: "CHEQUE", label: "Cheque" },
+                { key: "IMPS_NEFT", label: "NEFT" },
+              ]
             ).map((m) => (
               <button
                 key={m.key}
                 onClick={() => setPaymentMode(m.key)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  paymentMode === m.key
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${paymentMode === m.key
                     ? "bg-primary text-white shadow-sm"
                     : "text-black hover:text-gray-700 hover:bg-gray-100 border border-gray-200"
-                }`}
+                  }`}
               >
                 {m.label}
               </button>
@@ -466,8 +570,8 @@ const ReceiptManagement = () => {
                 ? cashReceiptColumns(handleAction)
                 : bankReceiptColumns(handleAction)
             }
-            data={tableData}
-            loading={tableLoading || closeDateLoading} // ✅ show loading while close dates fetch too
+            data={filteredData}
+            loading={tableLoading || closeDateLoading}
           />
         </div>
       </div>

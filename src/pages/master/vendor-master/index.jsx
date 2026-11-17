@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { columns } from "./constant";
@@ -40,6 +41,14 @@ const VendorMaster = () => {
   const [pdfLoading, setPdfLoading] = useState(false);
   const pdfPlugin = defaultLayoutPlugin();
 
+  // Spelling suggestion state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
+
   // Exclude contact type ID 2 (Customer)
   const excludedContactTypeIds = [2];
 
@@ -60,7 +69,7 @@ const VendorMaster = () => {
       } else {
         Swal.fire({ icon: "warning", title: "No file returned from server." });
       }
-    } catch (err) {
+    } catch {
       Swal.fire({ icon: "error", title: "Failed to download Excel." });
     }
   };
@@ -83,7 +92,7 @@ const VendorMaster = () => {
         setIsPdfModalVisible(false);
         Swal.fire({ icon: "warning", title: "No PDF returned from server." });
       }
-    } catch (err) {
+    } catch {
       setIsPdfModalVisible(false);
       Swal.fire({ icon: "error", title: "Failed to generate PDF." });
     } finally {
@@ -125,97 +134,166 @@ const VendorMaster = () => {
     }
   };
 
-  const formatCustomerData = (customers) =>
-    customers
-      .filter((cust) => {
-        const typeName = cust.contact?.contactType?.nameEnglish?.toLowerCase();
-        return typeName !== "customer";
-      })
-      .map((cust, index) => ({
-        sr_no: index + 1,
-        customerid: cust.id,
-        customer: getNameByLang(cust),
-        address: getAddressByLang(cust),
-        contact_type: cust.contact.nameEnglish,
-        email: cust.email || "-",
-        mobile: cust.mobileno || "-",
-        gst: cust.gst || "-",
-        birthdate: cust.birthDate || "-",
-        document: cust.document || "-",
-        altMobileno: cust.altMobileno || "",
-        image: cust.documentImage || "",
-        contactCategoryId: cust?.contact?.id || null,
-        nameEnglish: cust.nameEnglish,
-        nameHindi: cust.nameHindi,
-        nameGujarati: cust.nameGujarati,
-        addressEnglish: cust.addressEnglish,
-        addressHindi: cust.addressHindi,
-        addressGujarati: cust.addressGujarati,
-        price: cust.price,
-          helperPrice: cust.helperPrice,
-      counterPrice: cust.counterPrice,
-        type: cust.type,
-        opbDate: cust.opbDate,
-        opb: cust.opb,
-        connectivity: "Connected",
-      }));
+  // Extract dict words for suggestions
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await GetAllCustomer(userId);
+        if (cancelled) return;
+        const list = res?.data?.data?.["Party Details"] || [];
+        const words = extractDictWords(list, [
+          "nameEnglish",
+          "nameHindi",
+          "nameGujarati",
+          "customer",
+        ]);
+        setDictWords(words);
+      } catch (err) {
+        console.error("Failed to load spelling dictionary:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
-  const FetchAllContactCategory = async () => {
-    try {
-      const userId = localStorage.getItem("userId");
-      const res = await GetAllContactCategory(userId);
-      const data = res.data.data["Contact Category Details"];
-      setCategory(data);
-    } catch (error) {
-      console.log(error);
+  useEffect(() => {
+    if (tableData && tableData.length > 0) {
+      const words = extractDictWords(tableData, [
+        "nameEnglish",
+        "nameHindi",
+        "nameGujarati",
+        "customer",
+      ]);
+      if (words.length > 0) {
+        setDictWords((prev) => Array.from(new Set([...prev, ...words])));
+      }
+    }
+  }, [tableData]);
+
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timeoutId = setTimeout(() => {
+      const results = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(results);
+      setSpellIndex(-1);
+      setShowSpell(results.length > 0);
+    }, 200);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, dictWords]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const applySpellSuggestion = (text) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(text);
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((i) => (i + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((i) => (i <= 0 ? spellSuggestions.length - 1 : i - 1));
+    } else if (e.key === "Tab" || (e.key === "Enter" && spellIndex >= 0)) {
+      if (spellIndex >= 0) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
     }
   };
 
-  const fetchByCategory = async (catId) => {
-    try {
-      const userid = localStorage.getItem("userId");
-      const res = await GetPartyMasterByCatId(catId, userid);
-      const data = res?.data?.data?.["Party Details"];
-     
+  const FetchAllContactCategory = () => {
+    GetAllContactCategory(userId)
+      .then(({ data: { data } }) => {
+        if (data && data["Contact Category Details"]) {
+          const allCategories = data["Contact Category Details"];
+          const filteredCategories = allCategories.filter((cat) => {
+            const isExcluded = excludedContactTypeIds.includes(
+              cat.contactType?.id
+            );
+            return !isExcluded;
+          });
+          setCategory(filteredCategories);
+        }
+      })
+      .catch((error) => console.error("Error fetching categories:", error));
+  };
 
-      if (data) {
-        const filterdata = data.map((cust, index) => ({
-          sr_no: index + 1,
-          customerid: cust.id,
-          customer: getNameByLang(cust),
-          address: getAddressByLang(cust),
-          contact_type: cust.contact.nameEnglish,
-          email: cust.email || "-",
-          mobile: cust.mobileno || "-",
-          gst: cust.gst || "-",
-          birthdate: cust.birthDate || "-",
-          document: cust.document || "-",
-          altMobileno: cust.altMobileno || "",
-          image: cust.documentImage || "",
-          contactCategoryId: cust?.contact?.id || null,
-          nameEnglish: cust.nameEnglish,
-          nameHindi: cust.nameHindi,
-          nameGujarati: cust.nameGujarati,
-          addressEnglish: cust.addressEnglish,
-          addressHindi: cust.addressHindi,
-          addressGujarati: cust.addressGujarati,
-           helperPrice: cust.helperPrice,
-  counterPrice: cust.counterPrice,
-          price: cust.price,
-          type: cust.type,
-          opbDate: cust.opbDate,
-          opb: cust.opb,
-          connectivity: "Connected",
-        }));
+  const formatCustomerData = (partyDetails) => {
+    const filteredParties = partyDetails.filter((cust) => {
+      const contactTypeId = cust.contact?.contactType?.id;
+      const isExcluded =
+        contactTypeId && excludedContactTypeIds.includes(contactTypeId);
+      return !isExcluded;
+    });
 
-        setTableData(filterdata);
-      } else {
-        setTableData([]);
-      }
-    } catch (err) {
-      console.error("Error fetching by category:", err);
-      setTableData([]);
-    }
+    return filteredParties.map((cust, index) => ({
+      sr_no: index + 1,
+      customerid: cust.id,
+      customer: getNameByLang(cust),
+      address: getAddressByLang(cust),
+      contact_type: getContactTypeByLang(cust),
+      email: cust.email || "-",
+      mobile: cust.mobileno || "-",
+      gst: cust.gst || "-",
+      birthdate: cust.birthDate || "-",
+      document: cust.document || "-",
+      altMobileno: cust.altMobileno || "",
+      contactCategoryId: cust.contact?.id,
+      image: cust.docPath || cust.documentImage || "",
+      nameEnglish: cust.nameEnglish,
+      nameHindi: cust.nameHindi,
+      nameGujarati: cust.nameGujarati,
+      addressEnglish: cust.addressEnglish,
+      addressHindi: cust.addressHindi,
+      addressGujarati: cust.addressGujarati,
+      pan: cust.pan,
+      opb: cust.opb || "",
+      opbDate: cust.opbDate || "",
+      type: cust.type || "",
+    }));
+  };
+
+  const fetchByCategory = (categoryId) => {
+    GetPartyMasterByCatId(categoryId, userId)
+      .then(({ data: { data } }) => {
+        if (data && data["Party Details"]) {
+          const formatted = formatCustomerData(data["Party Details"]);
+          setTableData(formatted);
+        } else {
+          setTableData([]);
+        }
+      })
+      .catch((error) =>
+        console.error("Error fetching party by category:", error)
+      );
   };
 
   const handleCategoryChange = (value) => {
@@ -238,7 +316,6 @@ const VendorMaster = () => {
     GetAllCustomer(userId)
       .then(({ data: { data } }) => {
         if (data && data["Party Details"]) {
-          
           const formatted = formatCustomerData(data["Party Details"]);
           setTableData(formatted);
         }
@@ -288,7 +365,7 @@ const VendorMaster = () => {
           .then((response) => {
             if (
               response &&
-              (response.success || response.data.success === true)
+              (response.success || response.data?.success === true)
             ) {
               FetchCustomer();
               Swal.fire({
@@ -298,9 +375,26 @@ const VendorMaster = () => {
                 timer: 1500,
                 showConfirmButton: false,
               });
+            } else {
+              Swal.fire({
+                title: "Cannot Delete",
+                text:
+                  response?.data?.msg ||
+                  "Vendor is used in Purchase. Please delete it first.",
+                icon: "error",
+              });
             }
           })
-          .catch((error) => console.error("Error deleting customer:", error));
+          .catch((error) => {
+            console.error("Error deleting customer:", error);
+            Swal.fire({
+              title: "Cannot Delete",
+              text:
+                error?.response?.data?.msg ||
+                "Something went wrong while deleting customer.",
+              icon: "error",
+            });
+          });
       }
     });
   };
@@ -326,7 +420,7 @@ const VendorMaster = () => {
         <div className="pb-2 mb-3">
           <h1 className="text-xl text-gray-900">
             <FormattedMessage
-              id="COMMON.VENDOR_MASTER"
+              id="USER.MASTER.VENDOR_MASTER"
               defaultMessage="Vendors"
             />
           </h1>
@@ -336,7 +430,7 @@ const VendorMaster = () => {
         <div className="filters flex flex-wrap items-center justify-between gap-2 mb-3">
           {/* Left: Search + Category */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="filItems relative">
+            <div className="filItems relative" ref={searchBoxRef}>
               <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
               <input
                 className="input pl-8"
@@ -347,7 +441,36 @@ const VendorMaster = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
               />
+
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
             <div>
               <Select

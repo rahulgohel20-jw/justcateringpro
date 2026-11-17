@@ -1,6 +1,5 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import { Container } from "@/components/container";
-import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
 import { TableComponent } from "@/components/table/TableComponent";
 import { columns } from "./constant";
 import {
@@ -10,9 +9,9 @@ import {
 import useStyle from "./style";
 import AddLabourshift from "@/partials/modals/add-labour-shift/AddLabourshift";
 import Swal from "sweetalert2";
-import { FormattedMessage } from "react-intl";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
 import { usePermission } from "../../../hooks/usePermission";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const Labourshiftmaster = () => {
   const permissions = usePermission("Labour Shift");
@@ -20,15 +19,20 @@ const Labourshiftmaster = () => {
   const intl = useIntl();
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [selectedcontactType, setSelectedcontactType] = useState(null);
-  const [tableData, setTableData] = useState([]); // filtered data
-  const [originalData, setOriginalData] = useState([]); // unfiltered API data
+  const [tableData, setTableData] = useState([]);
+  const [originalData, setOriginalData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   const Id = localStorage.getItem("userId");
 
-  // --------------------------
-  // 🔥 Get translated field
-  // --------------------------
+  // Suggestions state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
+
   const getTranslatedName = (item) => {
     switch (intl.locale) {
       case "hi":
@@ -40,9 +44,6 @@ const Labourshiftmaster = () => {
     }
   };
 
-  // --------------------------
-  // 🔥 Format data helper
-  // --------------------------
   const formatShiftData = (shifts) => {
     return shifts.map((shift, index) => ({
       sr_no: index + 1,
@@ -53,19 +54,25 @@ const Labourshiftmaster = () => {
       nameEnglish: shift.nameEnglish || "",
       nameHindi: shift.nameHindi || "",
       nameGujarati: shift.nameGujarati || "",
-       transportationPrice: shift.price ?? "",
+      transportationPrice: shift.price ?? "",
     }));
   };
 
-  // Fetch labour shifts from API
   const FetchLabourShift = () => {
-    if (!Id) return; // No user logged in
+    if (!Id) return;
 
     GetAllLabourShift(Id)
       .then((res) => {
         const shifts = res?.data?.data?.["Function Details"] || [];
-        setOriginalData(shifts); // Store raw API data
-        setTableData(formatShiftData(shifts)); // Format and set table data
+        setOriginalData(shifts);
+        setTableData(formatShiftData(shifts));
+        const words = extractDictWords(shifts, [
+          "nameEnglish",
+          "nameHindi",
+          "nameGujarati",
+          "shiftTime",
+        ]);
+        setDictWords(words);
       })
       .catch((error) => {
         console.error("Error fetching labour shifts:", error);
@@ -76,12 +83,8 @@ const Labourshiftmaster = () => {
     FetchLabourShift();
   }, [Id]);
 
-  // --------------------------
-  // 🔥 Re-translate when language changes
-  // --------------------------
   useEffect(() => {
     if (originalData.length > 0) {
-      // If there's an active search, re-apply it with new language
       if (searchQuery.trim()) {
         const filtered = originalData.filter((item) => {
           const searchLower = searchQuery.toLowerCase();
@@ -98,24 +101,18 @@ const Labourshiftmaster = () => {
         });
         setTableData(formatShiftData(filtered));
       } else {
-        // No search active, just re-format all data
         setTableData(formatShiftData(originalData));
       }
     }
   }, [intl.locale]);
 
-  // --------------------------
-  // Search with Debounce
-  // --------------------------
   useEffect(() => {
     const handler = setTimeout(() => {
       if (!searchQuery.trim()) {
-        // Reset to all data, properly formatted
         setTableData(formatShiftData(originalData));
         return;
       }
 
-      // Filter on raw API data
       const filtered = originalData.filter((item) => {
         const searchLower = searchQuery.toLowerCase();
         return (
@@ -129,14 +126,72 @@ const Labourshiftmaster = () => {
         );
       });
 
-      // Format filtered results
       setTableData(formatShiftData(filtered));
-    }, 500); // debounce 500ms
+    }, 500);
 
     return () => clearTimeout(handler);
   }, [searchQuery, originalData, intl.locale]);
 
-  // Delete shift
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery, dictWords]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(word);
+    setShowSpell(false);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev < spellSuggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev > 0 ? prev - 1 : spellSuggestions.length - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
+
   const DeleteShift = (shiftId) => {
     Swal.fire({
       title: "Are you sure?",
@@ -176,7 +231,6 @@ const Labourshiftmaster = () => {
     });
   };
 
-  // Edit shift
   const handleEdit = (shift) => {
     setSelectedcontactType(shift);
     setIsContactModalOpen(true);
@@ -185,7 +239,6 @@ const Labourshiftmaster = () => {
   return (
     <Fragment>
       <Container>
-        {/* Breadcrumbs */}
         <div className=" pb-2 mb-3">
           <h1 className="text-xl text-gray-900">
             <FormattedMessage
@@ -195,12 +248,11 @@ const Labourshiftmaster = () => {
           </h1>
         </div>
 
-        {/* Filters */}
         <div className="filters flex flex-wrap items-center justify-between gap-2 mb-3">
           <div
             className={`flex flex-wrap items-center gap-2 ${classes.customStyle}`}
           >
-            <div className="filItems relative">
+            <div className="filItems relative" ref={searchBoxRef}>
               <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
               <input
                 className="input pl-8"
@@ -211,7 +263,35 @@ const Labourshiftmaster = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
               />
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
@@ -234,7 +314,6 @@ const Labourshiftmaster = () => {
           )}
         </div>
 
-        {/* Modal */}
         <AddLabourshift
           isOpen={isContactModalOpen}
           onClose={setIsContactModalOpen}
@@ -242,7 +321,6 @@ const Labourshiftmaster = () => {
           shiftData={selectedcontactType}
         />
 
-        {/* Table */}
         <TableComponent
           columns={columns(handleEdit, DeleteShift, permissions)}
           data={tableData}

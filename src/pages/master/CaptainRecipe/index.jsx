@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import Addcaptaionmodal from "../../../partials/modals/captainmodal/Addcaptainmodal";
@@ -24,12 +25,19 @@ const CaptainRecipe = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const userId = localStorage.getItem("userId");
   const [syncingAll, setSyncingAll] = useState(false);
-const [excelModalOpen, setExcelModalOpen] = useState(false);
-const [excelLoading, setExcelLoading] = useState(false);
-const [excelOptions, setExcelOptions] = useState({
-  isCaptainReceipe: true,
-  isCaptainReceipeRawMaterial: true,
-});
+  // Spelling suggestion state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
+  const [excelModalOpen, setExcelModalOpen] = useState(false);
+  const [excelLoading, setExcelLoading] = useState(false);
+  const [excelOptions, setExcelOptions] = useState({
+    isCaptainReceipe: true,
+    isCaptainReceipeRawMaterial: true,
+  });
 
   const fetchData = () => {
     getallcaptainrecipe(userId, "")
@@ -48,6 +56,67 @@ const [excelOptions, setExcelOptions] = useState({
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (!tableData || tableData.length === 0) return;
+    const words = extractDictWords(tableData, ["name", "nameEnglish", "nameGujarati", "nameHindi"]);
+    setDictWords(words);
+  }, [tableData]);
+
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timeoutId = setTimeout(() => {
+      const results = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(results);
+      setSpellIndex(-1);
+      setShowSpell(results.length > 0);
+    }, 200);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, dictWords]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const applySpellSuggestion = (text) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(text);
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((i) => (i + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((i) => (i <= 0 ? spellSuggestions.length - 1 : i - 1));
+    } else if (e.key === "Tab" || (e.key === "Enter" && spellIndex >= 0)) {
+      if (spellIndex >= 0) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
+
   const handleEdit = async (record) => {
     try {
       const res = await getCaptainReceipeById(record.id, false);
@@ -61,69 +130,69 @@ const [excelOptions, setExcelOptions] = useState({
   };
 
   const handleGenerateExcel = async () => {
-  if (!excelOptions.isCaptainReceipe && !excelOptions.isCaptainReceipeRawMaterial) {
-    Swal.fire("Select an option", "Turn on at least one toggle.", "info");
-    return;
-  }
+    if (!excelOptions.isCaptainReceipe && !excelOptions.isCaptainReceipeRawMaterial) {
+      Swal.fire("Select an option", "Turn on at least one toggle.", "info");
+      return;
+    }
 
-  const payload = {
-    isCaptainReceipe: excelOptions.isCaptainReceipe,
-    isCaptainReceipeRawMaterial: excelOptions.isCaptainReceipeRawMaterial,
-    isMenuCategory: false,
-    isMenuItem: false,
-    isMenuItemRawMaterial: false,
-    isRawMaterial: false,
-    isRawMaterialCat: false,
-    isUnit: false,
+    const payload = {
+      isCaptainReceipe: excelOptions.isCaptainReceipe,
+      isCaptainReceipeRawMaterial: excelOptions.isCaptainReceipeRawMaterial,
+      isMenuCategory: false,
+      isMenuItem: false,
+      isMenuItemRawMaterial: false,
+      isRawMaterial: false,
+      isRawMaterialCat: false,
+      isUnit: false,
+    };
+
+    try {
+      setExcelLoading(true);
+      const res = await Getgenerateusermenuitemrawmaterialexcel(userId, payload);
+      const d = res?.data;
+
+      // API answered but reported a failure
+      if (d?.success === false) {
+        throw new Error(d?.msg || d?.message || "Failed to export Excel.");
+      }
+
+      const fileUrl =
+        d?.report_path ||
+        d?.data?.report_path ||
+        d?.excel_path ||
+        d?.data?.excel_path ||
+        d?.file_path ||
+        d?.data?.file_path ||
+        d?.url ||
+        (typeof d?.data === "string" ? d.data : null);
+
+      if (fileUrl) {
+        const a = document.createElement("a");
+        a.href = fileUrl;
+        a.download = "Captain_Recipe.xlsx";
+        a.target = "_blank";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setExcelModalOpen(false);
+      } else {
+        console.log("Export response:", d);
+        throw new Error(d?.msg || d?.message || "No file URL returned");
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      // show the message that came from the API first
+      const apiMsg =
+        error?.response?.data?.msg ||
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to export Excel.";
+      Swal.fire({ title: "Error", text: apiMsg, icon: "error" });
+    } finally {
+      setExcelLoading(false);
+    }
   };
-
-  try {
-    setExcelLoading(true);
-    const res = await Getgenerateusermenuitemrawmaterialexcel(userId, payload);
-    const d = res?.data;
-
-    // API answered but reported a failure
-    if (d?.success === false) {
-      throw new Error(d?.msg || d?.message || "Failed to export Excel.");
-    }
-
-    const fileUrl =
-      d?.report_path ||
-      d?.data?.report_path ||
-      d?.excel_path ||
-      d?.data?.excel_path ||
-      d?.file_path ||
-      d?.data?.file_path ||
-      d?.url ||
-      (typeof d?.data === "string" ? d.data : null);
-
-    if (fileUrl) {
-      const a = document.createElement("a");
-      a.href = fileUrl;
-      a.download = "Captain_Recipe.xlsx";
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setExcelModalOpen(false);
-    } else {
-      console.log("Export response:", d);
-      throw new Error(d?.msg || d?.message || "No file URL returned");
-    }
-  } catch (error) {
-    console.error("Export error:", error);
-    // show the message that came from the API first
-    const apiMsg =
-      error?.response?.data?.msg ||
-      error?.response?.data?.message ||
-      error?.response?.data?.error ||
-      error?.message ||
-      "Failed to export Excel.";
-    Swal.fire({ title: "Error", text: apiMsg, icon: "error" });
-  } finally {
-    setExcelLoading(false);
-  }
-};
 
   const handleDelete = (id) => {
     Swal.fire({
@@ -214,7 +283,7 @@ const [excelOptions, setExcelOptions] = useState({
         </div>
 
         <div className="filters flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className="filItems relative">
+          <div className="filItems relative" ref={searchBoxRef}>
             <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3" />
             <input
               className="input pl-8"
@@ -222,16 +291,45 @@ const [excelOptions, setExcelOptions] = useState({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+              onKeyDown={handleSearchKeyDown}
+              autoComplete="off"
+              spellCheck={false}
             />
+
+            {showSpell && spellSuggestions.length > 0 && (
+              <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                  Suggestions:
+                </div>
+                <ul>
+                  {spellSuggestions.map((s, i) => (
+                    <li
+                      key={s}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        applySpellSuggestion(s);
+                      }}
+                      onMouseEnter={() => setSpellIndex(i)}
+                      className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                        i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                      }`}
+                    >
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             <button
-    className="btn btn-light"
-    onClick={() => setExcelModalOpen(true)}
-  >
-    <i className="ki-filled ki-file-down" /> Excel
-  </button>
+              className="btn btn-light"
+              onClick={() => setExcelModalOpen(true)}
+            >
+              <i className="ki-filled ki-file-down" /> Excel
+            </button>
 
             {permissions.add && (
               <button
@@ -285,46 +383,46 @@ const [excelOptions, setExcelOptions] = useState({
           </div>
         </div>
         <Modal
-  title="Export Excel"
-  open={excelModalOpen}
-  onCancel={() => setExcelModalOpen(false)}
-  zIndex={10000}
-  getContainer={() => document.body}
-  centered
-  footer={[
-    <Button key="cancel" onClick={() => setExcelModalOpen(false)}>
-      Cancel
-    </Button>,
-    <Button
-      key="generate"
-      type="primary"
-      loading={excelLoading}
-      onClick={handleGenerateExcel}
-    >
-      Generate
-    </Button>,
-  ]}
-  destroyOnClose
->
-  <div className="flex flex-col gap-4 py-2">
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-gray-700">Captain Recipe</span>
-      <Switch
-        checked={excelOptions.isCaptainReceipe}
-        onChange={(v) => setExcelOptions((p) => ({ ...p, isCaptainReceipe: v }))}
-      />
-    </div>
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-gray-700">Captain Recipe Raw Material</span>
-      <Switch
-        checked={excelOptions.isCaptainReceipeRawMaterial}
-        onChange={(v) =>
-          setExcelOptions((p) => ({ ...p, isCaptainReceipeRawMaterial: v }))
-        }
-      />
-    </div>
-  </div>
-</Modal>
+          title="Export Excel"
+          open={excelModalOpen}
+          onCancel={() => setExcelModalOpen(false)}
+          zIndex={10000}
+          getContainer={() => document.body}
+          centered
+          footer={[
+            <Button key="cancel" onClick={() => setExcelModalOpen(false)}>
+              Cancel
+            </Button>,
+            <Button
+              key="generate"
+              type="primary"
+              loading={excelLoading}
+              onClick={handleGenerateExcel}
+            >
+              Generate
+            </Button>,
+          ]}
+          destroyOnClose
+        >
+          <div className="flex flex-col gap-4 py-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">Captain Recipe</span>
+              <Switch
+                checked={excelOptions.isCaptainReceipe}
+                onChange={(v) => setExcelOptions((p) => ({ ...p, isCaptainReceipe: v }))}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">Captain Recipe Raw Material</span>
+              <Switch
+                checked={excelOptions.isCaptainReceipeRawMaterial}
+                onChange={(v) =>
+                  setExcelOptions((p) => ({ ...p, isCaptainReceipeRawMaterial: v }))
+                }
+              />
+            </div>
+          </div>
+        </Modal>
         <Addcaptaionmodal
           isModalOpen={isCategoryModalOpen}
           setIsModalOpen={setIsCategoryModalOpen}
