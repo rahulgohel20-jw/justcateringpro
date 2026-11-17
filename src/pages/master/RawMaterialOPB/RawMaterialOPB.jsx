@@ -6,13 +6,14 @@ import { FormattedMessage, useIntl } from "react-intl";
 import {
   GetRawMaterialcategory,
   AddOPB,
-  SearchRawMaterial,
   GetOPBItems,
-  AddLogs, // ✅ Add this
+  AddLogs,
+  GetAllRawMaterial,
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { Save } from "lucide-react";
 import { usePermission } from "../../../hooks/usePermission";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 // ✅ Mirror exact pattern from CreateEventPage
 const getUserEmail = () => {
@@ -23,17 +24,6 @@ const getUserEmail = () => {
     return parsed?.state?.user?.email || "";
   } catch {
     return "";
-  }
-};
-
-const getLogDescription = (status) => {
-  switch (status) {
-    case "SAVE_OPB_SUCCESS":
-      return "Raw Material Opening Balance saved successfully";
-    case "SAVE_OPB_ERROR":
-      return "Failed to save Raw Material Opening Balance";
-    default:
-      return "Raw Material OPB action performed";
   }
 };
 
@@ -77,78 +67,49 @@ const RawMaterialOPB = () => {
   const dirtyIdsRef = useRef(new Set());
   const rawMaterialsCacheRef = useRef({});
 
-  const FetchSearchRawMaterial = async (searchTerm, page = currentPage) => {
-    if (!searchTerm.trim()) {
-      FetchRawMaterial(page);
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const res = await SearchRawMaterial(
-        true,
-        Id,
-        page,
-        ITEMS_PER_PAGE,
-        searchTerm,
-      );
-
-      const data = res?.data?.data || {};
-
-      setRawOriginalData(data["Raw Material Details"] || []);
-      setTotalRecords(data.totalItems || 0);
-    } catch (err) {
-      setRawOriginalData([]);
-      setTotalRecords(0);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Suggestions state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
 
   const sendLog = useCallback(
-  async (status, payloadItems = []) => {
-    try {
-      const totalItems = payloadItems.length;
-      const itemNames = payloadItems
-        .map((item) => rawMaterialsCacheRef.current[item.rawMaterialId]?.raw_material_name)
-        .filter(Boolean);
+    async (status, payloadItems = []) => {
+      try {
+        const totalItems = payloadItems.length;
+        const itemNames = payloadItems
+          .map((item) => rawMaterialsCacheRef.current[item.rawMaterialId]?.raw_material_name)
+          .filter(Boolean);
 
-      const namesPreview =
-        itemNames.length > 0
-          ? itemNames.slice(0, 5).join(", ") +
+        const namesPreview =
+          itemNames.length > 0
+            ? itemNames.slice(0, 5).join(", ") +
             (itemNames.length > 5 ? ` +${itemNames.length - 5} more` : "")
-          : "N/A";
+            : "N/A";
 
-      const description =
-        status === "SAVE_OPB_SUCCESS"
-          ? `Raw Material Opening Balance saved — Items: ${totalItems} | Names: ${namesPreview} | Updated By: ${getUserEmail() || "Unknown User"}`
-          : status === "SAVE_OPB_ERROR"
-            ? `Raw Material Opening Balance save FAILED | Attempted By: ${getUserEmail() || "Unknown User"}`
-            : "Raw Material OPB action performed";
+        const description =
+          status === "SAVE_OPB_SUCCESS"
+            ? `Raw Material Opening Balance saved — Items: ${totalItems} | Names: ${namesPreview} | Updated By: ${getUserEmail() || "Unknown User"}`
+            : status === "SAVE_OPB_ERROR"
+              ? `Raw Material Opening Balance save FAILED | Attempted By: ${getUserEmail() || "Unknown User"}`
+              : "Raw Material OPB action performed";
 
-      const logPayload = {
-        description,
-        eventType: getEventType(status),
-        id:  0,
-        user: getUserEmail(),
-        eventId : 0,
-        
-      };
-      await AddLogs(logPayload);
-    } catch (logErr) {
-      console.error("Failed to save log:", logErr);
-    }
-  },
-  [userId],
-);
-
-  const formatDate = (date) => {
-    if (!date) return "";
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    return `${day}/${month}/${date.getFullYear()}`;
-  };
+        const logPayload = {
+          description,
+          eventType: getEventType(status),
+          id: 0,
+          user: getUserEmail(),
+          eventId: 0,
+        };
+        await AddLogs(logPayload);
+      } catch (logErr) {
+        console.error("Failed to save log:", logErr);
+      }
+    },
+    [],
+  );
 
   const FetchRawMaterial = async (page = currentPage, search = searchQuery) => {
     try {
@@ -158,12 +119,12 @@ const RawMaterialOPB = () => {
         page,
         ITEMS_PER_PAGE,
         userId,
-        search.trim(), // ← pass itemName
+        search.trim(),
       );
       const resData = res?.data || {};
       setRawOriginalData(resData.data || []);
       setTotalRecords(resData.totalRecords || 0);
-    } catch (err) {
+    } catch {
       setRawOriginalData([]);
       setTotalRecords(0);
     } finally {
@@ -184,6 +145,42 @@ const RawMaterialOPB = () => {
     FetchCategories();
   }, []);
 
+  // Pre-load raw materials to populate dictionary
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await GetAllRawMaterial(true, Id, 1, 1000);
+        if (cancelled) return;
+        const list = res?.data?.data?.["Raw Material Details"] || [];
+        const words = extractDictWords(list, [
+          "nameEnglish",
+          "nameHindi",
+          "nameGujarati",
+          "rawMaterialName",
+        ]);
+        setDictWords(words);
+      } catch (err) {
+        console.error("Failed to load spelling dictionary:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [Id]);
+
+  useEffect(() => {
+    if (rawOriginalData && rawOriginalData.length > 0) {
+      const words = extractDictWords(rawOriginalData, [
+        "rawMaterialName",
+        "categoryName",
+      ]);
+      if (words.length > 0) {
+        setDictWords((prev) => Array.from(new Set([...prev, ...words])));
+      }
+    }
+  }, [rawOriginalData]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [categoryFilter, searchQuery]);
@@ -196,44 +193,102 @@ const RawMaterialOPB = () => {
     return () => clearTimeout(timer);
   }, [currentPage, categoryFilter, searchQuery]);
 
- useEffect(() => {
-  if (rawOriginalData.length === 0) return;
+  // Suggestions generation
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery, dictWords]);
 
-  rawOriginalData.forEach((raw) => {
-    rawMaterialsCacheRef.current[raw.rawMaterialId] = {
-      raw_material_name: raw.rawMaterialName || "-",
-      raw_material_category: raw.categoryName || "-",
-      unit: raw.unitName || "-",
-    };
-  });
-
-  setOpbValues((prev) => {
-    const updated = { ...prev };
-    rawOriginalData.forEach((raw) => {
-      const id = raw.rawMaterialId;
-      // Never clobber a value the user already edited, on this page or any other
-      if (dirtyIdsRef.current.has(id)) return;
-      if (updated[id]) return; // already prefilled once, leave as-is
-
-      let expiryDate = "";
-      if (raw.expiryDate) {
-        const [day, month, year] = raw.expiryDate.split("/");
-        if (day && month && year) {
-          expiryDate = `${year}-${month}-${day}`;
-        }
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
       }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
 
-      updated[id] = {
-        opening_bal: raw.opbStock ?? "",
-        min_qty: raw.minStock ?? "",
-        expiry_date: expiryDate,
-        supplier_rate: raw.supplierRate ?? "",
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(word);
+    setShowSpell(false);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev < spellSuggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev > 0 ? prev - 1 : spellSuggestions.length - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
+
+  useEffect(() => {
+    if (rawOriginalData.length === 0) return;
+
+    rawOriginalData.forEach((raw) => {
+      rawMaterialsCacheRef.current[raw.rawMaterialId] = {
+        raw_material_name: raw.rawMaterialName || "-",
+        raw_material_category: raw.categoryName || "-",
+        unit: raw.unitName || "-",
       };
     });
-    return updated;
-  });
-}, [rawOriginalData]);
 
+    setOpbValues((prev) => {
+      const updated = { ...prev };
+      rawOriginalData.forEach((raw) => {
+        const id = raw.rawMaterialId;
+        if (dirtyIdsRef.current.has(id)) return;
+        if (updated[id]) return;
+
+        let expiryDate = "";
+        if (raw.expiryDate) {
+          const [day, month, year] = raw.expiryDate.split("/");
+          if (day && month && year) {
+            expiryDate = `${year}-${month}-${day}`;
+          }
+        }
+
+        updated[id] = {
+          opening_bal: raw.opbStock ?? "",
+          min_qty: raw.minStock ?? "",
+          expiry_date: expiryDate,
+          supplier_rate: raw.supplierRate ?? "",
+        };
+      });
+      return updated;
+    });
+  }, [rawOriginalData]);
 
   useEffect(() => {
     let filtered = [...rawOriginalData];
@@ -263,18 +318,16 @@ const RawMaterialOPB = () => {
 
   const totalPages = Math.ceil(totalRecords / ITEMS_PER_PAGE);
 
- const handleOPBChange = (id, key, value) => {
-  dirtyIdsRef.current.add(id);
-  setOpbValues((prev) => ({
-    ...prev,
-    [id]: { ...prev[id], [key]: value },
-  }));
-};
+  const handleOPBChange = (id, key, value) => {
+    dirtyIdsRef.current.add(id);
+    setOpbValues((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], [key]: value },
+    }));
+  };
 
-
-const handleSave = async () => {
-  const payload = Array.from(dirtyIdsRef.current)
-    .map((rawMaterialId) => {
+  const handleSave = async () => {
+    const payload = Array.from(dirtyIdsRef.current).map((rawMaterialId) => {
       const vals = opbValues[rawMaterialId] || {};
 
       let expiryDate = "";
@@ -294,50 +347,49 @@ const handleSave = async () => {
       };
     });
 
-  if (payload.length === 0) {
-    Swal.fire({
-      icon: "warning",
-      title: "Nothing to Save",
-      text: "Please edit at least one field for any item.",
-      confirmButtonColor: "#3085d6",
-    });
-    return;
-  }
+    if (payload.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Nothing to Save",
+        text: "Please edit at least one field for any item.",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
 
-  try {
-    setSaving(true);
+    try {
+      setSaving(true);
+      const response = await AddOPB({ items: payload });
 
-    const response = await AddOPB({ items: payload });
+      if (response?.data?.success === true || response?.success === true) {
+        await sendLog("SAVE_OPB_SUCCESS", payload);
 
-    if (response?.data?.success === true || response?.success === true) {
-      await sendLog("SAVE_OPB_SUCCESS", payload);
+        Swal.fire({
+          icon: "success",
+          title: "Saved!",
+          text: `Opening balances saved for ${payload.length} item(s).`,
+          timer: 1800,
+          showConfirmButton: false,
+        });
+
+        dirtyIdsRef.current.clear();
+        FetchRawMaterial(currentPage);
+      } else {
+        throw new Error(response?.data?.msg || "Save failed");
+      }
+    } catch (error) {
+      await sendLog("SAVE_OPB_ERROR", payload);
 
       Swal.fire({
-        icon: "success",
-        title: "Saved!",
-        text: `Opening balances saved for ${payload.length} item(s).`,
-        timer: 1800,
-        showConfirmButton: false,
+        icon: "error",
+        title: "Error",
+        text: error.message || "Failed to save. Please try again.",
+        confirmButtonColor: "#d33",
       });
-
-      dirtyIdsRef.current.clear(); // clear only after a successful save
-      FetchRawMaterial(currentPage);
-    } else {
-      throw new Error(response?.data?.msg || "Save failed");
+    } finally {
+      setSaving(false);
     }
-  } catch (error) {
-    await sendLog("SAVE_OPB_ERROR", payload);
-
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: error.message || "Failed to save. Please try again.",
-      confirmButtonColor: "#d33",
-    });
-  } finally {
-    setSaving(false);
-  }
-};
+  };
 
   return (
     <Fragment>
@@ -355,7 +407,7 @@ const handleSave = async () => {
           {/* LEFT SIDE */}
           <div className="flex flex-wrap items-end gap-3">
             {/* Search */}
-            <div className="relative w-[240px]">
+            <div className="relative w-[240px]" ref={searchBoxRef}>
               <input
                 className="input w-full h-[40px] pl-10"
                 placeholder={intl.formatMessage({
@@ -365,8 +417,35 @@ const handleSave = async () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
               />
               <i className="ki-filled ki-magnifier text-md text-primary absolute top-1/2 left-3 -translate-y-1/2"></i>
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                          }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* Category */}
@@ -403,22 +482,22 @@ const handleSave = async () => {
 
           {/* RIGHT SIDE */}
           <div className="flex items-end me-3">
-            {permissions.add &&(
-            <button
-              className="btn btn-success h-[40px] px-4 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleSave}
-              disabled={saving || loading}
-            >
-              <Save size={16} />
-              {saving ? (
-                <FormattedMessage
-                  id="COMMON.SAVING"
-                  defaultMessage="Saving..."
-                />
-              ) : (
-                <FormattedMessage id="COMMON.SAVE" defaultMessage="Save" />
-              )}
-            </button>
+            {permissions.add && (
+              <button
+                className="btn btn-success h-[40px] px-4 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSave}
+                disabled={saving || loading}
+              >
+                <Save size={16} />
+                {saving ? (
+                  <FormattedMessage
+                    id="COMMON.SAVING"
+                    defaultMessage="Saving..."
+                  />
+                ) : (
+                  <FormattedMessage id="COMMON.SAVE" defaultMessage="Save" />
+                )}
+              </button>
             )}
           </div>
         </div>
@@ -585,7 +664,7 @@ const handleSave = async () => {
                 </tbody>
               </table>
 
-              {/* ── Pagination (identical to RawMaterial.jsx) ── */}
+              {/* ── Pagination ── */}
               <div className="flex justify-end gap-2 p-3">
                 <button
                   disabled={currentPage === 1}

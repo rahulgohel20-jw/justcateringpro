@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { columns } from "./constant";
@@ -10,6 +10,7 @@ import Swal from "sweetalert2";
 import { FormattedMessage, useIntl } from "react-intl";
 import { usePermission } from "../../../hooks/usePermission";
 import AddRoomModal from "../../../partials/modals/add-room/AddRoomModal";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const RoomMaster = () => {
   const permissions = usePermission("Room");
@@ -22,6 +23,14 @@ const RoomMaster = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const userId = localStorage.getItem("userId");
+
+  // Suggestions state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
 
   // ─── Format raw API data into table rows ───────────────────────────────────
   const formatRoomData = (rooms) =>
@@ -44,6 +53,12 @@ const RoomMaster = () => {
         const rooms = res?.data?.data["Room Details"] || res?.data || [];
         setOriginalData(rooms);
         setTableData(formatRoomData(rooms));
+        const words = extractDictWords(rooms, [
+          "nameEnglish",
+          "nameGujarati",
+          "nameHindi",
+        ]);
+        setDictWords(words);
       })
       .catch((error) => {
         console.error("Error fetching rooms:", error);
@@ -79,50 +94,110 @@ const RoomMaster = () => {
     return () => clearTimeout(handler);
   }, [searchQuery, originalData]);
 
-  // ─── Delete room ───────────────────────────────────────────────────────────
- const handleDelete = (roomId) => {
-  Swal.fire({
-    title: intl.formatMessage({ id: "COMMON.ARE_YOU_SURE", defaultMessage: "Are you sure?" }),
-    text: intl.formatMessage({ id: "COMMON.CANNOT_REVERT", defaultMessage: "You won't be able to revert this!" }),
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#3085d6",
-    cancelButtonColor: "#d33",
-    confirmButtonText: intl.formatMessage({ id: "COMMON.YES_DELETE_IT", defaultMessage: "Yes, delete it!" }),
-    cancelButtonText: intl.formatMessage({ id: "COMMON.CANCEL", defaultMessage: "Cancel" }),
-  }).then((result) => {
-    if (result.isConfirmed) {
-      DeleteRoom(roomId)
-        .then((response) => {
-          if (
-            response &&
-            (response.success ||
-              response.status === 200 ||
-              response?.data?.success === true)
-          ) {
-            fetchRooms();
-            Swal.fire({
-              title: intl.formatMessage({ id: "COMMON.DELETED", defaultMessage: "Deleted!" }),
-              text: intl.formatMessage({ id: "ROOM.DELETED_SUCCESS", defaultMessage: "Room has been deleted successfully." }),
-              icon: "success",
-              timer: 1500,
-              showConfirmButton: false,
-            });
-          } else {
-            throw new Error(response?.message || "Delete failed");
-          }
-        })
-        .catch((error) => {
-          console.error("Error deleting room:", error);
-          Swal.fire(
-            intl.formatMessage({ id: "COMMON.ERROR", defaultMessage: "Error!" }),
-            intl.formatMessage({ id: "ROOM.DELETE_FAILED", defaultMessage: "Failed to delete the room." }),
-            "error"
-          );
-        });
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
     }
-  });
-};
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery, dictWords]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(word);
+    setShowSpell(false);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev < spellSuggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev > 0 ? prev - 1 : spellSuggestions.length - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
+
+  // ─── Delete room ───────────────────────────────────────────────────────────
+  const handleDelete = (roomId) => {
+    Swal.fire({
+      title: intl.formatMessage({ id: "COMMON.ARE_YOU_SURE", defaultMessage: "Are you sure?" }),
+      text: intl.formatMessage({ id: "COMMON.CANNOT_REVERT", defaultMessage: "You won't be able to revert this!" }),
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: intl.formatMessage({ id: "COMMON.YES_DELETE_IT", defaultMessage: "Yes, delete it!" }),
+      cancelButtonText: intl.formatMessage({ id: "COMMON.CANCEL", defaultMessage: "Cancel" }),
+    }).then((result) => {
+      if (result.isConfirmed) {
+        DeleteRoom(roomId)
+          .then((response) => {
+            if (
+              response &&
+              (response.success ||
+                response.status === 200 ||
+                response?.data?.success === true)
+            ) {
+              fetchRooms();
+              Swal.fire({
+                title: intl.formatMessage({ id: "COMMON.DELETED", defaultMessage: "Deleted!" }),
+                text: intl.formatMessage({ id: "ROOM.DELETED_SUCCESS", defaultMessage: "Room has been deleted successfully." }),
+                icon: "success",
+                timer: 1500,
+                showConfirmButton: false,
+              });
+            } else {
+              throw new Error(response?.message || "Delete failed");
+            }
+          })
+          .catch((error) => {
+            console.error("Error deleting room:", error);
+            Swal.fire(
+              intl.formatMessage({ id: "COMMON.ERROR", defaultMessage: "Error!" }),
+              intl.formatMessage({ id: "ROOM.DELETE_FAILED", defaultMessage: "Failed to delete the room." }),
+              "error"
+            );
+          });
+      }
+    });
+  };
 
   // ─── Open edit modal ───────────────────────────────────────────────────────
   const handleEdit = (room) => {
@@ -153,7 +228,7 @@ const RoomMaster = () => {
         <div className="filters flex flex-wrap items-center justify-between gap-2 mb-3">
           {/* Search */}
           <div className="flex flex-wrap items-center gap-2">
-            <div className="filItems relative">
+            <div className="filItems relative" ref={searchBoxRef}>
               <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
               <input
                 className="input pl-8"
@@ -164,7 +239,35 @@ const RoomMaster = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
               />
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 

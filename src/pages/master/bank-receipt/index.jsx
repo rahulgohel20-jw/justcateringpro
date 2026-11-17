@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+/* eslint-disable react/prop-types */
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { bankReceiptColumns } from "./constant";
@@ -14,6 +15,7 @@ import dayjs from "dayjs";
 import AddBankReceiptModal from "../../../partials/modals/add-bank-details/AddBankReceiptModal";
 import { useCloseDateAll } from "@/hooks/useCloseDate";
 import { usePermission } from "../../../hooks/usePermission";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const MONTHS = [
   "Jan",
@@ -50,7 +52,7 @@ const BankReceipts = () => {
   const [autoMonthSet, setAutoMonthSet] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [yearRangeStart, setYearRangeStart] = useState(
-    Math.floor(new Date().getFullYear() / 12) * 12,
+    Math.floor(new Date().getFullYear() / 12) * 12
   );
   const [modalState, setModalState] = useState({
     open: false,
@@ -59,6 +61,12 @@ const BankReceipts = () => {
   });
   const [tableData, setTableData] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
+
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const searchBoxRef = useRef(null);
+  const skipSuggestRef = useRef(false);
 
   // ── Fetch ALL year's close dates from API ──
   const { monthCloseDates, isLoading: closeDateLoading } =
@@ -91,7 +99,7 @@ const BankReceipts = () => {
       setYear(activeEntry.year);
       setAutoMonthSet(true);
     }
-  }, [monthCloseDates, closeDateLoading]);
+  }, [monthCloseDates, closeDateLoading, autoMonthSet]);
 
   // ── Load bank sub-tabs ──
   useEffect(() => {
@@ -113,10 +121,10 @@ const BankReceipts = () => {
       }
     };
     loadSubTabs();
-  }, []);
+  }, [userId]);
 
   // ── Fetch Bank Receipts ──
-  const fetchReceipts = async () => {
+  const fetchReceipts = useCallback(async () => {
     const key = `${year}-${month + 1}`;
     const entry = monthCloseDates?.[key];
 
@@ -153,39 +161,113 @@ const BankReceipts = () => {
     } finally {
       setTableLoading(false);
     }
-  };
+  }, [year, month, monthCloseDates, bankSubTabs, subTab, paymentMode, userId]);
 
   useEffect(() => {
     if (subTab && !closeDateLoading && bankSubTabs.length > 0) fetchReceipts();
   }, [
     subTab,
-    month,
-    year,
     closeDateLoading,
-    monthCloseDates,
-    bankSubTabs,
-    paymentMode,
+    bankSubTabs.length,
+    fetchReceipts,
   ]);
 
-  // ── Actions ──
+  const dictWords = useMemo(
+    () => extractDictWords(tableData, ["partyName", "voucherNo", "referenceNo"]),
+    [tableData]
+  );
+
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(search, dictWords);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [search, dictWords]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearch(word);
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) => (prev + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev <= 0 ? spellSuggestions.length - 1 : prev - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
+
+  // ── Handle Action ──
   const handleAction = async (rowData, mode) => {
     if (mode === "delete") {
       Swal.fire({
-        title: "Are you sure?",
-        text: `Delete receipt ${rowData.voucherNo || ""}? This cannot be undone.`,
+        title: intl.formatMessage({
+          id: "RECEIPT.DELETE_TITLE",
+          defaultMessage: "Are you sure?",
+        }),
+        text: intl.formatMessage(
+          {
+            id: "RECEIPT.DELETE_TEXT",
+            defaultMessage:
+              "Delete receipt {voucherNo}? This cannot be undone.",
+          },
+          { voucherNo: rowData.voucherNo || "" }
+        ),
         icon: "warning",
         showCancelButton: true,
         confirmButtonColor: "#d33",
         cancelButtonColor: "#3085d6",
-        confirmButtonText: "Yes, delete it!",
+        confirmButtonText: intl.formatMessage({
+          id: "RECEIPT.YES_DELETE",
+          defaultMessage: "Yes, delete it!",
+        }),
       }).then(async (result) => {
         if (!result.isConfirmed) return;
         try {
           const res = await DeleteReciptPayment(rowData.id);
           Swal.fire({
             icon: "success",
-            title: "Deleted!",
-            text: res?.data?.msg || "Deleted successfully",
+            title: intl.formatMessage({
+              id: "RECEIPT.DELETED",
+              defaultMessage: "Deleted!",
+            }),
+            text:
+              res?.data?.msg ||
+              intl.formatMessage({
+                id: "RECEIPT.DELETE_SUCCESS",
+                defaultMessage: "Receipt deleted successfully",
+              }),
             confirmButtonColor: "#3085d6",
           });
           fetchReceipts();
@@ -199,9 +281,11 @@ const BankReceipts = () => {
       });
       return;
     }
+
     try {
       const res = await Getbyidreciptpayment(rowData.id);
-      setModalState({ open: true, mode, data: res?.data?.data || rowData });
+      const fullData = res?.data?.data || rowData;
+      setModalState({ open: true, mode, data: fullData });
     } catch {
       setModalState({ open: true, mode, data: rowData });
     }
@@ -233,18 +317,45 @@ const BankReceipts = () => {
         onClick={() => setMonth(index)}
         className={`relative flex flex-col items-start px-3 py-2 rounded-2xl border transition-all text-left ${
           isSelected
-            ? "bg-primary text-white border-primary shadow-md"
-            : "bg-white text-gray-800 border-gray-200 hover:border-primary hover:shadow-sm"
+            ? "border-primary bg-primary text-white shadow-md shadow-primary/20"
+            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50/60"
         }`}
       >
-        {isActive && (
-          <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-green-400" />
-        )}
-        <span className="font-bold text-sm">{m}</span>
+        <div className="flex items-center justify-between w-full">
+          <span
+            className={`text-xs font-bold ${
+              isSelected ? "text-white" : "text-gray-800"
+            }`}
+          >
+            {m}
+          </span>
+          <span
+            className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
+              isSelected
+                ? "bg-white/20 text-white"
+                : "bg-gray-100 text-gray-400"
+            }`}
+          >
+            {String(index + 1).padStart(2, "0")}
+          </span>
+        </div>
         <span
-          className={`text-[11px] mt-1 ${isSelected ? "text-blue-100" : "text-gray-500"}`}
+          className={`text-[9px] mt-0.5 truncate w-full ${
+            isSelected ? "text-white/80" : "text-gray-400"
+          }`}
         >
           {getMonthDisplay(index, year)}
+        </span>
+        <span
+          className={`text-[9px] font-semibold mt-1 px-1.5 py-0.2 rounded-full ${
+            isSelected
+              ? "bg-white/25 text-white"
+              : isActive
+                ? "bg-emerald-50 text-emerald-600"
+                : "bg-red-50 text-red-500"
+          }`}
+        >
+          {isActive ? "Open" : "Closed"}
         </span>
       </button>
     );
@@ -252,42 +363,10 @@ const BankReceipts = () => {
 
   return (
     <Container>
-      <div className="">
-        {/* ── Mobile: dropdowns ── */}
-        <div className="flex flex-wrap items-center gap-2 md:hidden mb-4">
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-800 bg-white cursor-pointer outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
-          >
-            {Array.from(
-              { length: 10 },
-              (_, i) => new Date().getFullYear() - 5 + i,
-            ).map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-          <select
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-800 bg-white cursor-pointer outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
-          >
-            {MONTHS.map((m, i) => (
-              <option key={m} value={i}>
-                {m}
-              </option>
-            ))}
-          </select>
-          <span className="text-xs text-gray-500">
-            {getMonthDisplay(month, year)}
-          </span>
-        </div>
-
-        {/* ── Desktop: Year + Month grid ── */}
-        <div className="hidden md:grid grid-cols-7 gap-2 mb-4">
-          {/* Year picker */}
+      <div className="space-y-4">
+        {/* ── Year + Month Grid ── */}
+        <div className="grid grid-cols-7 gap-2">
+          {/* Year selector button + popup */}
           <div className="relative col-span-1 flex flex-col justify-start">
             <button
               onClick={() => setShowYearPicker((v) => !v)}
@@ -322,7 +401,7 @@ const BankReceipts = () => {
                   <div className="grid grid-cols-3 gap-2">
                     {Array.from(
                       { length: 12 },
-                      (_, i) => yearRangeStart + i,
+                      (_, i) => yearRangeStart + i
                     ).map((y) => (
                       <button
                         key={y}
@@ -330,7 +409,11 @@ const BankReceipts = () => {
                           setYear(y);
                           setShowYearPicker(false);
                         }}
-                        className={`py-2 rounded-xl text-sm font-semibold border-0 cursor-pointer transition ${y === year ? "bg-primary text-white" : "bg-gray-50 text-gray-700 hover:bg-gray-100"}`}
+                        className={`py-2 rounded-xl text-sm font-semibold transition ${
+                          y === year
+                            ? "bg-primary text-white shadow"
+                            : "hover:bg-gray-100 text-gray-700 border-0 bg-transparent cursor-pointer"
+                        }`}
                       >
                         {y}
                       </button>
@@ -341,53 +424,36 @@ const BankReceipts = () => {
             )}
           </div>
 
-          {/* Jan–Jun */}
-          {MONTHS.slice(0, 6).map((m, i) => (
-            <MonthButton key={m} m={m} index={i} />
-          ))}
-
-          <div />
-
-          {/* Jul–Dec */}
-          {MONTHS.slice(6, 12).map((m, i) => (
-            <MonthButton key={m} m={m} index={i + 6} />
-          ))}
+          {/* Month buttons (col 2–7) */}
+          <div className="col-span-6 grid grid-cols-6 gap-2">
+            {MONTHS.map((m, idx) => (
+              <MonthButton key={m} m={m} index={idx} />
+            ))}
+          </div>
         </div>
 
-        {/* ── Page Header ── */}
+        {/* ── Action Bar: Title + Add Button ── */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-lg font-bold text-gray-800">
               <FormattedMessage
-                id="RECEIPT.BANK_RECEIPT"
-                defaultMessage="Bank Receipt"
+                id="RECEIPT.BANK_RECEIPTS"
+                defaultMessage="Bank Receipts"
               />
             </h2>
-            <p className="text-sm text-black mt-0.5 mb-2">
-              Manage and audit bank inflows
+            <p className="text-xs text-gray-400">
+              {MONTHS[month]} {year} • {filteredData.length} records
             </p>
           </div>
+
           {permissions.add && (
             <button
               onClick={() =>
                 setModalState({ open: true, mode: "add", data: null })
               }
-              className="flex items-center gap-2 bg-primary hover:bg-blue-800 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl text-sm font-semibold shadow-sm transition"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
+              <i className="ki-filled ki-plus text-xs" />
               <FormattedMessage
                 id="RECEIPT.ADD_BANK_RECEIPT"
                 defaultMessage="Add Bank Receipt"
@@ -413,7 +479,7 @@ const BankReceipts = () => {
                 {s.label}
               </button>
             ))}
-            <div className="relative ml-auto">
+            <div ref={searchBoxRef} className="relative ml-auto">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -431,12 +497,38 @@ const BankReceipts = () => {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
                 placeholder={intl.formatMessage({
                   id: "RECEIPT.SEARCH_RECEIPTS",
                   defaultMessage: "Search receipts...",
                 })}
                 className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 w-52 transition"
               />
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute right-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">Suggestions:</div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
@@ -463,22 +555,19 @@ const BankReceipts = () => {
           </div>
 
           <TableComponent
-            columns={bankReceiptColumns(handleAction, permissions)}
+            columns={bankReceiptColumns(handleAction)}
             data={filteredData}
-            loading={tableLoading || closeDateLoading}
-            paginationSize={10}
+            loading={tableLoading}
           />
         </div>
       </div>
 
       <AddBankReceiptModal
-        isOpen={modalState.open}
+        open={modalState.open}
         onClose={closeModal}
         mode={modalState.mode}
-        receiptDetails={modalState.data}
-        type="bank"
-        userId={userId}
-        refreshData={handleModalSuccess}
+        initialData={modalState.data}
+        onSuccess={handleModalSuccess}
       />
     </Container>
   );

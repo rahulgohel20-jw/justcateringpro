@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useState, useMemo } from "react";
+import { Fragment, useEffect, useState, useMemo, useRef } from "react";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { columns } from "./constant";
@@ -22,10 +23,18 @@ const DecorCategory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [originalData, setOriginalData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter] = useState("all");
 
   const intl = useIntl();
   const userId = localStorage.getItem("userId");
+
+  // Spelling suggestion state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
 
   const FetchCategoryData = async () => {
     setLoading(true);
@@ -72,32 +81,92 @@ const DecorCategory = () => {
     setAllTableData(mapped);
   }, [originalData]);
 
+  // Extract dict words for suggestions
+  useEffect(() => {
+    if (!originalData || originalData.length === 0) return;
+    const words = extractDictWords(originalData, [
+      "nameEnglish",
+      "nameHindi",
+      "nameGujarati",
+      "name",
+    ]);
+    setDictWords(words);
+  }, [originalData]);
+
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timeoutId = setTimeout(() => {
+      const results = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(results);
+      setSpellIndex(-1);
+      setShowSpell(results.length > 0);
+    }, 200);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, dictWords]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const applySpellSuggestion = (text) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(text);
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((i) => (i + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((i) => (i <= 0 ? spellSuggestions.length - 1 : i - 1));
+    } else if (e.key === "Tab" || (e.key === "Enter" && spellIndex >= 0)) {
+      if (spellIndex >= 0) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
+
+  // Client-side filtering
   const filteredTableData = useMemo(() => {
-    let data = allTableData;
+    return allTableData.filter((item) => {
+      // Status filter
+      if (activeFilter === "active" && !item.isActive) return false;
+      if (activeFilter === "inactive" && item.isActive) return false;
 
-    if (activeFilter === "active") {
-      data = data.filter((item) => item.isActive === true);
-    } else if (activeFilter === "inactive") {
-      data = data.filter((item) => item.isActive === false);
-    }
+      // Search across all languages
+      if (!searchQuery.trim()) return true;
 
-    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      data = data.filter((item) => {
-        const searchInEnglish = (item.nameEnglish || "")
-          .toLowerCase()
-          .includes(query);
-        const searchInHindi = (item.nameHindi || "")
-          .toLowerCase()
-          .includes(query);
-        const searchInGujarati = (item.nameGujarati || "")
-          .toLowerCase()
-          .includes(query);
-        return searchInEnglish || searchInHindi || searchInGujarati;
-      });
-    }
-
-    return data;
+      return (
+        (item.nameEnglish || "").toLowerCase().includes(query) ||
+        (item.nameHindi || "").toLowerCase().includes(query) ||
+        (item.nameGujarati || "").toLowerCase().includes(query)
+      );
+    });
   }, [allTableData, searchQuery, activeFilter]);
 
   const deleteDecorCategory = (id) => {
@@ -114,7 +183,7 @@ const DecorCategory = () => {
       if (result.isConfirmed) {
         DeleteDecorCategory(id)
           .then((response) => {
-            if (response?.data?.success === true) {
+            if (response && (response.success || response.data?.success)) {
               FetchCategoryData();
               Swal.fire({
                 title: "Removed!",
@@ -128,24 +197,19 @@ const DecorCategory = () => {
                 title: "Error",
                 text: response?.data?.msg || "Failed to delete",
                 icon: "error",
+                showConfirmButton: true,
               });
             }
           })
           .catch((error) => {
-            console.error("Error deleting decor category:", error);
-            Swal.fire({
-              title: "Error",
-              text: error?.response?.data?.msg || "Something went wrong",
-              icon: "error",
-            });
+            console.error("Error deleting Decor Category:", error);
           });
       }
     });
   };
 
   const toggleStatus = (id, currentStatus) => {
-    const newStatus = !currentStatus;
-    UpdateDecorCategoryStatus(id, newStatus)
+    UpdateDecorCategoryStatus(id, !currentStatus)
       .then((res) => {
         FetchCategoryData();
         if (res.data?.msg) {
@@ -160,11 +224,6 @@ const DecorCategory = () => {
       })
       .catch((error) => {
         console.error("Error updating status:", error);
-        Swal.fire({
-          title: "Error",
-          text: error?.response?.data?.msg || "Failed to update status",
-          icon: "error",
-        });
       });
   };
 
@@ -191,7 +250,7 @@ const DecorCategory = () => {
 
         <div className="filters flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="filItems relative">
+            <div className="filItems relative" ref={searchBoxRef}>
               <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
               <input
                 className="input pl-8"
@@ -202,9 +261,37 @@ const DecorCategory = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
               />
-            </div>
 
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
 
             {loading && (
               <div className="flex items-center gap-2 text-primary">

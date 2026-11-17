@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import AssignTheme from "../theme";
-import { message, Spin, Input, Select, Modal, Switch, Button } from "antd";
+import { message, Spin, Modal, Switch, Button } from "antd";
 import { Link, useNavigate } from "react-router-dom";
 import { Container } from "@/components/container";
 import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
@@ -18,6 +18,7 @@ import { DeleteUserById, UserBlock } from "../../../../services/apiServices";
 import SummaryCards from "./SummaryCard";
 import { usePermission } from "../../../../hooks/usePermission";
 import UpgradeModuleModal from "./UpgradeModuleModal";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const AllUser = () => {
   const permissions = usePermission("Members");
@@ -27,7 +28,7 @@ const AllUser = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
-  const [cardData, setcCardData] = useState([]);
+  const [cardData] = useState([]);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isExtendModal, setIsExtendModal] = useState(false);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
@@ -38,33 +39,40 @@ const AllUser = () => {
   const [extendPayload, setExtendPayload] = useState(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [upgradeUserId, setUpgradeUserId] = useState(null);
-const [excelModalOpen, setExcelModalOpen] = useState(false);
-const [excelUserId, setExcelUserId] = useState(null);
-const [excelLoading, setExcelLoading] = useState(false);
+  const [excelModalOpen, setExcelModalOpen] = useState(false);
+  const [excelUserId, setExcelUserId] = useState(null);
+  const [excelLoading, setExcelLoading] = useState(false);
 
-const EXCEL_OPTION_LABELS = [
-  { key: "isCaptainReceipe", label: "Captain Recipe" },
-  { key: "isCaptainReceipeRawMaterial", label: "Captain Recipe Raw Material" },
-  { key: "isMenuCategory", label: "Menu Category" },
-  { key: "isMenuItem", label: "Menu Item" },
-  { key: "isMenuItemRawMaterial", label: "Menu Item Raw Material" },
-  { key: "isRawMaterial", label: "Raw Material" },
-  { key: "isRawMaterialCat", label: "Raw Material Category" },
-  { key: "isUnit", label: "Unit" },
-];
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const searchBoxRef = useRef(null);
+  const skipSuggestRef = useRef(false);
 
-const ALL_ON = {
-  isCaptainReceipe: true,
-  isCaptainReceipeRawMaterial: true,
-  isMenuCategory: true,
-  isMenuItem: true,
-  isMenuItemRawMaterial: true,
-  isRawMaterial: true,
-  isRawMaterialCat: true,
-  isUnit: true,
-};
+  const EXCEL_OPTION_LABELS = [
+    { key: "isCaptainReceipe", label: "Captain Recipe" },
+    { key: "isCaptainReceipeRawMaterial", label: "Captain Recipe Raw Material" },
+    { key: "isMenuCategory", label: "Menu Category" },
+    { key: "isMenuItem", label: "Menu Item" },
+    { key: "isMenuItemRawMaterial", label: "Menu Item Raw Material" },
+    { key: "isRawMaterial", label: "Raw Material" },
+    { key: "isRawMaterialCat", label: "Raw Material Category" },
+    { key: "isUnit", label: "Unit" },
+  ];
 
-const [excelOptions, setExcelOptions] = useState(ALL_ON);
+  const ALL_ON = {
+    isCaptainReceipe: true,
+    isCaptainReceipeRawMaterial: true,
+    isMenuCategory: true,
+    isMenuItem: true,
+    isMenuItemRawMaterial: true,
+    isRawMaterial: true,
+    isRawMaterialCat: true,
+    isUnit: true,
+  };
+
+  const [excelOptions, setExcelOptions] = useState(ALL_ON);
+
   const formatUsers = (users) => {
     return users
       .sort((a, b) => b.id - a.id)
@@ -96,7 +104,7 @@ const [excelOptions, setExcelOptions] = useState(ALL_ON);
       });
   };
 
-  const handleFetchByRoleId = async () => {
+  const handleFetchByRoleId = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getAllByRoleIdData(2, "member");
@@ -113,11 +121,75 @@ const [excelOptions, setExcelOptions] = useState(ALL_ON);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     handleFetchByRoleId();
+  }, [handleFetchByRoleId]);
+
+  const dictWords = useMemo(
+    () =>
+      extractDictWords(tableData, [
+        "fullName",
+        "email",
+        "companyName",
+        "plan",
+        "userCode",
+        "city",
+      ]),
+    [tableData]
+  );
+
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(searchText, dictWords);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchText, dictWords]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearchText(word);
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) => (prev + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev <= 0 ? spellSuggestions.length - 1 : prev - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
 
   useEffect(() => {
     let result = tableData;
@@ -136,7 +208,7 @@ const [excelOptions, setExcelOptions] = useState(ALL_ON);
           u.email?.toLowerCase().includes(lower) ||
           u.companyName?.toLowerCase().includes(lower) ||
           u.plan?.toLowerCase().includes(lower) ||
-          u.userCode?.toLowerCase().includes(lower),
+          u.userCode?.toLowerCase().includes(lower)
       );
     }
 
@@ -164,7 +236,7 @@ const [excelOptions, setExcelOptions] = useState(ALL_ON);
     try {
       setLoading(true);
       if (actionType === "delete") {
-        const deleteRes = await DeleteUserById(userId, "-1",true);
+        const deleteRes = await DeleteUserById(userId, "-1", true);
         if (deleteRes?.data?.msg) {
           setSelectedThemeUserId(userId);
           setOtpAction(actionType);
@@ -195,7 +267,8 @@ const [excelOptions, setExcelOptions] = useState(ALL_ON);
       } else {
         message.error(res?.data?.msg || "Failed to send OTP");
       }
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       message.error("Something went wrong");
     } finally {
       setLoading(false);
@@ -206,67 +279,68 @@ const [excelOptions, setExcelOptions] = useState(ALL_ON);
     setSelectedAssignRow(rowData);
     setIsAssignModalOpen(true);
   };
-// opens the modal for a member (all toggles on)
-const handleExcelDownload = (userId) => {
-  setExcelUserId(userId);
-  setExcelOptions(ALL_ON);
-  setExcelModalOpen(true);
-};
 
-const handleGenerateExcel = async () => {
-  if (!Object.values(excelOptions).some(Boolean)) {
-    message.warning("Turn on at least one toggle.");
-    return;
-  }
+  const handleExcelDownload = (userId) => {
+    setExcelUserId(userId);
+    setExcelOptions(ALL_ON);
+    setExcelModalOpen(true);
+  };
 
-  try {
-    setExcelLoading(true);
-    const response = await Getgenerateusermenuitemrawmaterialexcel(
-      excelUserId,
-      excelOptions,
-    );
-    const d = response?.data;
-
-    if (d?.success === false) {
-      throw new Error(d?.msg || d?.message || "Failed to generate Excel.");
+  const handleGenerateExcel = async () => {
+    if (!Object.values(excelOptions).some(Boolean)) {
+      message.warning("Turn on at least one toggle.");
+      return;
     }
 
-    const fileUrl =
-      d?.report_path ||
-      d?.data?.report_path ||
-      d?.excel_path ||
-      d?.data?.excel_path ||
-      d?.file_path ||
-      d?.data?.file_path ||
-      d?.url ||
-      (typeof d?.data === "string" ? d.data : null);
+    try {
+      setExcelLoading(true);
+      const response = await Getgenerateusermenuitemrawmaterialexcel(
+        excelUserId,
+        excelOptions
+      );
+      const d = response?.data;
 
-    if (fileUrl) {
-      const link = document.createElement("a");
-      link.href = fileUrl;
-      link.setAttribute("download", "");
-      link.target = "_blank";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      message.success("Excel downloaded successfully!");
-      setExcelModalOpen(false);
-    } else {
-      console.log("Export response:", d);
-      throw new Error(d?.msg || d?.message || "No file URL returned");
+      if (d?.success === false) {
+        throw new Error(d?.msg || d?.message || "Failed to generate Excel.");
+      }
+
+      const fileUrl =
+        d?.report_path ||
+        d?.data?.report_path ||
+        d?.excel_path ||
+        d?.data?.excel_path ||
+        d?.file_path ||
+        d?.data?.file_path ||
+        d?.url ||
+        (typeof d?.data === "string" ? d.data : null);
+
+      if (fileUrl) {
+        const link = document.createElement("a");
+        link.href = fileUrl;
+        link.setAttribute("download", "");
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        message.success("Excel downloaded successfully!");
+        setExcelModalOpen(false);
+      } else {
+        console.log("Export response:", d);
+        throw new Error(d?.msg || d?.message || "No file URL returned");
+      }
+    } catch (error) {
+      console.error("Excel download error:", error);
+      const apiMsg =
+        error?.response?.data?.msg ||
+        error?.response?.data?.message ||
+        error?.message ||
+        "An error occurred while downloading Excel.";
+      message.error(apiMsg);
+    } finally {
+      setExcelLoading(false);
     }
-  } catch (error) {
-    console.error("Excel download error:", error);
-    const apiMsg =
-      error?.response?.data?.msg ||
-      error?.response?.data?.message ||
-      error?.message ||
-      "An error occurred while downloading Excel.";
-    message.error(apiMsg);
-  } finally {
-    setExcelLoading(false);
-  }
-};
+  };
+
   const activeCount = tableData.filter((u) => u.isActive === true).length;
   const inactiveCount = tableData.filter((u) => u.isActive === false).length;
 
@@ -279,12 +353,41 @@ const handleGenerateExcel = async () => {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <Input.Search
-            placeholder="Search users..."
-            allowClear
-            onChange={(e) => setSearchText(e.target.value)}
-            className="w-full sm:w-64"
-          />
+          <div ref={searchBoxRef} className="relative w-full sm:w-64">
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+              onKeyDown={handleSearchKeyDown}
+              autoComplete="off"
+              spellCheck={false}
+              className="input input-sm w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
+            />
+            {showSpell && spellSuggestions.length > 0 && (
+              <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                <div className="px-3 pt-2 pb-1 text-xs text-gray-400">Suggestions:</div>
+                <ul>
+                  {spellSuggestions.map((s, i) => (
+                    <li
+                      key={s}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        applySpellSuggestion(s);
+                      }}
+                      onMouseEnter={() => setSpellIndex(i)}
+                      className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                        i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                      }`}
+                    >
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
 
           <div className="flex items-center gap-1.5 bg-gray-100 rounded-xl p-1">
             <button
@@ -358,23 +461,23 @@ const handleGenerateExcel = async () => {
         </div>
       ) : (
         <div className="relative -webkit-overflow-scrolling-touch">
-         <TableComponent
-  columns={columns(
-    navigate,
-    handleThemeClick,
-    handleApproveOtp,
-    handleAssignUser,
-    handleExtendClick,
-    permissions,
-    handleUpgradeModule,
-    handleExcelDownload,
-  )}
-  data={filteredData}
-  paginationSize={10}
-  rowClassName={(row) =>
-    row.dueAmount > 0 ? "bg-red-100 border-l-4 border-red-600" : ""
-  }
-/>
+          <TableComponent
+            columns={columns(
+              navigate,
+              handleThemeClick,
+              handleApproveOtp,
+              handleAssignUser,
+              handleExtendClick,
+              permissions,
+              handleUpgradeModule,
+              handleExcelDownload
+            )}
+            data={filteredData}
+            paginationSize={10}
+            rowClassName={(row) =>
+              row.dueAmount > 0 ? "bg-red-100 border-l-4 border-red-600" : ""
+            }
+          />
         </div>
       )}
 
@@ -411,42 +514,42 @@ const handleGenerateExcel = async () => {
       <UpgradeModuleModal
         isModalOpen={isUpgradeModalOpen}
         setIsModalOpen={setIsUpgradeModalOpen}
-        userId={selectedThemeUserId}
+        userId={upgradeUserId || selectedThemeUserId}
       />
       <Modal
-  title="Export Excel"
-  open={excelModalOpen}
-  onCancel={() => setExcelModalOpen(false)}
-  zIndex={10000}
-  getContainer={() => document.body}
-  centered
-  destroyOnClose
-  footer={[
-    <Button key="cancel" onClick={() => setExcelModalOpen(false)}>
-      Cancel
-    </Button>,
-    <Button
-      key="generate"
-      type="primary"
-      loading={excelLoading}
-      onClick={handleGenerateExcel}
-    >
-      Generate
-    </Button>,
-  ]}
->
-  <div className="flex flex-col gap-4 py-2">
-    {EXCEL_OPTION_LABELS.map(({ key, label }) => (
-      <div key={key} className="flex items-center justify-between">
-        <span className="text-sm text-gray-700">{label}</span>
-        <Switch
-          checked={excelOptions[key]}
-          onChange={(v) => setExcelOptions((p) => ({ ...p, [key]: v }))}
-        />
-      </div>
-    ))}
-  </div>
-</Modal>
+        title="Export Excel"
+        open={excelModalOpen}
+        onCancel={() => setExcelModalOpen(false)}
+        zIndex={10000}
+        getContainer={() => document.body}
+        centered
+        destroyOnClose
+        footer={[
+          <Button key="cancel" onClick={() => setExcelModalOpen(false)}>
+            Cancel
+          </Button>,
+          <Button
+            key="generate"
+            type="primary"
+            loading={excelLoading}
+            onClick={handleGenerateExcel}
+          >
+            Generate
+          </Button>,
+        ]}
+      >
+        <div className="flex flex-col gap-4 py-2">
+          {EXCEL_OPTION_LABELS.map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">{label}</span>
+              <Switch
+                checked={excelOptions[key]}
+                onChange={(v) => setExcelOptions((p) => ({ ...p, [key]: v }))}
+              />
+            </div>
+          ))}
+        </div>
+      </Modal>
     </Container>
   );
 };

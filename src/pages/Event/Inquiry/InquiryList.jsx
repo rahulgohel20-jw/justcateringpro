@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { Edit, Trash2, X } from "lucide-react";
 import { Tooltip, Spin } from "antd";
+import * as XLSX from "xlsx";
 import { Container } from "@/components/container";
 import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
 import { TableComponent } from "@/components/table/TableComponent";
@@ -123,6 +124,62 @@ const InquiryList = () => {
     setTableData(filtered);
   };
 
+  // Export the rows currently shown (respects the search filter) to Excel
+  const handleExportExcel = () => {
+    if (!tableData.length) {
+      Swal.fire({
+        icon: "info",
+        title: intl.formatMessage({
+          id: "USER.INQUIRY.NO_DATA_EXPORT",
+          defaultMessage: "No data to export",
+        }),
+      });
+      return;
+    }
+
+    try {
+      const rows = tableData.map((row, index) => ({
+        "Sr No": index + 1,
+        "Guest Name": row.guestName,
+        "Mobile No": row.mobileNo,
+        Email: row.emailId,
+        Function: row.function,
+        "Inquiry Date": row.inquiryDate,
+        "Tentative Date": row.tentativeDate,
+        "Referral Source": row.referralSource,
+        "Guest Address": row.guestAddress,
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      worksheet["!cols"] = [
+        { wch: 8 },  // Sr No
+        { wch: 24 }, // Guest Name
+        { wch: 16 }, // Mobile No
+        { wch: 28 }, // Email
+        { wch: 20 }, // Function
+        { wch: 14 }, // Inquiry Date
+        { wch: 16 }, // Tentative Date
+        { wch: 20 }, // Referral Source
+        { wch: 36 }, // Guest Address
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Inquiries");
+
+      const stamp = formatDate(new Date()).replace(/\//g, "-");
+      XLSX.writeFile(workbook, `Inquiry_Report_${stamp}.xlsx`);
+    } catch (error) {
+      console.error("Excel export failed:", error);
+      Swal.fire({
+        icon: "error",
+        title: intl.formatMessage({
+          id: "USER.INQUIRY.EXPORT_FAILED",
+          defaultMessage: "Failed to export Excel",
+        }),
+      });
+    }
+  };
+
   const handleDelete = (id) => {
     Swal.fire({
       title: intl.formatMessage({
@@ -237,14 +294,26 @@ const InquiryList = () => {
               />
             </div>
           </div>
-          {permissions.add && (
-            <div className="flex flex-wrap items-center gap-2">
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="btn btn-light"
+              title="Export Excel"
+              onClick={handleExportExcel}
+              disabled={loading || tableData.length === 0}
+            >
+              <i className="ki-filled ki-file-down"></i>{" "}
+              <FormattedMessage id="COMMON.EXPORT_EXCEL" defaultMessage="Export Excel" />
+            </button>
+
+            {permissions.add && (
               <button className="btn btn-primary" title="Add Inquiry" onClick={openAddForm}>
                 <i className="ki-filled ki-plus"></i>{" "}
                 <FormattedMessage id="USER.INQUIRY.ADD_BTN" defaultMessage="Add Inquiry" />
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -255,11 +324,12 @@ const InquiryList = () => {
             </div>
           </div>
         ) : (
-<TableComponent
-  columns={columns(permissions)}
-  data={tableData}
-  paginationSize={10}
-/>        )}
+          <TableComponent
+            columns={columns(permissions)}
+            data={tableData}
+            paginationSize={10}
+          />
+        )}
       </Container>
 
       {showForm && (

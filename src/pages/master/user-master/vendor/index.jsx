@@ -1,14 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import AssignTheme from "../theme";
-import { message, Spin, Input } from "antd";
+import { message, Spin } from "antd";
 import { Link, useNavigate } from "react-router-dom";
 import { Container } from "@/components/container";
 import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
 import { TableComponent } from "@/components/table/TableComponent";
 import { columns } from "../vendor/constant";
-import { getAllByRoleIdData, LoginWithOtp } from "@/services/apiServices";
+import {
+  getAllByRoleIdData,
+  LoginWithOtp,
+  updateStatusApprove,
+} from "@/services/apiServices";
 import ApproveOtp from "../approveotp";
 import { usePermission } from "../../../../hooks/usePermission";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const AllVendor = () => {
   const permissions = usePermission("Vendors");
@@ -17,10 +22,15 @@ const AllVendor = () => {
   const [tableData, setTableData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [searchText, setSearchText] = useState("");
-  const [editingUserId, setEditingUserId] = useState(null);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [selectedThemeUserId, setSelectedThemeUserId] = useState(null);
+
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const searchBoxRef = useRef(null);
+  const skipSuggestRef = useRef(false);
 
   const formatUsers = (users) => {
     const managerMap = {};
@@ -46,7 +56,7 @@ const AllVendor = () => {
       }));
   };
 
-  const handleFetchByRoleId = async (roleId = 1) => {
+  const handleFetchByRoleId = useCallback(async (roleId = 1) => {
     try {
       setLoading(true);
       const response = await getAllByRoleIdData(roleId, "member");
@@ -64,11 +74,75 @@ const AllVendor = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     handleFetchByRoleId();
+  }, [handleFetchByRoleId]);
+
+  const dictWords = useMemo(
+    () =>
+      extractDictWords(tableData, [
+        "fullName",
+        "email",
+        "companyName",
+        "plan",
+        "userCode",
+        "city",
+      ]),
+    [tableData]
+  );
+
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(searchText, dictWords);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchText, dictWords]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearchText(word);
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) => (prev + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev <= 0 ? spellSuggestions.length - 1 : prev - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
 
   useEffect(() => {
     if (!searchText) {
@@ -82,14 +156,14 @@ const AllVendor = () => {
             u.email?.toLowerCase().includes(lower) ||
             u.companyName?.toLowerCase().includes(lower) ||
             u.plan?.toLowerCase().includes(lower) ||
-            u.userCode?.toLowerCase().includes(lower),
-        ),
+            u.userCode?.toLowerCase().includes(lower)
+        )
       );
     }
   }, [searchText, tableData]);
 
   const handleEdit = (user) => {
-    setEditingUserId(user);
+    navigate(`/Superadmin-member-edit/${user.id}`);
   };
 
   const handleApprove = async (userId) => {
@@ -109,6 +183,7 @@ const AllVendor = () => {
       setLoading(false);
     }
   };
+
   const handleThemeClick = (userId) => {
     setSelectedThemeUserId(userId);
     setIsThemeModalOpen(true);
@@ -142,12 +217,41 @@ const AllVendor = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-        <Input.Search
-          placeholder="Search vendor..."
-          allowClear
-          onChange={(e) => setSearchText(e.target.value)}
-          className="w-full sm:w-64"
-        />
+        <div ref={searchBoxRef} className="relative w-full sm:w-64">
+          <input
+            type="text"
+            placeholder="Search vendor..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+            onKeyDown={handleSearchKeyDown}
+            autoComplete="off"
+            spellCheck={false}
+            className="input input-sm w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
+          />
+          {showSpell && spellSuggestions.length > 0 && (
+            <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg z-50">
+              <div className="px-3 pt-2 pb-1 text-xs text-gray-400">Suggestions:</div>
+              <ul>
+                {spellSuggestions.map((s, i) => (
+                  <li
+                    key={s}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      applySpellSuggestion(s);
+                    }}
+                    onMouseEnter={() => setSpellIndex(i)}
+                    className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                      i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                    }`}
+                  >
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
 
         {permissions.add && (
           <Link to="/vendor" className="w-full sm:w-auto">
@@ -171,7 +275,7 @@ const AllVendor = () => {
               navigate,
               handleThemeClick,
               handleApproveOtp,
-              permissions,
+              permissions
             )}
             data={filteredData}
             paginationSize={10}

@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useState } from "react";
+/* eslint-disable react/prop-types */
+import { Fragment, useEffect, useState, useRef } from "react";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { columns } from "./constant";
@@ -8,8 +9,9 @@ import { Search, Plus, Building2, CheckCircle2, Wrench } from "lucide-react";
 import Swal from "sweetalert2";
 import AddBanquetModal from "../../../partials/modals/add-banquet/AddBanquetModal";
 import { GetAllBanquet, DeleteBanquet, ChangeStatusBanquet } from "../../../services/apiServices";
-import { FormattedMessage } from "react-intl";
-import { useIntl } from "react-intl";
+import { FormattedMessage, useIntl } from "react-intl";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
+
 const StatCard = ({ icon: Icon, label, value, iconColor, iconBg }) => (
   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4 flex-1">
     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
@@ -25,7 +27,8 @@ const StatCard = ({ icon: Icon, label, value, iconColor, iconBg }) => (
 const BanquetMaster = () => {
   const permissions = usePermission("Banquet Master");
   const userId = localStorage.getItem("userId");
-const intl = useIntl();  const [tableData, setTableData] = useState([]);
+  const intl = useIntl();
+  const [tableData, setTableData] = useState([]);
   const [originalData, setOriginalData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,34 +36,45 @@ const intl = useIntl();  const [tableData, setTableData] = useState([]);
   const [editTarget, setEditTarget] = useState(null);
   const [viewTarget, setViewTarget] = useState(null);
 
-  useEffect(() => { fetchBanquets(); }, []);
+  // Suggestions state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
 
- const fetchBanquets = async () => {
-  try {
-    setLoading(true);
-    const res = await GetAllBanquet(userId);
-    const list = (res?.data?.data || []).map((item, index) => ({
-      ...item,
-      // normalize API field names → frontend names
-      capacity:item.capacity,
-      banquetName: item.hallName,
-      morning: item.morningPrice,
-      evening: item.eveningPrice,
-      fullDay: item.fullDayPrice,
-      exhibition: item.exhibitionPrice,
-      corporate: item.corporatePrice,
-      extraPerHr: item.extraChargesPerHr,
-      status: item.isActive ? "Active" : "Inactive",
-      sr_no: index + 1,
-    }));
-    setOriginalData(list);
-    setTableData(list);
-  } catch (err) {
-    console.error("Failed to fetch banquets:", err);
-  } finally {
-    setLoading(false);
-  }
-};
+  useEffect(() => {
+    fetchBanquets();
+  }, []);
+
+  const fetchBanquets = async () => {
+    try {
+      setLoading(true);
+      const res = await GetAllBanquet(userId);
+      const list = (res?.data?.data || []).map((item, index) => ({
+        ...item,
+        capacity: item.capacity,
+        banquetName: item.hallName,
+        morning: item.morningPrice,
+        evening: item.eveningPrice,
+        fullDay: item.fullDayPrice,
+        exhibition: item.exhibitionPrice,
+        corporate: item.corporatePrice,
+        extraPerHr: item.extraChargesPerHr,
+        status: item.isActive ? "Active" : "Inactive",
+        sr_no: index + 1,
+      }));
+      setOriginalData(list);
+      setTableData(list);
+      const words = extractDictWords(list, ["banquetName", "hallName"]);
+      setDictWords(words);
+    } catch (err) {
+      console.error("Failed to fetch banquets:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -73,6 +87,66 @@ const intl = useIntl();  const [tableData, setTableData] = useState([]);
       setTableData(filtered.map((item, i) => ({ ...item, sr_no: i + 1 })));
     }
   }, [searchQuery, originalData]);
+
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery, dictWords]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(word);
+    setShowSpell(false);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev < spellSuggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev > 0 ? prev - 1 : spellSuggestions.length - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
 
   const handleView = (item) => setViewTarget(item);
 
@@ -87,54 +161,54 @@ const intl = useIntl();  const [tableData, setTableData] = useState([]);
   };
 
   const handleDelete = async (id) => {
-  const result = await Swal.fire({
-    title: "Are you sure?",
-    text: "This banquet will be permanently deleted.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#d33",
-    cancelButtonColor: "#3085d6",
-    confirmButtonText: "Yes, delete it!",
-  });
-  if (result.isConfirmed) {
-    try {
-      await DeleteBanquet(id, userId);
-      fetchBanquets();
-      Swal.fire({ icon: "success", title: "Deleted!", timer: 1500, showConfirmButton: false });
-    } catch {
-      Swal.fire({ icon: "error", title: "Failed to delete. Try again." });
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "This banquet will be permanently deleted.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+    });
+    if (result.isConfirmed) {
+      try {
+        await DeleteBanquet(id, userId);
+        fetchBanquets();
+        Swal.fire({ icon: "success", title: "Deleted!", timer: 1500, showConfirmButton: false });
+      } catch {
+        Swal.fire({ icon: "error", title: "Failed to delete. Try again." });
+      }
     }
-  }
-};
+  };
 
-const handleToggleStatus = async (id, currentStatus) => {
-  const isCurrentlyActive = currentStatus === "Active";
-  const result = await Swal.fire({
-    title: `${isCurrentlyActive ? "Deactivate" : "Activate"} Banquet?`,
-    text: `This banquet will be marked as ${isCurrentlyActive ? "Inactive" : "Active"}.`,
-    icon: "question",
-    showCancelButton: true,
-    confirmButtonColor: isCurrentlyActive ? "#d33" : "#1e3a8a",
-    cancelButtonColor: "#6b7280",
-    confirmButtonText: isCurrentlyActive ? "Yes, Deactivate" : "Yes, Activate",
-  });
-  if (result.isConfirmed) {
-    try {
-      await ChangeStatusBanquet(id);
-      fetchBanquets();
-      Swal.fire({
-        icon: "success",
-        title: isCurrentlyActive ? "Deactivated!" : "Activated!",
-        text: `Banquet is now ${isCurrentlyActive ? "Inactive" : "Active"}.`,
-        timer: 1500,
-        showConfirmButton: false,
-      });
-    } catch (err) {
-      console.error("Toggle status failed:", err);
-      Swal.fire({ icon: "error", title: "Failed!", text: "Could not update status. Try again." });
+  const handleToggleStatus = async (id, currentStatus) => {
+    const isCurrentlyActive = currentStatus === "Active";
+    const result = await Swal.fire({
+      title: `${isCurrentlyActive ? "Deactivate" : "Activate"} Banquet?`,
+      text: `This banquet will be marked as ${isCurrentlyActive ? "Inactive" : "Active"}.`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: isCurrentlyActive ? "#d33" : "#1e3a8a",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: isCurrentlyActive ? "Yes, Deactivate" : "Yes, Activate",
+    });
+    if (result.isConfirmed) {
+      try {
+        await ChangeStatusBanquet(id);
+        fetchBanquets();
+        Swal.fire({
+          icon: "success",
+          title: isCurrentlyActive ? "Deactivated!" : "Activated!",
+          text: `Banquet is now ${isCurrentlyActive ? "Inactive" : "Active"}.`,
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } catch (err) {
+        console.error("Toggle status failed:", err);
+        Swal.fire({ icon: "error", title: "Failed!", text: "Could not update status. Try again." });
+      }
     }
-  }
-};
+  };
 
   const total = originalData.length;
   const active = originalData.filter((b) => b.status === "Active").length;
@@ -146,14 +220,15 @@ const handleToggleStatus = async (id, currentStatus) => {
         {/* Header */}
         <div className="flex items-center justify-between pb-4 mb-4">
           <div>
-<h1 className="text-xl font-bold text-gray-900">
-  <FormattedMessage id="BANQUET.TITLE" defaultMessage="Banquet Master" />
-</h1>           <p className="text-xs text-gray-400 mt-0.5">
-  <FormattedMessage
-    id="BANQUET.DESCRIPTION"
-    defaultMessage="Manage banquet halls, pricing structures, capacity details, and venue information efficiently."
-  />
-</p>
+            <h1 className="text-xl font-bold text-gray-900">
+              <FormattedMessage id="BANQUET.TITLE" defaultMessage="Banquet Master" />
+            </h1>
+            <p className="text-xs text-gray-400 mt-0.5">
+              <FormattedMessage
+                id="BANQUET.DESCRIPTION"
+                defaultMessage="Manage banquet halls, pricing structures, capacity details, and venue information efficiently."
+              />
+            </p>
           </div>
           {permissions.add && (
             <button className="btn btn-primary flex items-center gap-2" onClick={handleAddNew}>
@@ -164,32 +239,32 @@ const handleToggleStatus = async (id, currentStatus) => {
 
         {/* Stat Cards */}
         <div className="flex gap-4 mb-6">
-        <StatCard
-  icon={Building2}
-  label={intl.formatMessage({ id: "BANQUET.TOTAL_BANQUETS", defaultMessage: "Total Banquets" })}
-  value={String(total).padStart(2, "0")}
-  iconColor="text-blue-600"
-  iconBg="bg-blue-50"
-/>
-<StatCard
-  icon={CheckCircle2}
-  label={intl.formatMessage({ id: "BANQUET.ACTIVE_HALLS", defaultMessage: "Active Halls" })}
-  value={String(active).padStart(2, "0")}
-  iconColor="text-green-600"
-  iconBg="bg-green-50"
-/>
-<StatCard
-  icon={Wrench}
-  label={intl.formatMessage({ id: "BANQUET.MAINTENANCE_INACTIVE", defaultMessage: "Maintenance/Inactive" })}
-  value={String(inactive).padStart(2, "0")}
-  iconColor="text-orange-500"
-  iconBg="bg-orange-50"
-/>  
+          <StatCard
+            icon={Building2}
+            label={intl.formatMessage({ id: "BANQUET.TOTAL_BANQUETS", defaultMessage: "Total Banquets" })}
+            value={String(total).padStart(2, "0")}
+            iconColor="text-blue-600"
+            iconBg="bg-blue-50"
+          />
+          <StatCard
+            icon={CheckCircle2}
+            label={intl.formatMessage({ id: "BANQUET.ACTIVE_HALLS", defaultMessage: "Active Halls" })}
+            value={String(active).padStart(2, "0")}
+            iconColor="text-green-600"
+            iconBg="bg-green-50"
+          />
+          <StatCard
+            icon={Wrench}
+            label={intl.formatMessage({ id: "BANQUET.MAINTENANCE_INACTIVE", defaultMessage: "Maintenance/Inactive" })}
+            value={String(inactive).padStart(2, "0")}
+            iconColor="text-orange-500"
+            iconBg="bg-orange-50"
+          />
         </div>
 
         {/* Search */}
         <div className="filters flex flex-wrap items-center gap-2 mb-4">
-          <div className="filItems relative">
+          <div className="filItems relative" ref={searchBoxRef}>
             <Search className="w-4 h-4 text-primary absolute top-1/2 left-3 -translate-y-1/2 pointer-events-none" />
             <input
               className="input pl-9"
@@ -197,16 +272,43 @@ const handleToggleStatus = async (id, currentStatus) => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+              onKeyDown={handleSearchKeyDown}
+              autoComplete="off"
+              spellCheck={false}
             />
+            {showSpell && spellSuggestions.length > 0 && (
+              <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                  Suggestions:
+                </div>
+                <ul>
+                  {spellSuggestions.map((s, i) => (
+                    <li
+                      key={s}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        applySpellSuggestion(s);
+                      }}
+                      onMouseEnter={() => setSpellIndex(i)}
+                      className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                    >
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
 
-     <TableComponent
-  columns={columns(handleView, handleEdit, handleDelete, handleToggleStatus, permissions, intl)}
-  data={tableData}
-  paginationSize={10}
-  loading={loading}
-/>
+        <TableComponent
+          columns={columns(handleView, handleEdit, handleDelete, handleToggleStatus, permissions, intl)}
+          data={tableData}
+          paginationSize={10}
+          loading={loading}
+        />
 
         <AddBanquetModal
           isOpen={addModalOpen}

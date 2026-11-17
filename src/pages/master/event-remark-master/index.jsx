@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 import { Container } from "@/components/container";
-import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
 import { TableComponent } from "@/components/table/TableComponent";
 import { EVENT_REMARK_COLUMNS } from "./xonstant";
 import EventRemarkModal from "../../../partials/modals/event-remark-modal/EventRemarkModal";
@@ -20,6 +20,14 @@ const EventRemark = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Spelling suggestion state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -37,7 +45,75 @@ const EventRemark = () => {
     fetchData();
   }, []);
 
- 
+  // Extract dict words for suggestions
+  useEffect(() => {
+    if (!data || data.length === 0) return;
+    const words = extractDictWords(data, [
+      "nameEnglish",
+      "nameHindi",
+      "nameGujarati",
+      "remark",
+    ]);
+    setDictWords(words);
+  }, [data]);
+
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timeoutId = setTimeout(() => {
+      const results = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(results);
+      setSpellIndex(-1);
+      setShowSpell(results.length > 0);
+    }, 200);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, dictWords]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const applySpellSuggestion = (text) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(text);
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((i) => (i + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((i) => (i <= 0 ? spellSuggestions.length - 1 : i - 1));
+    } else if (e.key === "Tab" || (e.key === "Enter" && spellIndex >= 0)) {
+      if (spellIndex >= 0) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
+
   const filteredData = data.filter((row) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -131,7 +207,7 @@ const EventRemark = () => {
         {/* Filters */}
         <div className="filters flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="filItems relative">
+            <div className="filItems relative" ref={searchBoxRef}>
               <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
               <input
                 className="input pl-8"
@@ -142,7 +218,36 @@ const EventRemark = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
               />
+
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
