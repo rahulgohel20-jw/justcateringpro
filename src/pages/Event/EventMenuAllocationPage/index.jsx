@@ -9,7 +9,7 @@ import {
 import { Container } from "@/components/container";
 import SidebarChefModal from "../../../components/sidebarchefmodal/SidebarChefModal";
 import Swal from "sweetalert2";
-import { Input, Checkbox, Card, Badge, Tooltip, Spin , Select } from "antd";
+import { Input, Checkbox, Card, Badge, Tooltip, Spin, Select } from "antd";
 import SidebarModal from "../../../components/SidebarModal/SidebarModal";
 import CategorySidebarModal from "../CategorySidebar/CategorySidebarModal";
 import SidebarInsideModal from "../../../components/SidebarInsidemodal/SidebarInsideModal ";
@@ -32,7 +32,7 @@ import {
   FetchCalc,
   Deletesyncmenuallocationandrawmaterial,
   SyncItemWiseRawMaterial,
-  Getunit ,
+  Getunit,
   eventexcelforallocation,
 } from "@/services/apiServices";
 import { useParams, useNavigate, useBlocker } from "react-router-dom";
@@ -74,10 +74,10 @@ const getLocalizedValue = (obj, baseFieldName, fallbackValue = "-") => {
   if (lang !== "en") {
     const languageMap = {
       gu: "Gujarati",
-      mr: "Gujarati", 
-      ta: "Gujarati", 
-      te: "Gujarati", 
-      ml: "Gujarati", 
+      mr: "Gujarati",
+      ta: "Gujarati",
+      te: "Gujarati",
+      ml: "Gujarati",
       hi: "Hindi",
     };
 
@@ -104,10 +104,10 @@ const getDisplayName = (row, fieldType) => {
     en: fieldType + "En",
     hi: fieldType + "Hi",
     gu: fieldType + "Gu",
-    mr: fieldType + "Gu", 
-    ta: fieldType + "Gu", 
-    te: fieldType + "Gu", 
-    ml: fieldType + "Gu", 
+    mr: fieldType + "Gu",
+    ta: fieldType + "Gu",
+    te: fieldType + "Gu",
+    ml: fieldType + "Gu",
   };
   return row[langMap[lang]] || row[langMap["en"]] || row[fieldType] || "";
 };
@@ -186,13 +186,12 @@ const TopTabs = ({ value, onChange, functions, tableLoading }) => {
               key={item.id || item.function?.id}
               onClick={() => !isDisabled && onChange(item)}
               disabled={isDisabled}
-              className={`min-w-[100px] max-w-[140px] flex-shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-all border ${
-                isActive
-                  ? "bg-primary text-white border-primary shadow-md"
-                  : isDisabled
-                    ? "bg-gray-100 text-gray-300 border-gray-100 cursor-not-allowed"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary"
-              }`}
+              className={`min-w-[100px] max-w-[140px] flex-shrink-0 rounded-lg px-3 py-2 text-xs font-medium transition-all border ${isActive
+                ? "bg-primary text-white border-primary shadow-md"
+                : isDisabled
+                  ? "bg-gray-100 text-gray-300 border-gray-100 cursor-not-allowed"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-primary hover:text-primary"
+                }`}
             >
               <p className="font-semibold text-xs truncate text-center">
                 {getFunctionName(item.function)}
@@ -226,12 +225,12 @@ const OrderSummary = ({
   pax,
   groupedByFunction,
   rows,
-  eventId, 
-  activeEventFunctionId,         
+  eventId,
+  activeEventFunctionId,
   onSyncSuccess
 }) => {
 
-const eventFunctionId = activeEventFunctionId;
+  const eventFunctionId = activeEventFunctionId;
   const [syncingKey, setSyncingKey] = useState(null); // tracks which item is syncing
 
   const handleSyncItem = async (item, eventFunctionId) => {
@@ -318,7 +317,7 @@ const eventFunctionId = activeEventFunctionId;
   //   const basePrice = Number(item.totalPrice) || 0;
 
   //   if (matchingRow.inside) {
-      
+
   //     const transportCost =
   //       matchingRow.eventFunctionMenuAllocations
   //         ?.filter((a) => a.isInside)
@@ -345,55 +344,55 @@ const eventFunctionId = activeEventFunctionId;
   //   return basePrice;
   // };
 
- 
-//   const calculateItemPrice = (item, matchingRow) => {
 
-//     if (item.typeName === "OUTSIDE") return 0;
-//   if (!matchingRow) return item.totalPrice || 0;
+  //   const calculateItemPrice = (item, matchingRow) => {
 
-//   const basePrice = Number(item.totalPrice) || 0;
+  //     if (item.typeName === "OUTSIDE") return 0;
+  //   if (!matchingRow) return item.totalPrice || 0;
 
-//   if (matchingRow.inside) {
-//     const transportCost =
-//       matchingRow.eventFunctionMenuAllocations
-//         ?.filter((a) => a.isInside)
-//         .reduce((sum, a) => sum + (Number(a.shiftTransPrice) || 0), 0) || 0;
-//     return basePrice + transportCost;
-//   }
+  //   const basePrice = Number(item.totalPrice) || 0;
 
-//   return basePrice; 
-// };
+  //   if (matchingRow.inside) {
+  //     const transportCost =
+  //       matchingRow.eventFunctionMenuAllocations
+  //         ?.filter((a) => a.isInside)
+  //         .reduce((sum, a) => sum + (Number(a.shiftTransPrice) || 0), 0) || 0;
+  //     return basePrice + transportCost;
+  //   }
+
+  //   return basePrice; 
+  // };
 
 
 
-const calculateItemPrice = (item, matchingRow) => {
-  if (item.typeName === "OUTSIDE") return 0;
-  if (!matchingRow) return item.totalPrice || 0;
+  const calculateItemPrice = (item, matchingRow) => {
+    if (item.typeName === "OUTSIDE") return 0;
+    if (!matchingRow) return item.totalPrice || 0;
 
-  const basePrice = Number(item.totalPrice) || 0;
+    const basePrice = Number(item.totalPrice) || 0;
 
-  if (matchingRow.inside) {
-    const transportCost =
-      matchingRow.eventFunctionMenuAllocations
-        ?.filter((a) => a.isInside)
-        .reduce((sum, a) => sum + (Number(a.shiftTransPrice) || 0), 0) || 0;
-    return basePrice + transportCost;
-  }
+    if (matchingRow.inside) {
+      const transportCost =
+        matchingRow.eventFunctionMenuAllocations
+          ?.filter((a) => a.isInside)
+          .reduce((sum, a) => sum + (Number(a.shiftTransPrice) || 0), 0) || 0;
+      return basePrice + transportCost;
+    }
 
-  if (matchingRow.chefLabour) {
-    const chefCost =
-      matchingRow.eventFunctionMenuAllocations
-        ?.filter((a) => a.isChefLabour)
-        .reduce((sum, a) => sum + (Number(a.totalPrice) || 0), 0) || 0;
-    return basePrice + chefCost;  // ← add chef cost to base
-  }
+    if (matchingRow.chefLabour) {
+      const chefCost =
+        matchingRow.eventFunctionMenuAllocations
+          ?.filter((a) => a.isChefLabour)
+          .reduce((sum, a) => sum + (Number(a.totalPrice) || 0), 0) || 0;
+      return basePrice + chefCost;  // ← add chef cost to base
+    }
 
-  return basePrice;
-};
+    return basePrice;
+  };
 
   const grandTotal = useMemo(() => {
     if (groupedByFunction) {
-     
+
       return Math.round(
         groupedByFunction.reduce((total, functionGroup) => {
           const functionTotal = functionGroup.selectedItemDetails.reduce(
@@ -418,7 +417,7 @@ const calculateItemPrice = (item, matchingRow) => {
         }, 0),
       );
     } else {
-      
+
       return Math.round(
         groups.reduce((total, group) => {
           const groupTotal = group.items.reduce((sum, item) => {
@@ -466,7 +465,7 @@ const calculateItemPrice = (item, matchingRow) => {
             />
           </div>
         ) : groupedByFunction ? (
-        
+
           <>
             <div className="divide-y">
               {groupedByFunction.map((functionGroup, fIdx) => {
@@ -481,7 +480,7 @@ const calculateItemPrice = (item, matchingRow) => {
                             (r) =>
                               r.menuItemId === item.menuItemId &&
                               r.eventFunctionId ===
-                                functionGroup.eventFunctionId,
+                              functionGroup.eventFunctionId,
                           );
 
                           const itemPrice = calculateItemPrice(
@@ -540,56 +539,56 @@ const calculateItemPrice = (item, matchingRow) => {
                           </span>
                         </div>
                         <div className="mt-2 grid grid-cols-12 gap-y-2 text-sm text-gray-700 cursor-pointer">
-  {category.selectedMenuPreparationItems.map((item, iIdx) => {
-    const matchingRow = rows.find(
-      (r) =>
-        r.menuItemId === item.menuItemId &&
-        r.eventFunctionId === functionGroup.eventFunctionId,
-    );
+                          {category.selectedMenuPreparationItems.map((item, iIdx) => {
+                            const matchingRow = rows.find(
+                              (r) =>
+                                r.menuItemId === item.menuItemId &&
+                                r.eventFunctionId === functionGroup.eventFunctionId,
+                            );
 
-    const displayPrice = calculateItemPrice(item, matchingRow);
-    const syncKey = `${item.menuItemId}-${functionGroup.eventFunctionId}`;
+                            const displayPrice = calculateItemPrice(item, matchingRow);
+                            const syncKey = `${item.menuItemId}-${functionGroup.eventFunctionId}`;
 
-    return (
-      <Fragment
-        key={`${category.menuCategoryId}-${item.menuItemId}-${iIdx}`}
-      >
-        <div className="col-span-1 flex items-center justify-center">
-          <Tooltip title="Sync raw material for this item">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSyncItem(item, functionGroup.eventFunctionId);
-              }}
-              disabled={syncingKey === syncKey}
-              className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-primary transition-colors disabled:opacity-50"
-            >
-              <RefreshCw
-                size={14}
-                className={syncingKey === syncKey ? "animate-spin" : ""}
-              />
-            </button>
-          </Tooltip>
-        </div>
-        <div
-          className="col-span-8 pl-2 hover:text-primary"
-          onClick={() =>
-            onItemClick(item, category, functionGroup.eventFunctionId)
-          }
-        >
-          {getItemName(item)}
-          <span className="ml-1 text-primary font-bold">
-            - {item.typeName}
-          </span>
-        </div>
-        <div className="col-span-3 text-right tabular-nums">
-          ₹{displayPrice.toFixed(2)}
-        </div>
-      </Fragment>
-    );
-  })}
-</div>
+                            return (
+                              <Fragment
+                                key={`${category.menuCategoryId}-${item.menuItemId}-${iIdx}`}
+                              >
+                                <div className="col-span-1 flex items-center justify-center">
+                                  <Tooltip title="Sync raw material for this item">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleSyncItem(item, functionGroup.eventFunctionId);
+                                      }}
+                                      disabled={syncingKey === syncKey}
+                                      className="p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-primary transition-colors disabled:opacity-50"
+                                    >
+                                      <RefreshCw
+                                        size={14}
+                                        className={syncingKey === syncKey ? "animate-spin" : ""}
+                                      />
+                                    </button>
+                                  </Tooltip>
+                                </div>
+                                <div
+                                  className="col-span-8 pl-2 hover:text-primary"
+                                  onClick={() =>
+                                    onItemClick(item, category, functionGroup.eventFunctionId)
+                                  }
+                                >
+                                  {getItemName(item)}
+                                  <span className="ml-1 text-primary font-bold">
+                                    - {item.typeName}
+                                  </span>
+                                </div>
+                                <div className="col-span-3 text-right tabular-nums">
+                                  ₹{displayPrice.toFixed(2)}
+                                </div>
+                              </Fragment>
+                            );
+                          })}
+                        </div>
                       </div>
                     ))}
 
@@ -763,10 +762,10 @@ const calculateItemPrice = (item, matchingRow) => {
                   ₹{dishCosting.toFixed(2)}
                 </span>
               </div>
-              
+
             </div>
 
-            
+
           </>
         )}
       </Card>
@@ -787,7 +786,7 @@ const getGridTemplate = (showRate) =>
     ...(showRate ? [96, 96, 96] : []),
     120, // place
     240, // instructions
-      ...(showRate ? [240] : []),
+    ...(showRate ? [240] : []),
   ]
     .map((w) => `${w}px`)
     .join(" ");
@@ -823,87 +822,87 @@ const TableHeader = ({
     }
     onInsideCheckAll(checked);
   };
-const getGridTemplate = (showRate) =>
-  [
-    170, // name
-    60,  // chef
-    80,  // outsource
-    60,  // inside
-    70,  // person
-    ...(showRate ? [96, 96, 96] : []), // weight/unit, rate/total, L qty/L rate
-    120, // place
-    240, // instructions
-  ]
-    .map((w) => `${w}px`)
-    .join(" ");
+  const getGridTemplate = (showRate) =>
+    [
+      170, // name
+      60,  // chef
+      80,  // outsource
+      60,  // inside
+      70,  // person
+      ...(showRate ? [96, 96, 96] : []), // weight/unit, rate/total, L qty/L rate
+      120, // place
+      240, // instructions
+    ]
+      .map((w) => `${w}px`)
+      .join(" ");
 
   return (
- 
-<div
-  className="grid items-center gap-2 border-b border-gray-200 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 bg-gray-50 sticky z-10 rounded-t-xl"
-  style={{ top: 0, gridTemplateColumns: getGridTemplate(showRateColumns) }}
->
-  <div className="text-left">
-    <FormattedMessage id="COMMON.NAME" defaultMessage="Name" />
-  </div>
 
-    <div className="text-center">
-    <div className="flex flex-col items-center gap-1">
-      <span><FormattedMessage id="COMMON.CHEF_LABOUR" defaultMessage="Chef" /></span>
-      <Checkbox checked={allChefChecked} onChange={(e) => handleChefCheck(e.target.checked)} />
-    </div>
-  </div>
-
-     <div className="text-center">
-    <div className="flex flex-col items-center gap-1">
-      <span><FormattedMessage id="COMMON.OUTSIDE" defaultMessage="Outsource" /></span>
-      <Checkbox checked={allOutsourceChecked} onChange={(e) => handleOutsourceCheck(e.target.checked)} />
-    </div>
-  </div>
-
-     <div className="text-center">
-    <div className="flex flex-col items-center gap-1">
-      <span><FormattedMessage id="COMMON.INSIDE" defaultMessage="Inside" /></span>
-      <Checkbox checked={allInsideChecked} onChange={(e) => handleInsideCheck(e.target.checked)} />
-    </div>
-  </div>
-
-  <div className="text-center">
-    <FormattedMessage id="COMMON.PERSON" defaultMessage="Person" />
-  </div>
- {showRateColumns && (
-    <>
-      <div className="text-center leading-tight">
-        <FormattedMessage id="COMMON.WEIGHT" defaultMessage="Weight" />
-        <br />/ <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />
+    <div
+      className="grid items-center gap-2 border-b border-gray-200 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 bg-gray-50 sticky z-10 rounded-t-xl"
+      style={{ top: 0, gridTemplateColumns: getGridTemplate(showRateColumns) }}
+    >
+      <div className="text-left">
+        <FormattedMessage id="COMMON.NAME" defaultMessage="Name" />
       </div>
-      <div className="text-center leading-tight">
-        <FormattedMessage id="COMMON.RATE" defaultMessage="Rate" />
-        <br />/ <FormattedMessage id="COMMON.TOTAL_RATE" defaultMessage="Total Rate" />
-      </div>
-      <div className="text-center leading-tight">
-        <FormattedMessage id="COMMON.L_QTY" defaultMessage="L Qty" />
-        <br />/ <FormattedMessage id="COMMON.L_RATE" defaultMessage="L Rate" />
-      </div>
-    </>
-  )}
 
-  <div className="text-center">
-    <FormattedMessage id="COMMON.PLACE" defaultMessage="Place" />
-  </div>
+      <div className="text-center">
+        <div className="flex flex-col items-center gap-1">
+          <span><FormattedMessage id="COMMON.CHEF_LABOUR" defaultMessage="Chef" /></span>
+          <Checkbox checked={allChefChecked} onChange={(e) => handleChefCheck(e.target.checked)} />
+        </div>
+      </div>
 
-  <div className="text-left">
-    <FormattedMessage id="COMMON.INSTRUCTIONS" defaultMessage="Instructions" />
-  </div>
-  {showRateColumns && (
-  <div className="text-left">
-    <FormattedMessage id="COMMON.KITCHEN_INSTRUCTIONS" defaultMessage="Kitchen Instructions" />
-  </div>
-)}
-</div>
-);
+      <div className="text-center">
+        <div className="flex flex-col items-center gap-1">
+          <span><FormattedMessage id="COMMON.OUTSIDE" defaultMessage="Outsource" /></span>
+          <Checkbox checked={allOutsourceChecked} onChange={(e) => handleOutsourceCheck(e.target.checked)} />
+        </div>
+      </div>
+
+      <div className="text-center">
+        <div className="flex flex-col items-center gap-1">
+          <span><FormattedMessage id="COMMON.INSIDE" defaultMessage="Inside" /></span>
+          <Checkbox checked={allInsideChecked} onChange={(e) => handleInsideCheck(e.target.checked)} />
+        </div>
+      </div>
+
+      <div className="text-center">
+        <FormattedMessage id="COMMON.PERSON" defaultMessage="Person" />
+      </div>
+      {showRateColumns && (
+        <>
+          <div className="text-center leading-tight">
+            <FormattedMessage id="COMMON.WEIGHT" defaultMessage="Weight" />
+            <br />/ <FormattedMessage id="COMMON.UNIT" defaultMessage="Unit" />
+          </div>
+          <div className="text-center leading-tight">
+            <FormattedMessage id="COMMON.RATE" defaultMessage="Rate" />
+            <br />/ <FormattedMessage id="COMMON.TOTAL_RATE" defaultMessage="Total Rate" />
+          </div>
+          <div className="text-center leading-tight">
+            <FormattedMessage id="COMMON.L_QTY" defaultMessage="L Qty" />
+            <br />/ <FormattedMessage id="COMMON.L_RATE" defaultMessage="L Rate" />
+          </div>
+        </>
+      )}
+
+      <div className="text-center">
+        <FormattedMessage id="COMMON.PLACE" defaultMessage="Place" />
+      </div>
+
+      <div className="text-left">
+        <FormattedMessage id="COMMON.INSTRUCTIONS" defaultMessage="Instructions" />
+      </div>
+      {/* {showRateColumns && (
+        <div className="text-left">
+          <FormattedMessage id="COMMON.KITCHEN_INSTRUCTIONS" defaultMessage="Kitchen Instructions" />
+        </div>
+      )} */}
+    </div>
+  );
 };
- const showRateColumns = canSeeRateColumns();
+const showRateColumns = canSeeRateColumns();
 const stripHtmlTags = (str) => (str || "").replace(/<\/?[^>]+(>|$)/g, "");
 const toNum = (v) => {
   if (v === "" || v == null) return 0;
@@ -983,62 +982,62 @@ const calcTotalRate = (row, overrides = {}) => {
 
   const selectedFactor = getUnitFactor(unitId, hierarchy, unitName);
   const baseFactor = getUnitFactor(baseUnitId, hierarchy, baseUnitName);
-const hiddenWeight = weight * (selectedFactor / baseFactor);
-return String(Number((hiddenWeight * rate).toFixed(2)));
+  const hiddenWeight = weight * (selectedFactor / baseFactor);
+  return String(Number((hiddenWeight * rate).toFixed(2)));
 };
-const TableRow = ({ row, onChange, disabled, placeOptions = [], unitOptions = [] }) => {  
+const TableRow = ({ row, onChange, disabled, placeOptions = [], unitOptions = [] }) => {
   const showRateColumns = canSeeRateColumns();
   const [localPersonCount, setLocalPersonCount] = useState(row.personCount);
   const [hasError, setHasError] = useState(false);
   const [isTranslateOpen, setIsTranslateOpen] = useState(false);
 
   const translateTimer = useRef(null);
-const kitchenTimer = useRef(null);
-const rowRef = useRef(row);
-rowRef.current = row; // always the latest row, so the delayed translation doesn't overwrite newer edits
+  const kitchenTimer = useRef(null);
+  const rowRef = useRef(row);
+  rowRef.current = row; // always the latest row, so the delayed translation doesn't overwrite newer edits
   const rowUnitOptions = useMemo(() => {
-  const opts = buildUnitOptions(row.unitHierarchy);
-  if (opts.length === 0) return unitOptions; // no hierarchy: use the global list
+    const opts = buildUnitOptions(row.unitHierarchy);
+    if (opts.length === 0) return unitOptions; // no hierarchy: use the global list
 
-  // keep a saved unit selectable even if it isn't in the hierarchy
-  if (row.unitId && !opts.some((o) => o.value === Number(row.unitId))) {
-    opts.push({
-      value: Number(row.unitId),
-      label: row.unitName || String(row.unitId),
-    });
-  }
-  return opts;
-}, [row.unitHierarchy, row.unitId, row.unitName, unitOptions]);
+    // keep a saved unit selectable even if it isn't in the hierarchy
+    if (row.unitId && !opts.some((o) => o.value === Number(row.unitId))) {
+      opts.push({
+        value: Number(row.unitId),
+        label: row.unitName || String(row.unitId),
+      });
+    }
+    return opts;
+  }, [row.unitHierarchy, row.unitId, row.unitName, unitOptions]);
 
   const rowTotalPrice = useMemo(() => {
-  const allocs = row.eventFunctionMenuAllocations || [];
+    const allocs = row.eventFunctionMenuAllocations || [];
 
-  if (row.chefLabour) {
-    return allocs.reduce((sum, a) => {
-      const serviceType = (a.serviceType || "plate_wise")
-        .toLowerCase()
-        .replace(/\s+/g, "_");
-      if (serviceType === "counter_wise") {
-        return sum +
-          (Number(a.counterQuantity) || 0) * (Number(a.counterPrice) || 0) +
-          (Number(a.helperQuantity) || 0) * (Number(a.helperPrice) || 0) +
-          (Number(a.shiftTransPrice) || 0);
-      }
-      // plate_wise: totalPrice already has the correct value
-      return sum + (Number(a.totalPrice) || 0);
-    }, 0);
-  }
+    if (row.chefLabour) {
+      return allocs.reduce((sum, a) => {
+        const serviceType = (a.serviceType || "plate_wise")
+          .toLowerCase()
+          .replace(/\s+/g, "_");
+        if (serviceType === "counter_wise") {
+          return sum +
+            (Number(a.counterQuantity) || 0) * (Number(a.counterPrice) || 0) +
+            (Number(a.helperQuantity) || 0) * (Number(a.helperPrice) || 0) +
+            (Number(a.shiftTransPrice) || 0);
+        }
+        // plate_wise: totalPrice already has the correct value
+        return sum + (Number(a.totalPrice) || 0);
+      }, 0);
+    }
 
-  if (row.outside) {
-    return allocs.reduce((sum, a) => sum + (Number(a.totalPrice) || 0), 0);
-  }
+    if (row.outside) {
+      return allocs.reduce((sum, a) => sum + (Number(a.totalPrice) || 0), 0);
+    }
 
-  if (row.inside) {
-    return allocs.reduce((sum, a) => sum + (Number(a.shiftTransPrice) || 0), 0);
-  }
+    if (row.inside) {
+      return allocs.reduce((sum, a) => sum + (Number(a.shiftTransPrice) || 0), 0);
+    }
 
-  return 0;
-}, [row.eventFunctionMenuAllocations, row.chefLabour, row.outside, row.inside]);
+    return 0;
+  }, [row.eventFunctionMenuAllocations, row.chefLabour, row.outside, row.inside]);
 
   useEffect(() => {
     setLocalPersonCount(row.personCount);
@@ -1124,319 +1123,319 @@ rowRef.current = row; // always the latest row, so the delayed translation doesn
   };
 
 
-const handlePersonCountChange = (e) => {
-  setLocalPersonCount(Number(e.target.value) || 0);
-  setHasError(false);
-};
+  const handlePersonCountChange = (e) => {
+    setLocalPersonCount(Number(e.target.value) || 0);
+    setHasError(false);
+  };
 
-const handlePersonCountBlur = () => {
-  const value = Number(localPersonCount);
-  if (value === 0) {
-    setHasError(true);
-    message.error("Value cannot be zero");
-    return;
-  }
-  if (isNaN(value) || value < 0) {
-    setHasError(true);
-    message.error("Invalid person value");
-    return;
-  }
-  if (value !== row.personCount) {
-    const oldTotal = parseFloat(row.totalRate);
-    const canScale = !isNaN(oldTotal) && Number(row.personCount) > 0;
+  const handlePersonCountBlur = () => {
+    const value = Number(localPersonCount);
+    if (value === 0) {
+      setHasError(true);
+      message.error("Value cannot be zero");
+      return;
+    }
+    if (isNaN(value) || value < 0) {
+      setHasError(true);
+      message.error("Invalid person value");
+      return;
+    }
+    if (value !== row.personCount) {
+      const oldTotal = parseFloat(row.totalRate);
+      const canScale = !isNaN(oldTotal) && Number(row.personCount) > 0;
 
-    onChange(
-      {
-        ...row,
-        personCount: value,
-        ...(canScale
-          ? {
+      onChange(
+        {
+          ...row,
+          personCount: value,
+          ...(canScale
+            ? {
               totalRate: String(
                 Number(((oldTotal * value) / row.personCount).toFixed(2)),
               ),
             }
-          : {}),
-      },
-      true,
-    );
-  }
-};
-
-const handleInstructionChange = (e) => {
-  const rawVal = e.target.value;
-  const val = stripHtmlTags(rawVal); // ← strip any HTML tags
-
-  onChange({ ...row, instructions: val });
-
-  // Auto-translate with debounce
-  if (translateTimer.current) clearTimeout(translateTimer.current);
-
-  if (!val.trim()) {
-    onChange({ ...row, instructions: val, instructionsHindi: "", instructionsGujarati: "" });
-    return;
-  }
-
-  translateTimer.current = setTimeout(async () => {
-    try {
-      const { Translateapi } = await import("@/services/apiServices");
-      const res = await Translateapi(val);
-      const data = res?.data || {};
-      onChange({
-        ...row,
-        instructions: val,
-        instructionsHindi: data.hindi || "",
-        instructionsGujarati: data.gujarati || "",
-      });
-    } catch (err) {
-      console.error("Translation error:", err);
+            : {}),
+        },
+        true,
+      );
     }
-  }, 600);
-};
- 
-const handleKitchenInstructionChange = (e) => {
-  const val = stripHtmlTags(e.target.value);
+  };
 
-  onChange({ ...rowRef.current, kitchenInstructionEnglish: val });
+  const handleInstructionChange = (e) => {
+    const rawVal = e.target.value;
+    const val = stripHtmlTags(rawVal); // ← strip any HTML tags
 
-  if (kitchenTimer.current) clearTimeout(kitchenTimer.current);
+    onChange({ ...row, instructions: val });
 
-  if (!val.trim()) {
-    onChange({
-      ...rowRef.current,
-      kitchenInstructionEnglish: "",
-      kitchenInstructionHindi: "",
-      kitchenInstructionGujarati: "",
-    });
-    return;
-  }
+    // Auto-translate with debounce
+    if (translateTimer.current) clearTimeout(translateTimer.current);
 
-  kitchenTimer.current = setTimeout(async () => {
-    try {
-      const { Translateapi } = await import("@/services/apiServices");
-      const res = await Translateapi(val);
-      const data = res?.data || {};
+    if (!val.trim()) {
+      onChange({ ...row, instructions: val, instructionsHindi: "", instructionsGujarati: "" });
+      return;
+    }
+
+    translateTimer.current = setTimeout(async () => {
+      try {
+        const { Translateapi } = await import("@/services/apiServices");
+        const res = await Translateapi(val);
+        const data = res?.data || {};
+        onChange({
+          ...row,
+          instructions: val,
+          instructionsHindi: data.hindi || "",
+          instructionsGujarati: data.gujarati || "",
+        });
+      } catch (err) {
+        console.error("Translation error:", err);
+      }
+    }, 600);
+  };
+
+  const handleKitchenInstructionChange = (e) => {
+    const val = stripHtmlTags(e.target.value);
+
+    onChange({ ...rowRef.current, kitchenInstructionEnglish: val });
+
+    if (kitchenTimer.current) clearTimeout(kitchenTimer.current);
+
+    if (!val.trim()) {
       onChange({
         ...rowRef.current,
-        kitchenInstructionEnglish: val,
-        kitchenInstructionHindi: data.hindi || "",
-        kitchenInstructionGujarati: data.gujarati || "",
+        kitchenInstructionEnglish: "",
+        kitchenInstructionHindi: "",
+        kitchenInstructionGujarati: "",
       });
-    } catch (err) {
-      console.error("Kitchen instruction translation error:", err);
+      return;
     }
-  }, 600);
-};
+
+    kitchenTimer.current = setTimeout(async () => {
+      try {
+        const { Translateapi } = await import("@/services/apiServices");
+        const res = await Translateapi(val);
+        const data = res?.data || {};
+        onChange({
+          ...rowRef.current,
+          kitchenInstructionEnglish: val,
+          kitchenInstructionHindi: data.hindi || "",
+          kitchenInstructionGujarati: data.gujarati || "",
+        });
+      } catch (err) {
+        console.error("Kitchen instruction translation error:", err);
+      }
+    }, 600);
+  };
 
   return (
     <>
-<TranslateInstructionModal
-  isOpen={isTranslateOpen}
-  onClose={() => setIsTranslateOpen(false)}
-  sourceText={row.instructions}
-  valueHindi={row.instructionsHindi}
-  valueGujarati={row.instructionsGujarati}
-  onChange={(fields) => onChange({ ...row, ...fields })}
-/>
-<div
-  className="grid items-center gap-2 border-b border-gray-100 px-3 py-3 text-sm hover:bg-blue-50/40 transition-colors group"
-  style={{ gridTemplateColumns: getGridTemplate(showRateColumns) }}
->  {/* Name */}
-  <div className="min-w-0 font-medium text-gray-800">
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] text-gray-400 uppercase tracking-wide">
-        {getDisplayName(row, "categoryName")}
-      </span>
-      <span className="text-sm font-semibold text-gray-800 leading-tight">
-        {getDisplayName(row, "itemName")}
-      </span>
-    </div>
-  </div>
-
-  {/* Chef */}
-<div className="flex justify-center items-center">
-    <Checkbox
-      checked={row.chefLabour}
-      disabled={disabled}
-      onChange={(e) => handleCheckboxChange("chef", e.target.checked)}
-    />
-  </div>
-
-  {/* Outside */}
- <div className="flex justify-center items-center">
-    <Checkbox
-      checked={row.outside}
-      disabled={disabled}
-      onChange={(e) => handleCheckboxChange("outside", e.target.checked)}
-    />
-  </div>
-
-  {/* Inside */}
- <div className="flex justify-center items-center">
-    <Checkbox
-      checked={row.inside}
-      disabled={disabled}
-      onChange={(e) => handleCheckboxChange("inside", e.target.checked)}
-    />
-  </div>
-
-  {/* Person */}
-    <div className="flex justify-center">
-    <Input
-      min={0}
-      type="text"
-      value={localPersonCount}
-      onChange={handlePersonCountChange}
-      onBlur={handlePersonCountBlur}
-      status={hasError ? "error" : ""}
-      className="w-14 text-center text-sm p-1"
-    />
-  </div>
-{showRateColumns && (
-  <>
-    {/* Weight / Unit */}
-    <div className="min-w-0 flex flex-col gap-1">
-      <Input
-        size="small"
-        placeholder="Weight"
-        value={row.weight ?? ""}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (/^\d*\.?\d*$/.test(v))
-            onChange({
-              ...row,
-              weight: v,
-              totalRate: calcTotalRate(row, { weight: v }),
-            });
-        }}
-        className="text-center text-sm"
+      <TranslateInstructionModal
+        isOpen={isTranslateOpen}
+        onClose={() => setIsTranslateOpen(false)}
+        sourceText={row.instructions}
+        valueHindi={row.instructionsHindi}
+        valueGujarati={row.instructionsGujarati}
+        onChange={(fields) => onChange({ ...row, ...fields })}
       />
-      <Select
-        size="small"
-        showSearch
-        allowClear
-        optionFilterProp="label"
-        placeholder="Unit"
-        value={row.unitId || undefined}
-        options={rowUnitOptions}
-        onChange={(value, option) =>
-          onChange({
-            ...row,
-            unitId: value ?? 0,
-            unitName: option?.label ?? "",
-            totalRate: calcTotalRate(row, {
-              unitId: value ?? 0,
-              unitName: option?.label ?? "",
-            }),
-          })
-        }
-        className="w-full"
-        popupMatchSelectWidth={false}
-      />
-    </div>
+      <div
+        className="grid items-center gap-2 border-b border-gray-100 px-3 py-3 text-sm hover:bg-blue-50/40 transition-colors group"
+        style={{ gridTemplateColumns: getGridTemplate(showRateColumns) }}
+      >  {/* Name */}
+        <div className="min-w-0 font-medium text-gray-800">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+              {getDisplayName(row, "categoryName")}
+            </span>
+            <span className="text-sm font-semibold text-gray-800 leading-tight">
+              {getDisplayName(row, "itemName")}
+            </span>
+          </div>
+        </div>
 
-    {/* Rate / Total Rate */}
-    <div className="min-w-0 flex flex-col gap-1">
-      <Input
-        size="small"
-        placeholder="Rate"
-        value={row.rate ?? ""}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (/^\d*\.?\d*$/.test(v))
-            onChange({
-              ...row,
-              rate: v,
-              totalRate: calcTotalRate(row, { rate: v }),
-            });
-        }}
-        className="text-center text-sm"
-      />
-      <Input
-        size="small"
-        placeholder="Total Rate"
-        value={row.totalRate ?? ""}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (/^\d*\.?\d*$/.test(v)) onChange({ ...row, totalRate: v });
-        }}
-        className="text-center text-sm"
-      />
-    </div>
+        {/* Chef */}
+        <div className="flex justify-center items-center">
+          <Checkbox
+            checked={row.chefLabour}
+            disabled={disabled}
+            onChange={(e) => handleCheckboxChange("chef", e.target.checked)}
+          />
+        </div>
 
-    {/* L Qty / L Rate (labour, chef rows only) */}
-     <div className="min-w-0 flex flex-col gap-1">
-      <Input
-        size="small"
-        placeholder="L Qty"
-        
-        value={row.labourQty ?? ""}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (/^\d*\.?\d*$/.test(v)) onChange({ ...row, labourQty: v });
-        }}
-        className="text-center text-sm"
-      />
-      <Input
-        size="small"
-        placeholder="L Rate"
-        
-        value={row.labourRate ?? ""}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (/^\d*\.?\d*$/.test(v)) onChange({ ...row, labourRate: v });
-        }}
-        className="text-center text-sm"
-      />
-    </div>
-  </>
-)}
-  {/* Place */}
-  <div className="min-w-0">
-    <select
-      value={row.place || "0"}
-      onChange={(e) => onChange({ ...row, place: e.target.value })}
-      className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-300"
-    >
-      {placeOptions.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
-  </div>
+        {/* Outside */}
+        <div className="flex justify-center items-center">
+          <Checkbox
+            checked={row.outside}
+            disabled={disabled}
+            onChange={(e) => handleCheckboxChange("outside", e.target.checked)}
+          />
+        </div>
 
-  {/* Instructions */}
- <div className="min-w-0 flex items-center gap-1">
-    <Input
-      size="small"
-      placeholder="Add note..."
-      value={stripHtmlTags(row.instructions)}
-      onChange={handleInstructionChange}
-      className="w-full text-sm"
-      onDoubleClick={() => setIsTranslateOpen(true)}
-    />
-    <button
-      type="button"
-      onClick={() => setIsTranslateOpen(true)}
-      className="flex-shrink-0 p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500 transition-colors"
-      title="View/edit translations"
-    >
-      <Languages size={16} />
-    </button>
-  </div>
-  {showRateColumns && (
-  <div className="min-w-0">
-    <Input
-      size="small"
-      placeholder="Kitchen instruction..."
-      value={row.kitchenInstructionEnglish ?? ""}
-      onChange={handleKitchenInstructionChange}
-      className="w-full text-sm"
-    />
-  </div>
-)}
-</div>
-</>
+        {/* Inside */}
+        <div className="flex justify-center items-center">
+          <Checkbox
+            checked={row.inside}
+            disabled={disabled}
+            onChange={(e) => handleCheckboxChange("inside", e.target.checked)}
+          />
+        </div>
+
+        {/* Person */}
+        <div className="flex justify-center">
+          <Input
+            min={0}
+            type="text"
+            value={localPersonCount}
+            onChange={handlePersonCountChange}
+            onBlur={handlePersonCountBlur}
+            status={hasError ? "error" : ""}
+            className="w-14 text-center text-sm p-1"
+          />
+        </div>
+        {showRateColumns && (
+          <>
+            {/* Weight / Unit */}
+            <div className="min-w-0 flex flex-col gap-1">
+              <Input
+                size="small"
+                placeholder="Weight"
+                value={row.weight ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^\d*\.?\d*$/.test(v))
+                    onChange({
+                      ...row,
+                      weight: v,
+                      totalRate: calcTotalRate(row, { weight: v }),
+                    });
+                }}
+                className="text-center text-sm"
+              />
+              <Select
+                size="small"
+                showSearch
+                allowClear
+                optionFilterProp="label"
+                placeholder="Unit"
+                value={row.unitId || undefined}
+                options={rowUnitOptions}
+                onChange={(value, option) =>
+                  onChange({
+                    ...row,
+                    unitId: value ?? 0,
+                    unitName: option?.label ?? "",
+                    totalRate: calcTotalRate(row, {
+                      unitId: value ?? 0,
+                      unitName: option?.label ?? "",
+                    }),
+                  })
+                }
+                className="w-full"
+                popupMatchSelectWidth={false}
+              />
+            </div>
+
+            {/* Rate / Total Rate */}
+            <div className="min-w-0 flex flex-col gap-1">
+              <Input
+                size="small"
+                placeholder="Rate"
+                value={row.rate ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^\d*\.?\d*$/.test(v))
+                    onChange({
+                      ...row,
+                      rate: v,
+                      totalRate: calcTotalRate(row, { rate: v }),
+                    });
+                }}
+                className="text-center text-sm"
+              />
+              <Input
+                size="small"
+                placeholder="Total Rate"
+                value={row.totalRate ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^\d*\.?\d*$/.test(v)) onChange({ ...row, totalRate: v });
+                }}
+                className="text-center text-sm"
+              />
+            </div>
+
+            {/* L Qty / L Rate (labour, chef rows only) */}
+            <div className="min-w-0 flex flex-col gap-1">
+              <Input
+                size="small"
+                placeholder="L Qty"
+
+                value={row.labourQty ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^\d*\.?\d*$/.test(v)) onChange({ ...row, labourQty: v });
+                }}
+                className="text-center text-sm"
+              />
+              <Input
+                size="small"
+                placeholder="L Rate"
+
+                value={row.labourRate ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (/^\d*\.?\d*$/.test(v)) onChange({ ...row, labourRate: v });
+                }}
+                className="text-center text-sm"
+              />
+            </div>
+          </>
+        )}
+        {/* Place */}
+        <div className="min-w-0">
+          <select
+            value={row.place || "0"}
+            onChange={(e) => onChange({ ...row, place: e.target.value })}
+            className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-300"
+          >
+            {placeOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Instructions */}
+        <div className="min-w-0 flex items-center gap-1">
+          <Input
+            size="small"
+            placeholder="Add note..."
+            value={stripHtmlTags(row.instructions)}
+            onChange={handleInstructionChange}
+            className="w-full text-sm"
+            onDoubleClick={() => setIsTranslateOpen(true)}
+          />
+          <button
+            type="button"
+            onClick={() => setIsTranslateOpen(true)}
+            className="flex-shrink-0 p-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500 transition-colors"
+            title="View/edit translations"
+          >
+            <Languages size={16} />
+          </button>
+        </div>
+        {showRateColumns && (
+          <div className="min-w-0">
+            <Input
+              size="small"
+              placeholder="Kitchen instruction..."
+              value={row.kitchenInstructionEnglish ?? ""}
+              onChange={handleKitchenInstructionChange}
+              className="w-full text-sm"
+            />
+          </div>
+        )}
+      </div>
+    </>
   );
 };
 
@@ -1517,8 +1516,8 @@ const EventMenuAllocationPage = ({ mode }) => {
   const [menuForHMMappingId, setMenuForHMMappingId] = useState(null);
   const [menuForHMTemplateId, setMenuForHMTemplateId] = useState(null);
   const [isGuestSignModalOpen, setIsGuestSignModalOpen] = useState(false);
-const [guestSignSaving, setGuestSignSaving] = useState(false);
-const [excelLoading, setExcelLoading] = useState(false);
+  const [guestSignSaving, setGuestSignSaving] = useState(false);
+  const [excelLoading, setExcelLoading] = useState(false);
   // ============= LANGUAGE STATE =============
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
   const lastSavedPersonRef = useRef({});
@@ -1532,12 +1531,12 @@ const [excelLoading, setExcelLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const [saveCooldown, setSaveCooldown] = useState(false);
-const saveCooldownRef = useRef(false);
-const saveCooldownTimerRef = useRef(null);
+  const saveCooldownRef = useRef(false);
+  const saveCooldownTimerRef = useRef(null);
 
-const [syncCooldown, setSyncCooldown] = useState(false);
-const syncCooldownRef = useRef(false);
-const syncCooldownTimerRef = useRef(null);
+  const [syncCooldown, setSyncCooldown] = useState(false);
+  const syncCooldownRef = useRef(false);
+  const syncCooldownTimerRef = useRef(null);
 
   const permMenuPlanning = usePermission("Menu Planning");
   const { hasModuleAccess } = useModuleAccess();
@@ -1570,25 +1569,25 @@ const syncCooldownTimerRef = useRef(null);
     }
   })();
 
-useEffect(() => {
-  return () => {
-    if (saveCooldownTimerRef.current) clearTimeout(saveCooldownTimerRef.current);
-    if (syncCooldownTimerRef.current) clearTimeout(syncCooldownTimerRef.current);
-  };
-}, []);
-  
- useEffect(() => {
-  const userId = localStorage.getItem("userId");
-  if (!userId || userId === "undefined" || userId === "null") return;
-  Getunit(userId)
-    .then((res) => {
-      const list = res?.data?.data?.["Unit Details"] || [];
-      setUnitOptions(
-        list.map((u) => ({ value: Number(u.id), label: u.nameEnglish })),
-      );
-    })
-    .catch((err) => console.error("Error fetching units:", err));
-}, []);
+  useEffect(() => {
+    return () => {
+      if (saveCooldownTimerRef.current) clearTimeout(saveCooldownTimerRef.current);
+      if (syncCooldownTimerRef.current) clearTimeout(syncCooldownTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const userId = localStorage.getItem("userId");
+    if (!userId || userId === "undefined" || userId === "null") return;
+    Getunit(userId)
+      .then((res) => {
+        const list = res?.data?.data?.["Unit Details"] || [];
+        setUnitOptions(
+          list.map((u) => ({ value: Number(u.id), label: u.nameEnglish })),
+        );
+      })
+      .catch((err) => console.error("Error fetching units:", err));
+  }, []);
   const changedPaxRowsRef = useRef(new Set());
 
   const fetchMenuForHMModule = async () => {
@@ -1743,11 +1742,11 @@ useEffect(() => {
 
 
   const getFunctionStart = (fnId) =>
-  eventData?.eventFunctions?.find((f) => f.id === fnId)?.functionStartDateTime;
+    eventData?.eventFunctions?.find((f) => f.id === fnId)?.functionStartDateTime;
 
-// saved reporting time, or the function's start time when empty
-const resolveReportingTime = (alloc, row) =>
-  alloc.reportingTime || getFunctionTime(getFunctionStart(row.eventFunctionId));
+  // saved reporting time, or the function's start time when empty
+  const resolveReportingTime = (alloc, row) =>
+    alloc.reportingTime || getFunctionTime(getFunctionStart(row.eventFunctionId));
 
   // const isAllFunctions = activeFunction?.id === -1;
 
@@ -1921,103 +1920,103 @@ const resolveReportingTime = (alloc, row) =>
         itemNameEn: item.menuItemName,
         itemNameGu: item.menuItemNameGujarati,
         itemNameHi: item.menuItemNameHindi,
-kitchenInstructionEnglish: stripHtmlTags(item.kitchenInstructionEnglish ?? item.kitchenInstruction) || "",
-kitchenInstructionHindi: stripHtmlTags(item.kitchenInstructionHindi) || "",
-kitchenInstructionGujarati: stripHtmlTags(item.kitchenInstructionGujarati) || "",
+        kitchenInstructionEnglish: stripHtmlTags(item.kitchenInstructionEnglish ?? item.kitchenInstruction) || "",
+        kitchenInstructionHindi: stripHtmlTags(item.kitchenInstructionHindi) || "",
+        kitchenInstructionGujarati: stripHtmlTags(item.kitchenInstructionGujarati) || "",
         chefLabour: item.chefLabour || false,
         inside: item.inside || false,
         outside: item.outside || false,
         personCount: item.personCount || 0,
-     weight: (() => {
-  const w = Number(item.weight) || Number(item.itemWeight) || 0;
-  return w ? String(w) : "";
-})(),
-rate: (() => {
-  const r = Number(item.rate) || Number(item.itemRate) || 0;
-  return r ? String(r) : "";
-})(),
-unitId: Number(item.unitId) || Number(item.unitHierarchy?.unitId) || 0,
-unitName: item.unitName || item.unitHierarchy?.nameEnglish || item.units?.nameEnglish || "",
-baseUnitId: Number(item.unitHierarchy?.unitId) || Number(item.unitId) || 0,
-baseUnitName: item.unitHierarchy?.nameEnglish || item.unitName || item.units?.nameEnglish || "",
-unitHierarchy: item.unitHierarchy || null,
-totalRate:
-  item.totalRate !== null && item.totalRate !== undefined
-    ? String(item.totalRate)
-    : "",
-    labourQty: (() => {
-  const q = Number(item.labourQty) || 0;
-  return q ? String(q) : "";
-})(),
-labourRate: (() => {
-  const r = Number(item.labourRate) || 0;
-  return r ? String(r) : "";
-})(),
-       place: (() => {
-  const placeNum = Number(item.place);
-  if (!placeNum || isNaN(placeNum)) return "0";
-  return String(placeNum);
-})(),
+        weight: (() => {
+          const w = Number(item.weight) || Number(item.itemWeight) || 0;
+          return w ? String(w) : "";
+        })(),
+        rate: (() => {
+          const r = Number(item.rate) || Number(item.itemRate) || 0;
+          return r ? String(r) : "";
+        })(),
+        unitId: Number(item.unitId) || Number(item.unitHierarchy?.unitId) || 0,
+        unitName: item.unitName || item.unitHierarchy?.nameEnglish || item.units?.nameEnglish || "",
+        baseUnitId: Number(item.unitHierarchy?.unitId) || Number(item.unitId) || 0,
+        baseUnitName: item.unitHierarchy?.nameEnglish || item.unitName || item.units?.nameEnglish || "",
+        unitHierarchy: item.unitHierarchy || null,
+        totalRate:
+          item.totalRate !== null && item.totalRate !== undefined
+            ? String(item.totalRate)
+            : "",
+        labourQty: (() => {
+          const q = Number(item.labourQty) || 0;
+          return q ? String(q) : "";
+        })(),
+        labourRate: (() => {
+          const r = Number(item.labourRate) || 0;
+          return r ? String(r) : "";
+        })(),
+        place: (() => {
+          const placeNum = Number(item.place);
+          if (!placeNum || isNaN(placeNum)) return "0";
+          return String(placeNum);
+        })(),
         instructions: stripHtmlTags(item.instructions) || "",
-instructionsHindi: stripHtmlTags(item.instructionsHindi) || "",
-instructionsGujarati: stripHtmlTags(item.instructionsGujarati) || "",
+        instructionsHindi: stripHtmlTags(item.instructionsHindi) || "",
+        instructionsGujarati: stripHtmlTags(item.instructionsGujarati) || "",
         eventId: item.eventId,
         eventFunctionId: item.eventFunctionId,
         menuCategoryId: item.menuCategoryId,
         menuItemId: item.menuItemId,
         eventFunctionMenuAllocations: item.eventFunctionMenuAllocations?.map((alloc) => {
-  const isChefLabour = item.chefLabour && !item.outside && !item.inside;
-  const isOutside = item.outside;
-  const isInside = item.inside;
+          const isChefLabour = item.chefLabour && !item.outside && !item.inside;
+          const isOutside = item.outside;
+          const isInside = item.inside;
 
-  const serviceType = (alloc.serviceType || "plate_wise")
-    .toLowerCase()
-    .replace(/\s+/g, "_");
+          const serviceType = (alloc.serviceType || "plate_wise")
+            .toLowerCase()
+            .replace(/\s+/g, "_");
 
-  let allocationTotal = 0;
+          let allocationTotal = 0;
 
-  if (isChefLabour) {
-    if (serviceType === "counter_wise") {
-      allocationTotal =
-        (Number(alloc.counterPrice) || 0) * (Number(alloc.counterQuantity) || 0) +
-        (Number(alloc.helperPrice) || 0) * (Number(alloc.helperQuantity) || 0);
-    } else {
-      // plate_wise chef: use quantity * price
-      allocationTotal =
-        (Number(alloc.quantity) || 0) * (Number(alloc.price) || 0);
-    }
-  } else {
-    allocationTotal =
-      (Number(alloc.price) || 0) * (Number(alloc.quantity) || 0);
-  }
+          if (isChefLabour) {
+            if (serviceType === "counter_wise") {
+              allocationTotal =
+                (Number(alloc.counterPrice) || 0) * (Number(alloc.counterQuantity) || 0) +
+                (Number(alloc.helperPrice) || 0) * (Number(alloc.helperQuantity) || 0);
+            } else {
+              // plate_wise chef: use quantity * price
+              allocationTotal =
+                (Number(alloc.quantity) || 0) * (Number(alloc.price) || 0);
+            }
+          } else {
+            allocationTotal =
+              (Number(alloc.price) || 0) * (Number(alloc.quantity) || 0);
+          }
 
-  allocationTotal += Number(alloc.shiftTransPrice) || 0;
+          allocationTotal += Number(alloc.shiftTransPrice) || 0;
 
-  return {
-    id: alloc.id || null,
-    partyId: alloc.partyId,
-    partyName: alloc.partyName,
-    menuAllocationId: item.id,
-    price: Number(alloc.price) || 0,
-    quantity: Number(alloc.quantity) || 0,
-    unitId: alloc.unitId ?? null,
-    unitName: alloc.unitName ?? null,
-    serviceType: alloc.serviceType || "",
-    counterQuantity: alloc.counterQuantity || 0,
-    helperQuantity: alloc.helperQuantity || 0,
-    counterPrice: alloc.counterPrice || 0,
-    helperPrice: alloc.helperPrice || 0,
-    totalPrice: allocationTotal,  
-    shiftTransPrice: alloc.shiftTransPrice ?? 0,
-      reportingTime: alloc.reportingTime || getFunctionTime(getFunctionStart(item.eventFunctionId)),
-    isOutside,
-    isChefLabour,
-    isInside,
-    number: alloc.number ?? null,
-    remarks: alloc.remarks ?? null,
-    pax: alloc.pax ?? null,
-  };
-}) || [],
+          return {
+            id: alloc.id || null,
+            partyId: alloc.partyId,
+            partyName: alloc.partyName,
+            menuAllocationId: item.id,
+            price: Number(alloc.price) || 0,
+            quantity: Number(alloc.quantity) || 0,
+            unitId: alloc.unitId ?? null,
+            unitName: alloc.unitName ?? null,
+            serviceType: alloc.serviceType || "",
+            counterQuantity: alloc.counterQuantity || 0,
+            helperQuantity: alloc.helperQuantity || 0,
+            counterPrice: alloc.counterPrice || 0,
+            helperPrice: alloc.helperPrice || 0,
+            totalPrice: allocationTotal,
+            shiftTransPrice: alloc.shiftTransPrice ?? 0,
+            reportingTime: alloc.reportingTime || getFunctionTime(getFunctionStart(item.eventFunctionId)),
+            isOutside,
+            isChefLabour,
+            isInside,
+            number: alloc.number ?? null,
+            remarks: alloc.remarks ?? null,
+            pax: alloc.pax ?? null,
+          };
+        }) || [],
         menuItemRawMaterials: [],
         itemSortorder: item.itemSortorder ?? null,
         menuSortorder: item.menuSortorder ?? null,
@@ -2026,7 +2025,7 @@ instructionsGujarati: stripHtmlTags(item.instructionsGujarati) || "",
       setRows(transformedRows);
 
       setInitialRows(JSON.parse(JSON.stringify(transformedRows)));
-isInitialLoadRef.current = false;
+      isInitialLoadRef.current = false;
 
       const allSelectedItems = allMenuDataResponse.flatMap(
         (detail) => detail?.selectedItemDetails || [],
@@ -2100,8 +2099,8 @@ isInitialLoadRef.current = false;
                   // } 
 
                   else if (matchingRow.outside) {
-  rowPrice = basePrice; // was: summing isOutside allocations
-}
+                    rowPrice = basePrice; // was: summing isOutside allocations
+                  }
 
                   // else if (matchingRow.chefLabour) {
                   //   const chefCost =
@@ -2112,16 +2111,16 @@ isInitialLoadRef.current = false;
                   // }
 
                   else if (matchingRow.chefLabour) {
-  rowPrice = basePrice; // was: basePrice + chefCost
-}
+                    rowPrice = basePrice; // was: basePrice + chefCost
+                  }
 
-else if (matchingRow.chefLabour) {
-  const chefCost =
-    matchingRow.eventFunctionMenuAllocations
-      ?.filter((a) => a.isChefLabour)
-      .reduce((sum, allocation) => sum + (allocation.totalPrice || 0), 0) || 0;
-  rowPrice = basePrice + chefCost;
-}
+                  else if (matchingRow.chefLabour) {
+                    const chefCost =
+                      matchingRow.eventFunctionMenuAllocations
+                        ?.filter((a) => a.isChefLabour)
+                        .reduce((sum, allocation) => sum + (allocation.totalPrice || 0), 0) || 0;
+                    rowPrice = basePrice + chefCost;
+                  }
 
                   return total + rowPrice;
                 }, 0);
@@ -2215,13 +2214,13 @@ else if (matchingRow.chefLabour) {
         row.personCount !== original.personCount ||
         row.place !== original.place ||
         row.instructions !== original.instructions ||
-         row.weight !== original.weight ||
-  row.unitId !== original.unitId ||
-  row.rate !== original.rate ||
-  row.totalRate !== original.totalRate ||
-  row.labourQty !== original.labourQty ||
-  row.labourRate !== original.labourRate || 
-  row.kitchenInstructionEnglish !== original.kitchenInstructionEnglish 
+        row.weight !== original.weight ||
+        row.unitId !== original.unitId ||
+        row.rate !== original.rate ||
+        row.totalRate !== original.totalRate ||
+        row.labourQty !== original.labourQty ||
+        row.labourRate !== original.labourRate ||
+        row.kitchenInstructionEnglish !== original.kitchenInstructionEnglish
       ) {
         return true;
       }
@@ -2560,8 +2559,8 @@ else if (matchingRow.chefLabour) {
             // }
 
             if (matchingRow.outside) {
-  return total + basePrice; // removed outside allocation sum
-}
+              return total + basePrice; // removed outside allocation sum
+            }
 
             // if (matchingRow.chefLabour) {
             //   const chefLabourCost =
@@ -2574,18 +2573,18 @@ else if (matchingRow.chefLabour) {
             //   return total + (basePrice + chefLabourCost);
             // }
 
-//             if (matchingRow.chefLabour) {
-//   return total + basePrice; // removed chef labour cost addition
-// }
+            //             if (matchingRow.chefLabour) {
+            //   return total + basePrice; // removed chef labour cost addition
+            // }
 
 
-if (matchingRow.chefLabour) {
-  const chefLabourCost =
-    matchingRow.eventFunctionMenuAllocations
-      ?.filter((a) => a.isChefLabour)
-      .reduce((sum, allocation) => sum + (allocation.totalPrice || 0), 0) || 0;
-  return total + (basePrice + chefLabourCost);
-}
+            if (matchingRow.chefLabour) {
+              const chefLabourCost =
+                matchingRow.eventFunctionMenuAllocations
+                  ?.filter((a) => a.isChefLabour)
+                  .reduce((sum, allocation) => sum + (allocation.totalPrice || 0), 0) || 0;
+              return total + (basePrice + chefLabourCost);
+            }
 
 
             return total + basePrice;
@@ -2597,55 +2596,55 @@ if (matchingRow.chefLabour) {
     );
   };
 
- // REPLACE the entire handleAgencyAllocationSave:
-const handleAgencyAllocationSave = useCallback((savedMenuItems, type) => {
-  setRows((prevRows) => {
-    const updatedRows = prevRows.map((row) => {
-      const matchingItem = savedMenuItems.find(
-        (item) =>
-          item.menuItemId === row.menuItemId &&
-          item.eventFunctionId === row.eventFunctionId &&
-          item.menuCategoryId === row.menuCategoryId,
-      );
+  // REPLACE the entire handleAgencyAllocationSave:
+  const handleAgencyAllocationSave = useCallback((savedMenuItems, type) => {
+    setRows((prevRows) => {
+      const updatedRows = prevRows.map((row) => {
+        const matchingItem = savedMenuItems.find(
+          (item) =>
+            item.menuItemId === row.menuItemId &&
+            item.eventFunctionId === row.eventFunctionId &&
+            item.menuCategoryId === row.menuCategoryId,
+        );
 
-      if (!matchingItem) return row;
+        if (!matchingItem) return row;
 
-      // Build new allocations tagged with the correct type
-      const newTypeAllocations = (matchingItem.eventFunctionMenuAllocations || []).map((alloc) => ({
-        ...alloc,
-        isChefLabour: type === "chef",
-        isOutside: type === "outside",
-        isInside: type === "inside",
-      }));
+        // Build new allocations tagged with the correct type
+        const newTypeAllocations = (matchingItem.eventFunctionMenuAllocations || []).map((alloc) => ({
+          ...alloc,
+          isChefLabour: type === "chef",
+          isOutside: type === "outside",
+          isInside: type === "inside",
+        }));
 
-      // Keep allocations of OTHER types, replace only the saved type
-      const keptOtherAllocations = (row.eventFunctionMenuAllocations || []).filter((alloc) => {
-        if (type === "chef") return !alloc.isChefLabour;
-        if (type === "outside") return !alloc.isOutside;
-        if (type === "inside") return !alloc.isInside;
-        return true;
+        // Keep allocations of OTHER types, replace only the saved type
+        const keptOtherAllocations = (row.eventFunctionMenuAllocations || []).filter((alloc) => {
+          if (type === "chef") return !alloc.isChefLabour;
+          if (type === "outside") return !alloc.isOutside;
+          if (type === "inside") return !alloc.isInside;
+          return true;
+        });
+
+        return {
+          ...row,
+          // Update the type flags on the row itself from the saved item
+          chefLabour: type === "chef" ? matchingItem.chefLabour ?? row.chefLabour : row.chefLabour,
+          outside: type === "outside" ? matchingItem.outside ?? row.outside : row.outside,
+          inside: type === "inside" ? matchingItem.inside ?? row.inside : row.inside,
+          eventFunctionMenuAllocations: [...keptOtherAllocations, ...newTypeAllocations],
+        };
       });
 
-      return {
-        ...row,
-        // Update the type flags on the row itself from the saved item
-        chefLabour: type === "chef" ? matchingItem.chefLabour ?? row.chefLabour : row.chefLabour,
-        outside: type === "outside" ? matchingItem.outside ?? row.outside : row.outside,
-        inside: type === "inside" ? matchingItem.inside ?? row.inside : row.inside,
-        eventFunctionMenuAllocations: [...keptOtherAllocations, ...newTypeAllocations],
-      };
+      const affectedMenuItemIds = [...new Set(savedMenuItems.map((i) => i.menuItemId))];
+      affectedMenuItemIds.forEach((menuItemId) => {
+        updateOrderSummaryPrices(menuItemId, updatedRows);
+      });
+
+
+
+      return updatedRows;
     });
-
-    const affectedMenuItemIds = [...new Set(savedMenuItems.map((i) => i.menuItemId))];
-    affectedMenuItemIds.forEach((menuItemId) => {
-      updateOrderSummaryPrices(menuItemId, updatedRows);
-    });
-
-    
-
-    return updatedRows;
-  });
-}, [updateOrderSummaryPrices]);
+  }, [updateOrderSummaryPrices]);
 
   // const calculateAllFunctionsPrices = () => {
   //   if (!enrichedGroupedByFunction) return;
@@ -2856,7 +2855,7 @@ const handleAgencyAllocationSave = useCallback((savedMenuItems, type) => {
         }
 
         const res = await GETallGodown(userId);
-        
+
         if (res?.data?.data?.length) {
           const godownOptions = res?.data?.data.map((g) => ({
             value: String(g.id),
@@ -2907,151 +2906,151 @@ const handleAgencyAllocationSave = useCallback((savedMenuItems, type) => {
     });
   };
 
-const buildMenuExecutionChangeSummary = (prevRows, currentRows) => {
-  const prevByKey = new Map(prevRows.map((r) => [r.key, r]));
-  const currByKey = new Map(currentRows.map((r) => [r.key, r]));
-  const parts = [];
+  const buildMenuExecutionChangeSummary = (prevRows, currentRows) => {
+    const prevByKey = new Map(prevRows.map((r) => [r.key, r]));
+    const currByKey = new Map(currentRows.map((r) => [r.key, r]));
+    const parts = [];
 
-  const typeChanges = [];
-  const personChanges = [];
-  const placeChanges = [];
-  const instructionChanges = [];
-  const allocationChanges = [];
-  const newItems = [];
-  const removedItems = [];
+    const typeChanges = [];
+    const personChanges = [];
+    const placeChanges = [];
+    const instructionChanges = [];
+    const allocationChanges = [];
+    const newItems = [];
+    const removedItems = [];
 
-  const getType = (r) =>
-    r.chefLabour ? "Chef Labour" : r.outside ? "Outsource" : r.inside ? "Inside" : "None";
+    const getType = (r) =>
+      r.chefLabour ? "Chef Labour" : r.outside ? "Outsource" : r.inside ? "Inside" : "None";
 
-  const getPlaceLabel = (placeVal) =>
-    placeOptions.find((p) => p.value === String(placeVal))?.label || placeVal || "-";
+    const getPlaceLabel = (placeVal) =>
+      placeOptions.find((p) => p.value === String(placeVal))?.label || placeVal || "-";
 
-  // ── Detect newly added items (present now, not in previous save) ──
-  currentRows.forEach((row) => {
-    if (!prevByKey.has(row.key)) {
-      newItems.push(
-        `${getDisplayName(row, "itemName")} (Type: ${getType(row)}, Person: ${row.personCount || 0})`,
-      );
-    }
-  });
-
-  // ── Detect removed items (were in previous save, missing now) ──
-  prevRows.forEach((row) => {
-    if (!currByKey.has(row.key)) {
-      removedItems.push(`${getDisplayName(row, "itemName")}`);
-    }
-  });
-
-  currentRows.forEach((row) => {
-    const prev = prevByKey.get(row.key);
-    if (!prev) return; // already logged as a new item above
-
-    const itemLabel = `${getDisplayName(row, "itemName")}`;
-
-    const prevType = getType(prev);
-    const currType = getType(row);
-    if (prevType !== currType) {
-      typeChanges.push(`${itemLabel}: ${prevType} → ${currType}`);
-    }
-
-    if (Number(prev.personCount || 0) !== Number(row.personCount || 0)) {
-      personChanges.push(`${itemLabel}: ${prev.personCount || 0} → ${row.personCount || 0}`);
-    }
-
-    if (String(prev.place) !== String(row.place)) {
-      placeChanges.push(
-        `${itemLabel}: ${getPlaceLabel(prev.place)} → ${getPlaceLabel(row.place)}`,
-      );
-    }
-
-    if ((prev.instructions || "") !== (row.instructions || "")) {
-      const newNote = (row.instructions || "").trim();
-      instructionChanges.push(
-        newNote ? `${itemLabel}: "${newNote}"` : `${itemLabel}: cleared`,
-      );
-    }
-
-    // ── Allocation-level diff (party / price / qty / transport / unit / reporting time / service type) ──
-    const prevAllocs = prev.eventFunctionMenuAllocations || [];
-    const currAllocs = row.eventFunctionMenuAllocations || [];
-
-    if (currType !== "None") {
-      const maxLen = Math.max(prevAllocs.length, currAllocs.length);
-      for (let i = 0; i < maxLen; i++) {
-        const pa = prevAllocs[i];
-        const ca = currAllocs[i];
-
-        if (!pa && ca) {
-          allocationChanges.push(
-            `${itemLabel}: added party ${ca.partyName || ca.partyId || "-"}`,
-          );
-          continue;
-        }
-        if (pa && !ca) {
-          allocationChanges.push(
-            `${itemLabel}: removed party ${pa.partyName || pa.partyId || "-"}`,
-          );
-          continue;
-        }
-        if (!pa || !ca) continue;
-
-        const partyLabel = ca.partyName || pa.partyName || "party";
-
-        const fieldsToCheck = [
-          ["partyId", "Party"],
-          ["serviceType", "Service Type"],
-          ["price", "Price"],
-          ["quantity", "Qty"],
-          ["counterQuantity", "Counter Qty"],
-          ["counterPrice", "Counter Price"],
-          ["helperQuantity", "Helper Qty"],
-          ["helperPrice", "Helper Price"],
-          ["shiftTransPrice", "Transport"],
-          ["totalPrice", "Total Price"],
-          ["unitId", "Unit"],
-          ["reportingTime", "Reporting Time"],
-          ["number", "Number"],
-          ["remarks", "Remarks"],
-        ];
-
-        fieldsToCheck.forEach(([field, label]) => {
-          const prevRaw = pa[field];
-          const currRaw = ca[field];
-
-          const isNumericField = [
-            "price",
-            "quantity",
-            "counterQuantity",
-            "counterPrice",
-            "helperQuantity",
-            "helperPrice",
-            "shiftTransPrice",
-            "totalPrice",
-          ].includes(field);
-
-          const prevVal = isNumericField ? Number(prevRaw || 0) : (prevRaw ?? "-");
-          const currVal = isNumericField ? Number(currRaw || 0) : (currRaw ?? "-");
-
-          if (String(prevVal) !== String(currVal)) {
-            allocationChanges.push(
-              `${itemLabel} (${partyLabel}) ${label}: ${prevVal} → ${currVal}`,
-            );
-          }
-        });
+    // ── Detect newly added items (present now, not in previous save) ──
+    currentRows.forEach((row) => {
+      if (!prevByKey.has(row.key)) {
+        newItems.push(
+          `${getDisplayName(row, "itemName")} (Type: ${getType(row)}, Person: ${row.personCount || 0})`,
+        );
       }
-    }
-  });
+    });
 
-  if (newItems.length) parts.push(`New Items Added: ${newItems.join(", ")}`);
-  if (removedItems.length) parts.push(`Items Removed: ${removedItems.join(", ")}`);
-  if (typeChanges.length) parts.push(`Type Changed: ${typeChanges.join(", ")}`);
-  if (personChanges.length) parts.push(`Person Count Changed: ${personChanges.join(", ")}`);
-  if (placeChanges.length) parts.push(`Place Changed: ${placeChanges.join(", ")}`);
-  if (allocationChanges.length) parts.push(`Allocation Changed: ${allocationChanges.join(", ")}`);
-  if (instructionChanges.length) parts.push(`Instructions Changed: ${instructionChanges.join(", ")}`);
+    // ── Detect removed items (were in previous save, missing now) ──
+    prevRows.forEach((row) => {
+      if (!currByKey.has(row.key)) {
+        removedItems.push(`${getDisplayName(row, "itemName")}`);
+      }
+    });
 
-  return parts.length > 0 ? parts.join(" | ") : "No item-level changes detected.";
-};
+    currentRows.forEach((row) => {
+      const prev = prevByKey.get(row.key);
+      if (!prev) return; // already logged as a new item above
+
+      const itemLabel = `${getDisplayName(row, "itemName")}`;
+
+      const prevType = getType(prev);
+      const currType = getType(row);
+      if (prevType !== currType) {
+        typeChanges.push(`${itemLabel}: ${prevType} → ${currType}`);
+      }
+
+      if (Number(prev.personCount || 0) !== Number(row.personCount || 0)) {
+        personChanges.push(`${itemLabel}: ${prev.personCount || 0} → ${row.personCount || 0}`);
+      }
+
+      if (String(prev.place) !== String(row.place)) {
+        placeChanges.push(
+          `${itemLabel}: ${getPlaceLabel(prev.place)} → ${getPlaceLabel(row.place)}`,
+        );
+      }
+
+      if ((prev.instructions || "") !== (row.instructions || "")) {
+        const newNote = (row.instructions || "").trim();
+        instructionChanges.push(
+          newNote ? `${itemLabel}: "${newNote}"` : `${itemLabel}: cleared`,
+        );
+      }
+
+      // ── Allocation-level diff (party / price / qty / transport / unit / reporting time / service type) ──
+      const prevAllocs = prev.eventFunctionMenuAllocations || [];
+      const currAllocs = row.eventFunctionMenuAllocations || [];
+
+      if (currType !== "None") {
+        const maxLen = Math.max(prevAllocs.length, currAllocs.length);
+        for (let i = 0; i < maxLen; i++) {
+          const pa = prevAllocs[i];
+          const ca = currAllocs[i];
+
+          if (!pa && ca) {
+            allocationChanges.push(
+              `${itemLabel}: added party ${ca.partyName || ca.partyId || "-"}`,
+            );
+            continue;
+          }
+          if (pa && !ca) {
+            allocationChanges.push(
+              `${itemLabel}: removed party ${pa.partyName || pa.partyId || "-"}`,
+            );
+            continue;
+          }
+          if (!pa || !ca) continue;
+
+          const partyLabel = ca.partyName || pa.partyName || "party";
+
+          const fieldsToCheck = [
+            ["partyId", "Party"],
+            ["serviceType", "Service Type"],
+            ["price", "Price"],
+            ["quantity", "Qty"],
+            ["counterQuantity", "Counter Qty"],
+            ["counterPrice", "Counter Price"],
+            ["helperQuantity", "Helper Qty"],
+            ["helperPrice", "Helper Price"],
+            ["shiftTransPrice", "Transport"],
+            ["totalPrice", "Total Price"],
+            ["unitId", "Unit"],
+            ["reportingTime", "Reporting Time"],
+            ["number", "Number"],
+            ["remarks", "Remarks"],
+          ];
+
+          fieldsToCheck.forEach(([field, label]) => {
+            const prevRaw = pa[field];
+            const currRaw = ca[field];
+
+            const isNumericField = [
+              "price",
+              "quantity",
+              "counterQuantity",
+              "counterPrice",
+              "helperQuantity",
+              "helperPrice",
+              "shiftTransPrice",
+              "totalPrice",
+            ].includes(field);
+
+            const prevVal = isNumericField ? Number(prevRaw || 0) : (prevRaw ?? "-");
+            const currVal = isNumericField ? Number(currRaw || 0) : (currRaw ?? "-");
+
+            if (String(prevVal) !== String(currVal)) {
+              allocationChanges.push(
+                `${itemLabel} (${partyLabel}) ${label}: ${prevVal} → ${currVal}`,
+              );
+            }
+          });
+        }
+      }
+    });
+
+    if (newItems.length) parts.push(`New Items Added: ${newItems.join(", ")}`);
+    if (removedItems.length) parts.push(`Items Removed: ${removedItems.join(", ")}`);
+    if (typeChanges.length) parts.push(`Type Changed: ${typeChanges.join(", ")}`);
+    if (personChanges.length) parts.push(`Person Count Changed: ${personChanges.join(", ")}`);
+    if (placeChanges.length) parts.push(`Place Changed: ${placeChanges.join(", ")}`);
+    if (allocationChanges.length) parts.push(`Allocation Changed: ${allocationChanges.join(", ")}`);
+    if (instructionChanges.length) parts.push(`Instructions Changed: ${instructionChanges.join(", ")}`);
+
+    return parts.length > 0 ? parts.join(" | ") : "No item-level changes detected.";
+  };
 
 
 
@@ -3059,13 +3058,13 @@ const buildMenuExecutionChangeSummary = (prevRows, currentRows) => {
     if (saveCooldownRef.current) return;
     saveClickCountRef.current += 1;
     if (isSavingRef.current) return;
-      saveCooldownRef.current = true;
-  setSaveCooldown(true);
-  if (saveCooldownTimerRef.current) clearTimeout(saveCooldownTimerRef.current);
-  saveCooldownTimerRef.current = setTimeout(() => {
-    saveCooldownRef.current = false;
-    setSaveCooldown(false);
-  }, 3000);
+    saveCooldownRef.current = true;
+    setSaveCooldown(true);
+    if (saveCooldownTimerRef.current) clearTimeout(saveCooldownTimerRef.current);
+    saveCooldownTimerRef.current = setTimeout(() => {
+      saveCooldownRef.current = false;
+      setSaveCooldown(false);
+    }, 3000);
     isSavingRef.current = true;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
@@ -3104,120 +3103,120 @@ const buildMenuExecutionChangeSummary = (prevRows, currentRows) => {
       }
 
       const payload = rows.map((r) => {
-  // Derive flags directly from row booleans - don't trust alloc-level flags
-  const menuAllocationOrders = (r.eventFunctionMenuAllocations || []).map((alloc) => {
-    if (r.chefLabour) {
-      return {
-        counterPrice: alloc.counterPrice ?? 0,
-        counterQuantity: alloc.counterQuantity ?? 0,
-        helperPrice: alloc.helperPrice ?? 0,
-        helperQuantity: alloc.helperQuantity ?? 0,
-        id: 0,
-        isOutside: false,
-        partyId: alloc.partyId ?? 0,
-        price: alloc.price ?? 0,
-        quantity: alloc.quantity ?? 0,
-        serviceType: alloc.serviceType || "",
-        totalPrice: alloc.totalPrice ?? 0,
-        shiftTransPrice: alloc.shiftTransPrice ?? 0,
-         reportingTime: resolveReportingTime(alloc, r),
-        unitId: alloc.unitId ?? 0,
-      };
-    }
-    if (r.outside) {
-      return {
-        counterPrice: alloc.counterPrice ?? 0,
-        counterQuantity: alloc.counterQuantity ?? 0,
-        helperPrice: alloc.helperPrice ?? 0,
-        helperQuantity: alloc.helperQuantity ?? 0,
-        id: 0,
-        isOutside: true,
-        partyId: alloc.partyId ?? 0,
-        price: alloc.price ?? 0,
-        quantity: alloc.quantity ?? 0,
-        serviceType: alloc.serviceType || "",
-        shiftTransPrice: alloc.shiftTransPrice ?? 0,
-        totalPrice: alloc.totalPrice ?? 0,
-         reportingTime: resolveReportingTime(alloc, r), 
-        unitId: alloc.unitId ?? 0,
-      };
-    }
-    if (r.inside) {
-      return {
-        counterPrice: alloc.counterPrice || 0,
-        counterQuantity: alloc.counterQuantity || 0,
-        helperPrice: alloc.helperPrice || 0,
-        helperQuantity: alloc.helperQuantity || 0,
-        id: 0,
-        isOutside: false,
-        number: alloc.number || "",
-        remarks: alloc.remarks || "",
-        partyId: alloc.partyId || 0,
-        price: alloc.price || 0,
-        quantity: alloc.quantity || 0,
-        serviceType: alloc.serviceType || "",
-        totalPrice: alloc.totalPrice || 0,
-        shiftTransPrice: alloc.shiftTransPrice || 0,
-         reportingTime: resolveReportingTime(alloc, r),
-        unitId: alloc.unitId || 0,
-      };
-    }
-    return null;
-  }).filter(Boolean);
+        // Derive flags directly from row booleans - don't trust alloc-level flags
+        const menuAllocationOrders = (r.eventFunctionMenuAllocations || []).map((alloc) => {
+          if (r.chefLabour) {
+            return {
+              counterPrice: alloc.counterPrice ?? 0,
+              counterQuantity: alloc.counterQuantity ?? 0,
+              helperPrice: alloc.helperPrice ?? 0,
+              helperQuantity: alloc.helperQuantity ?? 0,
+              id: 0,
+              isOutside: false,
+              partyId: alloc.partyId ?? 0,
+              price: alloc.price ?? 0,
+              quantity: alloc.quantity ?? 0,
+              serviceType: alloc.serviceType || "",
+              totalPrice: alloc.totalPrice ?? 0,
+              shiftTransPrice: alloc.shiftTransPrice ?? 0,
+              reportingTime: resolveReportingTime(alloc, r),
+              unitId: alloc.unitId ?? 0,
+            };
+          }
+          if (r.outside) {
+            return {
+              counterPrice: alloc.counterPrice ?? 0,
+              counterQuantity: alloc.counterQuantity ?? 0,
+              helperPrice: alloc.helperPrice ?? 0,
+              helperQuantity: alloc.helperQuantity ?? 0,
+              id: 0,
+              isOutside: true,
+              partyId: alloc.partyId ?? 0,
+              price: alloc.price ?? 0,
+              quantity: alloc.quantity ?? 0,
+              serviceType: alloc.serviceType || "",
+              shiftTransPrice: alloc.shiftTransPrice ?? 0,
+              totalPrice: alloc.totalPrice ?? 0,
+              reportingTime: resolveReportingTime(alloc, r),
+              unitId: alloc.unitId ?? 0,
+            };
+          }
+          if (r.inside) {
+            return {
+              counterPrice: alloc.counterPrice || 0,
+              counterQuantity: alloc.counterQuantity || 0,
+              helperPrice: alloc.helperPrice || 0,
+              helperQuantity: alloc.helperQuantity || 0,
+              id: 0,
+              isOutside: false,
+              number: alloc.number || "",
+              remarks: alloc.remarks || "",
+              partyId: alloc.partyId || 0,
+              price: alloc.price || 0,
+              quantity: alloc.quantity || 0,
+              serviceType: alloc.serviceType || "",
+              totalPrice: alloc.totalPrice || 0,
+              shiftTransPrice: alloc.shiftTransPrice || 0,
+              reportingTime: resolveReportingTime(alloc, r),
+              unitId: alloc.unitId || 0,
+            };
+          }
+          return null;
+        }).filter(Boolean);
 
-  const rowHadPaxChange = changedPaxRowsRef.current.has(r.key);
-  return {
-    chefLabour: r.chefLabour || false,
-    eventFunctionId: r.eventFunctionId,
-    eventId: validEventId,
-    id: r.id || 0,
-    inside: r.inside || false,
-    instructions: stripHtmlTags(r.instructions) || "",
-    instructionsHindi: r.instructionsHindi || "",      
-  instructionsGujarati: r.instructionsGujarati || "", 
-  kitchenInstructionEnglish: r.kitchenInstructionEnglish || "",
-kitchenInstructionHindi: r.kitchenInstructionHindi || "",
-kitchenInstructionGujarati: r.kitchenInstructionGujarati || "",
-    isPaxChange: rowHadPaxChange,
-    menuAllocationOrders,
-    menuCategoryId: r.menuCategoryId || 0,
-    menuItemId: r.menuItemId || 0,
-    menuItemRawMaterials: [],
-    outside: r.outside || false,
-    personCount: r.personCount || 0,
-    place: r.place === "0" || !r.place ? "venue" : r.place,
-    userId: Number(Id) || 0,
-    itemSortorder: r.itemSortorder ?? null,
-    menuSortorder: r.menuSortorder ?? null,
-weight: toNum(r.weight),
-unitId: toNum(r.unitId),
-rate: toNum(r.rate),
-totalRate: toNum(r.totalRate),
-labourQty: toNum(r.labourQty),
-labourRate: toNum(r.labourRate),
-  };
-});
+        const rowHadPaxChange = changedPaxRowsRef.current.has(r.key);
+        return {
+          chefLabour: r.chefLabour || false,
+          eventFunctionId: r.eventFunctionId,
+          eventId: validEventId,
+          id: r.id || 0,
+          inside: r.inside || false,
+          instructions: stripHtmlTags(r.instructions) || "",
+          instructionsHindi: r.instructionsHindi || "",
+          instructionsGujarati: r.instructionsGujarati || "",
+          kitchenInstructionEnglish: r.kitchenInstructionEnglish || "",
+          kitchenInstructionHindi: r.kitchenInstructionHindi || "",
+          kitchenInstructionGujarati: r.kitchenInstructionGujarati || "",
+          isPaxChange: rowHadPaxChange,
+          menuAllocationOrders,
+          menuCategoryId: r.menuCategoryId || 0,
+          menuItemId: r.menuItemId || 0,
+          menuItemRawMaterials: [],
+          outside: r.outside || false,
+          personCount: r.personCount || 0,
+          place: r.place === "0" || !r.place ? "venue" : r.place,
+          userId: Number(Id) || 0,
+          itemSortorder: r.itemSortorder ?? null,
+          menuSortorder: r.menuSortorder ?? null,
+          weight: toNum(r.weight),
+          unitId: toNum(r.unitId),
+          rate: toNum(r.rate),
+          totalRate: toNum(r.totalRate),
+          labourQty: toNum(r.labourQty),
+          labourRate: toNum(r.labourRate),
+        };
+      });
 
-      
+
       animateProgress(0, 70, 800);
 
-      
-payload.forEach((item, i) => {
- 
-  item.menuAllocationOrders.forEach((order, j) => {
-  });
-});
+
+      payload.forEach((item, i) => {
+
+        item.menuAllocationOrders.forEach((order, j) => {
+        });
+      });
 
 
-rows.forEach((r, i) => {
- 
-  r.eventFunctionMenuAllocations?.forEach((a, j) => {
-  });
-});
+      rows.forEach((r, i) => {
 
-      const res = await MenuAllocationSave(payload); 
+        r.eventFunctionMenuAllocations?.forEach((a, j) => {
+        });
+      });
 
-      
+      const res = await MenuAllocationSave(payload);
+
+
       if (progressAnimRef.current) {
         clearInterval(progressAnimRef.current);
         progressAnimRef.current = null;
@@ -3228,31 +3227,30 @@ rows.forEach((r, i) => {
       isSubmittingRef.current = false;
 
       if (res?.data?.success === true) {
-  const isUpdate = rows.some((r) => (r.id || 0) !== 0);
+        const isUpdate = rows.some((r) => (r.id || 0) !== 0);
 
-  // ── Build detailed change summary against last-saved rows ──
-  const changeSummary = buildMenuExecutionChangeSummary(initialRows, rows);
+        // ── Build detailed change summary against last-saved rows ──
+        const changeSummary = buildMenuExecutionChangeSummary(initialRows, rows);
 
-  try {
-    await AddLogs({
-      id: 0,
-      eventId: Number(eventId),
-      description:
-        `${isUpdate ? "Menu Execution updated" : "Menu Execution saved"} for Event No: ${
-          eventData?.eventNo || eventId
-        } | Party: ${getPartyName(eventData?.party)} | Function: ${getFunctionName(
-          activeFunction?.function,
-        )} | Saved By: ${userEmail || "Unknown User"} | Total Items: ${rows.length} | Changes: ${changeSummary}`,
-      eventType: isUpdate ? "Menu Execution Update" : "Menu Execution Save",
-      user: userEmail,
-    });
-  } catch (logErr) {
-    console.error("Log failed (non-blocking):", logErr);
-  }
+        try {
+          await AddLogs({
+            id: 0,
+            eventId: Number(eventId),
+            description:
+              `${isUpdate ? "Menu Execution updated" : "Menu Execution saved"} for Event No: ${eventData?.eventNo || eventId
+              } | Party: ${getPartyName(eventData?.party)} | Function: ${getFunctionName(
+                activeFunction?.function,
+              )} | Saved By: ${userEmail || "Unknown User"} | Total Items: ${rows.length} | Changes: ${changeSummary}`,
+            eventType: isUpdate ? "Menu Execution Update" : "Menu Execution Save",
+            user: userEmail,
+          });
+        } catch (logErr) {
+          console.error("Log failed (non-blocking):", logErr);
+        }
 
-  changedPaxRowsRef.current.clear();
+        changedPaxRowsRef.current.clear();
 
-        
+
         await new Promise((r) => setTimeout(r, 150));
 
         await Swal.fire({
@@ -3325,107 +3323,107 @@ rows.forEach((r, i) => {
       if (hasInvalidPerson) return false;
 
       const payload = rows.map((r) => {
-  const menuAllocationOrders = [];
+        const menuAllocationOrders = [];
 
-  if (r.outside) {
-    menuAllocationOrders.push(
-      ...(r.eventFunctionMenuAllocations
-        ?.filter((a) => !a.isChefLabour)  // ← was: a.isOutside
-        .map((alloc) => ({
-          counterPrice: alloc.counterPrice ?? 0,
-          counterQuantity: alloc.counterQuantity ?? 0,
-          helperPrice: alloc.helperPrice ?? 0,
-          helperQuantity: alloc.helperQuantity ?? 0,
-          id: 0,
-          isOutside: true,              // ← always force true for outside rows
-          partyId: alloc.partyId ?? 0,
-          price: alloc.price ?? 0,
-          quantity: alloc.quantity ?? 0,
-          serviceType: alloc.serviceType || "",
-          shiftTransPrice: alloc.shiftTransPrice ?? 0,
-          totalPrice: alloc.totalPrice ?? 0,
-               reportingTime: resolveReportingTime(alloc, r),
-          unitId: alloc.unitId ?? 0,
-        })) || []),
-    );
-  }
+        if (r.outside) {
+          menuAllocationOrders.push(
+            ...(r.eventFunctionMenuAllocations
+              ?.filter((a) => !a.isChefLabour)  // ← was: a.isOutside
+              .map((alloc) => ({
+                counterPrice: alloc.counterPrice ?? 0,
+                counterQuantity: alloc.counterQuantity ?? 0,
+                helperPrice: alloc.helperPrice ?? 0,
+                helperQuantity: alloc.helperQuantity ?? 0,
+                id: 0,
+                isOutside: true,              // ← always force true for outside rows
+                partyId: alloc.partyId ?? 0,
+                price: alloc.price ?? 0,
+                quantity: alloc.quantity ?? 0,
+                serviceType: alloc.serviceType || "",
+                shiftTransPrice: alloc.shiftTransPrice ?? 0,
+                totalPrice: alloc.totalPrice ?? 0,
+                reportingTime: resolveReportingTime(alloc, r),
+                unitId: alloc.unitId ?? 0,
+              })) || []),
+          );
+        }
 
-  if (r.chefLabour) {
-    menuAllocationOrders.push(
-      ...(r.eventFunctionMenuAllocations
-        ?.filter((a) => !a.isOutside && !a.isInside)  // ← was: a.isChefLabour
-        .map((alloc) => ({
-          counterPrice: alloc.counterPrice ?? 0,
-          counterQuantity: alloc.counterQuantity ?? 0,
-          helperPrice: alloc.helperPrice ?? 0,
-          helperQuantity: alloc.helperQuantity ?? 0,
-          id: 0,
-          isOutside: false,
-          partyId: alloc.partyId ?? 0,
-          price: alloc.price ?? 0,
-          quantity: alloc.quantity ?? 0,
-          serviceType: alloc.serviceType || "",
-          totalPrice: alloc.totalPrice ?? 0,
-          shiftTransPrice: alloc.shiftTransPrice ?? 0,
-               reportingTime: resolveReportingTime(alloc, r),
-          unitId: alloc.unitId ?? 0,
-        })) || []),
-    );
-  }
+        if (r.chefLabour) {
+          menuAllocationOrders.push(
+            ...(r.eventFunctionMenuAllocations
+              ?.filter((a) => !a.isOutside && !a.isInside)  // ← was: a.isChefLabour
+              .map((alloc) => ({
+                counterPrice: alloc.counterPrice ?? 0,
+                counterQuantity: alloc.counterQuantity ?? 0,
+                helperPrice: alloc.helperPrice ?? 0,
+                helperQuantity: alloc.helperQuantity ?? 0,
+                id: 0,
+                isOutside: false,
+                partyId: alloc.partyId ?? 0,
+                price: alloc.price ?? 0,
+                quantity: alloc.quantity ?? 0,
+                serviceType: alloc.serviceType || "",
+                totalPrice: alloc.totalPrice ?? 0,
+                shiftTransPrice: alloc.shiftTransPrice ?? 0,
+                reportingTime: resolveReportingTime(alloc, r),
+                unitId: alloc.unitId ?? 0,
+              })) || []),
+          );
+        }
 
-  if (r.inside) {
-    menuAllocationOrders.push(
-      ...(r.eventFunctionMenuAllocations
-        ?.filter((a) => !a.isOutside && !a.isChefLabour)  // ← was: a.isInside
-        .map((alloc) => ({
-          counterPrice: alloc.counterPrice || 0,
-          counterQuantity: alloc.counterQuantity || 0,
-          helperPrice: alloc.helperPrice || 0,
-          helperQuantity: alloc.helperQuantity || 0,
-          id: 0,
-          isOutside: false,
-          number: alloc.number || "",
-          remarks: alloc.remarks || "",
-          partyId: alloc.partyId || 0,
-          price: alloc.price || 0,
-          quantity: alloc.quantity || 0,
-          serviceType: alloc.serviceType || "",
-          totalPrice: alloc.totalPrice || 0,
-          shiftTransPrice: alloc.shiftTransPrice || 0,
-               reportingTime: resolveReportingTime(alloc, r),
-          unitId: alloc.unitId || 0,
-        })) || []),
-    );
-  }
+        if (r.inside) {
+          menuAllocationOrders.push(
+            ...(r.eventFunctionMenuAllocations
+              ?.filter((a) => !a.isOutside && !a.isChefLabour)  // ← was: a.isInside
+              .map((alloc) => ({
+                counterPrice: alloc.counterPrice || 0,
+                counterQuantity: alloc.counterQuantity || 0,
+                helperPrice: alloc.helperPrice || 0,
+                helperQuantity: alloc.helperQuantity || 0,
+                id: 0,
+                isOutside: false,
+                number: alloc.number || "",
+                remarks: alloc.remarks || "",
+                partyId: alloc.partyId || 0,
+                price: alloc.price || 0,
+                quantity: alloc.quantity || 0,
+                serviceType: alloc.serviceType || "",
+                totalPrice: alloc.totalPrice || 0,
+                shiftTransPrice: alloc.shiftTransPrice || 0,
+                reportingTime: resolveReportingTime(alloc, r),
+                unitId: alloc.unitId || 0,
+              })) || []),
+          );
+        }
 
-  return {
-    chefLabour: r.chefLabour || false,
-    eventFunctionId: r.eventFunctionId,
-    eventId: validEventId,
-    id: r.id || 0,
-    inside: r.inside || false,
-    instructions: stripHtmlTags(r.instructions) || "",
-    instructionsHindi: r.instructionsHindi || "",      
-  instructionsGujarati: r.instructionsGujarati || "",
-    isPaxChange: changedPaxRowsRef.current.has(r.key),
-    menuAllocationOrders,
-    menuCategoryId: r.menuCategoryId || 0,
-    menuItemId: r.menuItemId || 0,
-    menuItemRawMaterials: [],
-    outside: r.outside || false,
-    personCount: r.personCount || 0,
-    place: r.place === "0" || !r.place ? "venue" : r.place,
-    userId: Number(Id) || 0,
-    itemSortorder: r.itemSortorder ?? null,
-    menuSortorder: r.menuSortorder ?? null,
-  weight: toNum(r.weight),
-unitId: toNum(r.unitId),
-rate: toNum(r.rate),
-totalRate: toNum(r.totalRate),
-labourQty: r.chefLabour ? toNum(r.labourQty) : 0,
-labourRate: r.chefLabour ? toNum(r.labourRate) : 0,
-  };
-});
+        return {
+          chefLabour: r.chefLabour || false,
+          eventFunctionId: r.eventFunctionId,
+          eventId: validEventId,
+          id: r.id || 0,
+          inside: r.inside || false,
+          instructions: stripHtmlTags(r.instructions) || "",
+          instructionsHindi: r.instructionsHindi || "",
+          instructionsGujarati: r.instructionsGujarati || "",
+          isPaxChange: changedPaxRowsRef.current.has(r.key),
+          menuAllocationOrders,
+          menuCategoryId: r.menuCategoryId || 0,
+          menuItemId: r.menuItemId || 0,
+          menuItemRawMaterials: [],
+          outside: r.outside || false,
+          personCount: r.personCount || 0,
+          place: r.place === "0" || !r.place ? "venue" : r.place,
+          userId: Number(Id) || 0,
+          itemSortorder: r.itemSortorder ?? null,
+          menuSortorder: r.menuSortorder ?? null,
+          weight: toNum(r.weight),
+          unitId: toNum(r.unitId),
+          rate: toNum(r.rate),
+          totalRate: toNum(r.totalRate),
+          labourQty: r.chefLabour ? toNum(r.labourQty) : 0,
+          labourRate: r.chefLabour ? toNum(r.labourRate) : 0,
+        };
+      });
 
       const res = await MenuAllocationSave(payload);
       if (res?.data?.success === true) {
@@ -3474,133 +3472,133 @@ labourRate: r.chefLabour ? toNum(r.labourRate) : 0,
     setIsSelectMenuReport(true);
   }
 
- const openSummaryItemModalchefoutside = () => {
-  setIsModalOpen(true);
-};
+  const openSummaryItemModalchefoutside = () => {
+    setIsModalOpen(true);
+  };
 
- const openSummaryItemModalOustsideAgency = () => {
-  setIsOutsideAgencyModalOpen(true);
-};
+  const openSummaryItemModalOustsideAgency = () => {
+    setIsOutsideAgencyModalOpen(true);
+  };
 
- const openSummaryItemModalInHouseCook = () => {
-  setIsInHouseCookModalOpen(true);
-};
+  const openSummaryItemModalInHouseCook = () => {
+    setIsInHouseCookModalOpen(true);
+  };
 
   const handleSyncRawMaterial = async () => {
-  if (syncCooldownRef.current) return;
+    if (syncCooldownRef.current) return;
 
-  try {
-    const eventFunctionId = activeFunction?.id || -1;
+    try {
+      const eventFunctionId = activeFunction?.id || -1;
 
-    if (!eventFunctionId) {
+      if (!eventFunctionId) {
+        Swal.fire({
+          icon: "error",
+          title: "Missing data",
+          text: "Event or function information missing",
+        });
+        return;
+      }
+
+      const confirm = await Swal.fire({
+        title: "Are you sure?",
+        text: "Do you want to sync raw materials for this function?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, Sync",
+        cancelButtonText: "Cancel",
+      });
+
+      if (!confirm.isConfirmed) return;
+
+      // Lock now that the user has actually confirmed
+      syncCooldownRef.current = true;
+      setSyncCooldown(true);
+      if (syncCooldownTimerRef.current) clearTimeout(syncCooldownTimerRef.current);
+      syncCooldownTimerRef.current = setTimeout(() => {
+        syncCooldownRef.current = false;
+        setSyncCooldown(false);
+      }, 3000);
+
+      Swal.fire({
+        title: "Syncing Raw Materials...",
+        text: "Please wait",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
+      const res = await SyncRawmaterialMenuallocation(eventFunctionId, eventId);
+
+      Swal.close();
+
+      if (res?.data?.success) {
+        Swal.fire({
+          icon: "success",
+          title: "Synced Successfully",
+          text: "Raw materials synced successfully",
+          confirmButtonColor: "#3085d6",
+        });
+
+        fetchMenuAllocation(eventFunctionId);
+      } else {
+        throw new Error(res?.data?.message || "Sync failed");
+      }
+    } catch (error) {
+      Swal.close();
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message || "Failed to sync raw materials",
+        confirmButtonColor: "#d33",
+      });
+    }
+  };
+
+
+  const handleExcelReport = async () => {
+    if (excelLoading) return;
+
+    const userId = localStorage.getItem("userId");
+    if (!eventId || !userId) {
       Swal.fire({
         icon: "error",
         title: "Missing data",
-        text: "Event or function information missing",
+        text: "Event or user information missing",
+        confirmButtonColor: "#d33",
       });
       return;
     }
 
-    const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "Do you want to sync raw materials for this function?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, Sync",
-      cancelButtonText: "Cancel",
-    });
+    // Open the tab synchronously so the popup blocker doesn't stop it after the await
+    const newTab = window.open("", "_blank");
 
-    if (!confirm.isConfirmed) return;
+    try {
+      setExcelLoading(true);
+      const res = await eventexcelforallocation(eventId, userId);
+      const fileUrl = res?.data?.fileUrl;
 
-    // Lock now that the user has actually confirmed
-    syncCooldownRef.current = true;
-    setSyncCooldown(true);
-    if (syncCooldownTimerRef.current) clearTimeout(syncCooldownTimerRef.current);
-    syncCooldownTimerRef.current = setTimeout(() => {
-      syncCooldownRef.current = false;
-      setSyncCooldown(false);
-    }, 3000);
-
-    Swal.fire({
-      title: "Syncing Raw Materials...",
-      text: "Please wait",
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
-    });
-
-    const res = await SyncRawmaterialMenuallocation(eventFunctionId, eventId);
-
-    Swal.close();
-
-    if (res?.data?.success) {
+      if (res?.data?.success && fileUrl) {
+        if (newTab) newTab.location.href = fileUrl;
+        else window.open(fileUrl, "_blank");
+      } else {
+        throw new Error(res?.data?.msg || "Failed to generate Excel");
+      }
+    } catch (error) {
+      if (newTab) newTab.close();
       Swal.fire({
-        icon: "success",
-        title: "Synced Successfully",
-        text: "Raw materials synced successfully",
-        confirmButtonColor: "#3085d6",
+        icon: "error",
+        title: "Error",
+        text: error.message || "Failed to generate Excel report",
+        confirmButtonColor: "#d33",
       });
-
-      fetchMenuAllocation(eventFunctionId);
-    } else {
-      throw new Error(res?.data?.message || "Sync failed");
+    } finally {
+      setExcelLoading(false);
     }
-  } catch (error) {
-    Swal.close();
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: error.message || "Failed to sync raw materials",
-      confirmButtonColor: "#d33",
-    });
-  }
-};
-
-
-const handleExcelReport = async () => {
-  if (excelLoading) return;
-
-  const userId = localStorage.getItem("userId");
-  if (!eventId || !userId) {
-    Swal.fire({
-      icon: "error",
-      title: "Missing data",
-      text: "Event or user information missing",
-      confirmButtonColor: "#d33",
-    });
-    return;
-  }
-
-  // Open the tab synchronously so the popup blocker doesn't stop it after the await
-  const newTab = window.open("", "_blank");
-
-  try {
-    setExcelLoading(true);
-    const res = await eventexcelforallocation(eventId, userId);
-    const fileUrl = res?.data?.fileUrl;
-
-    if (res?.data?.success && fileUrl) {
-      if (newTab) newTab.location.href = fileUrl;
-      else window.open(fileUrl, "_blank");
-    } else {
-      throw new Error(res?.data?.msg || "Failed to generate Excel");
-    }
-  } catch (error) {
-    if (newTab) newTab.close();
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: error.message || "Failed to generate Excel report",
-      confirmButtonColor: "#d33",
-    });
-  } finally {
-    setExcelLoading(false);
-  }
-};
+  };
   const handleDeleteSyncWithPasswordCheck = async () => {
     const { value: password, isConfirmed: passwordConfirmed } = await Swal.fire(
       {
@@ -3814,59 +3812,59 @@ const handleExcelReport = async () => {
               3. Menu Execution
             </h2>
 
-           <div className="flex gap-2">
-  {permMenuPlanning.view && (
-    <button
-      onClick={() =>
-        handleNavigateWithWarning(`/menu-preparation/${eventId}`)
-      }
-      className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors"
-    >
-      <i className="ki-filled ki-menu text-primary text-sm"></i>
-      2. Menu Planning
-    </button>
-  )}
+            <div className="flex gap-2">
+              {permMenuPlanning.view && (
+                <button
+                  onClick={() =>
+                    handleNavigateWithWarning(`/menu-preparation/${eventId}`)
+                  }
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors"
+                >
+                  <i className="ki-filled ki-menu text-primary text-sm"></i>
+                  2. Menu Planning
+                </button>
+              )}
 
-  {permRawMaterial.view && (
-    <button
-      className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors"
-      onClick={() =>
-        handleNavigateWithWarning(
-          `/raw-material-allocation/${eventId}`,
-        )
-      }
-    >
-      <i className="ki-filled ki-gift text-primary text-sm"></i>
-      4. Raw Material Distribution
-    </button>
-  )}
+              {permRawMaterial.view && (
+                <button
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors"
+                  onClick={() =>
+                    handleNavigateWithWarning(
+                      `/raw-material-allocation/${eventId}`,
+                    )
+                  }
+                >
+                  <i className="ki-filled ki-gift text-primary text-sm"></i>
+                  4. Raw Material Distribution
+                </button>
+              )}
 
-  {permAgencyDistribution.view && (
-    <button
-      className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors"
-      onClick={() =>
-        handleNavigateWithWarning(
-          `/labour-and-other-management/${eventId}`,
-        )
-      }
-    >
-      <i className="ki-filled ki-gift text-primary text-sm"></i>
-      5. Agency Distribution
-    </button>
-  )}
+              {permAgencyDistribution.view && (
+                <button
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors"
+                  onClick={() =>
+                    handleNavigateWithWarning(
+                      `/labour-and-other-management/${eventId}`,
+                    )
+                  }
+                >
+                  <i className="ki-filled ki-gift text-primary text-sm"></i>
+                  5. Agency Distribution
+                </button>
+              )}
 
-  {permPerDishCosting.view && (
-    <button
-      className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors"
-      onClick={() =>
-        handleNavigateWithWarning(`/dish-costing/${eventId}`)
-      }
-    >
-      <i className="ki-filled ki-grid text-primary text-sm"></i>
-      6. Per Dish-costing
-    </button>
-  )}
-</div>
+              {permPerDishCosting.view && (
+                <button
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold hover:border-gray-400 transition-colors"
+                  onClick={() =>
+                    handleNavigateWithWarning(`/dish-costing/${eventId}`)
+                  }
+                >
+                  <i className="ki-filled ki-grid text-primary text-sm"></i>
+                  6. Per Dish-costing
+                </button>
+              )}
+            </div>
             <button
               onClick={() => navigate("/")} // OR navigate('/calendar')
               className="btn border border-gray-300 text-gray-700 bg-white font-semibold hover:bg-gray-100"
@@ -3960,54 +3958,54 @@ const handleExcelReport = async () => {
 
             {/* Action Buttons */}
             {/* Action Buttons */}
-<div className="flex flex-col items-end gap-2 flex-shrink-0">
-  <div className="flex items-center gap-2">
-    <button
-      className="btn btn-sm btn-primary"
-      onClick={handleMainSave}
-      disabled={
-        isSubmittingRef.current ||
-        isSaving ||
-        saveCooldown ||
-        loading ||
-        tableLoading ||
-        menuLoading ||
-        !activeFunction
-      }
-    >
-      {isSubmittingRef.current || isSaving ? (
-        <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-      ) : (
-        <FormattedMessage id="COMMON.SAVE" defaultMessage="Save" />
-      )}
-    </button>
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={handleMainSave}
+                  disabled={
+                    isSubmittingRef.current ||
+                    isSaving ||
+                    saveCooldown ||
+                    loading ||
+                    tableLoading ||
+                    menuLoading ||
+                    !activeFunction
+                  }
+                >
+                  {isSubmittingRef.current || isSaving ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  ) : (
+                    <FormattedMessage id="COMMON.SAVE" defaultMessage="Save" />
+                  )}
+                </button>
 
-    <button
-      className="btn btn-sm btn-primary"
-      onClick={handleSyncRawMaterial}
-      disabled={
-        syncCooldown || loading || tableLoading || menuLoading || !activeFunction
-      }
-    >
-      <FormattedMessage
-        id="EVENT_MENU_ALLOCATION.SYNC_RAW_MATERIAL"
-        defaultMessage="Sync Raw Material"
-      />
-    </button>
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={handleSyncRawMaterial}
+                  disabled={
+                    syncCooldown || loading || tableLoading || menuLoading || !activeFunction
+                  }
+                >
+                  <FormattedMessage
+                    id="EVENT_MENU_ALLOCATION.SYNC_RAW_MATERIAL"
+                    defaultMessage="Sync Raw Material"
+                  />
+                </button>
 
-    <button
-      className="btn btn-sm bg-white border border-red-700 text-red-700 flex items-center gap-1.5"
-      onClick={handleDeleteSyncWithPasswordCheck}
-      disabled={isSyncing}
-    >
-      <AlertTriangle size={18} className="text-red-700 shrink-0" />
-      <FormattedMessage
-        id="EVENT_MENU_ALLOCATION.SYNC_RAW_MATERIAL"
-        defaultMessage="Sync Raw Material and Menu allocation"
-      />
-    </button>
+                <button
+                  className="btn btn-sm bg-white border border-red-700 text-red-700 flex items-center gap-1.5"
+                  onClick={handleDeleteSyncWithPasswordCheck}
+                  disabled={isSyncing}
+                >
+                  <AlertTriangle size={18} className="text-red-700 shrink-0" />
+                  <FormattedMessage
+                    id="EVENT_MENU_ALLOCATION.SYNC_RAW_MATERIAL"
+                    defaultMessage="Sync Raw Material and Menu allocation"
+                  />
+                </button>
 
-    {/* {canAccessAccounting && (
+                {/* {canAccessAccounting && (
       <button
         className="btn btn-sm btn-success"
         onClick={() => setAllVendor(true)}
@@ -4023,23 +4021,23 @@ const handleExcelReport = async () => {
         />
       </button>
     )} */}
-  </div>
-{canAccessGuestSignature && (
- <button
-  className="btn btn-sm text-white"
-  style={{ backgroundColor: "green" }}
-  onClick={() => setIsGuestSignModalOpen(true)}
-  disabled={loading || tableLoading || menuLoading || !activeFunction}
->
-  <i className="ki-filled ki-pencil text-sm "></i>
-  <FormattedMessage
-    id="EVENT_MENU_ALLOCATION.GET_SIGNATURE"
-    defaultMessage="Guest Signature"
-  />
-</button>
-)}
-</div>
- 
+              </div>
+              {canAccessGuestSignature && (
+                <button
+                  className="btn btn-sm text-white"
+                  style={{ backgroundColor: "green" }}
+                  onClick={() => setIsGuestSignModalOpen(true)}
+                  disabled={loading || tableLoading || menuLoading || !activeFunction}
+                >
+                  <i className="ki-filled ki-pencil text-sm "></i>
+                  <FormattedMessage
+                    id="EVENT_MENU_ALLOCATION.GET_SIGNATURE"
+                    defaultMessage="Guest Signature"
+                  />
+                </button>
+              )}
+            </div>
+
           </div>
         </div>
 
@@ -4116,25 +4114,25 @@ const handleExcelReport = async () => {
                         />
                       </button>
                     </Tooltip>
-{canSeeRateColumns() && (
-  <Tooltip title="Download the event menu allocation as an Excel file.">
-    <button
-      className="btn btn-sm btn-primary"
-      title="Excel"
-      onClick={handleExcelReport}
-      disabled={excelLoading || loading || tableLoading || menuLoading}
-    >
-      {excelLoading ? (
-        <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-      ) : (
-        <FormattedMessage
-          id="EVENT_MENU_ALLOCATION.EXCEL_REPORT"
-          defaultMessage="Excel Report"
-        />
-      )}
-    </button>
-  </Tooltip>
-)}
+                    {canSeeRateColumns() && (
+                      <Tooltip title="Download the event menu allocation as an Excel file.">
+                        <button
+                          className="btn btn-sm btn-primary"
+                          title="Excel"
+                          onClick={handleExcelReport}
+                          disabled={excelLoading || loading || tableLoading || menuLoading}
+                        >
+                          {excelLoading ? (
+                            <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                          ) : (
+                            <FormattedMessage
+                              id="EVENT_MENU_ALLOCATION.EXCEL_REPORT"
+                              defaultMessage="Excel Report"
+                            />
+                          )}
+                        </button>
+                      </Tooltip>
+                    )}
 
                   </div>
 
@@ -4252,49 +4250,49 @@ const handleExcelReport = async () => {
               </div>
             </div>
 
-           <div
-  className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-auto"
-style={{ maxHeight: "calc(100vh - 260px)", minHeight: 300 }}>
-   <div style={{ minWidth: "max-content" }}>
-              <TableHeader
-                onChefCheckAll={handleChefCheckAll}
-                onOutsourceCheckAll={handleOutsourceCheckAll}
-                onInsideCheckAll={handleInsideCheckAll}
-                allChefChecked={allChefChecked}
-                allOutsourceChecked={allOutsourceChecked}
-                allInsideChecked={allInsideChecked}
-              />
+            <div
+              className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-auto"
+              style={{ maxHeight: "calc(100vh - 260px)", minHeight: 300 }}>
+              <div style={{ minWidth: "max-content" }}>
+                <TableHeader
+                  onChefCheckAll={handleChefCheckAll}
+                  onOutsourceCheckAll={handleOutsourceCheckAll}
+                  onInsideCheckAll={handleInsideCheckAll}
+                  allChefChecked={allChefChecked}
+                  allOutsourceChecked={allOutsourceChecked}
+                  allInsideChecked={allInsideChecked}
+                />
 
-              {tableLoading ? (
-                <div className="flex items-center justify-center p-8">
-                  <Spin />
-                </div>
-              ) : (
-                (() => {
-                  const currentFunctionRows = filtered.filter(
-                    (row) =>
-                      row.eventFunctionId ===
-                      getEventFunctionId(activeFunction),
-                  );
+                {tableLoading ? (
+                  <div className="flex items-center justify-center p-8">
+                    <Spin />
+                  </div>
+                ) : (
+                  (() => {
+                    const currentFunctionRows = filtered.filter(
+                      (row) =>
+                        row.eventFunctionId ===
+                        getEventFunctionId(activeFunction),
+                    );
 
-                  return currentFunctionRows.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500">
-                      No menu items available for this function
-                    </div>
-                  ) : (
-                    currentFunctionRows.map((row, index) => (
-                     <TableRow
-  key={`${row.menuItemId}-${row.menuCategoryId}-${index}`}
-  row={row}
-  onChange={updateRow}
-  placeOptions={placeOptions}
-  unitOptions={unitOptions}
-/>
-                    ))
-                  );
-                })()
-              )}
-            </div>
+                    return currentFunctionRows.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500">
+                        No menu items available for this function
+                      </div>
+                    ) : (
+                      currentFunctionRows.map((row, index) => (
+                        <TableRow
+                          key={`${row.menuItemId}-${row.menuCategoryId}-${index}`}
+                          row={row}
+                          onChange={updateRow}
+                          placeOptions={placeOptions}
+                          unitOptions={unitOptions}
+                        />
+                      ))
+                    );
+                  })()
+                )}
+              </div>
             </div>
           </div>
 
@@ -4302,18 +4300,18 @@ style={{ maxHeight: "calc(100vh - 260px)", minHeight: 300 }}>
             <div className="sticky bg-white " style={{ top: "70px" }}>
               <div className="max-h-[calc(100vh-100px)] overflow-y-auto no-scrollbar">
                 <OrderSummary
-  groups={orderSummaryGroups}
-  loading={menuLoading}
-  onItemClick={handleOrderSummaryItemClick}
-  pax={totalPax}
-  groupedByFunction={null}
-  rows={rows}
-  eventId={eventId}
-  activeEventFunctionId={getEventFunctionId(activeFunction)}
-  onSyncSuccess={(fnId) =>
-    fetchMenuAllocation(fnId || getEventFunctionId(activeFunction))
-  }
-/>
+                  groups={orderSummaryGroups}
+                  loading={menuLoading}
+                  onItemClick={handleOrderSummaryItemClick}
+                  pax={totalPax}
+                  groupedByFunction={null}
+                  rows={rows}
+                  eventId={eventId}
+                  activeEventFunctionId={getEventFunctionId(activeFunction)}
+                  onSyncSuccess={(fnId) =>
+                    fetchMenuAllocation(fnId || getEventFunctionId(activeFunction))
+                  }
+                />
               </div>
             </div>
           </div>
@@ -4322,24 +4320,24 @@ style={{ maxHeight: "calc(100vh - 260px)", minHeight: 300 }}>
         <div className="  ">
           <div className="flex justify-end p-4">
             <button
-  className="btn btn-primary px-6 py-2"
-  onClick={handleMainSave}
-  disabled={
-    isSaving ||
-    isSubmittingRef.current ||
-    saveCooldown ||
-    loading ||
-    tableLoading ||
-    menuLoading ||
-    !activeFunction
-  }
->
-  {isSaving ? (
-    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-  ) : (
-    <FormattedMessage id="COMMON.SAVE" defaultMessage="Save" />
-  )}
-</button>
+              className="btn btn-primary px-6 py-2"
+              onClick={handleMainSave}
+              disabled={
+                isSaving ||
+                isSubmittingRef.current ||
+                saveCooldown ||
+                loading ||
+                tableLoading ||
+                menuLoading ||
+                !activeFunction
+              }
+            >
+              {isSaving ? (
+                <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              ) : (
+                <FormattedMessage id="COMMON.SAVE" defaultMessage="Save" />
+              )}
+            </button>
           </div>
         </div>
 
@@ -4389,7 +4387,7 @@ style={{ maxHeight: "calc(100vh - 260px)", minHeight: 300 }}>
           onSave={handleCategorySave}
           allocationType={selectedRow?.allocationType}
           eventDate={eventData?.eventStartDateTime}
-          pax={activeFunction?.pax || 0} 
+          pax={activeFunction?.pax || 0}
         />
         <WhatsappSidebarMenu
           open={iswhatsAppSidebar}
@@ -4423,37 +4421,37 @@ style={{ maxHeight: "calc(100vh - 260px)", minHeight: 300 }}>
           mode={mode}
         />
         <SummaryItemModalchefoutside
-  open={isModalOpen}
-  onClose={() => setIsModalOpen(false)}
-  chefsummary={chefsummary}
-  eventFunctionId={getEventFunctionId(activeFunction)}
-  eventId={eventId}
-  type={"chef"}
-  eventFunctionsFromParent={eventData?.eventFunctions || []}
-  eventVenueName={
-    getVenueDisplay(eventData) !== "-" ? getVenueDisplay(eventData) : ""
-  }
-  mealType={eventData?.mealType}
-  mealNotes={eventData?.meal_notes}
-  mealNotesHindi={eventData?.meal_notes_hindi}
-  mealNotesGujarati={eventData?.meal_notes_gujarati}
-/>
-<SummaryItemModalOutsideAgency
-  open={isOutsideAgencyModalOpen}
-  onClose={() => setIsOutsideAgencyModalOpen(false)}
-  outsidesummary={outsidesummary}
-  eventFunctionId={getEventFunctionId(activeFunction)}
-  eventId={eventId}
-  type={"outside"}
-  eventFunctionsFromParent={eventData?.eventFunctions || []}
-   eventVenueName={
-    getVenueDisplay(eventData) !== "-" ? getVenueDisplay(eventData) : ""
-  }
-  mealType={eventData?.mealType}
-  mealNotes={eventData?.meal_notes}
-  mealNotesHindi={eventData?.meal_notes_hindi}
-  mealNotesGujarati={eventData?.meal_notes_gujarati}
-/>
+          open={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          chefsummary={chefsummary}
+          eventFunctionId={getEventFunctionId(activeFunction)}
+          eventId={eventId}
+          type={"chef"}
+          eventFunctionsFromParent={eventData?.eventFunctions || []}
+          eventVenueName={
+            getVenueDisplay(eventData) !== "-" ? getVenueDisplay(eventData) : ""
+          }
+          mealType={eventData?.mealType}
+          mealNotes={eventData?.meal_notes}
+          mealNotesHindi={eventData?.meal_notes_hindi}
+          mealNotesGujarati={eventData?.meal_notes_gujarati}
+        />
+        <SummaryItemModalOutsideAgency
+          open={isOutsideAgencyModalOpen}
+          onClose={() => setIsOutsideAgencyModalOpen(false)}
+          outsidesummary={outsidesummary}
+          eventFunctionId={getEventFunctionId(activeFunction)}
+          eventId={eventId}
+          type={"outside"}
+          eventFunctionsFromParent={eventData?.eventFunctions || []}
+          eventVenueName={
+            getVenueDisplay(eventData) !== "-" ? getVenueDisplay(eventData) : ""
+          }
+          mealType={eventData?.mealType}
+          mealNotes={eventData?.meal_notes}
+          mealNotesHindi={eventData?.meal_notes_hindi}
+          mealNotesGujarati={eventData?.meal_notes_gujarati}
+        />
         <SummaryItemModalInHousecook
           open={isInHouseCookModalOpen}
           onClose={() => setIsInHouseCookModalOpen(false)}
@@ -4487,29 +4485,29 @@ style={{ maxHeight: "calc(100vh - 260px)", minHeight: 300 }}>
           onEventSelect={handleEventSelect}
         />
         <GuestSignModal
-  open={isGuestSignModalOpen}
-  onClose={() => setIsGuestSignModalOpen(false)}
-  saving={guestSignSaving}
-  eventId={eventId}
-  eventFunctionId={getEventFunctionId(activeFunction)}
-  eventFunctions={eventData?.eventFunctions || []}
-  onSave={async (payload) => {
-    setGuestSignSaving(true);
-    try {
-      console.log("Guest sign rows to save:", payload);
-      setIsGuestSignModalOpen(false);
-    } catch (err) {
-      console.error("Failed to save guest signature particulars:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Failed to save guest signature details.",
-      });
-    } finally {
-      setGuestSignSaving(false);
-    }
-  }}
-/>
+          open={isGuestSignModalOpen}
+          onClose={() => setIsGuestSignModalOpen(false)}
+          saving={guestSignSaving}
+          eventId={eventId}
+          eventFunctionId={getEventFunctionId(activeFunction)}
+          eventFunctions={eventData?.eventFunctions || []}
+          onSave={async (payload) => {
+            setGuestSignSaving(true);
+            try {
+              console.log("Guest sign rows to save:", payload);
+              setIsGuestSignModalOpen(false);
+            } catch (err) {
+              console.error("Failed to save guest signature particulars:", err);
+              Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Failed to save guest signature details.",
+              });
+            } finally {
+              setGuestSignSaving(false);
+            }
+          }}
+        />
       </Container>
       {isSaving && (
         <div

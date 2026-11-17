@@ -719,50 +719,50 @@ const legendItems = [
            extraFilters={
   <Fragment>
     {/* Venue filter */}
-    <Select
-      showSearch
-      allowClear
-      style={{ width: 190 }}
-      popupMatchSelectWidth={false}   // dropdown grows for long names, the box stays 190px
-      placeholder="Select Venue"
-      optionFilterProp="label"
-      disabled={loadingEvents}
-      value={selectedVenue === 0 ? undefined : selectedVenue}
-      onChange={(val) => {
-        const v = val ?? 0;            // clearing goes back to "nothing selected"
-        setSelectedVenue(v);
-        if (v !== -1) setSelectedBanquet(-1);
-      }}
-      options={[
-        { value: -1, label: "All Venues" },
-        ...venueList.map((v) => ({
-          value: v.id,
-          label: getLocalizedText(v, "name") || v.nameEnglish || v.name,
-        })),
-      ]}
-    />
+   <Select
+  showSearch
+  allowClear
+  style={{ width: 190 }}
+  popupMatchSelectWidth={false}
+  placeholder="Select Venue"
+  optionFilterProp="label"
+  disabled={loadingEvents}
+  value={selectedVenue === 0 ? undefined : selectedVenue} // 0 = cleared -> show placeholder
+  onChange={(val) => {
+    const v = val ?? 0; // cleared -> 0
+    setSelectedVenue(v);
+    if (v > 0) setSelectedBanquet(-1); // reset banquet only when a real venue is picked
+  }}
+  options={[
+    { value: -1, label: "All Venues" },
+    ...venueList.map((v) => ({
+      value: v.id,
+      label: getLocalizedText(v, "name") || v.nameEnglish || v.name,
+    })),
+  ]}
+/>
 
     {/* Banquet filter (only with Banquet module) */}
     {canAccessBanquet && (
-      <Select
-        showSearch
-        allowClear
-        style={{ width: 190 }}
-        popupMatchSelectWidth={false}
-        placeholder="Select Banquet"
-        optionFilterProp="label"
-        disabled={loadingEvents}
-        value={selectedBanquet === 0 ? undefined : selectedBanquet}
-        onChange={(val) => {
-          const v = val ?? 0;
-          setSelectedBanquet(v);
-          if (v !== -1) setSelectedVenue(-1);
-        }}
-       options={[
-  { value: -1, label: "All Banquets" },
-  ...visibleBanquets.map((b) => ({ value: b.id, label: b.hallName })),
-]}  
-      />
+   <Select
+  showSearch
+  allowClear
+  style={{ width: 190 }}
+  popupMatchSelectWidth={false}
+  placeholder="Select Banquet"
+  optionFilterProp="label"
+  disabled={loadingEvents}
+  value={selectedBanquet === 0 ? undefined : selectedBanquet}
+  onChange={(val) => {
+    const b = val ?? 0; // cleared -> 0
+    setSelectedBanquet(b);
+    if (b > 0) setSelectedVenue(-1); // reset venue only when a real banquet is picked
+  }}
+  options={[
+    { value: -1, label: "All Banquets" },
+    ...visibleBanquets.map((b) => ({ value: b.id, label: b.hallName })),
+  ]}
+/>
     )}
   </Fragment>
 }

@@ -430,6 +430,7 @@ export const allMenuItems = (navigate) => {
       icon: "  text-lg ki-filled ki-home-2 text-primary",
       pageName: "Banquet",
       moduleName: "Banquet",
+      
       children: [
         {
           title: (
@@ -440,7 +441,7 @@ export const allMenuItems = (navigate) => {
           ),
           path: "/master/banquet-master",
           pageName: "Banquet Master",
-          moduleName: "Banquet",
+          // moduleName: "Banquet",
         },
         {
           title: (
@@ -451,7 +452,7 @@ export const allMenuItems = (navigate) => {
           ),
           path: "/master/banquet-shift",
           pageName: "Banquet Shift",
-          moduleName: "Banquet",
+          // moduleName: "Banquet",
         },
         {
           title: (
@@ -462,7 +463,7 @@ export const allMenuItems = (navigate) => {
           ),
           path: "/event-remark",
           pageName: "Event Remarks",
-          moduleName: "Banquet",
+          // moduleName: "Banquet",
         },
         {
           title: (
@@ -473,7 +474,7 @@ export const allMenuItems = (navigate) => {
           ),
           path: "/master/room",
           pageName: "Room",
-          moduleName: "Banquet",
+          // moduleName: "Banquet",
         },
         {
           title: (
@@ -484,7 +485,7 @@ export const allMenuItems = (navigate) => {
           ),
           path: "/hallpackagerate",
           pageName: "Hall Package Rate",
-          moduleName: "Banquet",
+          // moduleName: "Banquet",
         },
       ],
     },
@@ -944,7 +945,18 @@ export const allMenuItems = (navigate) => {
       path: "#",
       pageName: "CRM",
       moduleName: "CRM",
-      alwaysVisible: true,
+      rightsKeys: [
+        "Crm Dashboard",
+        "Crm Add Lead",
+        "Crm All Leads",
+        "Crm Department",
+        "Crm Event Type",
+        "Crm Lead Sources",
+        "Crm Lead Status",
+        "Crm Report",
+        "Crm User Master",
+        "CrmLeads",
+      ],
     },
 
     {
@@ -968,7 +980,7 @@ export const allMenuItems = (navigate) => {
       path: "#",
       pageName: "POS",
       moduleName: "POS",
-      alwaysVisible: true,
+     
     },
     {
       title: (
