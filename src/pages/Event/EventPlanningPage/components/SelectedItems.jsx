@@ -444,6 +444,7 @@ const ItemRow = ({
     itemStatus = "NORMAL",
      onVendorSave = () => {},
      isOverLimit = false, 
+       renamedName = "",  
 }) => {
 
   const isDeleted = itemStatus === "CANCELLED"; // ← locked state
@@ -618,8 +619,15 @@ className={`relative p-2 rounded-lg transition-shadow ${
         : "text-gray-900"
 }`}
                 >
-                  {sequenceNumber}. {displayItemName}
+ {sequenceNumber}. {displayItemName}
                 </span>
+                 
+
+                {renamedName && renamedName !== displayItemName && (
+                  <span className="text-[11px] text-gray-500 mt-0.5">
+                    Rename: <span className="font-semibold text-primary">{renamedName}</span>
+                  </span>
+                )}
 
                 {/* Badges — wrap freely on their own line, never push the name around */}
                 {(isItemAddons || item.itemSpace > 0 || subItem || item.itemHeading || isDeleted || item.vendorName) && (
@@ -1840,7 +1848,8 @@ const subLangKey = { en: "english", hi: "hindi", gu: "gujarati" }[currentLanguag
 
 const catSubText = data.categorySubTexts?.[catName]?.[subLangKey] || "";
 const catHeadingText = data.categoryHeadings?.[catName]?.[subLangKey] || "";
-
+const catRenamedName = (data.categoryRenames?.[catName]?.[subLangKey] || "").trim();
+const hasCatRename = !!catRenamedName && catRenamedName !== displayCategoryName;
 const catSpace = data.categorySpaces?.[catName] || 0;
 const catStatus = items[0]?.categoryStatus || "NORMAL";  
 const highlightCat =
@@ -2095,6 +2104,11 @@ return (
                                       dangerouslySetInnerHTML={{ __html: catHeadingText }}
                                     />
                                   )}
+                                   {hasCatRename && (
+                                  <span className="block text-[11px] text-gray-500 ">
+                                    Rename: <span className="font-semibold text-primary">{catRenamedName}</span>
+                                  </span>
+                                )}
                                 </p>
                               </div>
 
@@ -2149,6 +2163,11 @@ return (
                                            onSelectPrimaryItem={onSelectPrimaryItem}
                                            onRenameItemSave={onRenameItemSave}
                                            renameValue={data.itemRenames?.[item.id]}
+                                           renamedName={(
+  data.itemRenames?.[item.id]?.[subLangKey] ||
+  item.nicknames?.[subLangKey] ||
+  ""
+).trim()}
                                              mode={mode}
                                           rowRef={(el) => {
                                             itemRowRefs.current[

@@ -39,7 +39,7 @@ const CreateCashRecipet = ({ isOpen, onClose, onSaveSuccess, editData }) => {
   const [isPurchase, setIsPurchase] = useState(false);
   const [isCashAccounts, setIsCashAccounts] = useState([]);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
-const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
+  const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     accountname: "",
     cashId: "",
@@ -330,8 +330,8 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
       const formatDate = (date) =>
         date
           ? `${String(date.getDate()).padStart(2, "0")}/${String(
-              date.getMonth() + 1,
-            ).padStart(2, "0")}/${date.getFullYear()}`
+            date.getMonth() + 1,
+          ).padStart(2, "0")}/${date.getFullYear()}`
           : "";
 
       if (editData) {
@@ -361,7 +361,11 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
             ? 0
             : Number(firstRow?.settlementAmount) || 0,
           userId: Number(userId),
-          vendorCat: formData.vendorCat,
+          vendorCat:
+            formData.vendorCat ||
+            editData.vendorCat ||
+            accountData.find((a) => String(a.partyId) === String(formData.partyId))?.type ||
+            "",
           vendorId: Number(formData.partyId) || 0,
         };
 
@@ -383,8 +387,8 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
               `Mode: ${formData.paymentMode} | ` +
               `Date: ${formatDate(formData.paymentDate)}`,
             eventType: "Update",
-            id:  0,
-            eventId:0,
+            id: 0,
+            eventId: 0,
             user: getUserEmail(),
           }).catch((err) => console.error("Failed to save log:", err));
           onClose();
@@ -418,21 +422,21 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
           totalSettlementAmount: isPurchase
             ? 0
             : eventRows.reduce(
-                (sum, row) => sum + (Number(row.settlementAmount) || 0),
-                0,
-              ),
+              (sum, row) => sum + (Number(row.settlementAmount) || 0),
+              0,
+            ),
           userId: Number(userId),
           vendorCat: formData.vendorCat,
           vendorEventsPayment: isPurchase
             ? []
             : eventRows
-                .filter((row) => Number(row.eventname) > 0)
-                .map((row) => ({
-                  eventId: Number(row.eventname) || null,
-                  payAmount: 0,
-                  receivedAmount: Number(row.payAmount) || 0,
-                  settlementAmount: Number(row.settlementAmount) || 0,
-                })),
+              .filter((row) => Number(row.eventname) > 0)
+              .map((row) => ({
+                eventId: Number(row.eventname) || null,
+                payAmount: 0,
+                receivedAmount: Number(row.payAmount) || 0,
+                settlementAmount: Number(row.settlementAmount) || 0,
+              })),
           vendorId: Number(formData.partyId) || 0,
         };
 
@@ -454,8 +458,8 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
               `Mode: ${formData.paymentMode} | ` +
               `Date: ${formatDate(formData.paymentDate)}`,
             eventType: "Create",
-            id:  0,
-            eventId:0,
+            id: 0,
+            eventId: 0,
             user: getUserEmail(),
           }).catch((err) => console.error("Failed to save log:", err));
           onClose();
@@ -516,32 +520,32 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
             >
               {/* Header */}
               <div className="flex items-center gap-3 px-4 sm:px-8 py-4 sm:py-6 border-b border-gray-200 justify-between">
-  <div className="flex items-center gap-3">
-    <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-      <Wallet className="w-6 h-6 text-white" />
-    </div>
-    <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-      {editData ? "Edit Payment" : "Payment"}
-    </h2>
-  </div>
-  <div className="flex items-center gap-2">
-    <button
-      type="button"
-      onClick={() => setIsAccountMasterModalOpen(true)}
-      className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-    >
-      <UserPlus className="w-4 h-4" />
-      Add Account Contact
-    </button>
-    <input
-      type="text"
-      placeholder="Voucher No"
-      value={formData.voucherNo}
-      disabled
-      className="w-36 px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-    />
-  </div>
-</div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Wallet className="w-6 h-6 text-white" />
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                    {editData ? "Edit Payment" : "Payment"}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsAccountMasterModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Add Account Contact
+                  </button>
+                  <input
+                    type="text"
+                    placeholder="Voucher No"
+                    value={formData.voucherNo}
+                    disabled
+                    className="w-36 px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
 
               {/* Content */}
               <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 sm:py-6">
@@ -549,46 +553,46 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
                   {/* Row 1 — Account Name, Date */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div>
-  <label className="block text-sm font-medium text-gray-700 mb-2">
-    Account Name <RequiredStar />
-  </label>
-  <div className="flex items-center gap-2">
-    <Select
-      showSearch
-      placeholder="Select Account"
-      value={
-        formData.partyId
-          ? Number(formData.partyId)
-          : undefined
-      }
-      onChange={handleAccountSelect}
-      filterOption={(input, option) =>
-        option?.label
-          ?.toLowerCase()
-          .includes(input.toLowerCase())
-      }
-      options={[
-        ...new Map(
-          accountData.map((acc) => [acc.partyId, acc]),
-        ).values(),
-      ].map((account) => ({
-        value: account.partyId,
-        label: account.partyName,
-      }))}
-      style={{ width: "100%" }}
-      status={errors.partyId ? "error" : ""}
-    />
-    <button
-      type="button"
-      onClick={() => setIsVendorModalOpen(true)}
-      className="flex-shrink-0 w-[38px] h-[38px] flex items-center justify-center rounded-lg bg-primary text-white hover:opacity-90 transition-opacity"
-      title="Add Vendor"
-    >
-      <Plus className="w-4 h-4" />
-    </button>
-  </div>
-  <ErrorMsg field="partyId" />
-</div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Account Name <RequiredStar />
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          showSearch
+                          placeholder="Select Account"
+                          value={
+                            formData.partyId
+                              ? Number(formData.partyId)
+                              : undefined
+                          }
+                          onChange={handleAccountSelect}
+                          filterOption={(input, option) =>
+                            option?.label
+                              ?.toLowerCase()
+                              .includes(input.toLowerCase())
+                          }
+                          options={[
+                            ...new Map(
+                              accountData.map((acc) => [acc.partyId, acc]),
+                            ).values(),
+                          ].map((account) => ({
+                            value: account.partyId,
+                            label: account.partyName,
+                          }))}
+                          style={{ width: "100%" }}
+                          status={errors.partyId ? "error" : ""}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setIsVendorModalOpen(true)}
+                          className="flex-shrink-0 w-[38px] h-[38px] flex items-center justify-center rounded-lg bg-primary text-white hover:opacity-90 transition-opacity"
+                          title="Add Vendor"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <ErrorMsg field="partyId" />
+                    </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -606,11 +610,10 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
                         }}
                         dateFormat="dd/MM/yyyy"
                         placeholderText="Select date"
-                        className={`w-full px-4 py-2.5 border rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                          errors.paymentDate
+                        className={`w-full px-4 py-2.5 border rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.paymentDate
                             ? "border-red-400"
                             : "border-gray-300"
-                        }`}
+                          }`}
                         wrapperClassName="w-full"
                       />
                       <ErrorMsg field="paymentDate" />
@@ -641,11 +644,10 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
                                 cashId: undefined,
                               }));
                           }}
-                          className={`w-full px-4 py-2.5 pr-10 border rounded-lg text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${
-                            errors.paymentMode
+                          className={`w-full px-4 py-2.5 pr-10 border rounded-lg text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${errors.paymentMode
                               ? "border-red-400"
                               : "border-gray-300"
-                          }`}
+                            }`}
                         >
                           <option value="">Select Mode</option>
                           <option>Bank Transfer</option>
@@ -676,11 +678,10 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
                                   depositTo: undefined,
                                 }));
                             }}
-                            className={`w-full px-4 py-2.5 pr-10 border rounded-lg text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${
-                              errors.depositTo
+                            className={`w-full px-4 py-2.5 pr-10 border rounded-lg text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${errors.depositTo
                                 ? "border-red-400"
                                 : "border-gray-300"
-                            }`}
+                              }`}
                           >
                             <option value="">Select Bank</option>
                             {isBank.map((bank) => (
@@ -712,11 +713,10 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
                                   cashId: undefined,
                                 }));
                             }}
-                            className={`w-full px-4 py-2.5 pr-10 border rounded-lg text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${
-                              errors.cashId
+                            className={`w-full px-4 py-2.5 pr-10 border rounded-lg text-sm text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${errors.cashId
                                 ? "border-red-400"
                                 : "border-gray-300"
-                            }`}
+                              }`}
                           >
                             <option value="">Select Cash Account</option>
                             {isCashAccounts.map((cash) => (
@@ -784,11 +784,10 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
                             }));
                         }}
                         placeholder="Sum of event pay amounts"
-                        className={`w-full px-4 py-2.5 border rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                          errors.totalPayAmount
+                        className={`w-full px-4 py-2.5 border rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.totalPayAmount
                             ? "border-red-400"
                             : "border-gray-300"
-                        }`}
+                          }`}
                       />
                       <ErrorMsg field="totalPayAmount" />
                     </div>
@@ -820,14 +819,12 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
                       <button
                         type="button"
                         onClick={() => setIsOpb((prev) => !prev)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${
-                          isOpb ? "bg-blue-600" : "bg-gray-300"
-                        }`}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none ${isOpb ? "bg-blue-600" : "bg-gray-300"
+                          }`}
                       >
                         <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                            isOpb ? "translate-x-6" : "translate-x-1"
-                          }`}
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${isOpb ? "translate-x-6" : "translate-x-1"
+                            }`}
                         />
                       </button>
                     </div>
@@ -1043,7 +1040,7 @@ const [isAccountMasterModalOpen, setIsAccountMasterModalOpen] = useState(false);
       )}
 
 
-       <AddVendor
+      <AddVendor
         isModalOpen={isVendorModalOpen}
         setIsModalOpen={setIsVendorModalOpen}
         selectedCustomer={null}

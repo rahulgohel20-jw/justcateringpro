@@ -21,18 +21,16 @@ const Toggle = ({ checked, onChange, label }) => (
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        checked ? "bg-primary" : "bg-gray-300"
-      }`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? "bg-primary" : "bg-gray-300"
+        }`}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? "translate-x-6" : "translate-x-1"
-        }`}
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? "translate-x-6" : "translate-x-1"
+          }`}
       />
     </button>
   </div>
-);  
+);
 
 const ExportPdfModal = ({ isOpen, onClose }) => {
   const [isCompanyDetails, setIsCompanyDetails] = useState(true);
@@ -135,21 +133,21 @@ const CashRecipet = () => {
     setEditData(rowData);
     setIsModalOpen(true);
   };
- const filteredData = tableData.filter((row) => {
-  const term = searchTerm.toLowerCase().trim();
-  if (!term) return true;
+  const filteredData = tableData.filter((row) => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
 
-  const accountMatch = (row.accountname || "")
-    .toLowerCase()
-    .includes(term);
+    const accountMatch = (row.accountname || "")
+      .toLowerCase()
+      .includes(term);
 
-  const amountMatch = (row.total ?? "")
-    .toString()
-    .toLowerCase()
-    .includes(term);
+    const amountMatch = (row.total ?? "")
+      .toString()
+      .toLowerCase()
+      .includes(term);
 
-  return accountMatch || amountMatch;
-});
+    return accountMatch || amountMatch;
+  });
 
   const handleDelete = useCallback(async (paymentId) => {
     const result = await Swal.fire({
@@ -194,7 +192,7 @@ const CashRecipet = () => {
       header: "Action",
       cell: ({ row }) => (
         <div className="flex gap-1">
-         
+
           {permissions.edit && (
             <Tooltip title="Edit">
               <button
@@ -236,28 +234,28 @@ const CashRecipet = () => {
       const userId = localStorage.getItem("userId");
       const res = await Getpaymentvendordata(-1, false, userId, -1);
       const payments = res.data.data.payments;
-
+      console.log("receipt item", payments[0]);
       const data = payments
-      .sort((a, b) => b.id - a.id)
-      .map((item, index) => ({
-        srNo: index + 1,
-        paymentId: item.id,
-        bankId: item.bankId,
-        bankname: item.bankName,
-        cashId: item.cashId,
-        cashName: item.cashName,
-        voucherdate: item.date,
-        voucherno: item.invoiceCode,
-        total: item.receivedAmount,
-        modeofpayment: item.payMode,
-        settlementAmount: item.settlementAmount,
-        accountname: item.vendorName,
-        vendorId: item.vendorId,
-        eventId: item.eventId,
-        referenceId: item.referenceId,
-        remarks: item.remarks,
-        vendorCat: item.vendorCat,
-      }));
+        .sort((a, b) => b.id - a.id)
+        .map((item, index) => ({
+          srNo: index + 1,
+          paymentId: item.id,
+          bankId: item.bankId,
+          bankname: item.bankName,
+          cashId: item.cashId,
+          cashName: item.cashName,
+          voucherdate: item.date,
+          voucherno: item.invoiceCode,
+          total: item.receivedAmount,
+          modeofpayment: item.payMode,
+          settlementAmount: item.settlementAmount,
+          accountname: item.vendorName,
+          vendorId: item.vendorId,
+          eventId: item.eventId,
+          referenceId: item.referenceId,
+          remarks: item.remarks,
+          vendorCat: item.vendorCat ?? item.vendorCategory ?? item.type ?? "",
+        }));
 
       setTableData(data);
     } catch (err) {
@@ -273,54 +271,54 @@ const CashRecipet = () => {
     <Fragment>
       <Container>
         <div className="gap-2 mb-3">
-<h1 className="text-3xl font-bold text-[#111827]">
-  <FormattedMessage
-    id="COMMON.RECEIPTS"
-    defaultMessage="Receipts"
-  />
-</h1>        </div>
+          <h1 className="text-3xl font-bold text-[#111827]">
+            <FormattedMessage
+              id="COMMON.RECEIPTS"
+              defaultMessage="Receipts"
+            />
+          </h1>        </div>
 
         <div className="flex flex-wrap items-center gap-2 justify-between mb-4">
           <div className="filItems relative">
             <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
-            <input className="input pl-8" placeholder="Search" type="text"    
-            value={searchTerm}                              
-              onChange={(e) => setSearchTerm(e.target.value)}  />
+            <input className="input pl-8" placeholder="Search" type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-    <div className="flex items-center gap-3">
-  {permissions.add && (
-    <>
-<button
-  className="btn btn-danger"
-  onClick={() => setIsExportModalOpen(true)}
-  title="Export PDF"
->
-  <i className="ki-filled ki-file-down me-1"></i>
-  <FormattedMessage
-    id="COMMON.EXPORT_PDF"
-    defaultMessage="Export PDF"
-  />
-</button>
+          <div className="flex items-center gap-3">
+            {permissions.add && (
+              <>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => setIsExportModalOpen(true)}
+                  title="Export PDF"
+                >
+                  <i className="ki-filled ki-file-down me-1"></i>
+                  <FormattedMessage
+                    id="COMMON.EXPORT_PDF"
+                    defaultMessage="Export PDF"
+                  />
+                </button>
 
-     <button
-  className="btn btn-primary"
-  onClick={() => handleModalOpen(null)}
-  title="Create"
->
-  <i className="ki-filled ki-plus me-1"></i>
-  <FormattedMessage
-    id="COMMON.CREATE"
-    defaultMessage="Create"
-  />
-</button>
-    </>
-  )}
-</div>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => handleModalOpen(null)}
+                  title="Create"
+                >
+                  <i className="ki-filled ki-plus me-1"></i>
+                  <FormattedMessage
+                    id="COMMON.CREATE"
+                    defaultMessage="Create"
+                  />
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         <TableComponent
           columns={tableColumns}
-data={filteredData} 
+          data={filteredData}
           paginationSize={10}
         />
       </Container>
@@ -334,7 +332,7 @@ data={filteredData}
         onSaveSuccess={fetchPayment}
         editData={editData}
       />
-       <ExportPdfModal
+      <ExportPdfModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
       />

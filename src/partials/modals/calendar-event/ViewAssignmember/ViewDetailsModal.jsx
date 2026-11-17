@@ -8,22 +8,23 @@ import ViewAllTask from "./Viewalltask";
 import AddTask from "../../../../partials/modals/add-task/AddTask";
 import Swal from "sweetalert2";
 import { usePermission } from "../../../../hooks/usePermission";
+import { buildVendorFormData } from "@/utils/buildVendorFormData";
 
 // ─── Constants ────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
-  PENDING:   { bg: "bg-slate-100",  text: "text-slate-600",  dot: "bg-slate-400"  },
-  RUNNING:   { bg: "bg-amber-50",   text: "text-amber-600",  dot: "bg-amber-400"  },
-  CONFIRMED: { bg: "bg-green-50", text: "text-green-600",dot: "bg-green-500" },
-  DONE:      { bg: "bg-blue-50",    text: "text-primary",   dot: "bg-blue-500"   },
-  COMPLETED: { bg: "bg-green-50",    text: "text-green",   dot: "bg-green-500"   },
+  PENDING: { bg: "bg-slate-100", text: "text-slate-600", dot: "bg-slate-400" },
+  RUNNING: { bg: "bg-amber-50", text: "text-amber-600", dot: "bg-amber-400" },
+  CONFIRMED: { bg: "bg-green-50", text: "text-green-600", dot: "bg-green-500" },
+  DONE: { bg: "bg-blue-50", text: "text-primary", dot: "bg-blue-500" },
+  COMPLETED: { bg: "bg-green-50", text: "text-green", dot: "bg-green-500" },
 };
 
 const RESOURCE_COLORS = {
-  LABOUR:  { bg: "bg-violet-50",  text: "text-violet-600",  ring: "ring-violet-200" },
-  OUTSIDE: { bg: "bg-orange-50",  text: "text-orange-600",  ring: "ring-orange-200" },
-  CHEF:    { bg: "bg-blue-50",    text: "text-primary",    ring: "ring-blue-200"   },
-  INSIDE:  { bg: "bg-teal-50",    text: "text-teal-600",    ring: "ring-teal-200"   },
+  LABOUR: { bg: "bg-violet-50", text: "text-violet-600", ring: "ring-violet-200" },
+  OUTSIDE: { bg: "bg-orange-50", text: "text-orange-600", ring: "ring-orange-200" },
+  CHEF: { bg: "bg-blue-50", text: "text-primary", ring: "ring-blue-200" },
+  INSIDE: { bg: "bg-teal-50", text: "text-teal-600", ring: "ring-teal-200" },
 };
 
 const RESOURCE_TYPE_LABELS = {
@@ -73,11 +74,11 @@ const getNow24 = () => {
 };
 
 const formatDDMMYYYYWithTime = (d) => {
-  const day   = String(d.getDate()).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year  = d.getFullYear();
-  let hours   = d.getHours();
-  const mins  = String(d.getMinutes()).padStart(2, "0");
+  const year = d.getFullYear();
+  let hours = d.getHours();
+  const mins = String(d.getMinutes()).padStart(2, "0");
   const period = hours >= 12 ? "PM" : "AM";
   hours = hours % 12 || 12;
   return `${day}/${month}/${year} ${String(hours).padStart(2, "0")}:${mins} ${period}`;
@@ -103,21 +104,19 @@ const TaskRow = ({ task, isComplete, onToggle, onDelete, onRemarksChange, Assign
   const resColor = RESOURCE_COLORS[task.resourceType] ?? RESOURCE_COLORS.CHEF;
   return (
     <div
-      className={`rounded-xl border transition-all duration-200 ${
-        isComplete
-          ? "bg-green-50 border-green-200"
-          : "bg-white border-gray-100 hover:border-blue-200 hover:shadow-sm"
-      }`}
+      className={`rounded-xl border transition-all duration-200 ${isComplete
+        ? "bg-green-50 border-green-200"
+        : "bg-white border-gray-100 hover:border-blue-200 hover:shadow-sm"
+        }`}
     >
       <div className="flex items-start gap-3 px-3 py-3">
         {/* Checkbox circle */}
         <button
           onClick={() => onToggle(task.id)}
-          className={`w-5 h-5 mt-0.5 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-            isComplete
-              ? "bg-green-500 shadow-sm"
-              : "border-2 border-gray-300 hover:border-green-400 bg-white"
-          }`}
+          className={`w-5 h-5 mt-0.5 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${isComplete
+            ? "bg-green-500 shadow-sm"
+            : "border-2 border-gray-300 hover:border-green-400 bg-white"
+            }`}
           title={isComplete ? "Mark pending" : "Mark done"}
         >
           {isComplete && (
@@ -158,16 +157,16 @@ const TaskRow = ({ task, isComplete, onToggle, onDelete, onRemarksChange, Assign
 
         {/* Delete — frontend only */}
         {AssignManagerPermission.delete && (
-        <button
-          onClick={() => onDelete(task._uid ?? task.id, task.isCommonTask)}
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 flex-shrink-0 transition-colors mt-0.5"
-          title="Remove task"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
-          </svg>
-        </button>
+          <button
+            onClick={() => onDelete(task._uid ?? task.id, task.isCommonTask)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 flex-shrink-0 transition-colors mt-0.5"
+            title="Remove task"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+            </svg>
+          </button>
         )}
       </div>
     </div>
@@ -176,15 +175,17 @@ const TaskRow = ({ task, isComplete, onToggle, onDelete, onRemarksChange, Assign
 
 // ─── Main component ───────────────────────────────────────────────────────
 
-export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeUpdated }) {
+export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeUpdated, eventId, eventFunctionId }) {
   const data = order?.raw ?? order ?? {};
   const photos = Array.isArray(data.vendorImages) ? data.vendorImages : [];
+  const resolvedResourceType = (order?.resourceType || data.resourceType || "").toUpperCase();
+  const assignmentId = order?.rawId ?? data.rawId ?? (order?.raw ? data.id : -1);
 
   // ── Task state ──
-  const [predefinedTasks, setPredefinedTasks]         = useState([]);
+  const [predefinedTasks, setPredefinedTasks] = useState([]);
   const [loadingPredefinedTasks, setLoadingPredefined] = useState(false);
-  const [customTasks, setCustomTasks]                  = useState([]);
-  const [completedPredefinedIds, setCompletedIds]      = useState(new Set());
+  const [customTasks, setCustomTasks] = useState([]);
+  const [completedPredefinedIds, setCompletedIds] = useState(new Set());
 
   // ── Modal state ──
   const [isViewAllOpen, setIsViewAllOpen] = useState(false);
@@ -200,21 +201,21 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
   const [hasPunchedIn, setHasPunchedIn] = useState(!!data.arrivalTime);
 
   // ── Upload ──
-  const [uploadFiles, setUploadFiles]     = useState([]);
+  const [uploadFiles, setUploadFiles] = useState([]);
   const [uploadPreviews, setUploadPreviews] = useState([]);
 
   // ── Save state ──
-  const [savingTasks, setSavingTasks]   = useState(false);
-  const [savingPhotos, setSavingPhotos] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // ── Quick add task ──
-  const [quickTaskName, setQuickTaskName]   = useState("");
+  const [quickTaskName, setQuickTaskName] = useState("");
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [pendingTranslations, setPendingTranslations] = useState(0);
 
   // ── Other fields ──
+  const [assignedQtyValue, setAssignedQtyValue] = useState(data.labour?.assignedQty ?? "");
   const [confirmedQtyValue, setConfirmedQtyValue] = useState(data.labour?.confirmedQty ?? "");
-  const [remarksValue, setRemarksValue]           = useState(data.remarks || "");
+  const [remarksValue, setRemarksValue] = useState(data.remarks || "");
 
   // ── Sync when order prop changes ──
   useEffect(() => {
@@ -222,6 +223,7 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
     setHasPunchedIn(!!data.arrivalTime);
   }, [data.arrivalTime]);
 
+  useEffect(() => { setAssignedQtyValue(data.labour?.assignedQty ?? ""); }, [data.labour?.assignedQty]);
   useEffect(() => { setConfirmedQtyValue(data.labour?.confirmedQty ?? ""); }, [data.labour?.confirmedQty]);
   useEffect(() => { setRemarksValue(data.remarks || ""); }, [data.remarks]);
 
@@ -280,23 +282,23 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
   }, [isOpen, data.id, data.resourceType]);
 
   // ── Derived ──
-  const allTasks   = [
+  const allTasks = [
     ...predefinedTasks.map((t) => ({ ...t, isCommonTask: true })),
-    ...customTasks.map((t)      => ({ ...t, isCommonTask: false })),
+    ...customTasks.map((t) => ({ ...t, isCommonTask: false })),
   ];
-  const inlineTasks  = allTasks.slice(0, INLINE_TASK_LIMIT);
+  const inlineTasks = allTasks.slice(0, INLINE_TASK_LIMIT);
   const hasMoreTasks = allTasks.length > INLINE_TASK_LIMIT;
-  const totalTasks   = allTasks.length;
-  const doneTasks    = completedPredefinedIds.size;
-  const progress     = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+  const totalTasks = allTasks.length;
+  const doneTasks = completedPredefinedIds.size;
+  const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
   const circumference = 2 * Math.PI * 38; // r=38 matches the big progress ring
-  const strokeDash    = (progress / 100) * circumference;
+  const strokeDash = (progress / 100) * circumference;
 
-  const statusKey    = (data.status || "").toUpperCase();
+  const statusKey = (data.status || "").toUpperCase();
   const statusConfig = STATUS_CONFIG[statusKey] || STATUS_CONFIG.PENDING;
-  const resColor     = RESOURCE_COLORS[data.resourceType] ?? RESOURCE_COLORS.CHEF;
+  const resColor = RESOURCE_COLORS[data.resourceType] ?? RESOURCE_COLORS.CHEF;
 
-  const orderCode  = `#${data.resourceType ?? "ORD"}-${data.id ?? "—"}`;
+  const orderCode = `#${data.resourceType ?? "ORD"}-${data.id ?? "—"}`;
   const eventTitle = [data.functionNameEnglish?.trim(), data.eventNameEnglish].filter(Boolean).join(" — ") || "—";
   const chefInitials = (data.vendorNameEnglish || "—")
     .split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
@@ -369,7 +371,7 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
       const res = await Translateapi(name);
       const translations = res?.data || res;
       const nameGujarati = translations?.gujarati || "";
-      const nameHindi    = translations?.hindi    || "";
+      const nameHindi = translations?.hindi || "";
       setCustomTasks((prev) =>
         prev.map((t) => (t.id === newTask.id ? { ...t, nameGujarati, nameHindi } : t))
       );
@@ -397,81 +399,92 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
     });
   };
 
-  // ── Build FormData ──
-  const buildAssignmentFormData = () => {
-    const fd = new FormData();
-    const base = "assignments[0]";
-    const userId = localStorage.getItem("userId") ?? "";
-
-    fd.append(`${base}.arrivalTime`,      formatTimeToAMPM(arrivalTimeValue) || "");
-    fd.append(`${base}.eventFunctionId`,  data.eventFunctionId ?? "");
-    fd.append(`${base}.eventId`,          data.eventId ?? "");
-    fd.append(`${base}.id`,              data.id ?? "");
-    fd.append(`${base}.isPresent`,        hasPunchedIn);         // punched-in == present
-    fd.append(`${base}.managerId`,        data.managerId ?? userId);
-    fd.append(`${base}.remarks`,          remarksValue ?? "");
-    fd.append(`${base}.reportingTime`,    data.reportingTime ?? "");
-    fd.append(`${base}.resourceType`,     data.resourceType ?? "");
-    // Status logic:
-    //  • all tasks done  → "Completed"
-    //  • some tasks done → "RUNNING"
-    //  • none done       → keep original status from data
-    const totalTaskCount = allTasks.length;
-    const doneTaskCount  = allTasks.filter((t) => completedPredefinedIds.has(t.id)).length;
-    const derivedStatus  =
-      totalTaskCount > 0 && doneTaskCount === totalTaskCount ? "Completed"
-      : doneTaskCount > 0                                    ? "RUNNING"
-      : (data.status ?? "");
-    fd.append(`${base}.status`, derivedStatus);
-    fd.append(`${base}.userId`,           userId);
-    fd.append(`${base}.vendorId`,         data.vendorId ?? "");
-
-    fd.append(`${base}.chefLabour.helpers`,       data.chefLabour?.helpers       ?? "");
-    fd.append(`${base}.chefLabour.labour`,         data.chefLabour?.labour        ?? "");
-    fd.append(`${base}.chefLabour.staffCategory`,  data.chefLabour?.staffCategory ?? "");
-    fd.append(`${base}.chefLabour.unitId`,          data.chefLabour?.unitId        ?? "");
-    fd.append(`${base}.chefLabour.weight`,          data.chefLabour?.weight        ?? "");
-
-    fd.append(`${base}.labour.assignedQty`,   data.labour?.assignedQty ?? "");
-    fd.append(`${base}.labour.confirmedQty`,   confirmedQtyValue ?? "");
-    fd.append(`${base}.labour.shift`,          data.labour?.shift ?? "");
-    fd.append(`${base}.labour.staffCategory`,  data.labour?.staffCategory ?? "");
-
-    fd.append(`${base}.outside.unitId`, data.outside?.unitId ?? "");
-    fd.append(`${base}.outside.weight`, data.outside?.weight ?? "");
-
-    allTasks.forEach((task, i) => {
-      const isComplete          = completedPredefinedIds.has(task.id);
-      const isUnsavedLocalTask  = !task.isCommonTask && Number(task.id) < 0;
-      fd.append(`${base}.vendorTasks[${i}].assignmentId`,      data.id ?? "");
-      fd.append(`${base}.vendorTasks[${i}].completedDate`,     isComplete ? formatDDMMYYYYWithTime(new Date()) : "");
-      fd.append(`${base}.vendorTasks[${i}].eventFunctionTaskId`, isUnsavedLocalTask ? 0 : task.eventFunctionTaskId ?? task.id ?? "");
-      fd.append(`${base}.vendorTasks[${i}].isCommonTask`,      !!task.isCommonTask);
-      fd.append(`${base}.vendorTasks[${i}].isCompleted`,       isComplete);
-      fd.append(`${base}.vendorTasks[${i}].taskId`,            isUnsavedLocalTask ? 0 : task.id ?? "");
-      fd.append(`${base}.vendorTasks[${i}].taskName`,          task.nameEnglish    ?? "");
-      fd.append(`${base}.vendorTasks[${i}].taskNameGujarati`,  task.nameGujarati   ?? "");
-      fd.append(`${base}.vendorTasks[${i}].taskNameHindi`,     task.nameHindi      ?? "");
-      fd.append(`${base}.vendorTasks[${i}].remarks`,           task.remarks        ?? "");
-    });
-
-    uploadFiles.forEach((file, i) => {
-      fd.append(`${base}.vendorImages[${i}].assignmentId`, data.id ?? "");
-      fd.append(`${base}.vendorImages[${i}].file`,         file);
-      fd.append(`${base}.vendorImages[${i}].uploadId`,     "0");
-    });
-
-    return fd;
-  };
-
   // ── Save all ──
   const handleSaveAll = async () => {
-    setSavingTasks(true);
-    setSavingPhotos(true);
+    const resolvedEventId = eventId ?? order?.eventId ?? data.eventId;
+    const resolvedEventFunctionId = eventFunctionId ?? order?.eventFunctionId ?? data.eventFunctionId;
+    const resolvedVendorId = order?.vendorId ?? data.vendorId;
+    const resolvedResourceType = (order?.resourceType || data.resourceType || "").toUpperCase();
+    const assignmentId = order?.rawId ?? data.rawId ?? (order?.raw ? data.id : -1);
+
+    if (!resolvedEventId || !resolvedEventFunctionId || !resolvedVendorId || !resolvedResourceType) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        text: "Missing required fields (eventId, eventFunctionId, vendorId, or resourceType).",
+      });
+      return;
+    }
+
+    setIsSaving(true);
     try {
-      const formData = buildAssignmentFormData();
-      const res      = await addupdateeventvendordata(formData);
-      const resData  = res?.data;
+      const totalTaskCount = allTasks.length;
+      const doneTaskCount = allTasks.filter((t) => completedPredefinedIds.has(t.id)).length;
+      const derivedStatus =
+        totalTaskCount > 0 && doneTaskCount === totalTaskCount ? "Completed"
+          : doneTaskCount > 0 ? "RUNNING"
+            : (data.status ?? "");
+
+      const vendorTasksPayload = allTasks.map((task) => {
+        const isComplete = completedPredefinedIds.has(task.id);
+        const isUnsavedLocalTask = !task.isCommonTask && Number(task.id) < 0;
+        return {
+          taskId: isUnsavedLocalTask ? 0 : task.id ?? 0,
+          taskName: task.nameEnglish ?? "",
+          taskNameHindi: task.nameHindi ?? "",
+          taskNameGujarati: task.nameGujarati ?? "",
+          isCompleted: isComplete,
+          isCommonTask: !!task.isCommonTask,
+          remarks: task.remarks ?? "",
+          completedDate: isComplete ? formatDDMMYYYYWithTime(new Date()) : "",
+          assignmentId: assignmentId,
+          eventFunctionTaskId: isUnsavedLocalTask ? 0 : task.eventFunctionTaskId ?? task.id ?? 0,
+        };
+      });
+
+      const assignmentPayload = {
+        rawId: assignmentId,
+        eventId: resolvedEventId,
+        eventFunctionId: resolvedEventFunctionId,
+        vendorId: resolvedVendorId,
+        resourceType: resolvedResourceType,
+        userId: localStorage.getItem("userId") || data.userId || "",
+        managerId: data.managerId ?? localStorage.getItem("userId") ?? "",
+        reportingTime: data.reportingTime || "",
+        arrivalTime: formatTimeToAMPM(arrivalTimeValue) || "",
+        remarks: remarksValue || "",
+        status: derivedStatus,
+        isPresent: hasPunchedIn,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        menuItemId: data.menuItemId,
+        instructions: data.instructions,
+        instructionsHindi: data.instructionsHindi,
+        instructionsGujarati: data.instructionsGujarati,
+        chefLabour: data.chefLabour ? {
+          staffCategory: data.chefLabour.staffCategory,
+          labour: data.chefLabour.labour,
+          helpers: data.chefLabour.helpers,
+          weight: data.chefLabour.weight,
+          unitId: data.chefLabour.unitId,
+        } : undefined,
+        outside: data.outside ? {
+          weight: data.outside.weight,
+          unitId: data.outside.unitId,
+        } : undefined,
+      labour: (data.labour || confirmedQtyValue !== "") ? {
+  staffCategory: data.labour?.staffCategory,
+  shift: data.labour?.shift,
+  assignedQty: data.labour?.assignedQty,
+  confirmedQty: confirmedQtyValue === "" ? 0 : Number(confirmedQtyValue),
+} : undefined,
+        vendorImages: uploadFiles,
+        vendorTasks: vendorTasksPayload,
+      };
+
+      const formData = buildVendorFormData(assignmentPayload, 0);
+      const res = await addupdateeventvendordata(formData);
+      const resData = res?.data;
 
       if (resData?.success) {
         Swal.fire({ icon: "success", title: "Saved", text: resData?.msg || "Saved successfully", timer: 2000, showConfirmButton: false });
@@ -480,18 +493,16 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
         setUploadPreviews([]);
         onArrivalTimeUpdated?.();
       } else {
-        Swal.fire({ icon: "error", title: "Failed", text: resData?.msg || "Something went wrong" });
+        Swal.fire({ icon: "error", title: "Failed", text: resData?.msg || resData?.message || "Something went wrong" });
       }
     } catch (err) {
       console.error("Save failed:", err);
-      Swal.fire({ icon: "error", title: "Failed", text: err?.response?.data?.msg || err?.message || "Something went wrong" });
+      const beMsg = err?.response?.data?.msg || err?.response?.data?.message || err?.message || "Something went wrong";
+      Swal.fire({ icon: "error", title: "Failed", text: beMsg });
     } finally {
-      setSavingTasks(false);
-      setSavingPhotos(false);
+      setIsSaving(false);
     }
   };
-
-  const isSaving = savingTasks || savingPhotos;
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
@@ -501,9 +512,8 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${
-          isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
+        className={`fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          }`}
       />
 
       {/* Sidebar */}
@@ -513,7 +523,7 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
           ${isOpen ? "translate-x-0" : "translate-x-full"}`}
       >
 
-       
+
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0 bg-white">
           <div className="flex items-center gap-3">
             {/* Avatar */}
@@ -525,7 +535,7 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
               <div className="flex items-center gap-2 mt-0.5">
                 {/* <span className="text-xs font-mono text-gray-400">{orderCode}</span> */}
                 <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${data.status === "Completed"?"text-green-700":"text-gray-700"} ${statusConfig.dot}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${data.status === "Completed" ? "text-green-700" : "text-gray-700"} ${statusConfig.dot}`} />
                   {data.status ?? "Pending"}
                 </span>
               </div>
@@ -576,6 +586,103 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
             />
           </div>
 
+          {/* ── Allocation Details Card ───────────────────────────────── */}
+          {(data.menuItemNameEnglish || data.chefLabour || data.outside || data.labour) && (
+            <div className="mx-4 mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Allocation Details</p>
+              <div className="grid grid-cols-2 gap-3">
+                {data.menuItemNameEnglish && (
+                  <div className="col-span-2 bg-gray-50 rounded-xl px-3 py-2.5">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Menu Item</p>
+                    <p className="text-sm font-bold text-gray-800">{data.menuItemNameEnglish}</p>
+                  </div>
+                )}
+                {data.resourceType === "CHEF" && (
+                  <>
+                    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Allocation Type</p>
+                      <p className="text-sm font-bold text-gray-800">
+                        {data.chefLabour?.staffCategory
+                          ? data.chefLabour.staffCategory.replace(/_/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase())
+                          : "—"}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Labour</p>
+                      <p className="text-sm font-bold text-gray-800">{data.chefLabour?.labour ?? "—"}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Helpers</p>
+                      <p className="text-sm font-bold text-gray-800">{data.chefLabour?.helpers ?? "—"}</p>
+                    </div>
+                    {data.chefLabour?.weight != null && (
+                      <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Quantity</p>
+                        <p className="text-sm font-bold text-gray-800">
+                          {data.chefLabour.weight} {data.chefLabour.unitNameEnglish || ""}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+                {data.resourceType === "OUTSIDE" && (
+                  <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Quantity</p>
+                    <p className="text-sm font-bold text-gray-800">
+                      {data.outside?.weight != null
+                        ? `${data.outside.weight} ${data.outside.unitNameEnglish || ""}`
+                        : "—"}
+                    </p>
+                  </div>
+                )}
+                {data.resourceType === "LABOUR" && (
+                  <>
+                    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Staff Category</p>
+                      <p className="text-sm font-bold text-gray-800">{data.labour?.staffCategory?.trim() || "—"}</p>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Shift</p>
+                      <p className="text-sm font-bold text-gray-800">{data.labour?.shift || "—"}</p>
+                    </div>
+                   <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Assigned Qty</p>
+  <p className="text-sm font-bold text-gray-800">
+    {assignedQtyValue !== "" ? assignedQtyValue : (data.labour?.assignedQty ?? "—")}
+  </p>
+</div>
+
+<div className="bg-gray-50 rounded-xl px-3 py-2.5">
+  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Confirmed Qty</p>
+  {(AssignManagerPermission.add || AssignManagerPermission.edit) ? (
+    <input
+      type="number"
+      min="0"
+      max={assignedQtyValue !== "" ? assignedQtyValue : undefined}
+      value={confirmedQtyValue}
+      placeholder="Enter qty"
+      onChange={(e) => {
+        const v = e.target.value;
+        if (v === "") return setConfirmedQtyValue("");
+        const n = Number(v);
+        if (n < 0) return;
+        if (assignedQtyValue !== "" && n > Number(assignedQtyValue)) return;
+        setConfirmedQtyValue(v);
+      }}
+      className="w-full text-sm font-bold text-gray-800 bg-white border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+    />
+  ) : (
+    <p className="text-sm font-bold text-gray-800">
+      {confirmedQtyValue !== "" ? confirmedQtyValue : "—"}
+    </p>
+  )}
+</div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ── Timing + Punch-in card ───────────────────────────────── */}
           <div className="mx-4 mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Timing</p>
@@ -604,54 +711,83 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
                 <input
                   type="time"
                   value={arrivalTimeValue}
-                  disabled={!AssignManagerPermission.add || AssignManagerPermission.edit}
+disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
                   onChange={(e) => setArrivalTimeValue(e.target.value)}
                   className="w-full text-sm font-bold text-gray-800 bg-white border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400 mb-2"
                 />
                 {(AssignManagerPermission.add || AssignManagerPermission.edit) && (
-                <button
-                  onClick={handlePunchIn}
-                  disabled={hasPunchedIn}
-                  title={hasPunchedIn ? `Punched in at ${formatTimeToAMPM(arrivalTimeValue)}` : "Set current time as arrival"}
-                  className={`w-full flex items-center justify-center gap-1.5 text-[11px] font-bold py-1.5 rounded-lg transition-all ${
-                    hasPunchedIn
+                  <button
+                    onClick={handlePunchIn}
+                    disabled={hasPunchedIn}
+                    title={hasPunchedIn ? `Punched in at ${formatTimeToAMPM(arrivalTimeValue)}` : "Set current time as arrival"}
+                    className={`w-full flex items-center justify-center gap-1.5 text-[11px] font-bold py-1.5 rounded-lg transition-all ${hasPunchedIn
                       ? "bg-green-50 text-green-600 border border-green-200 cursor-not-allowed"
                       : "bg-primary text-white hover:bg-blue-700 active:scale-95"
-                  }`}
-                >
-                  {hasPunchedIn ? (
-                    <>
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Punched In · {formatTimeToAMPM(arrivalTimeValue)}
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Punch In Now
-                    </>
-                  )}
-                </button>
+                      }`}
+                  >
+                    {hasPunchedIn ? (
+                      <>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Punched In · {formatTimeToAMPM(arrivalTimeValue)}
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Punch In Now
+                      </>
+                    )}
+                  </button>
                 )}
               </div>
             </div>
           </div>
 
-          {/* ── Confirmed Qty (Labour only) ──────────────────────────── */}
+          {/* ── Labour Quantities (Labour only) ──────────────────────────── */}
           {data.resourceType === "LABOUR" && (
             <div className="mx-4 mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Confirmed Qty</p>
-              <input
-                type="number"
-                min="0"
-                value={confirmedQtyValue}
-                onChange={(e) => setConfirmedQtyValue(e.target.value)}
-                placeholder="0"
-                className="w-32 text-sm font-bold text-gray-800 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400"
-              />
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Labour Quantities</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1">
+                    Assigned Qty
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={assignedQtyValue}
+                    disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
+                    onChange={(e) => setAssignedQtyValue(e.target.value)}
+                    placeholder="0"
+                    className="w-full text-sm font-bold text-gray-800 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  />
+                </div>
+               <div>
+  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1">
+    Confirmed Qty
+  </label>
+  <input
+    type="number"
+    min="0"
+    max={assignedQtyValue !== "" ? assignedQtyValue : undefined}
+    value={confirmedQtyValue}
+    disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
+    onChange={(e) => {
+      const v = e.target.value;
+      if (v === "") return setConfirmedQtyValue("");
+      const n = Number(v);
+      if (n < 0) return;
+      if (assignedQtyValue !== "" && n > Number(assignedQtyValue)) return;
+      setConfirmedQtyValue(v);
+    }}
+    placeholder="0"
+    className="w-full text-sm font-bold text-gray-800 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400"
+  />
+</div>
+              </div>
             </div>
           )}
 
@@ -671,9 +807,8 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
                   <div className="mt-2 w-40">
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          progress === 100 ? "bg-green-500" : "bg-primary"
-                        }`}
+                        className={`h-full rounded-full transition-all duration-500 ${progress === 100 ? "bg-green-500" : "bg-primary"
+                          }`}
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -702,7 +837,7 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
                     <span className={`text-lg font-black leading-none ${progress === 100 ? "text-green-700" : "text-primary"}`}>
                       {progress}%
                     </span>
-                 
+
                   </div>
                 </div>
               )}
@@ -889,31 +1024,31 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
               Cancel
             </button>
             {(AssignManagerPermission.add || AssignManagerPermission.edit) && (
-            <button
-              onClick={handleSaveAll}
-              disabled={isSaving || pendingTranslations > 0}
-              className="text-xs font-bold bg-primary text-white px-5 py-2.5 rounded-xl hover:bg-purple-900 disabled:opacity-50 flex items-center gap-1.5 min-w-[110px] justify-center transition-colors"
-            >
-              {pendingTranslations > 0 ? (
-                <>
-                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                  </svg>
-                  Translating…
-                </>
-              ) : isSaving ? (
-                <>
-                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                  </svg>
-                  Saving…
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </button>
+              <button
+                onClick={handleSaveAll}
+                disabled={isSaving || pendingTranslations > 0}
+                className="text-xs font-bold bg-primary text-white px-5 py-2.5 rounded-xl hover:bg-purple-900 disabled:opacity-50 flex items-center gap-1.5 min-w-[110px] justify-center transition-colors"
+              >
+                {pendingTranslations > 0 ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    Translating…
+                  </>
+                ) : isSaving ? (
+                  <>
+                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                    </svg>
+                    Saving…
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
             )}
           </div>
         </div>

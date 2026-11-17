@@ -8,6 +8,9 @@ import {
 } from "../../../services/apiServices";
 import Swal from "sweetalert2";
 
+const DEFAULT_FONT_NAME = "Default";
+const DEFAULT_FONT_ID = -1;
+
 const ROWS = [
   { key: "category", label: "Category Font" },
   { key: "item", label: "Item Font" },
@@ -42,10 +45,8 @@ const ReportConfiguration = () => {
   const buildConfigFromThemes = (themes, fontList) =>
     Object.fromEntries(
       themes.map((report) => {
-        const findFontName = (fontId) =>
-          fontList.find((f) => f.fontId === fontId)?.name ??
-          fontList[0]?.name ??
-          "";
+      const findFontName = (fontId) =>
+  fontList.find((f) => f.fontId === fontId)?.name ?? DEFAULT_FONT_NAME;
 
         return [
           report.id,
@@ -124,8 +125,10 @@ const ReportConfiguration = () => {
     try {
       const payload = exclusiveThemes.map((report) => {
         const reportConfig = config[report.id];
-        const getFontId = (fontName) =>
-          fonts.find((f) => f.name === fontName)?.fontId ?? 0;
+     const getFontId = (fontName) =>
+  fontName === DEFAULT_FONT_NAME
+    ? DEFAULT_FONT_ID
+    : fonts.find((f) => f.name === fontName)?.fontId ?? DEFAULT_FONT_ID;
 
         return {
           adminTemplateModuleId: report.id,
@@ -259,11 +262,13 @@ const ReportConfiguration = () => {
                                 }
                                 className="appearance-none text-md bg-gray-50 border border-gray-200 rounded-lg px-3 pr-7 py-1.5 text-gray-800 cursor-pointer focus:outline-none focus:border-primary focus:ring-2 w-full"
                               >
-                                {fonts.map((f) => (
-                                  <option key={f.fontId} value={f.name}>
-                                    {f.name}
-                                  </option>
-                                ))}
+                                <option value={DEFAULT_FONT_NAME}>Default</option>
+
+                                 {fonts.map((f) => (
+    <option key={f.fontId} value={f.name}>
+      {f.name}
+    </option>
+  ))}
                               </select>
                               <ChevronDown
                                 size={12}

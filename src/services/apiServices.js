@@ -491,12 +491,22 @@ export const GetEventMaster = (
     month = -1;
     year = -1;
   }
-  const statusParam = status === null || status === undefined || status === -1 ? "" : `&status=${status}`;
+
+  const statusParam =
+    status === null || status === undefined || status === -1 ? "" : `&status=${status}`;
   const venueParam = `&venueId=${venueId !== undefined && venueId !== null && venueId !== "" ? venueId : -1}`;
   const banqParam = `&banqId=${banqId !== undefined && banqId !== null && banqId !== "" ? banqId : -1}`;
   const partyParam = partyName ? `&partyName=${encodeURIComponent(partyName)}` : "";
+
+  // memberId <- mainId from localStorage (omitted if not present)
+  const mainId = localStorage.getItem("mainId");
+  const memberParam =
+    mainId !== null && mainId !== "" && mainId !== "undefined" && mainId !== "null"
+      ? `&memberId=${encodeURIComponent(mainId)}`
+      : "";
+
   return GET(
-    `/eventmaster/getallbyuserid?userId=${Id}&isChildUser=${isChildUser}&month=${month || -1}&year=${year || -1}&isVisible=${isVisible}${statusParam}${venueParam}${banqParam}${partyParam}`
+    `/eventmaster/getallbyuserid?userId=${Id}&isChildUser=${isChildUser}&month=${month || -1}&year=${year || -1}&isVisible=${isVisible}${statusParam}${venueParam}${banqParam}${partyParam}${memberParam}`
   );
 };
 
@@ -4399,3 +4409,7 @@ export const GenerateRecipeExcel = (userId, menuItemId) => {
 export const generatereportnotes = (notesId, userId) => {
   return GET(`/notes/generate-report?notesId=${notesId}&userId=${userId}`);
 };
+
+// export const getCurrentAttendance = (eventFunctionId, managerId) => {
+//   return GET(`/attendance?eventFunctionId=${eventFunctionId}&managerId=${managerId}`);
+// };

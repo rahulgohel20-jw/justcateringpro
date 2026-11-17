@@ -106,6 +106,11 @@ const OrderCard = ({ order, onViewDetails }) => {
         <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-0.5">Order #</p>
         <p className="text-[15px] font-bold text-slate-800 leading-tight">#{order.id}</p>
         <p className="text-[13px] text-slate-500 mt-0.5">{order.name}</p>
+        {order.menuItemNameEnglish && (
+          <p className="text-[12px] font-medium text-slate-700 mt-1 truncate max-w-[180px]" title={order.menuItemNameEnglish}>
+            {order.menuItemNameEnglish}
+          </p>
+        )}
       </div>
 
       <div className="h-12 w-px bg-slate-100 shrink-0" />
@@ -146,7 +151,7 @@ const OrderCard = ({ order, onViewDetails }) => {
 
       <button
         onClick={onViewDetails}
-        className="flex items-center gap-2 bg-primary hover:bg-[#1246891] text-white text-[13px] font-semibold rounded-lg px-5 py-2.5 transition-colors duration-150 whitespace-nowrap shrink-0 ml-auto"
+        className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-[13px] font-semibold rounded-lg px-5 py-2.5 transition-colors duration-150 whitespace-nowrap shrink-0 ml-auto"
       >
         View Details
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -157,35 +162,136 @@ const OrderCard = ({ order, onViewDetails }) => {
   );
 };
 
-const buildResources = (detail) => {
+const buildResources = (detail, resourceType) => {
   if (!detail) return [];
   const resources = [];
-  if (detail.labour != null)      resources.push({ icon: "labor",  label: `Labour: ${detail.labour}` });
-  if (detail.helpers != null)     resources.push({ icon: "helper", label: `Helpers: ${detail.helpers}` });
-  if (detail.weight != null) {
-    const unitLabel = detail.unitNameEnglish ? ` ${detail.unitNameEnglish}` : "";
-    resources.push({ icon: "plates", label: `Qty: ${detail.weight}${unitLabel}` });
+  const type = (resourceType || "").toUpperCase();
+
+  if (type === "CHEF") {
+    if (detail.staffCategory != null && detail.staffCategory !== "") {
+      const formatted = detail.staffCategory.replace(/_/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase());
+      resources.push({ icon: "chef", label: formatted });
+    }
+    if (detail.labour != null) resources.push({ icon: "labor", label: `Labour: ${detail.labour}` });
+    if (detail.helpers != null) resources.push({ icon: "helper", label: `Helpers: ${detail.helpers}` });
+    if (detail.weight != null) {
+      const unitLabel = detail.unitNameEnglish ? ` ${detail.unitNameEnglish}` : "";
+      resources.push({ icon: "plates", label: `Qty: ${detail.weight}${unitLabel}` });
+    }
+  } else if (type === "OUTSIDE") {
+    if (detail.weight != null) {
+      const unitLabel = detail.unitNameEnglish ? ` ${detail.unitNameEnglish}` : "";
+      resources.push({ icon: "plates", label: `Qty: ${detail.weight}${unitLabel}` });
+    }
+  } else if (type === "LABOUR") {
+    if (detail.staffCategory != null && detail.staffCategory.trim() !== "") {
+      resources.push({ icon: "labor", label: detail.staffCategory.trim() });
+    }
+    if (detail.shift != null && detail.shift !== "") {
+      resources.push({ icon: "labor", label: `Shift: ${detail.shift}` });
+    }
+    if (detail.assignedQty != null) {
+      resources.push({ icon: "helper", label: `AssignedQTY: ${detail.assignedQty}` });
+    }
+    if (detail.confirmedQty != null) {
+      resources.push({ icon: "helper", label: `Confirmed: ${detail.confirmedQty}` });
+    }
+  } else {
+    if (detail.staffCategory != null && detail.staffCategory !== "") {
+      const formatted = detail.staffCategory.replace(/_/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase());
+      resources.push({ icon: "labor", label: formatted });
+    }
+    if (detail.labour != null) resources.push({ icon: "labor", label: `Labour: ${detail.labour}` });
+    if (detail.helpers != null) resources.push({ icon: "helper", label: `Helpers: ${detail.helpers}` });
+    if (detail.weight != null) {
+      const unitLabel = detail.unitNameEnglish ? ` ${detail.unitNameEnglish}` : "";
+      resources.push({ icon: "plates", label: `Qty: ${detail.weight}${unitLabel}` });
+    }
+    if (detail.shift != null && detail.shift !== "") {
+      resources.push({ icon: "labor", label: `Shift: ${detail.shift}` });
+    }
+    if (detail.assignedQty != null) {
+      resources.push({ icon: "helper", label: `AssignedQTY: ${detail.assignedQty}` });
+    }
+    if (detail.confirmedQty != null) {
+      resources.push({ icon: "helper", label: `Confirmed: ${detail.confirmedQty}` });
+    }
   }
-  if (detail.shift != null)       resources.push({ icon: "labor",  label: `Shift: ${detail.shift}` });
-  if (detail.assignedQty != null) resources.push({ icon: "helper", label: `AssignedQTY: ${detail.assignedQty}` });
-  if (detail.confirmedQty != null)resources.push({ icon: "helper", label: `Confirmed: ${detail.confirmedQty}` });
+
   return resources;
 };
 
-const mapOrders = (list) =>
-  (list ?? []).map((item, index) => {
-    const detail = item.chefLabour ?? item.outside ?? item.labour ?? {};
-    return {
-      id: index + 1,
-      rawId: item.id,
-      name: item.vendorNameEnglish || "—",
-      type: detail.staffCategory ? detail.staffCategory.replace(/_/g, " ") : item.resourceType,
-      resourceType: item.resourceType,
-      resources: buildResources(detail),
-      status: item.status,   // keep raw string from API — getStatusStyle normalizes it
-      raw: item,
-    };
+const mapOrders = (list) => {
+  const flattened = [];
+
+  (list ?? []).forEach((vendor) => {
+    const items = Array.isArray(vendor.items) && vendor.items.length > 0 ? vendor.items : [vendor];
+    items.forEach((subItem) => {
+      const rawId = subItem.id ?? vendor.id;
+      const normalizedResourceType = (subItem.resourceType || vendor.resourceType || "").toUpperCase();
+      const detail =
+        normalizedResourceType === "CHEF"
+          ? subItem.chefLabour ?? vendor.chefLabour ?? {}
+          : normalizedResourceType === "OUTSIDE"
+          ? subItem.outside ?? vendor.outside ?? {}
+          : normalizedResourceType === "LABOUR"
+          ? subItem.labour ?? vendor.labour ?? {}
+          : subItem.chefLabour ?? vendor.chefLabour ?? subItem.outside ?? vendor.outside ?? subItem.labour ?? vendor.labour ?? {};
+
+      const staffCat = detail.staffCategory ? detail.staffCategory.replace(/_/g, " ").trim() : "";
+      const displayType = staffCat
+        ? staffCat.replace(/\b\w/g, (c) => c.toUpperCase())
+        : normalizedResourceType;
+
+      flattened.push({
+        rawId,
+        vendorId: vendor.vendorId ?? subItem.vendorId,
+        eventId: vendor.eventId ?? subItem.eventId,
+        eventFunctionId: vendor.eventFunctionId ?? subItem.eventFunctionId,
+        eventNameEnglish: vendor.eventNameEnglish,
+        functionNameEnglish: vendor.functionNameEnglish,
+        venue: vendor.venue,
+        reportingTime: vendor.reportingTime ?? subItem.reportingTime,
+        arrivalTime: vendor.arrivalTime ?? subItem.arrivalTime,
+        isPresent: vendor.isPresent ?? subItem.isPresent,
+        remarks: vendor.remarks ?? subItem.remarks,
+        latitude: vendor.latitude ?? subItem.latitude,
+        longitude: vendor.longitude ?? subItem.longitude,
+        menuItemId: subItem.menuItemId ?? vendor.menuItemId,
+        menuItemNameEnglish: subItem.menuItemNameEnglish ?? vendor.menuItemNameEnglish,
+        instructions: subItem.instructions ?? vendor.instructions,
+        instructionsHindi: subItem.instructionsHindi ?? vendor.instructionsHindi,
+        instructionsGujarati: subItem.instructionsGujarati ?? vendor.instructionsGujarati,
+        managerId: vendor.managerId ?? subItem.managerId,
+        name: vendor.vendorNameEnglish || subItem.vendorNameEnglish || "—",
+        type: displayType,
+        resourceType: normalizedResourceType,
+        resources: buildResources(detail, normalizedResourceType),
+        status: vendor.status ?? subItem.status,
+        chefLabour: subItem.chefLabour ?? vendor.chefLabour,
+        outside: subItem.outside ?? vendor.outside,
+        labour: subItem.labour ?? vendor.labour,
+        raw: {
+          ...vendor,
+          ...subItem,
+          id: rawId,
+          rawId,
+          resourceType: normalizedResourceType,
+          chefLabour: subItem.chefLabour ?? vendor.chefLabour,
+          outside: subItem.outside ?? vendor.outside,
+          labour: subItem.labour ?? vendor.labour,
+          vendorImages: vendor.vendorImages ?? subItem.vendorImages ?? [],
+          vendorTasks: vendor.vendorTasks ?? subItem.vendorTasks ?? [],
+        },
+      });
+    });
   });
+
+  return flattened.map((order, index) => ({
+    ...order,
+    id: index + 1,
+  }));
+};
 
 const ManagerViewOrder = () => {
   const [activeTab, setActiveTab]       = useState("chef");
@@ -260,7 +366,7 @@ const ManagerViewOrder = () => {
           <p className="text-[13px] text-slate-500 mt-0.5">Manage and track all your orders</p>
         </div>
 
-        <div className="relative">
+        {/* <div className="relative">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -278,7 +384,7 @@ const ManagerViewOrder = () => {
           >
             <path d="M6 9l6 6 6-6" />
           </svg>
-        </div>
+        </div> */}
       </div>
 
       {/* Order list */}
@@ -316,6 +422,8 @@ const ManagerViewOrder = () => {
         onClose={() => setSelectedOrder(null)}
         order={selectedOrder}
         onArrivalTimeUpdated={handleOrderSaved}
+        eventId={eventId}
+        eventFunctionId={eventFunctionId}
       />
     </div>
   );
