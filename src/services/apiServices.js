@@ -4410,6 +4410,41 @@ export const generatereportnotes = (notesId, userId) => {
   return GET(`/notes/generate-report?notesId=${notesId}&userId=${userId}`);
 };
 
-// export const getCurrentAttendance = (eventFunctionId, managerId) => {
-//   return GET(`/attendance?eventFunctionId=${eventFunctionId}&managerId=${managerId}`);
-// };
+export const getCurrentAttendance = (eventFunctionId, managerId) => {
+  return GET(`/attendance?eventFunctionId=${eventFunctionId}&managerId=${managerId}`);
+};
+
+const buildFeedbackQuery = (params = {}) => {
+  const queryParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== "") {
+      queryParams.append(key, String(value));
+    }
+  });
+
+  const queryString = queryParams.toString();
+  return queryString ? `?${queryString}` : "";
+};
+
+export const getAllFeedbacks = (params = {}) => {
+  return GET(`/event-function-feedback/getall${buildFeedbackQuery(params)}`);
+};
+
+export const getFeedbackById = (id) => {
+  return GET(`/event-function-feedback/getbyid?feedbackId=${id}`);
+};
+
+export const createFeedback = (body) => {
+  // TODO: confirm backend endpoint and payload contract for create.
+  return POST(`/event-function-feedback/create`, body);
+};
+
+export const updateFeedback = (body) => {
+  // TODO: confirm backend endpoint and payload contract for update.
+  return PUT(`/event-function-feedback/update`, body);
+};
+
+export const deleteFeedbackById = (id) => {
+  return DELETE(`/event-function-feedback/deletebyid?feedbackId=${id}`);
+};
