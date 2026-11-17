@@ -1,11 +1,11 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { columns } from "./constant";
 import { usePermission } from "../../../hooks/usePermission";
 import ViewNoteModal from "./ViewNoteModal";
 import AddNoteModal from "./AddNoteModal";
-import { Search, Plus, StickyNote, Heading } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import Swal from "sweetalert2";
 import {
   GetAllNotes,
@@ -13,20 +13,8 @@ import {
   DeleteNoteById,
   generatereportnotes,
 } from "../../../services/apiServices";
-import { FormattedMessage } from "react-intl";
-import { useIntl } from "react-intl";
-
-const StatCard = ({ icon: Icon, label, value, iconColor, iconBg }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4 flex-1">
-    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${iconBg}`}>
-      <Icon className={`w-6 h-6 ${iconColor}`} />
-    </div>
-    <div>
-      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">{label}</p>
-      <p className="text-3xl font-bold text-gray-900 leading-tight">{value}</p>
-    </div>
-  </div>
-);
+import { FormattedMessage, useIntl } from "react-intl";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const NotesManagement = () => {
   const permissions = usePermission("Notes Management");
@@ -41,9 +29,13 @@ const NotesManagement = () => {
   const [editTarget, setEditTarget] = useState(null);
   const [viewTarget, setViewTarget] = useState(null);
 
-  useEffect(() => {
-    fetchNotes();
-  }, []);
+  // Suggestions state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
 
   const fetchNotes = async () => {
     try {
@@ -55,12 +47,24 @@ const NotesManagement = () => {
       }));
       setOriginalData(list);
       setTableData(list);
+
+      const words = extractDictWords(list, [
+        "title",
+        "name",
+        "noteName",
+        "heading",
+      ]);
+      setDictWords(words);
     } catch (err) {
       console.error("Failed to fetch notes:", err);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchNotes();
+  }, []);
 
   // Apply search
   useEffect(() => {
@@ -77,6 +81,66 @@ const NotesManagement = () => {
 
     setTableData(filtered.map((item, i) => ({ ...item, sr_no: i + 1 })));
   }, [searchQuery, originalData]);
+
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery, dictWords]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(word);
+    setShowSpell(false);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev < spellSuggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev > 0 ? prev - 1 : spellSuggestions.length - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
 
   const handleView = async (item) => {
     try {
@@ -156,12 +220,6 @@ const NotesManagement = () => {
     }
   };
 
-  const total = originalData.length;
-  const totalHeadings = originalData.reduce(
-    (acc, n) => acc + (n.headings?.length || 0),
-    0
-  );
-
   return (
     <Fragment>
       <Container>
@@ -185,12 +243,9 @@ const NotesManagement = () => {
           )}
         </div>
 
-        {/* Stat Cards */}
-        
-
         {/* Search */}
         <div className="filters flex flex-wrap justify-start gap-3 mb-4">
-          <div className="filterItems relative ml-auto">
+          <div className="filItems relative ml-auto" ref={searchBoxRef}>
             <Search className="w-4 h-4 text-primary absolute top-1/2 left-3 -translate-y-1/2 pointer-events-none" />
             <input
               className="input pl-9"
@@ -198,7 +253,35 @@ const NotesManagement = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+              onKeyDown={handleSearchKeyDown}
+              autoComplete="off"
+              spellCheck={false}
             />
+            {showSpell && spellSuggestions.length > 0 && (
+              <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                  Suggestions:
+                </div>
+                <ul>
+                  {spellSuggestions.map((s, i) => (
+                    <li
+                      key={s}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        applySpellSuggestion(s);
+                      }}
+                      onMouseEnter={() => setSpellIndex(i)}
+                      className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                        i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                      }`}
+                    >
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
 

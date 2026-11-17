@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import AssignTheme from "../theme";
-import { message, Spin, Input } from "antd";
+import { message, Spin } from "antd";
 import { Link, useNavigate } from "react-router-dom";
 import { Container } from "@/components/container";
 import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
@@ -17,6 +17,7 @@ import ExtendDate from "./ExtendDate";
 import { DeleteUserById, UserBlock } from "../../../../services/apiServices";
 import SummaryCards from "./SummaryCard";
 import { usePermission } from "../../../../hooks/usePermission";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const DemoUsers = () => {
   const permissions = usePermission("Demo Member");
@@ -34,6 +35,12 @@ const DemoUsers = () => {
   const [selectedAssignRow, setSelectedAssignRow] = useState(null);
   const [otpAction, setOtpAction] = useState(null);
   const [extendPayload, setExtendPayload] = useState(null);
+
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const searchBoxRef = useRef(null);
+  const skipSuggestRef = useRef(false);
 
   const formatUsers = (users) => {
     return users
@@ -66,7 +73,7 @@ const DemoUsers = () => {
       });
   };
 
-  const handleFetchByRoleId = async () => {
+  const handleFetchByRoleId = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getAllByRoleIdData(2, "demo");
@@ -87,11 +94,75 @@ const DemoUsers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     handleFetchByRoleId();
+  }, [handleFetchByRoleId]);
+
+  const dictWords = useMemo(
+    () =>
+      extractDictWords(tableData, [
+        "fullName",
+        "email",
+        "companyName",
+        "plan",
+        "userCode",
+        "city",
+      ]),
+    [tableData]
+  );
+
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(searchText, dictWords);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchText, dictWords]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearchText(word);
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) => (prev + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev <= 0 ? spellSuggestions.length - 1 : prev - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
 
   useEffect(() => {
     if (!searchText) {
@@ -105,8 +176,8 @@ const DemoUsers = () => {
             u.email?.toLowerCase().includes(lower) ||
             u.companyName?.toLowerCase().includes(lower) ||
             u.plan?.toLowerCase().includes(lower) ||
-            u.userCode?.toLowerCase().includes(lower),
-        ),
+            u.userCode?.toLowerCase().includes(lower)
+        )
       );
     }
   }, [searchText, tableData]);
@@ -122,35 +193,32 @@ const DemoUsers = () => {
     setIsExtendModal(true);
   };
 
-  // ─── Convert: call transfermember with otp=-1 first, then open ApproveOtp modal ─
   const handleConvertClick = async (userId) => {
     try {
       setLoading(true);
-      const otp = "-1";
-      const res = await transfermember(otp, "demo", userId);
+      const res = await transfermember(userId);
 
-      if (res?.data?.msg) {
-        message.success("OTP sent successfully");
+      if (res?.data?.success) {
         setSelectedThemeUserId(userId);
         setOtpAction("convert");
         setIsOtpModalOpen(true);
       } else {
         message.error(res?.data?.msg || "Failed to initiate convert");
       }
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       message.error("Something went wrong");
     } finally {
       setLoading(false);
     }
   };
-  // ─────────────────────────────────────────────────────────────────────────────
 
   const handleApproveOtp = async (userId, actionType) => {
     try {
       setLoading(true);
 
       if (actionType === "delete") {
-        const deleteRes = await DeleteUserById(userId, "-1",true);
+        const deleteRes = await DeleteUserById(userId, "-1", true);
 
         if (deleteRes?.data?.msg) {
           setSelectedThemeUserId(userId);
@@ -165,8 +233,6 @@ const DemoUsers = () => {
 
       if (actionType === "block") {
         const blockRes = await UserBlock(userId, "-1");
-
-      
 
         if (blockRes?.data?.msg) {
           setSelectedThemeUserId(userId);
@@ -189,7 +255,8 @@ const DemoUsers = () => {
       } else {
         message.error(res?.data?.msg || "Failed to send OTP");
       }
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       message.error("Something went wrong");
     } finally {
       setLoading(false);
@@ -209,12 +276,41 @@ const DemoUsers = () => {
       <SummaryCards data={cardData} />
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
-        <Input.Search
-          placeholder="Search users..."
-          allowClear
-          onChange={(e) => setSearchText(e.target.value)}
-          className="w-full sm:w-64"
-        />
+        <div ref={searchBoxRef} className="relative w-full sm:w-64">
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+            onKeyDown={handleSearchKeyDown}
+            autoComplete="off"
+            spellCheck={false}
+            className="input input-sm w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
+          />
+          {showSpell && spellSuggestions.length > 0 && (
+            <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg z-50">
+              <div className="px-3 pt-2 pb-1 text-xs text-gray-400">Suggestions:</div>
+              <ul>
+                {spellSuggestions.map((s, i) => (
+                  <li
+                    key={s}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      applySpellSuggestion(s);
+                    }}
+                    onMouseEnter={() => setSpellIndex(i)}
+                    className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                      i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                    }`}
+                  >
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
         {permissions.add && (
           <Link to="/auth/signup" className="w-full sm:w-auto">
             <button className="btn btn-primary flex items-center justify-center gap-1 w-full sm:w-auto">
@@ -237,8 +333,8 @@ const DemoUsers = () => {
               handleApproveOtp,
               handleAssignUser,
               handleExtendClick,
-              handleConvertClick, // ← passed to columns
-              permissions,
+              handleConvertClick,
+              permissions
             )}
             data={filteredData}
             paginationSize={10}

@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { columns } from "./constant";
@@ -38,6 +39,14 @@ const CustomerMaster = () => {
   const userId = localStorage.getItem("userId");
   const lang = localStorage.getItem("lang") || "en";
 
+  // Spelling suggestion state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
+
   // ✅ Excel download — type: "party", userId from localStorage
   const handleExcelDownload = async () => {
     try {
@@ -55,7 +64,7 @@ const CustomerMaster = () => {
       } else {
         Swal.fire({ icon: "warning", title: "No file returned from server." });
       }
-    } catch (err) {
+    } catch {
       Swal.fire({ icon: "error", title: "Failed to download Excel." });
     }
   };
@@ -78,7 +87,7 @@ const CustomerMaster = () => {
         setIsPdfModalVisible(false);
         Swal.fire({ icon: "warning", title: "No PDF returned from server." });
       }
-    } catch (err) {
+    } catch {
       setIsPdfModalVisible(false);
       Swal.fire({ icon: "error", title: "Failed to generate PDF." });
     } finally {
@@ -124,6 +133,101 @@ const CustomerMaster = () => {
     FetchCustomer();
   }, [lang]);
 
+  // Extract dict words for suggestions
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await GetAllCustomer(userId);
+        if (cancelled) return;
+        const list = res?.data?.data?.["Party Details"] || [];
+        const words = extractDictWords(list, [
+          "nameEnglish",
+          "nameHindi",
+          "nameGujarati",
+          "customer",
+        ]);
+        setDictWords(words);
+      } catch (err) {
+        console.error("Failed to load spelling dictionary:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (tableData && tableData.length > 0) {
+      const words = extractDictWords(tableData, [
+        "nameEnglish",
+        "nameHindi",
+        "nameGujarati",
+        "customer",
+      ]);
+      if (words.length > 0) {
+        setDictWords((prev) => Array.from(new Set([...prev, ...words])));
+      }
+    }
+  }, [tableData]);
+
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timeoutId = setTimeout(() => {
+      const results = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(results);
+      setSpellIndex(-1);
+      setShowSpell(results.length > 0);
+    }, 200);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, dictWords]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const applySpellSuggestion = (text) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(text);
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((i) => (i + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((i) => (i <= 0 ? spellSuggestions.length - 1 : i - 1));
+    } else if (e.key === "Tab" || (e.key === "Enter" && spellIndex >= 0)) {
+      if (spellIndex >= 0) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
+
   const FetchCustomer = () => {
     GetAllCustomer(userId)
       .then(({ data: { data } }) => {
@@ -148,17 +252,17 @@ const CustomerMaster = () => {
           document: cust.document || "-",
           altMobileno: cust.altMobileno || "",
           contactCategoryId: cust.contact?.id,
-           image: cust.docPath || cust.documentImage || "",
+          image: cust.docPath || cust.documentImage || "",
           nameEnglish: cust.nameEnglish,
           nameHindi: cust.nameHindi,
           nameGujarati: cust.nameGujarati,
           addressEnglish: cust.addressEnglish,
           addressHindi: cust.addressHindi,
           addressGujarati: cust.addressGujarati,
-          pan:cust.pan,
+          pan: cust.pan,
           opb: cust.opb || "",
-  opbDate: cust.opbDate || "",
-  type: cust.type || "",
+          opbDate: cust.opbDate || "",
+          type: cust.type || "",
         }));
 
         setTableData(formatted);
@@ -198,10 +302,10 @@ const CustomerMaster = () => {
               addressEnglish: cust.addressEnglish,
               addressHindi: cust.addressHindi,
               addressGujarati: cust.addressGujarati,
-              pan:cust.pan,
-               opb: cust.opb ?? "",        // ← add
-  opbDate: cust.opbDate || "", // ← add
-  type: cust.type || "",
+              pan: cust.pan,
+              opb: cust.opb ?? "",
+              opbDate: cust.opbDate || "",
+              type: cust.type || "",
             }));
 
             setTableData(formatted);
@@ -301,7 +405,7 @@ const CustomerMaster = () => {
           <div
             className={`flex flex-wrap items-center gap-2 ${classes.customStyle}`}
           >
-            <div className="filItems relative">
+            <div className="filItems relative" ref={searchBoxRef}>
               <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
               <input
                 className="input pl-8"
@@ -312,7 +416,36 @@ const CustomerMaster = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
               />
+
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 

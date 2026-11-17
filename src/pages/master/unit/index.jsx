@@ -1,14 +1,13 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 import { Container } from "@/components/container";
-import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
 import { TableComponent } from "@/components/table/TableComponent";
-import { columns, defaultData } from "./constant";
+import { columns } from "./constant";
 import AddUnit from "@/partials/modals/add-unit/AddUnit";
 import {
   Getunit,
   DeleteUnit,
   SearchUnit,
-  updateunit,
   GetUnitById,
   Getgenerateusermenuitemrawmaterialexcel
 } from "@/services/apiServices";
@@ -24,8 +23,16 @@ const UnitMaster = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoadingUnit, setIsLoadingUnit] = useState(false);
   const intl = useIntl();
-const [isExporting, setIsExporting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [lang, setLang] = useState(localStorage.getItem("lang") || "en");
+
+  // Spelling suggestion state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -73,7 +80,7 @@ const [isExporting, setIsExporting] = useState(false);
   const Fetchunit = () => {
     Getunit(Id)
       .then((res) => {
-        if (res?.data?.data?.["Unit Details"]) {
+        if (res.data?.data?.["Unit Details"]) {
           const formatted = res.data.data["Unit Details"].map(
             (cust, index) => ({
               sr_no: index + 1,
@@ -98,6 +105,104 @@ const [isExporting, setIsExporting] = useState(false);
   useEffect(() => {
     Fetchunit();
   }, [lang]);
+
+  // Extract dict words for suggestions
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await Getunit(Id);
+        if (cancelled) return;
+        const list = res?.data?.data?.["Unit Details"] || [];
+        const words = extractDictWords(list, [
+          "nameEnglish",
+          "nameHindi",
+          "nameGujarati",
+          "symbolEnglish",
+          "symbolHindi",
+          "symbolGujarati",
+        ]);
+        setDictWords(words);
+      } catch (err) {
+        console.error("Failed to load spelling dictionary:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [Id]);
+
+  useEffect(() => {
+    if (tableData && tableData.length > 0) {
+      const words = extractDictWords(tableData, [
+        "nameEnglish",
+        "nameHindi",
+        "nameGujarati",
+        "unit",
+        "symbol",
+      ]);
+      if (words.length > 0) {
+        setDictWords((prev) => Array.from(new Set([...prev, ...words])));
+      }
+    }
+  }, [tableData]);
+
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timeoutId = setTimeout(() => {
+      const results = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(results);
+      setSpellIndex(-1);
+      setShowSpell(results.length > 0);
+    }, 200);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, dictWords]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const applySpellSuggestion = (text) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(text);
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((i) => (i + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((i) => (i <= 0 ? spellSuggestions.length - 1 : i - 1));
+    } else if (e.key === "Tab" || (e.key === "Enter" && spellIndex >= 0)) {
+      if (spellIndex >= 0) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -138,12 +243,12 @@ const [isExporting, setIsExporting] = useState(false);
       }),
       text: intl.formatMessage({
         id: "USER.MASTER.DELETE_UNIT_CONFIRM_TEXT",
-        defaultMessage: "You want to remove this unit?",
+        defaultMessage: "You won't be able to revert this!",
       }),
       icon: "warning",
       showCancelButton: true,
-      cancelButtonColor: "#3085d6",
-      confirmButtonColor: "#d33",
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
       confirmButtonText: intl.formatMessage({
         id: "USER.MASTER.DELETE_CONFIRM_BUTTON",
         defaultMessage: "Yes, delete it!",
@@ -152,218 +257,153 @@ const [isExporting, setIsExporting] = useState(false);
         id: "USER.MASTER.CANCEL_BUTTON",
         defaultMessage: "Cancel",
       }),
-    }).then(async (result) => {
+    }).then((result) => {
       if (result.isConfirmed) {
-        try {
-          const response = await DeleteUnit(unitId);
-
-          if (
-            response &&
-            (response.success || response.data.success === true)
-          ) {
-            Fetchunit();
+        DeleteUnit(unitId)
+          .then((response) => {
+            if (
+              response &&
+              (response.success || response.data?.success === true)
+            ) {
+              Fetchunit();
+              Swal.fire({
+                title: intl.formatMessage({
+                  id: "USER.MASTER.DELETE_SUCCESS_TITLE",
+                  defaultMessage: "Removed!",
+                }),
+                text: intl.formatMessage({
+                  id: "USER.MASTER.UNIT_DELETE_SUCCESS",
+                  defaultMessage: "Unit has been removed successfully.",
+                }),
+                icon: "success",
+                timer: 1500,
+                showConfirmButton: false,
+              });
+            } else {
+              Swal.fire({
+                title: intl.formatMessage({
+                  id: "USER.MASTER.ERROR",
+                  defaultMessage: "Error",
+                }),
+                text:
+                  response?.data?.msg ||
+                  intl.formatMessage({
+                    id: "USER.MASTER.DELETE_FAILED",
+                    defaultMessage: "Failed to delete unit.",
+                  }),
+                icon: "error",
+              });
+            }
+          })
+          .catch((error) => {
+            console.error("Error deleting unit:", error);
             Swal.fire({
               title: intl.formatMessage({
-                id: "USER.MASTER.DELETE_SUCCESS_TITLE",
-                defaultMessage: "Removed!",
+                id: "USER.MASTER.ERROR",
+                defaultMessage: "Error",
               }),
-              text: intl.formatMessage({
-                id: "USER.MASTER.UNIT_DELETE_SUCCESS",
-                defaultMessage: "Unit has been removed successfully.",
-              }),
-              icon: "success",
-              timer: 1500,
-              showConfirmButton: false,
+              text:
+                error?.response?.data?.msg ||
+                intl.formatMessage({
+                  id: "USER.MASTER.DELETE_FAILED",
+                  defaultMessage: "Failed to delete unit.",
+                }),
+              icon: "error",
             });
-          } else {
-            throw new Error(response?.message || "API call failed");
-          }
-        } catch (error) {
-          console.error("Delete Unit API Error:", error);
-          Swal.fire({
-            title: intl.formatMessage({
-              id: "USER.MASTER.ERROR",
-              defaultMessage: "Error!",
-            }),
-            text:
-              error.message ||
-              intl.formatMessage({
-                id: "USER.MASTER.DELETE_FAILED",
-                defaultMessage: "Failed to delete unit.",
-              }),
-            icon: "error",
-            confirmButtonText: intl.formatMessage({
-              id: "USER.MASTER.OK_BUTTON",
-              defaultMessage: "OK",
-            }),
           });
-        }
       }
     });
   };
 
-  const handleExportExcel = async () => {
-  const payload = {
-    isCaptainReceipe: false,
-    isCaptainReceipeRawMaterial: false,
-    isMenuCategory: false,
-    isMenuItem: false,
-    isMenuItemRawMaterial: false,
-    isRawMaterial: false,
-    isRawMaterialCat: false,
-    isUnit: true, // only Unit
+  const statusUnit = () => {
+    //
   };
 
-  try {
-    setIsExporting(true);
-    const res = await Getgenerateusermenuitemrawmaterialexcel(Id, payload);
-
-    // Pick up the file URL, whatever field the API uses
-    const d = res?.data;
-    const fileUrl =
-      d?.report_path ||
-      d?.data?.report_path ||
-      d?.excel_path ||
-      d?.data?.excel_path ||
-      d?.file_path ||
-      d?.data?.file_path ||
-      d?.url ||
-      (typeof d?.data === "string" ? d.data : null);
-
-    if (fileUrl) {
-      const a = document.createElement("a");
-      a.href = fileUrl;
-      a.download = "Unit_Master.xlsx";
-      a.target = "_blank";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } else {
-      console.log("Export response:", res?.data);
-      throw new Error("No file URL returned");
-    }
-  } catch (error) {
-    console.error("Export error:", error);
-    Swal.fire({
-      title: intl.formatMessage({ id: "USER.MASTER.ERROR", defaultMessage: "Error!" }),
-      text: "Failed to export Excel.",
-      icon: "error",
-    });
-  } finally {
-    setIsExporting(false);
-  }
-};
-
-  // ✅ Fetch complete unit details by ID when editing
-  const handleEdit = async (event) => {
-    setIsLoadingUnit(true);
+  const handleEdit = async (unit) => {
     try {
-      const response = await GetUnitById(event.unitId);
+      setIsLoadingUnit(true);
+      const res = await GetUnitById(unit.unitId);
 
-      if (
-        response?.data?.success &&
-        response?.data?.data?.["Unit Details"]?.[0]
-      ) {
-        const unitDetails = response.data.data["Unit Details"][0];
-
-        // Format the unit data for the form
-        const formattedUnit = {
-          unitId: unitDetails.id,
-          nameEnglish: unitDetails.nameEnglish,
-          nameGujarati: unitDetails.nameGujarati,
-          nameHindi: unitDetails.nameHindi,
-          symbolEnglish: unitDetails.symbolEnglish,
-          symbolGujarati: unitDetails.symbolGujarati,
-          symbolHindi: unitDetails.symbolHindi,
-          isParentUnit: unitDetails.isParentUnit,
-          decimalLimit: unitDetails.decimalLimit,
-          parentUnit: unitDetails.parentUnit,
-          equivalentValue: unitDetails.equivalentValue,
-          rangeType: unitDetails.rangeType,
-          ranges: unitDetails.ranges || [],
-          stepValue: unitDetails.stepValue,
-        };
-
-        setSelectedUnit(formattedUnit);
+      if (res?.data?.success && res?.data?.data) {
+        const fullUnitData = res.data.data;
+        setSelectedUnit(fullUnitData);
         setIsEventTypeModalOpen(true);
       } else {
-        Swal.fire({
-          title: intl.formatMessage({
-            id: "USER.MASTER.ERROR",
-            defaultMessage: "Error!",
-          }),
-          text: intl.formatMessage({
-            id: "USER.MASTER.FETCH_UNIT_FAILED",
-            defaultMessage: "Failed to fetch unit details.",
-          }),
-          icon: "error",
-        });
+        console.warn("Could not fetch full unit details, using table data");
+        setSelectedUnit(unit);
+        setIsEventTypeModalOpen(true);
       }
     } catch (error) {
       console.error("Error fetching unit details:", error);
-      Swal.fire({
-        title: intl.formatMessage({
-          id: "USER.MASTER.ERROR",
-          defaultMessage: "Error!",
-        }),
-        text:
-          error.message ||
-          intl.formatMessage({
-            id: "USER.MASTER.FETCH_UNIT_FAILED",
-            defaultMessage: "Failed to fetch unit details.",
-          }),
-        icon: "error",
-      });
+      setSelectedUnit(unit);
+      setIsEventTypeModalOpen(true);
     } finally {
       setIsLoadingUnit(false);
     }
   };
 
-  const statusUnit = (unitId, status) => {
-    updateunit(unitId, status)
-      .then((res) => {
-        if (res.data?.msg || res.data.status === true) {
-          Swal.fire({
-            title: intl.formatMessage({
-              id: "USER.MASTER.SUCCESS",
-              defaultMessage: "Success!",
-            }),
-            text:
-              res.data?.msg ||
-              intl.formatMessage({
-                id: "USER.MASTER.STATUS_UPDATE_SUCCESS",
-                defaultMessage: "Status updated successfully",
-              }),
-            icon: "success",
-            timer: 1500,
-            showConfirmButton: false,
-          });
-          Fetchunit();
-        }
-      })
-      .catch((error) => {
-        console.error("Error updating unit status:", error);
-        Swal.fire({
-          title: intl.formatMessage({
-            id: "USER.MASTER.ERROR",
-            defaultMessage: "Error!",
-          }),
-          text: intl.formatMessage({
-            id: "USER.MASTER.STATUS_UPDATE_FAILED",
-            defaultMessage: "Failed to update unit status",
-          }),
-          icon: "error",
-          confirmButtonText: intl.formatMessage({
-            id: "USER.MASTER.OK_BUTTON",
-            defaultMessage: "OK",
-          }),
-        });
-      });
+  const handleExportExcel = async () => {
+    const payload = {
+      isCaptainReceipe: false,
+      isCaptainReceipeRawMaterial: false,
+      isMenuCategory: false,
+      isMenuItem: false,
+      isMenuItemRawMaterial: false,
+      isRawMaterial: false,
+      isRawMaterialCat: false,
+      isUnit: true, // Only Unit
+    };
+
+    try {
+      setIsExporting(true);
+      const res = await Getgenerateusermenuitemrawmaterialexcel(Id, payload);
+      const d = res?.data;
+
+      // API returned failure
+      if (d?.success === false) {
+        throw new Error(d?.msg || d?.message || "Failed to export Excel.");
+      }
+
+      const fileUrl =
+        d?.report_path ||
+        d?.data?.report_path ||
+        d?.excel_path ||
+        d?.data?.excel_path ||
+        d?.file_path ||
+        d?.data?.file_path ||
+        d?.url ||
+        (typeof d?.data === "string" ? d.data : null);
+
+      if (fileUrl) {
+        const a = document.createElement("a");
+        a.href = fileUrl;
+        a.download = "Units.xlsx";
+        a.target = "_blank";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        console.log("Export response:", d);
+        throw new Error(d?.msg || d?.message || "No file URL returned");
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      const apiMsg =
+        error?.response?.data?.msg ||
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to export Excel.";
+      Swal.fire({ title: "Error", text: apiMsg, icon: "error" });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
     <Fragment>
       <Container>
+        {/* Breadcrumbs */}
         <div className=" pb-2 mb-3">
           <h1 className="text-xl text-gray-900">
             <FormattedMessage
@@ -374,8 +414,8 @@ const [isExporting, setIsExporting] = useState(false);
         </div>
 
         <div className="filters flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className={`flex flex-wrap items-center gap-2`}>
-            <div className="filItems relative">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="filItems relative" ref={searchBoxRef}>
               <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
               <input
                 className="input pl-8"
@@ -386,36 +426,65 @@ const [isExporting, setIsExporting] = useState(false);
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
               />
+
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-           <button
-    className="btn btn-light"
-    onClick={handleExportExcel}
-    disabled={isExporting}
-  >
-    <i className="ki-filled ki-file-down"></i>{" "}
-    {isExporting ? "Exporting..." : "Excel"}
-  </button>
+            <button
+              className="btn btn-light"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+            >
+              <i className="ki-filled ki-file-down"></i>{" "}
+              {isExporting ? "Exporting..." : "Excel"}
+            </button>
 
-          {permissions.add && (
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  setIsEventTypeModalOpen(true);
-                  setSelectedUnit(null);
-                }}
-              >
-                <i className="ki-filled ki-plus"></i>{" "}
-                <FormattedMessage
-                  id="USER.MASTER.ADD_CONTACT_CATEGORY"
-                  defaultMessage="Create New"
-                />
-              </button>
-            </div>
-          )}
+            {permissions.add && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setIsEventTypeModalOpen(true);
+                    setSelectedUnit(null);
+                  }}
+                >
+                  <i className="ki-filled ki-plus"></i>{" "}
+                  <FormattedMessage
+                    id="USER.MASTER.ADD_CONTACT_CATEGORY"
+                    defaultMessage="Create New"
+                  />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { columns } from "./constant";
@@ -11,6 +11,7 @@ import {
 } from "@/services/apiServices";
 import Addcashaccount from "../../../../partials/modals/add-cash-account/Addcashaccount";
 import { usePermission } from "../../../../hooks/usePermission.js";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const CashAccountsList = () => {
   const permissions = usePermission("CashOPB");
@@ -22,6 +23,14 @@ const CashAccountsList = () => {
 
   let Id = JSON.parse(localStorage.getItem("userId"));
   const [tableData, setTableData] = useState([]);
+
+  // Suggestions state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
 
   const handleEdit = async (item) => {
     try {
@@ -59,10 +68,9 @@ const CashAccountsList = () => {
     try {
       const res = await DeleteCashAccount(item.id);
 
-      // ✅ BE returned success: false (account in use)
       if (!res?.data?.success) {
         Swal.fire({
-          icon: "info", // ✅ info instead of error/success
+          icon: "info",
           title: intl.formatMessage({
             id: "CASH_ACCOUNT.CANNOT_DELETE",
             defaultMessage: "Cannot Delete",
@@ -77,7 +85,6 @@ const CashAccountsList = () => {
         return;
       }
 
-      // ✅ success: true
       Swal.fire({
         icon: "success",
         title: intl.formatMessage({ id: "COMMON.DELETED", defaultMessage: "Deleted!" }),
@@ -108,6 +115,7 @@ const CashAccountsList = () => {
       });
     }
   };
+
   const handleAddNew = () => {
     setSelectedBankDetails(null);
     setIsBankModalOpen(true);
@@ -121,7 +129,7 @@ const CashAccountsList = () => {
         id: item.id,
         accountName: item.accountName,
         subTitle: item.description || "-",
-        cashType: item.contactType.nameEnglish || "-",
+        cashType: item.contactType?.nameEnglish || "-",
         openingBalance: Number(item.openingBalance || 0).toFixed(2),
         currentBalance: Number(item.currentBalance || 0).toFixed(2),
         status: item.isActive ? "ACTIVE" : "INACTIVE",
@@ -130,6 +138,8 @@ const CashAccountsList = () => {
       }));
       setTableData(mapped);
       setOriginalData(mapped);
+      const words = extractDictWords(mapped, ["accountName", "subTitle", "cashType"]);
+      setDictWords(words);
     } catch (error) {
       console.log("cash list error", error);
     }
@@ -138,6 +148,81 @@ const CashAccountsList = () => {
   useEffect(() => {
     fetchCashAccounts();
   }, []);
+
+  // Filter on search
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setTableData(originalData);
+      return;
+    }
+    const q = searchQuery.toLowerCase();
+    const filtered = originalData.filter((item) =>
+      [item.accountName, item.subTitle, item.cashType].some((v) =>
+        String(v || "").toLowerCase().includes(q)
+      )
+    );
+    setTableData(filtered);
+  }, [searchQuery, originalData]);
+
+  // Suggestions generation
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery, dictWords]);
+
+  // Click outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(word);
+    setShowSpell(false);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev < spellSuggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev > 0 ? prev - 1 : spellSuggestions.length - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
 
   return (
     <Fragment>
@@ -153,7 +238,7 @@ const CashAccountsList = () => {
 
         <div className="filters flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="filItems relative">
+            <div className="filItems relative" ref={searchBoxRef}>
               <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
               <input
                 className="input pl-8"
@@ -164,7 +249,35 @@ const CashAccountsList = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
               />
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
@@ -189,7 +302,6 @@ const CashAccountsList = () => {
           allBankDetails={tableData}
         />
 
-        {/* ✅ pass handleDelete + delete permission */}
         <TableComponent
           columns={columns(handleEdit, handleDelete, permissions, intl, {
             edit: true,

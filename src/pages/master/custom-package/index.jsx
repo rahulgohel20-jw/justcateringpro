@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { columns } from "../custom-package/constant";
@@ -10,7 +10,6 @@ import {
   GetCustomPackageapi,
   DeleteCustomPackageapi,
   UpdateCustomPackageStatusapi,
-  GetAllCustomThemeByUserId,
   CustomPackagePdf,
   GetAllFonts,
 } from "@/services/apiServices";
@@ -22,6 +21,7 @@ import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
 import "@react-pdf-viewer/default-layout/lib/styles/index.css";
 import SelectMenureport from "../../../partials/modals/menu-report/SelectMenureport";
 import MenuReport from "../../../partials/modals/menu-report/MenuReport";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const getLangCode = (lang) => {
   switch (lang) {
@@ -70,6 +70,14 @@ const CustomPackageMaster = () => {
   const [customPackageTemplateId, setCustomPackageTemplateId] = useState(null);
   const pdfPlugin = defaultLayoutPlugin();
 
+  // Suggestions state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
+
   // --- Font selection state ---
   const [fontList, setFontList] = useState([]);
   const [isFontModalVisible, setIsFontModalVisible] = useState(false);
@@ -82,12 +90,10 @@ const CustomPackageMaster = () => {
   const [catFontSize, setCatFontSize] = useState(-1);
   const [itemFontSize, setItemFontSize] = useState(-1);
   const [sloganFontSize, setSloganFontSize] = useState(-1);
-const [isSelectReportOpen, setIsSelectReportOpen] = useState(false);
-const [isMenuReportOpen, setIsMenuReportOpen] = useState(false);   // NEW
-const [menuReportTemplate, setMenuReportTemplate] = useState(null);
-const [loadingTable, setLoadingTable] = useState(false);
-  // Fetch the template ID for "Custome Package Theme" once on mount
- 
+  const [isSelectReportOpen, setIsSelectReportOpen] = useState(false);
+  const [isMenuReportOpen, setIsMenuReportOpen] = useState(false);
+  const [menuReportTemplate, setMenuReportTemplate] = useState(null);
+  const [loadingTable, setLoadingTable] = useState(false);
 
   // Fetch fonts for the dropdowns once on mount
   const fetchFonts = async () => {
@@ -120,75 +126,73 @@ const [loadingTable, setLoadingTable] = useState(false);
     })),
   ];
 
+  const handleDownloadPdf = (packageId) => {
+    setSelectedPackageId(packageId);
+    setIsSelectReportOpen(true);
+  };
 
-const handleDownloadPdf = (packageId) => {
-  setSelectedPackageId(packageId);
-  setIsSelectReportOpen(true);
-};
-const handlePackageTemplateSelect = (template) => {
-  const templateId = template.id;
-  setCustomPackageTemplateId(templateId);
-  setIsSelectReportOpen(false);
+  const handlePackageTemplateSelect = (template) => {
+    const templateId = template.id;
+    setCustomPackageTemplateId(templateId);
+    setIsSelectReportOpen(false);
 
-// For arroma report 
-  if (template.type === "Type 19" || template.type === "Type 20") {
-    setMenuReportTemplate(template);
-    setIsMenuReportOpen(true);
-    return;
-  }
-
-  fetchFonts();
-  setSelectedLanguage("english");
-  setCatFontId(-1);
-  setItemFontId(-1);
-  setSloganFontId(-1);
-  setCatFontSize(-1);
-  setItemFontSize(-1);
-  setSloganFontSize(-1);
-  setIsFontModalVisible(true);
-};
-  // Step 2: user confirms fonts -> build full payload and generate PDF
-  // Step 2: user confirms fonts -> build full payload and generate PDF
-const generatePdf = async () => {
-  const userId = localStorage.getItem("userId");
-  if (!userId) {
-    Swal.fire("Error", "User ID not found!", "error");
-    return;
-  }
-
- const payload = {
-  adminTemplateId: customPackageTemplateId || 0,
-  catFontId: catFontId ?? 0,
-  catFontSize: catFontSize ?? 0,
-  customPackageId: selectedPackageId || 0,
-  itemFontId: itemFontId ?? 0,
-  itemFontSize: itemFontSize ?? 0,
-  lang: getLangCode(selectedLanguage),
-  sloganFontId: sloganFontId ?? 0,
-  sloganFontSize: sloganFontSize ?? 0,
-  userId: Number(userId),
-};
-  try {
-    setLoadingPdf(true);
-    setPdfUrl("");
-    setIsFontModalVisible(false);
-    setIsPdfModalVisible(false);
-
-    const response = await CustomPackagePdf(payload);
-
-    if (response?.data?.fileUrl) {
-      setPdfUrl(response.data.fileUrl + `?t=${Date.now()}`);
-      setIsPdfModalVisible(true);
-    } else {
-      Swal.fire("Error", "PDF not available.", "error");
+    if (template.type === "Type 19" || template.type === "Type 20") {
+      setMenuReportTemplate(template);
+      setIsMenuReportOpen(true);
+      return;
     }
-  } catch (error) {
-    console.error("PDF load error:", error);
-    Swal.fire("Error", "Failed to load PDF.", "error");
-  } finally {
-    setLoadingPdf(false);
-  }
-};
+
+    fetchFonts();
+    setSelectedLanguage("english");
+    setCatFontId(-1);
+    setItemFontId(-1);
+    setSloganFontId(-1);
+    setCatFontSize(-1);
+    setItemFontSize(-1);
+    setSloganFontSize(-1);
+    setIsFontModalVisible(true);
+  };
+
+  const generatePdf = async () => {
+    const userId = localStorage.getItem("userId");
+    if (!userId) {
+      Swal.fire("Error", "User ID not found!", "error");
+      return;
+    }
+
+    const payload = {
+      adminTemplateId: customPackageTemplateId || 0,
+      catFontId: catFontId ?? 0,
+      catFontSize: catFontSize ?? 0,
+      customPackageId: selectedPackageId || 0,
+      itemFontId: itemFontId ?? 0,
+      itemFontSize: itemFontSize ?? 0,
+      lang: getLangCode(selectedLanguage),
+      sloganFontId: sloganFontId ?? 0,
+      sloganFontSize: sloganFontSize ?? 0,
+      userId: Number(userId),
+    };
+    try {
+      setLoadingPdf(true);
+      setPdfUrl("");
+      setIsFontModalVisible(false);
+      setIsPdfModalVisible(false);
+
+      const response = await CustomPackagePdf(payload);
+
+      if (response?.data?.fileUrl) {
+        setPdfUrl(response.data.fileUrl + `?t=${Date.now()}`);
+        setIsPdfModalVisible(true);
+      } else {
+        Swal.fire("Error", "PDF not available.", "error");
+      }
+    } catch (error) {
+      console.error("PDF load error:", error);
+      Swal.fire("Error", "Failed to load PDF.", "error");
+    } finally {
+      setLoadingPdf(false);
+    }
+  };
 
   const formatPackageData = (packages) => {
     return packages.map((pkg, index) => {
@@ -210,29 +214,32 @@ const generatePdf = async () => {
     });
   };
 
- const fetchPackages = async () => {
-  setLoadingTable(true);
-  try {
-    const Id = localStorage.getItem("userId");
-    if (!Id) {
-      Swal.fire("Error", "User ID not found!", "error");
-      return;
+  const fetchPackages = async () => {
+    setLoadingTable(true);
+    try {
+      const Id = localStorage.getItem("userId");
+      if (!Id) {
+        Swal.fire("Error", "User ID not found!", "error");
+        return;
+      }
+
+      const res = await GetCustomPackageapi(Id);
+      const allPackages = res?.data?.data?.["Package Details"] || [];
+
+      setOriginalData(allPackages);
+      setDictWords(
+        extractDictWords(allPackages, ["nameEnglish", "nameHindi", "nameGujarati"])
+      );
+
+      const formatted = formatPackageData(allPackages);
+      setTableData(formatted);
+    } catch (err) {
+      console.error("Failed to fetch packages:", err);
+      Swal.fire("Error", "Failed to fetch package data.", "error");
+    } finally {
+      setLoadingTable(false);
     }
-
-    const res = await GetCustomPackageapi(Id);
-    const allPackages = res?.data?.data?.["Package Details"] || [];
-
-    setOriginalData(allPackages);
-
-    const formatted = formatPackageData(allPackages);
-    setTableData(formatted);
-  } catch (err) {
-    console.error("Failed to fetch packages:", err);
-    Swal.fire("Error", "Failed to fetch package data.", "error");
-  } finally {
-    setLoadingTable(false);
-  }
-};  
+  };
 
   useEffect(() => {
     fetchPackages();
@@ -253,8 +260,8 @@ const generatePdf = async () => {
         return;
       }
 
+      const searchLower = searchQuery.toLowerCase();
       const filtered = originalData.filter((pkg) => {
-        const searchLower = searchQuery.toLowerCase();
         return (
           (pkg.nameEnglish &&
             pkg.nameEnglish.toLowerCase().includes(searchLower)) ||
@@ -271,6 +278,66 @@ const generatePdf = async () => {
 
     return () => clearTimeout(handler);
   }, [searchQuery, originalData, intl.locale]);
+
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery, dictWords]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearchQuery(word);
+    setShowSpell(false);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev < spellSuggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev > 0 ? prev - 1 : spellSuggestions.length - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
 
   const deletePackage = async (packageid) => {
     Swal.fire({
@@ -369,7 +436,7 @@ const generatePdf = async () => {
           <div
             className={`flex flex-wrap items-center gap-2 ${classes.customStyle}`}
           >
-            <div className="filItems relative">
+            <div className="filItems relative" ref={searchBoxRef}>
               <i className="ki-filled ki-magnifier leading-none text-md text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-3"></i>
               <input
                 className="input pl-8"
@@ -380,7 +447,35 @@ const generatePdf = async () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
               />
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
           {permissions.add && (
@@ -400,24 +495,24 @@ const generatePdf = async () => {
           )}
         </div>
 
-       {loadingTable ? (
-  <div className="flex items-center justify-center py-20">
-    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
-    <span className="ml-3 text-sm text-gray-500">Loading packages…</span>
-  </div>
-) : (
-  <TableComponent
-    columns={columns(
-      handleEdit,
-      deletePackage,
-      statusHandler,
-      permissions,
-      handleDownloadPdf,
-    )}
-    data={tableData}
-    paginationSize={10}
-  />
-)}
+        {loadingTable ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+            <span className="ml-3 text-sm text-gray-500">Loading packages…</span>
+          </div>
+        ) : (
+          <TableComponent
+            columns={columns(
+              handleEdit,
+              deletePackage,
+              statusHandler,
+              permissions,
+              handleDownloadPdf,
+            )}
+            data={tableData}
+            paginationSize={10}
+          />
+        )}
 
         {/* Font Selection Modal */}
         <Modal
@@ -441,7 +536,6 @@ const generatePdf = async () => {
           ]}
         >
           <div className="space-y-6">
-            {/* Language selector — button row, matches MenuReport pattern */}
             <div>
               <label className="block font-medium mb-2 text-gray-700">
                 Select Language
@@ -464,7 +558,6 @@ const generatePdf = async () => {
               </div>
             </div>
 
-            {/* Font family selectors */}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block font-medium mb-2 text-gray-700">
@@ -504,7 +597,6 @@ const generatePdf = async () => {
               </div>
             </div>
 
-            {/* Font size selectors */}
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block font-medium mb-2 text-gray-700">
@@ -545,34 +637,34 @@ const generatePdf = async () => {
             </div>
           </div>
         </Modal>
-<SelectMenureport
-  eventId={null}
-  isSelectMenureport={isSelectReportOpen}
-  setIsSelectMenuReport={setIsSelectReportOpen}
-  mode="package"
-  customPackageId={selectedPackageId}
-  onPackageTemplateSelect={handlePackageTemplateSelect}
-  // restrictToType="Type 1"
-/>
 
-{isMenuReportOpen && (
-  <MenuReport
-    isModalOpen={isMenuReportOpen}
-    setIsModalOpen={setIsMenuReportOpen}
-    eventId={null}
-    eventFunctionId={-1}
-    moduleId={menuReportTemplate?.moduleId}
-    mappingId={menuReportTemplate?.mappingId}
-    selectedTemplateId={menuReportTemplate?.id}
-    selectedTemplateName={menuReportTemplate?.name}
-    isNamePlateTheme={false}
-    isAdminModuleReport={false}
-    exclusive={true}
-    customPackageId={selectedPackageId}
-    customPackageTemplateMasterId={menuReportTemplate?.templateMasterId}
-  />
-)}
-        {/* PDF Preview Modal */}
+        <SelectMenureport
+          eventId={null}
+          isSelectMenureport={isSelectReportOpen}
+          setIsSelectMenuReport={setIsSelectReportOpen}
+          mode="package"
+          customPackageId={selectedPackageId}
+          onPackageTemplateSelect={handlePackageTemplateSelect}
+        />
+
+        {isMenuReportOpen && (
+          <MenuReport
+            isModalOpen={isMenuReportOpen}
+            setIsModalOpen={setIsMenuReportOpen}
+            eventId={null}
+            eventFunctionId={-1}
+            moduleId={menuReportTemplate?.moduleId}
+            mappingId={menuReportTemplate?.mappingId}
+            selectedTemplateId={menuReportTemplate?.id}
+            selectedTemplateName={menuReportTemplate?.name}
+            isNamePlateTheme={false}
+            isAdminModuleReport={false}
+            exclusive={true}
+            customPackageId={selectedPackageId}
+            customPackageTemplateMasterId={menuReportTemplate?.templateMasterId}
+          />
+        )}
+
         <Modal
           title="Package Report"
           open={isPdfModalVisible}

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+/* eslint-disable react/prop-types */
+import { useState, useEffect, useRef } from "react";
 import { Container } from "@/components/container";
 import { TableComponent } from "@/components/table/TableComponent";
 import { bankPaymentColumns } from "./constant";
@@ -13,6 +14,7 @@ import Swal from "sweetalert2";
 import AddPayable from "../../../partials/modals/add-cash-account/AddPayable";
 import { useCloseDateAll } from "@/hooks/useCloseDate";
 import { usePermission } from "../../../hooks/usePermission";
+import { buildSpellSuggestions, extractDictWords } from "@/utils";
 
 const MONTHS = [
   "Jan",
@@ -59,6 +61,14 @@ const SuperBankPayment = () => {
   const [tableData, setTableData] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
 
+  // Suggestions state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
+
   // ── Fetch ALL year's close dates from API ──
   const { monthCloseDates, isLoading: closeDateLoading } =
     useCloseDateAll(year);
@@ -90,7 +100,7 @@ const SuperBankPayment = () => {
       setYear(activeEntry.year);
       setAutoMonthSet(true);
     }
-  }, [monthCloseDates, closeDateLoading]);
+  }, [monthCloseDates, closeDateLoading, autoMonthSet]);
 
   // ── Load bank sub-tabs ──
   useEffect(() => {
@@ -112,7 +122,7 @@ const SuperBankPayment = () => {
       }
     };
     loadSubTabs();
-  }, []);
+  }, [userId]);
 
   const fetchPayments = async () => {
     const key = `${year}-${month + 1}`;
@@ -143,7 +153,14 @@ const SuperBankPayment = () => {
         voucherNo: "",
       });
 
-      setTableData(res?.data?.data || []);
+      const list = res?.data?.data || [];
+      setTableData(list);
+      const words = extractDictWords(list, [
+        "partyName",
+        "voucherNo",
+        "referenceNo",
+      ]);
+      setDictWords(words);
     } catch (err) {
       console.error("❌ Fetch payments error →", err);
       setTableData([]);
@@ -163,6 +180,66 @@ const SuperBankPayment = () => {
     bankSubTabs,
     paymentMode,
   ]);
+
+  // Build suggestions while typing
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const q = (search || "").trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const suggestions = buildSpellSuggestions(q, dictWords, 6);
+      setSpellSuggestions(suggestions);
+      setShowSpell(suggestions.length > 0);
+      setSpellIndex(-1);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [search, dictWords]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
+
+  const applySpellSuggestion = (word) => {
+    skipSuggestRef.current = true;
+    setSearch(word);
+    setShowSpell(false);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev < spellSuggestions.length - 1 ? prev + 1 : 0
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((prev) =>
+        prev > 0 ? prev - 1 : spellSuggestions.length - 1
+      );
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (spellIndex >= 0 && spellIndex < spellSuggestions.length) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
 
   const handleAction = async (rowData, mode) => {
     if (mode === "delete") {
@@ -227,11 +304,10 @@ const SuperBankPayment = () => {
     return (
       <button
         onClick={() => setMonth(index)}
-        className={`relative flex flex-col items-start px-3 py-2 rounded-2xl border transition-all text-left ${
-          isSelected
+        className={`relative flex flex-col items-start px-3 py-2 rounded-2xl border transition-all text-left ${isSelected
             ? "bg-primary text-white border-primary shadow-md"
             : "bg-white text-gray-800 border-gray-200 hover:border-primary hover:shadow-sm"
-        }`}
+          }`}
       >
         {isActive && (
           <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-green-400" />
@@ -248,105 +324,115 @@ const SuperBankPayment = () => {
 
   return (
     <Container>
-      <div className="">
-        {/* ── Mobile: dropdowns ── */}
-        <div className="flex flex-wrap items-center gap-3 md:hidden mb-4">
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-800 bg-white cursor-pointer outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
-          >
-            {Array.from(
-              { length: 10 },
-              (_, i) => new Date().getFullYear() - 5 + i,
-            ).map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-          <select
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-800 bg-white cursor-pointer outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
-          >
-            {MONTHS.map((m, i) => (
-              <option key={m} value={i}>
-                {m}
-              </option>
-            ))}
-          </select>
-          <span className="text-xs text-gray-500">
-            {getMonthDisplay(month, year)}
-          </span>
-        </div>
-
-        {/* ── Desktop: Year + Month grid ── */}
-        <div className="hidden md:grid grid-cols-7 gap-3 mb-4">
-          {/* Year picker */}
-          <div className="relative col-span-1 flex flex-col justify-start">
+      <div className="space-y-5">
+        {/* ── Year Selector Header ── */}
+        <div className="flex items-center justify-between">
+          <div className="relative">
             <button
-              onClick={() => setShowYearPicker((v) => !v)}
-              className="px-3 py-2 rounded-xl bg-primary text-white text-sm font-bold w-fit min-w-[70px]"
+              onClick={() => setShowYearPicker((p) => !p)}
+              className="flex items-center gap-2 text-2xl font-bold text-gray-800 hover:text-primary transition-colors group"
             >
-              {year}
-            </button>
-            {showYearPicker && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowYearPicker(false)}
+              <span>FY {year}</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`w-5 h-5 text-gray-400 group-hover:text-primary transition-transform ${showYearPicker ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 9l-7 7-7-7"
                 />
-                <div className="absolute top-12 left-0 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-4 w-64">
-                  <div className="flex items-center justify-between mb-4">
-                    <button
-                      onClick={() => setYearRangeStart((y) => y - 12)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 text-lg border-0 bg-transparent cursor-pointer"
+              </svg>
+            </button>
+
+            {showYearPicker && (
+              <div className="absolute top-full left-0 mt-2 z-50 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 w-72">
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <button
+                    onClick={() => setYearRangeStart((s) => s - 12)}
+                    className="p-1 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-800 transition"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
                     >
-                      ‹
-                    </button>
-                    <span className="text-sm font-bold text-gray-700">
-                      {yearRangeStart} – {yearRangeStart + 11}
-                    </span>
-                    <button
-                      onClick={() => setYearRangeStart((y) => y + 12)}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500 text-lg border-0 bg-transparent cursor-pointer"
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
+                  </button>
+                  <span className="text-xs font-semibold text-gray-500">
+                    {yearRangeStart} - {yearRangeStart + 11}
+                  </span>
+                  <button
+                    onClick={() => setYearRangeStart((s) => s + 12)}
+                    className="p-1 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-800 transition"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
                     >
-                      ›
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {Array.from(
-                      { length: 12 },
-                      (_, i) => yearRangeStart + i,
-                    ).map((y) => (
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {Array.from({ length: 12 }, (_, i) => yearRangeStart + i).map(
+                    (y) => (
                       <button
                         key={y}
                         onClick={() => {
                           setYear(y);
                           setShowYearPicker(false);
                         }}
-                        className={`py-2 rounded-xl text-sm font-semibold border-0 cursor-pointer transition ${y === year ? "bg-primary text-white" : "bg-gray-50 text-gray-700 hover:bg-gray-100"}`}
+                        className={`py-2 text-xs font-semibold rounded-xl transition ${year === y
+                            ? "bg-primary text-white shadow-sm"
+                            : "text-gray-700 hover:bg-blue-50 hover:text-primary"
+                          }`}
                       >
                         {y}
                       </button>
-                    ))}
-                  </div>
+                    ),
+                  )}
                 </div>
-              </>
+              </div>
             )}
           </div>
 
-          {/* Jan–Jun */}
-          {MONTHS.slice(0, 6).map((m, i) => (
-            <MonthButton key={m} m={m} index={i} />
-          ))}
+          <div className="flex items-center gap-4 text-xs font-medium">
+            <span className="flex items-center gap-1.5 text-gray-500">
+              <span className="w-2 h-2 rounded-full bg-green-500" />
+              Active Cycle
+            </span>
+            <span className="flex items-center gap-1.5 text-gray-500">
+              <span className="w-2 h-2 rounded-full bg-gray-300" />
+              Archived
+            </span>
+          </div>
+        </div>
 
-          <div />
-
-          {/* Jul–Dec */}
-          {MONTHS.slice(6, 12).map((m, i) => (
-            <MonthButton key={m} m={m} index={i + 6} />
+        {/* ── 12-Month Cards Grid ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {MONTHS.map((m, index) => (
+            <MonthButton key={m} m={m} index={index} />
           ))}
         </div>
 
@@ -393,17 +479,16 @@ const SuperBankPayment = () => {
                 <button
                   key={s.key}
                   onClick={() => setSubTab(s.key)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    subTab === s.key
+                  className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${subTab === s.key
                       ? "bg-white text-primary shadow-sm border border-gray-200"
                       : "text-black hover:text-gray-700 hover:bg-white"
-                  }`}
+                    }`}
                 >
                   {s.label}
                 </button>
               ))}
             </div>
-            <div className="relative">
+            <div className="relative" ref={searchBoxRef}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -421,9 +506,36 @@ const SuperBankPayment = () => {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
                 placeholder="Search payments..."
                 className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 w-52 transition"
               />
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                          }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
 
@@ -436,11 +548,10 @@ const SuperBankPayment = () => {
               <button
                 key={m.key}
                 onClick={() => setPaymentMode(m.key)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  paymentMode === m.key
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${paymentMode === m.key
                     ? "bg-primary text-white shadow-sm"
                     : "text-black hover:text-gray-700 hover:bg-gray-100 border border-gray-200"
-                }`}
+                  }`}
               >
                 {m.label}
               </button>

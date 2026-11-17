@@ -25,6 +25,42 @@ import { useModuleAccess } from "../../../hooks/useModuleAccess";
 
 const ITEMS_PER_PAGE = 100;
 
+// ---------- Spelling suggestion helpers ----------
+
+// Edit distance that also counts swapped letters (e.g. "pnaeer" -> "paneer") as 1 edit
+const editDistance = (a, b) => {
+  const m = a.length;
+  const n = b.length;
+  const d = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) d[i][0] = i;
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    }
+  }
+  return d[m][n];
+};
+
+const maxEdits = (len) => (len <= 4 ? 1 : 2);
+
+// Closest dictionary words for one typed word (best first)
+const closestWords = (token, words, limit = 3) => {
+  const limitEdits = maxEdits(token.length);
+  const scored = [];
+  for (const w of words) {
+    if (Math.abs(w.length - token.length) > limitEdits) continue;
+    const dist = editDistance(token, w);
+    if (dist > 0 && dist <= limitEdits) scored.push({ w, dist });
+  }
+  scored.sort((x, y) => x.dist - y.dist || x.w.localeCompare(y.w));
+  return scored.slice(0, limit).map((s) => s.w);
+};
+
 const MenuItems = () => {
     const { hasModuleAccess } = useModuleAccess();
   const canAccessCaptainRecipe = hasModuleAccess("Captain Recipe");
@@ -57,6 +93,14 @@ const [excelOptions, setExcelOptions] = useState({
   isMenuItemRawMaterial: true,
 });
   const [videoModal, setVideoModal] = useState({ open: false, url: "" });
+
+  // Spelling suggestion state
+  const [dictWords, setDictWords] = useState([]);
+  const [spellSuggestions, setSpellSuggestions] = useState([]);
+  const [showSpell, setShowSpell] = useState(false);
+  const [spellIndex, setSpellIndex] = useState(-1);
+  const skipSuggestRef = useRef(false);
+  const searchBoxRef = useRef(null);
 
 const openVideoModal = (url) => {
   const embedUrl = getYoutubeEmbedUrl(url);
@@ -483,6 +527,130 @@ useEffect(() => {
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
+  // Load the spelling word list once from existing menu item names
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await GetAllMenuItems({
+          isAsc: "",
+          userId: Id,
+          itemName: "",
+          menuCatId: "",
+          subCategoryId: "",
+          isWithRecipe: "",
+          page: 1,
+          size: 1000,
+        });
+        if (cancelled) return;
+        const items = res?.data?.data?.items || [];
+        const set = new Set();
+        items.forEach((it) => {
+          (it.nameEnglish || "")
+            .toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter((w) => w.length >= 3)
+            .forEach((w) => set.add(w));
+        });
+        setDictWords([...set]);
+      } catch (err) {
+        console.error("Failed to load spelling dictionary:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Build suggestions while typing:
+  // 1) words starting with what you typed (autocomplete)
+  // 2) words containing it
+  // 3) spelling corrections when nothing matches
+  useEffect(() => {
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2 || dictWords.length === 0) {
+      setSpellSuggestions([]);
+      setShowSpell(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      const tokens = q.split(/\s+/).filter(Boolean);
+      const last = tokens[tokens.length - 1];
+      const prefixTokens = tokens.slice(0, -1);
+
+      let words = dictWords
+        .filter((w) => w.startsWith(last) && w !== last)
+        .sort((a, b) => a.length - b.length || a.localeCompare(b));
+
+      if (words.length === 0) {
+        words = dictWords
+          .filter((w) => w.includes(last) && w !== last)
+          .sort((a, b) => a.length - b.length || a.localeCompare(b));
+      }
+
+      // Fill remaining slots with spelling corrections
+      if (words.length < 3 && last.length >= 3) {
+        closestWords(last, dictWords, 3).forEach((w) => {
+          if (!words.includes(w)) words.push(w);
+        });
+      }
+
+      const results = words
+        .slice(0, 6)
+        .map((w) => [...prefixTokens, w].join(" "))
+        .filter((phrase) => phrase !== q);
+
+      setSpellSuggestions(results);
+      setSpellIndex(-1);
+      setShowSpell(results.length > 0);
+    }, 200);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, dictWords]);
+
+  // Close the dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSpell(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const applySpellSuggestion = (text) => {
+    skipSuggestRef.current = true; // don't re-run suggestions for this change
+    setSearchQuery(text); // existing debounce effect refreshes the table
+    setShowSpell(false);
+    setSpellIndex(-1);
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showSpell || spellSuggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSpellIndex((i) => (i + 1) % spellSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSpellIndex((i) => (i <= 0 ? spellSuggestions.length - 1 : i - 1));
+    } else if (e.key === "Tab" || (e.key === "Enter" && spellIndex >= 0)) {
+      if (spellIndex >= 0) {
+        e.preventDefault();
+        applySpellSuggestion(spellSuggestions[spellIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSpell(false);
+    }
+  };
+
   const handleDelete = (id) => {
     if (!id || isNaN(id)) {
       console.error("❌ Invalid ID passed to delete:", id);
@@ -646,10 +814,10 @@ useEffect(() => {
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           {/* Filters */}
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
+            <div className="relative" ref={searchBoxRef}>
               <i className="ki-filled ki-magnifier leading-none text-sm text-primary absolute top-1/2 start-0 -translate-y-1/2 ms-2.5" />
               <input
-                className="input pl-7 h-8 text-sm w-[160px]"
+                className="input pl-7 h-8 text-sm w-[220px]"
                 placeholder={intl.formatMessage({
                   id: "MASTER.SEARCH_MENU_ITEMS",
                   defaultMessage: "Search Menu Items",
@@ -657,7 +825,36 @@ useEffect(() => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => spellSuggestions.length > 0 && setShowSpell(true)}
+                onKeyDown={handleSearchKeyDown}
+                autoComplete="off"
+                spellCheck={false}
               />
+
+              {showSpell && spellSuggestions.length > 0 && (
+                <div className="absolute left-0 top-full mt-1 w-[260px] bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                  <div className="px-3 pt-2 pb-1 text-xs text-gray-400">
+                    Suggestions:
+                  </div>
+                  <ul>
+                    {spellSuggestions.map((s, i) => (
+                      <li
+                        key={s}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySpellSuggestion(s);
+                        }}
+                        onMouseEnter={() => setSpellIndex(i)}
+                        className={`px-3 py-2 cursor-pointer text-sm text-primary capitalize ${
+                          i === spellIndex ? "bg-gray-100" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <Select
