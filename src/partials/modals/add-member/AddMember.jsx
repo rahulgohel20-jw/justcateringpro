@@ -16,10 +16,13 @@ import Swal from "sweetalert2";
 import { IsChildUserExist } from "../../../services/apiServices";
 import { useModuleAccess } from "../../../hooks/useModuleAccess";
 
+const isValidPassword = (pwd = "") =>
+  pwd.length >= 6 && /[A-Za-z]/.test(pwd) && /\d/.test(pwd);
+
 const AddMember = ({
   isModalOpen,
   setIsModalOpen,
-  refreshData = () => {},
+  refreshData = () => { },
   selectedMember,
 }) => {
   const [taskAccess, setTaskAccess] = useState(true);
@@ -39,10 +42,10 @@ const AddMember = ({
   const [selectedRole, setSelectedRole] = useState("");
   const [isChildUser, setIsChildUser] = useState(false);
   const { hasModuleAccess } = useModuleAccess();
-const canAccessMirrorSecurity = hasModuleAccess("Mirror Security");
+  const canAccessMirrorSecurity = hasModuleAccess("Mirror Security");
 
-const auth = JSON.parse(localStorage.getItem("auth-storage"));
-const softType = auth?.state?.user?.softType ?? "";
+  const auth = JSON.parse(localStorage.getItem("auth-storage"));
+  const softType = auth?.state?.user?.softType ?? "";
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -134,6 +137,10 @@ const softType = auth?.state?.user?.softType ?? "";
     if (!formData.memberid) {
       if (!formData.password) {
         return "Password is required";
+      }
+
+      if (!isValidPassword(formData.password)) {
+        return "Password must be at least 6 characters and contain both letters and numbers";
       }
 
       if (!formData.confirmpassword) {
@@ -440,11 +447,11 @@ const softType = auth?.state?.user?.softType ?? "";
                 value={
                   countries.find((c) => c.id === formData.countryId)
                     ? {
-                        value: formData.countryId,
-                        label: countries.find(
-                          (c) => c.id === formData.countryId,
-                        )?.name,
-                      }
+                      value: formData.countryId,
+                      label: countries.find(
+                        (c) => c.id === formData.countryId,
+                      )?.name,
+                    }
                     : null
                 }
                 onChange={(selected) =>
@@ -466,10 +473,10 @@ const softType = auth?.state?.user?.softType ?? "";
                 value={
                   states.find((s) => s.id === formData.stateId)
                     ? {
-                        value: formData.stateId,
-                        label: states.find((s) => s.id === formData.stateId)
-                          ?.name,
-                      }
+                      value: formData.stateId,
+                      label: states.find((s) => s.id === formData.stateId)
+                        ?.name,
+                    }
                     : null
                 }
                 onChange={(selected) =>
@@ -495,10 +502,10 @@ const softType = auth?.state?.user?.softType ?? "";
                 value={
                   cities.find((ct) => ct.id === formData.cityId)
                     ? {
-                        value: formData.cityId,
-                        label: cities.find((ct) => ct.id === formData.cityId)
-                          ?.name,
-                      }
+                      value: formData.cityId,
+                      label: cities.find((ct) => ct.id === formData.cityId)
+                        ?.name,
+                    }
                     : null
                 }
                 onChange={(selected) =>
@@ -605,6 +612,9 @@ const softType = auth?.state?.user?.softType ?? "";
                   className="input"
                   placeholder="Password"
                 />
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Min 6 characters, with letters and numbers
+                </p>
               </div>
               <div className="flex flex-col">
                 <label className="form-label">
@@ -623,17 +633,17 @@ const softType = auth?.state?.user?.softType ?? "";
           )}
 
           {canAccessMirrorSecurity && (
-  <div className="flex items-center justify-between mt-2">
-    <label className="form-label mb-0">Is Child User</label>
-    <label className="switch switch-lg">
-      <input
-        type="checkbox"
-        checked={isChildUser}
-        onChange={handleChildUserToggle}
-      />
-    </label>
-  </div>
-)}
+            <div className="flex items-center justify-between mt-2">
+              <label className="form-label mb-0">Is Child User</label>
+              <label className="switch switch-lg">
+                <input
+                  type="checkbox"
+                  checked={isChildUser}
+                  onChange={handleChildUserToggle}
+                />
+              </label>
+            </div>
+          )}
 
           <div className="flex items-center gap-2 mt-1 hidden">
             <label className="form-label">Task Access</label>

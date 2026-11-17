@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   // base: "/JCX/",
-   base: "/",
+  base: "/",
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -21,7 +21,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 3000,
   },
   server: {
-    port: 5174,
+    port: 5173,
     proxy: {
       "/v1/api": {
         target: "http://103.1.101.244:5101",

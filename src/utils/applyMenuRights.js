@@ -45,6 +45,20 @@ export const applyMenuRights = (menuItems, rights, activeModuleNames = []) => {
     return false;
   };
 
+  const hasSpecifiedRights = (keys = []) =>
+    keys.some((key) => {
+      const clean = (key || "").trim();
+      if (!clean) return false;
+
+      if (rights?.[clean]?.view === true) return true;
+
+      const matchedKey = Object.keys(rights || {}).find(
+        (k) => k.trim().toLowerCase() === clean.toLowerCase()
+      );
+
+      return matchedKey ? rights[matchedKey]?.view === true : false;
+    });
+
   return menuItems
     .map((item) => {
       let children;
@@ -52,7 +66,10 @@ export const applyMenuRights = (menuItems, rights, activeModuleNames = []) => {
         children = applyMenuRights(item.children, rights, activeModuleNames);
       }
 
-      if (item.pageName) {
+      if (item.rightsKeys?.length) {
+        const canView = hasSpecifiedRights(item.rightsKeys);
+        if (!canView) return null;
+      } else if (item.pageName) {
         const isUpgradedModule =
           item.moduleName && activeModuleNames.includes(item.moduleName);
 
