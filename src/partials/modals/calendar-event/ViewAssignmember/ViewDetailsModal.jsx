@@ -746,50 +746,7 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
             </div>
           </div>
 
-          {/* ── Labour Quantities (Labour only) ──────────────────────────── */}
-          {data.resourceType === "LABOUR" && (
-            <div className="mx-4 mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">Labour Quantities</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1">
-                    Assigned Qty
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={assignedQtyValue}
-                    disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
-                    onChange={(e) => setAssignedQtyValue(e.target.value)}
-                    placeholder="0"
-                    className="w-full text-sm font-bold text-gray-800 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                  />
-                </div>
-               <div>
-  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block mb-1">
-    Confirmed Qty
-  </label>
-  <input
-    type="number"
-    min="0"
-    max={assignedQtyValue !== "" ? assignedQtyValue : undefined}
-    value={confirmedQtyValue}
-    disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
-    onChange={(e) => {
-      const v = e.target.value;
-      if (v === "") return setConfirmedQtyValue("");
-      const n = Number(v);
-      if (n < 0) return;
-      if (assignedQtyValue !== "" && n > Number(assignedQtyValue)) return;
-      setConfirmedQtyValue(v);
-    }}
-    placeholder="0"
-    className="w-full text-sm font-bold text-gray-800 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400"
-  />
-</div>
-              </div>
-            </div>
-          )}
+         
 
           {/* ── Assigned Tasks ───────────────────────────────────────── */}
           <div className="mx-4 mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
