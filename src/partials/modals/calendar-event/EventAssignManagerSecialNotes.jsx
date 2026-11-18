@@ -1,14 +1,15 @@
-import { Fragment, useState, useEffect, useMemo } from "react";
+import { Fragment, useState, useEffect, useMemo, useCallback } from "react";
 import { Select, Input, Tooltip } from "antd";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { toAbsoluteUrl } from "@/utils/Assets";
 import { TableComponent } from "@/components/table/TableComponent";
 import { CustomModal } from "@/components/custom-modal/CustomModal";
-import { Pencil, Trash2, Plus, Edit } from "lucide-react";
+import { Trash2, Plus, Edit } from "lucide-react";
 import {
   GetEventMasterById,
   AddSpecialNotes,
   GetSpecialNotes,
+  getallassignfunctionbyevent,
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
@@ -21,10 +22,7 @@ const { TextArea } = Input;
 // ─── Status helpers ────────────────────────────────────────────────────────
 const STATUS_MAP = {
   0: { label: "Inquiry", color: "bg-blue-50 text-blue-500 border-blue-200" },
-  1: {
-    label: "Confirmed",
-    color: "bg-green-50 text-green-600 border-green-200",
-  },
+  1: { label: "Confirmed", color: "bg-green-50 text-green-600 border-green-200" },
   2: { label: "Cancelled", color: "bg-red-50 text-red-500 border-red-200" },
 };
 
@@ -49,7 +47,6 @@ const emptyNote = (managerId = null) => ({
   status: "PENDING",
 });
 
-// Normalize whatever shape the GET returns into our note object.
 const mapNoteResponse = (raw, fallbackManagerId) => ({
   id: raw.id ?? null,
   name: raw.name ?? "",
@@ -57,27 +54,57 @@ const mapNoteResponse = (raw, fallbackManagerId) => ({
   priority: raw.priority ?? "MEDIUM",
   managerId: raw.managerId ?? fallbackManagerId,
   status: raw.status || "PENDING",
+  remarks: raw.remarks ?? "",
+  sequence: raw.sequence ?? null,
+  files: (Array.isArray(raw.files) ? raw.files : [])
+    .map((f) => ({ id: f.id, url: f.imagePath || f.url || f.path || "" }))
+    .filter((f) => f.url),
 });
 
-// Columns are built inside the component so the action-cell handlers
-// (edit/delete) always close over fresh state.
+const NOTE_STATUS_BADGE = {
+  PENDING: "bg-amber-50 text-amber-600 border border-amber-200",
+  RUNNING: "bg-blue-50 text-blue-600 border border-blue-200",
+  INPROGRESS: "bg-blue-50 text-blue-600 border border-blue-200",
+  COMPLETED: "bg-green-50 text-green-600 border border-green-200",
+};
+
+// Managers assigned to this function (getallassignfunctionbyevent -> fn.managers[])
+const extractManagers = (fn, lockedId, lockedName) => {
+  const map = new Map();
+  (fn?.managers ?? []).forEach((m) => {
+    if (m?.managerId == null) return;
+    map.set(m.managerId, {
+      value: m.managerId,
+      label: m.managerName || `Manager #${m.managerId}`,
+    });
+  });
+  if (lockedId && !map.has(lockedId)) {
+    map.set(lockedId, { value: lockedId, label: lockedName || `Manager #${lockedId}` });
+  }
+  return Array.from(map.values());
+};
+
 const buildColumns = ({ onEdit, onDelete }) => [
+  {
+    id: "sequence",
+    header: "#",
+    accessorKey: "sequence",
+    cell: ({ row }) => (
+      <span className="text-sm text-gray-500">{row.original.sequence ?? row.index + 1}</span>
+    ),
+  },
   {
     id: "name",
     header: "Title",
     accessorKey: "name",
-    cell: ({ row }) => (
-      <span className="text-sm text-gray-800">
-        {row.original.name}
-      </span>
-    ),
+    cell: ({ row }) => <span className="text-sm text-gray-800">{row.original.name}</span>,
   },
   {
     id: "description",
     header: "Description",
     accessorKey: "description",
     cell: ({ row }) => (
-      <span className="text-sm text-gray-800  max-w-[320px] ">
+      <span className="text-sm text-gray-800 max-w-[320px]">
         {row.original.description || "—"}
       </span>
     ),
@@ -96,16 +123,60 @@ const buildColumns = ({ onEdit, onDelete }) => [
       </span>
     ),
   },
-//   {
-//     id: "status",
-//     header: "Status",
-//     accessorKey: "status",
-//     cell: ({ row }) => (
-//       <span className="bg-emerald-50 text-emerald-600 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase">
-//         {row.original.id ? "Saved" : "Unsaved"}
-//       </span>
-//     ),
-//   },
+  {
+    id: "status",
+    header: "Status",
+    accessorKey: "status",
+    cell: ({ row }) => {
+      const s = String(row.original.status || "PENDING").toUpperCase();
+      return (
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+            NOTE_STATUS_BADGE[s] || NOTE_STATUS_BADGE.PENDING
+          }`}
+        >
+          {s}
+        </span>
+      );
+    },
+  },
+  {
+    id: "remarks",
+    header: "Remarks",
+    accessorKey: "remarks",
+    cell: ({ row }) => (
+      <span className="text-sm text-gray-800 max-w-[240px]">{row.original.remarks || "—"}</span>
+    ),
+  },
+  {
+    id: "files",
+    header: "Files",
+    cell: ({ row }) => {
+      const files = row.original.files || [];
+      if (!files.length) return <span className="text-sm text-gray-400">—</span>;
+      return (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {files.map((f, i) => (
+            <a
+              key={f.id ?? i}
+              href={f.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open image"
+              className="block h-10 w-10 overflow-hidden rounded-lg ring-1 ring-gray-200 bg-gray-100"
+            >
+              <img
+                src={f.url}
+                alt={`note-file-${i + 1}`}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            </a>
+          ))}
+        </div>
+      );
+    },
+  },
   {
     id: "action",
     header: "Actions",
@@ -135,10 +206,8 @@ const buildColumns = ({ onEdit, onDelete }) => [
 ];
 
 // ─── Main Component ─────────────────────────────────────────────────────────
-// Scoped to a SINGLE event function + manager (passed in via location.state
-// from ViewAssignMember's "Assign Special Notes" action). Notes for that
-// function are shown in a proper table with Edit / Delete row actions, and a
-// single "Add Note" button opens a modal to create a new note.
+// One function, many managers: pick a manager from the dropdown and that
+// manager's own special notes are shown / added / edited.
 const EventAssignManagerSpecialNotes = () => {
   const { eventId } = useParams();
   const navigate = useNavigate();
@@ -151,29 +220,40 @@ const EventAssignManagerSpecialNotes = () => {
 
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [notesLoading, setNotesLoading] = useState(false);
   const [eventMeta, setEventMeta] = useState(null);
-  const [functionData, setFunctionData] = useState(null); // the single selected function
+  const [functionData, setFunctionData] = useState(null);
   const [notes, setNotes] = useState([]);
 
-  // Modal state: isModalOpen controls visibility; modalIndex === null means
-  // "adding a new note", otherwise it's the index of the note being edited.
+  // Manager dropdown
+  const [managers, setManagers] = useState([]);
+  const [selectedManagerId, setSelectedManagerId] = useState(lockedManagerId ?? null);
+
   const [modalNote, setModalNote] = useState(null);
   const [modalIndex, setModalIndex] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const AssignManagerPermission = usePermission("Assign Manager");
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+  const selectedManager = managers.find((m) => m.value === selectedManagerId);
+
+  // ── Fetch event + managers ────────────────────────────────────────────────
   useEffect(() => {
     if (!eventId) return;
     fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const userId = localStorage.getItem("userId");
-      const eventRes = await GetEventMasterById(eventId);
+      const [eventRes, assignedRes] = await Promise.all([
+        GetEventMasterById(eventId),
+        getallassignfunctionbyevent(eventId).catch((e) => {
+          console.error("getallassignfunctionbyevent failed:", e);
+          return null;
+        }),
+      ]);
 
       const eventList = eventRes?.data?.data?.["Event Details"];
       if (!eventList || eventList.length === 0) {
@@ -194,10 +274,7 @@ const EventAssignManagerSpecialNotes = () => {
         venue: ev.venue?.nameEnglish || ev.address || "",
       });
 
-      // ── Only keep the single selected function ──
-      const ef = (ev.eventFunctions || []).find(
-        (f) => f.id === lockedFunctionId,
-      );
+      const ef = (ev.eventFunctions || []).find((f) => f.id === lockedFunctionId);
 
       if (ef) {
         const startDayjs = ef.functionStartDateTime
@@ -224,17 +301,19 @@ const EventAssignManagerSpecialNotes = () => {
           pax: ef.pax ?? 0,
         });
 
-        // Fetch existing notes for this function + manager
-        if (lockedManagerId) {
-          try {
-            const res = await GetSpecialNotes(ef.id, lockedManagerId, userId);
-            const raw = res?.data?.data?.["SpecialNotes"];
-            const rawList = Array.isArray(raw) ? raw : raw ? [raw] : [];
-            setNotes(rawList.map((n) => mapNoteResponse(n, lockedManagerId)));
-          } catch (err) {
-            console.error("Failed to fetch special notes:", err);
-          }
-        }
+        // Managers assigned to this function
+        const assignedEvents = assignedRes?.data?.data;
+        const assignedEvent =
+          (Array.isArray(assignedEvents) ? assignedEvents : []).find(
+            (e) => Number(e.eventId) === Number(eventId),
+          ) || (Array.isArray(assignedEvents) ? assignedEvents[0] : null);
+        const assignedFunction = (assignedEvent?.eventFunctions || []).find(
+          (f) => Number(f.eventFunctionId) === Number(lockedFunctionId),
+        );
+
+        const options = extractManagers(assignedFunction, lockedManagerId, lockedManagerName);
+        setManagers(options);
+        setSelectedManagerId((prev) => prev ?? options[0]?.value ?? null);
       } else {
         setFunctionData(null);
       }
@@ -246,9 +325,41 @@ const EventAssignManagerSpecialNotes = () => {
     }
   };
 
-  // ── Modal open helpers ───────────────────────────────────────────────────
+  // ── Load the selected manager's own notes ─────────────────────────────────
+  const loadNotes = useCallback(async () => {
+    if (!functionData?.eventFunctionId || !selectedManagerId) {
+      setNotes([]);
+      return;
+    }
+
+    setNotesLoading(true);
+    try {
+      const userId = localStorage.getItem("userId");
+      const res = await GetSpecialNotes(functionData.eventFunctionId, selectedManagerId, userId);
+      const raw = res?.data?.data?.["SpecialNotes"];
+      const rawList = Array.isArray(raw) ? raw : raw ? [raw] : [];
+      setNotes(rawList.map((n) => mapNoteResponse(n, selectedManagerId)));
+    } catch (err) {
+      console.error("Failed to fetch special notes:", err);
+      setNotes([]);
+    } finally {
+      setNotesLoading(false);
+    }
+  }, [functionData?.eventFunctionId, selectedManagerId]);
+
+  useEffect(() => {
+    loadNotes();
+  }, [loadNotes]);
+
+  const handleManagerChange = (value) => {
+    if (value === selectedManagerId) return;
+    setNotes([]);
+    setSelectedManagerId(value ?? null);
+  };
+
+  // ── Modal helpers ──────────────────────────────────────────────────────────
   const openAddModal = () => {
-    setModalNote(emptyNote(lockedManagerId));
+    setModalNote(emptyNote(selectedManagerId));
     setModalIndex(null);
     setIsModalOpen(true);
   };
@@ -266,59 +377,48 @@ const EventAssignManagerSpecialNotes = () => {
   };
 
   const handleModalSave = async () => {
-  if (!modalNote?.name || !functionData || !lockedManagerId) return;
+    if (!modalNote?.name || !functionData || !selectedManagerId) return;
 
-  const userId = localStorage.getItem("userId");
+    const userId = localStorage.getItem("userId");
 
-  setIsSaving(true);
-  try {
-    const formData = new FormData();
-    formData.append("id", modalNote.id || -1);
-    formData.append("eventFunctionId", functionData.eventFunctionId);
-    formData.append("eventId", parseInt(eventId));
-    formData.append("managerId", lockedManagerId);
-    formData.append("name", modalNote.name);
-    formData.append("description", modalNote.description || "");
-    formData.append("priority", modalNote.priority || "MEDIUM");
-    formData.append("status", "PENDING");
-    formData.append("userId", parseInt(userId));
+    setIsSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("id", modalNote.id || -1);
+      formData.append("eventFunctionId", functionData.eventFunctionId);
+      formData.append("eventId", parseInt(eventId));
+      // the manager currently selected in the dropdown
+      formData.append("managerId", selectedManagerId);
+      formData.append("name", modalNote.name);
+      formData.append("description", modalNote.description || "");
+      formData.append("priority", modalNote.priority || "MEDIUM");
+      // keep the note's current status (e.g. COMPLETED) when editing
+      formData.append("status", modalNote.status || "PENDING");
+      formData.append("userId", parseInt(userId));
 
-    const res = await AddSpecialNotes(formData);
+      await AddSpecialNotes(formData);
 
-    const savedId =
-      res?.data?.data?.id ?? res?.data?.data?.["SpecialNotes"]?.id ?? modalNote.id;
+      Swal.fire({
+        title: "Success",
+        text: modalIndex === null ? "Note added successfully!" : "Note updated successfully!",
+        icon: "success",
+        timer: 1200,
+        showConfirmButton: false,
+      });
 
-    const savedNote = {
-      ...modalNote,
-      id: savedId ?? modalNote.id,
-      managerId: lockedManagerId,
-    };
-
-    if (modalIndex === null) {
-      setNotes((prev) => [...prev, savedNote]);
-    } else {
-      setNotes((prev) =>
-        prev.map((n, i) => (i === modalIndex ? savedNote : n)),
-      );
+      closeModal();
+      // Reload from the server so ids and ordering are correct
+      await loadNotes();
+    } catch (err) {
+      console.error("Save note error:", err);
+      Swal.fire("Error", "Failed to save note. Please try again.", "error");
+    } finally {
+      setIsSaving(false);
     }
+  };
 
-    Swal.fire({
-      title: "Success",
-      text: modalIndex === null ? "Note added successfully!" : "Note updated successfully!",
-      icon: "success",
-      timer: 1200,
-      showConfirmButton: false,
-    });
-
-    closeModal();
-  } catch (err) {
-    console.error("Save note error:", err);
-    Swal.fire("Error", "Failed to save note. Please try again.", "error");
-  } finally {
-    setIsSaving(false);
-  }
-};
-
+  // NOTE: this only removes the row from the screen (same as before) because
+  // no delete API is wired up. It will reappear on reload.
   const handleDeleteNote = (note, index) => {
     Swal.fire({
       title: "Delete this note?",
@@ -335,65 +435,10 @@ const EventAssignManagerSpecialNotes = () => {
   };
 
   const columns = useMemo(
-    () =>
-      buildColumns({
-        onEdit: openEditModal,
-        onDelete: handleDeleteNote,
-      }),
+    () => buildColumns({ onEdit: openEditModal, onDelete: handleDeleteNote }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [notes],
   );
-
-  // ── Save ───────────────────────────────────────────────────────────────────
-//   const handleSave = async () => {
-//     if (!functionData) return;
-//     const userId = localStorage.getItem("userId");
-
-//     const notesToSave = notes.filter((n) => n.name && n.managerId);
-
-//     if (notesToSave.length === 0) {
-//       Swal.fire(
-//         "Nothing to save",
-//         "Please add a special note with a title.",
-//         "info",
-//       );
-//       return;
-//     }
-
-//     setIsSaving(true);
-//     try {
-//       await Promise.all(
-//         notesToSave.map((note) => {
-//           const formData = new FormData();
-//           formData.append("id", note.id || -1);
-//           formData.append("eventFunctionId", functionData.eventFunctionId);
-//           formData.append("eventId", parseInt(eventId));
-//           formData.append("managerId", note.managerId);
-//           formData.append("name", note.name);
-//           formData.append("description", note.description || "");
-//           formData.append("priority", note.priority || "MEDIUM");
-//           formData.append("status", "PENDING");
-//           formData.append("userId", parseInt(userId));
-
-//           return AddSpecialNotes(formData);
-//         }),
-//       );
-
-//       Swal.fire({
-//         title: "Success",
-//         text: "Special notes saved successfully!",
-//         icon: "success",
-//         timer: 1500,
-//         showConfirmButton: false,
-//       });
-
-//       navigate(-1);
-//     } catch (err) {
-//       console.error("Save error:", err);
-//       Swal.fire("Error", "Failed to save. Please try again.", "error");
-//     } finally {
-//       setIsSaving(false);
-//     }
-//   };
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (loading) {
@@ -412,7 +457,6 @@ const EventAssignManagerSpecialNotes = () => {
 
   return (
     <Fragment>
-      {/* Saving overlay */}
       {isSaving && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
           <img
@@ -425,17 +469,13 @@ const EventAssignManagerSpecialNotes = () => {
 
       <div className="min-h-screen">
         <div className="p-6 mx-auto pb-28">
-          {/* Header row: title + breadcrumb + Create New (matches screenshot) */}
           <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
-            <h1 className="text-xl font-bold text-gray-900">
-              Assign Special Notes
-            </h1>
+            <h1 className="text-xl font-bold text-gray-900">Assign Special Notes</h1>
             <div className="flex items-center gap-4">
-              
               {AssignManagerPermission.add && (
                 <button
                   onClick={openAddModal}
-                  disabled={!functionData}
+                  disabled={!functionData || !selectedManagerId}
                   className="btn btn-primary text-sm font-semibold px-4 h-9 flex items-center gap-1.5 disabled:opacity-50"
                 >
                   <Plus size={15} />
@@ -445,7 +485,7 @@ const EventAssignManagerSpecialNotes = () => {
             </div>
           </div>
 
-          {/* ── Event Header ── */}
+          {/* Event header */}
           <div className="mb-4">
             <div className="flex items-center gap-2.5 mb-2">
               <h2 className="text-lg font-bold text-gray-900 uppercase">
@@ -488,28 +528,37 @@ const EventAssignManagerSpecialNotes = () => {
             </div>
           </div>
 
-          {/* ── Fixed Manager Banner ── */}
-          {lockedManagerId ? (
-            <div className="mb-5 flex items-center gap-2.5 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
+          {/* Manager selector */}
+          {managers.length > 0 ? (
+            <div className="mb-5 flex flex-wrap items-center gap-3 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
               <i className="ki-filled ki-user text-primary text-base" />
-              <p className="text-sm text-gray-700">
-                Assigning special notes as{" "}
-                <span className="font-semibold text-gray-900">
-                  {lockedManagerName || `Manager #${lockedManagerId}`}
+              <p className="text-sm text-gray-700">Special notes for</p>
+              <Select
+                className="min-w-[240px]"
+                placeholder="Select manager"
+                value={selectedManagerId}
+                options={managers}
+                onChange={handleManagerChange}
+                showSearch
+                optionFilterProp="label"
+              />
+              {selectedManager && (
+                <span className="text-xs text-gray-500">
+                  {notes.length} note{notes.length === 1 ? "" : "s"}
                 </span>
-              </p>
+              )}
             </div>
           ) : (
             <div className="mb-5 flex items-center gap-2.5 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
               <i className="ki-filled ki-information-5 text-red-500 text-base" />
               <p className="text-sm text-red-600">
-                No manager context found. Please open this page from the
-                "Assign Special Notes" action on a specific function.
+                No managers are assigned to this function yet. Assign a manager
+                first, then add special notes.
               </p>
             </div>
           )}
 
-          {/* ── Selected Function ── */}
+          {/* Selected function */}
           {!functionData ? (
             <div className="bg-white border border-gray-200 rounded-xl p-10 text-center text-gray-400 text-sm">
               Selected function not found for this event.
@@ -518,12 +567,8 @@ const EventAssignManagerSpecialNotes = () => {
             <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-6 shadow-sm">
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div>
-                  <p className="text-base font-bold text-gray-900">
-                    {functionData.name}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {functionData.subtitle}
-                  </p>
+                  <p className="text-base font-bold text-gray-900">{functionData.name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{functionData.subtitle}</p>
                 </div>
                 {functionData.startDate && (
                   <div className="text-right flex-shrink-0">
@@ -560,32 +605,30 @@ const EventAssignManagerSpecialNotes = () => {
             </div>
           )}
 
-          {/* ── Special Notes Table ── */}
+          {/* Special notes table */}
           {functionData && (
             <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
               <div className="flex items-center justify-between px-5 pt-5 pb-3">
                 <h3 className="text-sm font-bold text-gray-900">
-                  Special Notes
+                  Special Notes{selectedManager ? ` — ${selectedManager.label}` : ""}
                 </h3>
-                
               </div>
 
-              {notes.length === 0 ? (
+              {notesLoading ? (
+                <div className="py-10 flex justify-center">
+                  <div className="w-6 h-6 border-4 border-blue-200 border-t-primary rounded-full animate-spin" />
+                </div>
+              ) : notes.length === 0 ? (
                 <p className="text-sm text-gray-400 italic py-10 text-center">
-                  No special notes yet. Click "Add Note" to create one.
+                  No special notes for this manager yet. Click "Create New" to add one.
                 </p>
               ) : (
-                <TableComponent
-                  columns={columns}
-                  data={notes}
-                  paginationSize={10}
-                />
+                <TableComponent columns={columns} data={notes} paginationSize={10} />
               )}
             </div>
           )}
         </div>
 
-          {/* ── Sticky Footer ── */}
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-3.5 flex items-center justify-between z-40">
           <button
             onClick={() => navigate(-1)}
@@ -596,7 +639,7 @@ const EventAssignManagerSpecialNotes = () => {
         </div>
       </div>
 
-      {/* ── Add / Edit Note Modal ── */}
+      {/* Add / Edit note modal */}
       {isModalOpen && (
         <CustomModal
           open={isModalOpen}
@@ -605,6 +648,13 @@ const EventAssignManagerSpecialNotes = () => {
           width={560}
         >
           <div className="flex flex-col gap-4 p-1">
+            {selectedManager && (
+              <p className="text-xs text-gray-500">
+                For manager:{" "}
+                <span className="font-semibold text-gray-800">{selectedManager.label}</span>
+              </p>
+            )}
+
             <div>
               <p className="text-[10px] font-bold text-gray-500 tracking-widest uppercase mb-1.5">
                 Title
@@ -614,9 +664,7 @@ const EventAssignManagerSpecialNotes = () => {
                 autoFocus
                 placeholder="Note title"
                 value={modalNote?.name || ""}
-                onChange={(e) =>
-                  setModalNote((n) => ({ ...n, name: e.target.value }))
-                }
+                onChange={(e) => setModalNote((n) => ({ ...n, name: e.target.value }))}
                 className="w-full h-10 px-3 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -629,9 +677,7 @@ const EventAssignManagerSpecialNotes = () => {
                 className="w-full"
                 value={modalNote?.priority || "MEDIUM"}
                 options={PRIORITY_OPTIONS}
-                onChange={(val) =>
-                  setModalNote((n) => ({ ...n, priority: val }))
-                }
+                onChange={(val) => setModalNote((n) => ({ ...n, priority: val }))}
               />
             </div>
 
@@ -643,12 +689,7 @@ const EventAssignManagerSpecialNotes = () => {
                 placeholder="Description"
                 autoSize={{ minRows: 3, maxRows: 6 }}
                 value={modalNote?.description || ""}
-                onChange={(e) =>
-                  setModalNote((n) => ({
-                    ...n,
-                    description: e.target.value,
-                  }))
-                }
+                onChange={(e) => setModalNote((n) => ({ ...n, description: e.target.value }))}
               />
             </div>
 
