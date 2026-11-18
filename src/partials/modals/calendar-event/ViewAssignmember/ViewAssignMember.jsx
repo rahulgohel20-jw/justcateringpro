@@ -5,13 +5,22 @@ import {
   GetEventFunctionManagerTask,
   GetSpecialNotes,
   GetAllManagerTask,
+  geratemangerallreport,
 } from "@/services/apiServices";
 import { TableComponent } from "@/components/table/TableComponent";
 import { useNavigate, useParams } from "react-router-dom";
 import { Breadcrumbs } from "@/layouts/demo1/breadcrumbs/Breadcrumbs";
 import { CustomModal } from "@/components/custom-modal/CustomModal";
 import FeedbackModal from "./FeedbackModal";
-import { Users2, ChefHat, ListChecks, NotebookPen, MessageSquare } from "lucide-react";
+import {
+  Users2,
+  ChefHat,
+  ListChecks,
+  NotebookPen,
+  MessageSquare,
+  FileText,
+} from "lucide-react";
+import Swal from "sweetalert2";
 import {
   ASSIGNED_FUNCTIONS_COLUMNS,
   ASSIGNED_FUNCTIONS_DEFAULT_SORTING,
@@ -171,6 +180,11 @@ const ViewAssignMember = () => {
   const [modalLoading, setModalLoading] = useState(false);
   const [sectionErrors, setSectionErrors] = useState({});
   const [feedbackModal, setFeedbackModal] = useState(null);
+
+  // Report modal state
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportFunctionId, setReportFunctionId] = useState(-1);
+  const [reportLoading, setReportLoading] = useState(false);
 
   // Task master (id -> name), fetched once
   const taskMasterRef = useRef(null);
@@ -389,6 +403,52 @@ const ViewAssignMember = () => {
     setFeedbackModal(null);
   };
 
+  const openReportModal = () => {
+    setReportFunctionId(-1); // default: All Functions
+    setReportOpen(true);
+  };
+
+  const handleGenerateReport = async () => {
+    // Open the tab now, inside the click, so the browser doesn't block it after the await
+    const win = window.open("", "_blank");
+    try {
+      setReportLoading(true);
+      const userId = localStorage.getItem("userId");
+      const res = await geratemangerallreport(
+        reportFunctionId,
+        eventData?.eventId ?? eventId,
+        userId,
+      );
+      const d = res?.data;
+      const url =
+        d?.report_path ||
+        d?.data?.report_path ||
+        d?.file_path ||
+        d?.data?.file_path ||
+        d?.url ||
+        (typeof d?.data === "string" ? d.data : null);
+
+      if (!url) throw new Error(d?.msg || d?.message || "No report URL returned");
+
+      if (win) win.location.href = url;
+      else window.open(url, "_blank");
+      setReportOpen(false);
+    } catch (err) {
+      win?.close();
+      Swal.fire({
+        title: "Error",
+        text:
+          err?.response?.data?.msg ||
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to generate report.",
+        icon: "error",
+      });
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   const columns = ASSIGNED_FUNCTIONS_COLUMNS.map((col) => {
     // Manager column -> clickable names
     if (col.id === "managers") {
@@ -498,6 +558,16 @@ const ViewAssignMember = () => {
               : "this event"}
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={openReportModal}
+          disabled={loading || !!error}
+          className="btn btn-primary flex items-center gap-2"
+        >
+          <FileText size={16} />
+          Report
+        </button>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
@@ -574,6 +644,60 @@ const ViewAssignMember = () => {
           eventFunctionId={feedbackModal.eventFunctionId}
           functionName={feedbackModal.functionName}
         />
+      )}
+
+      {/* Report modal: pick All Functions (-1) or a single function, then generate */}
+      {reportOpen && (
+        <CustomModal
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          title="Generate Report"
+          width={520}
+        >
+          <div className="p-2 space-y-4">
+            {/* Event details */}
+            <div className="rounded-xl bg-gray-50 border border-gray-100 p-4 space-y-1">
+              <p className="text-sm font-semibold text-slate-900">{manager.name}</p>
+              <p className="text-[13px] text-gray-600">{manager.eventStartDate}</p>
+              <p className="text-[13px] text-gray-600">{manager.location}</p>
+            </div>
+
+            {/* Function select */}
+            <div>
+              <label className="block text-sm font-semibold mb-2">Select Function</label>
+              <select
+                className="w-full border rounded-lg px-4 py-2"
+                value={reportFunctionId}
+                onChange={(e) => setReportFunctionId(Number(e.target.value))}
+              >
+                <option value={-1}>All Functions</option>
+                {functions.map((fn) => (
+                  <option key={fn.eventFunctionId} value={fn.eventFunctionId}>
+                    {fn.functionName} ({fn.startDate})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setReportOpen(false)}
+                className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateReport}
+                disabled={reportLoading}
+                className="btn btn-primary"
+              >
+                {reportLoading ? "Generating..." : "Generate"}
+              </button>
+            </div>
+          </div>
+        </CustomModal>
       )}
 
       {/* Manager modal: attendance + tasks + special notes */}

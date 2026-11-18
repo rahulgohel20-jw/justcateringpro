@@ -4448,3 +4448,9 @@ export const updateFeedback = (body) => {
 export const deleteFeedbackById = (id) => {
   return DELETE(`/event-function-feedback/deletebyid?feedbackId=${id}`);
 };
+
+export const geratemangerallreport = (eventFunctionId, eventId, userId) => {
+  return GET(
+    `/eventmaster/generateAssignedManagerReport?eventFunctionId=${eventFunctionId}&eventId=${eventId}&userId=${userId}`
+  );
+};
