@@ -789,34 +789,33 @@ const MenuReport = ({
         setModuleType(config.moduleNameEnglish || null);
 
 
-        if (config.isRawMaterialCat === 1) {
-          setisDropdownStatus(1);
-          setShowCategoryDropdown(true);
-          setShowAgencyDropdown(false);
-          setShowItemDropdown(false);
-        }
+        // if (config.isRawMaterialCat === 1) {
+        //   setisDropdownStatus(1);
+        //   setShowCategoryDropdown(true);
+        //   setShowAgencyDropdown(false);
+        //   setShowItemDropdown(false);
+        // }
 
-        if (isAdminModuleReport) {
-          setisDropdownStatus(0);
-          setShowAgencyDropdown(false);
-          setShowItemDropdown(false);
-          setShowCategoryDropdown(false);
-        } else if (config.isRawMaterialCat === 1) {
-          setisDropdownStatus(1);
-          setShowCategoryDropdown(true);
-          setShowAgencyDropdown(false);
-          setShowItemDropdown(false);
-        } else {
-          // Agency dropdown only makes sense when we actually have an agencyType
-          // to filter by — it stays independent of Item/Category below.
-          const canShowAgency = config.isAgency === 1 && agencyType != null;
-          const canShowItem = config.isItem === 1;
+       if (isAdminModuleReport) {
+  setisDropdownStatus(0);
+  setShowAgencyDropdown(false);
+  setShowItemDropdown(false);
+  setShowCategoryDropdown(false);
+} else if (config.isRawMaterialCat === 1) {
+  setisDropdownStatus(1);
+  setShowCategoryDropdown(true);
+  // Show Agency too when the template config has isAgency = 1
+  setShowAgencyDropdown(config.isAgency === 1 && agencyType != null);
+  setShowItemDropdown(false);
+} else {
+  const canShowAgency = config.isAgency === 1 && agencyType != null;
+  const canShowItem = config.isItem === 1;
 
-          setShowAgencyDropdown(canShowAgency);
-          setShowItemDropdown(canShowItem);
-          setShowCategoryDropdown(false);
-          setisDropdownStatus(canShowAgency || canShowItem ? 1 : 0);
-        }
+  setShowAgencyDropdown(canShowAgency);
+  setShowItemDropdown(canShowItem);
+  setShowCategoryDropdown(false);
+  setisDropdownStatus(canShowAgency || canShowItem ? 1 : 0);
+}
 
         if (config.isDate === 1 || config.isStartDate === 1 || config.isEndDate === 1) {
           setisDateStatus(1);
@@ -1024,7 +1023,7 @@ const MenuReport = ({
   useEffect(() => {
     if (!isModalOpen || isDropdownStatus !== 1) return;
 
-    const isRawMaterialTab = agencyType === "raw_material";
+    const isRawMaterialTab = agencyType === "chef";
 
     const fetchcategory = async () => {
       setLoadingFilters(true);
