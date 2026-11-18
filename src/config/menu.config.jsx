@@ -148,7 +148,7 @@ export const allMenuItems = (navigate) => {
       icon: "  text-lg ki-filled ki-setting-4 text-primary",
       path: "/exhibition-setup",
       pageName: "Exhibition Quotation",
-      moduleName: "Exhibition Quotation"
+      // moduleName: "Exhibition Quotation"
     },
 
     {
@@ -161,7 +161,7 @@ export const allMenuItems = (navigate) => {
       icon: "  text-lg ki-filled ki-setting-3 text-primary",
       path: "/master/preparation-master",
       pageName: "Preparation Master",
-      moduleName: "Preparation Master"
+      // moduleName: "Preparation Master"
     },
 
     {
@@ -391,7 +391,7 @@ export const allMenuItems = (navigate) => {
       icon: "text-lg ki-filled ki-note-2 text-primary",
       path: "/master/notes-management",
       pageName: "Notes Management",
-      moduleName: "Notes Management",
+      // moduleName: "Notes Management",
 
     },
 
@@ -741,8 +741,9 @@ export const allMenuItems = (navigate) => {
       ),
       icon: "ki-filled ki-book text-primary",
       path: "/captainrecipe",
+      
       pageName: "Captain Recipe",
-      moduleName: "Captain Recipe",
+      // moduleName: "Captain Recipe",
     },
     {
       title: (

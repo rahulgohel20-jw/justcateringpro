@@ -201,25 +201,33 @@ const handleAllocate = useCallback(
   (allocationData) => {
     const hasSelectedItems = Object.values(selectedItems).some(Boolean);
 
-    const hasNonTimeFields =
-      allocationData.partyId !== undefined ||
-      allocationData.serviceType !== undefined ||
-      allocationData.pax !== undefined ||
-      allocationData.quantity !== undefined ||
-      allocationData.shiftTransPrice !== undefined;
-
-    // Only require a selection if something OTHER than reporting date/time was provided
-    if (hasNonTimeFields && !hasSelectedItems) {
-      Swal.fire({ title: "Warning", text: "Please select at least one item to allocate", icon: "warning" });
+    // FIX 1: a selection is ALWAYS required (before, date/time-only
+    // allocations were allowed with nothing selected).
+    if (!hasSelectedItems) {
+      Swal.fire({
+        title: "Warning",
+        text: "Please select at least one item to allocate",
+        icon: "warning",
+      });
       return false;
     }
 
-    if (
-      !hasNonTimeFields &&
-      allocationData.reportingTime === undefined &&
-      allocationData.reportingDate === undefined
-    ) {
-      Swal.fire({ title: "Warning", text: "Please provide at least one allocation value", icon: "warning" });
+    const hasAnyValue = [
+      "partyId",
+      "serviceType",
+      "pax",
+      "quantity",
+      "shiftTransPrice",
+      "reportingDate",
+      "reportingTime",
+    ].some((key) => allocationData[key] !== undefined);
+
+    if (!hasAnyValue) {
+      Swal.fire({
+        title: "Warning",
+        text: "Please provide at least one allocation value",
+        icon: "warning",
+      });
       return false;
     }
 
@@ -228,38 +236,43 @@ const handleAllocate = useCallback(
     const updatedMenuItems = menuItems.map((menuItem, menuIndex) => {
       if (!Array.isArray(menuItem.eventFunctionMenuAllocations)) return menuItem;
 
+      let hasUpdatedAllocations = false;
+
       const updatedAllocations = menuItem.eventFunctionMenuAllocations.map(
         (allocation, allocationIndex) => {
           const itemKey = `${menuIndex}-${allocationIndex}`;
-          const isSelected = !!selectedItems[itemKey];
 
-          // ⬅ reporting date & time are stamped on EVERY row, regardless of checkbox
-          const timeDateUpdate = {
-            ...(allocationData.reportingTime !== undefined ? { reportingTime: allocationData.reportingTime } : {}),
-            ...(allocationData.reportingDate !== undefined ? { reportingDate: allocationData.reportingDate } : {}),
-          };
-
-          if (!isSelected) {
-            return Object.keys(timeDateUpdate).length
-              ? { ...allocation, ...timeDateUpdate }
-              : allocation;
-          }
+          // FIX 2: rows that are NOT selected are returned untouched.
+          // (Before, reportingDate / reportingTime were stamped on every
+          // row "regardless of checkbox".)
+          if (!selectedItems[itemKey]) return allocation;
 
           allocatedCount++;
-          const updates = { ...timeDateUpdate };
+          hasUpdatedAllocations = true;
+
+          const updates = {};
+
+          // Date & time: selected rows only
+          if (allocationData.reportingTime !== undefined)
+            updates.reportingTime = allocationData.reportingTime;
+          if (allocationData.reportingDate !== undefined)
+            updates.reportingDate = allocationData.reportingDate;
 
           if (allocationData.partyId !== undefined) {
             updates.partyId = allocationData.partyId;
             updates.partyName = allocationData.partyName || "";
             updates.number = allocationData.number || "";
           }
-          if (allocationData.serviceType !== undefined) updates.serviceType = allocationData.serviceType;
+          if (allocationData.serviceType !== undefined)
+            updates.serviceType = allocationData.serviceType;
           if (allocationData.pax !== undefined) updates.quantity = allocationData.pax;
-          if (allocationData.quantity !== undefined) updates.quantity = allocationData.quantity;
+          if (allocationData.quantity !== undefined)
+            updates.quantity = allocationData.quantity;
           if (allocationData.shiftTransPrice !== undefined)
             updates.shiftTransPrice = allocationData.shiftTransPrice;
 
-          const effectiveType = updates.serviceType ?? allocation.serviceType ?? "plate_wise";
+          const effectiveType =
+            updates.serviceType ?? allocation.serviceType ?? "plate_wise";
           const merged = { ...allocation, ...updates };
           const shiftTrans = parseFloat(merged.shiftTransPrice) || 0;
 
@@ -279,11 +292,10 @@ const handleAllocate = useCallback(
         },
       );
 
-      const hasUpdatedAllocations = menuItem.eventFunctionMenuAllocations.some(
-        (_, allocationIndex) => selectedItems[`${menuIndex}-${allocationIndex}`],
-      );
+      // No selected row inside this menu item -> keep the same object
+      if (!hasUpdatedAllocations) return menuItem;
 
-      if (hasUpdatedAllocations && allocationData.pax !== undefined) {
+      if (allocationData.pax !== undefined) {
         const itemKey = `${menuItem.menuItemId}-${menuItem.menuCategoryId}-${menuItem.eventFunctionId}`;
         const initialItem = initialMenuItemsRef.current[menuIndex];
         if (initialItem && initialItem.personCount !== allocationData.pax) {
@@ -294,8 +306,7 @@ const handleAllocate = useCallback(
       return {
         ...menuItem,
         eventFunctionMenuAllocations: updatedAllocations,
-        ...(hasUpdatedAllocations &&
-          allocationData.pax !== undefined && { personCount: allocationData.pax }),
+        ...(allocationData.pax !== undefined && { personCount: allocationData.pax }),
       };
     });
 
@@ -304,16 +315,9 @@ const handleAllocate = useCallback(
     if (onDataUpdate) onDataUpdate(updatedMenuItems);
     setSelectedItems({});
 
-    const hasDateTime =
-      allocationData.reportingTime !== undefined ||
-      allocationData.reportingDate !== undefined;
-
     Swal.fire({
       title: "Success",
-      text:
-        hasDateTime
-          ? `Reporting date/time set on all items${allocatedCount ? `, and ${allocatedCount} selected item(s) updated` : ""}`
-          : `Updated ${allocatedCount} selected item(s) successfully`,
+      text: `Updated ${allocatedCount} selected item(s) successfully`,
       icon: "success",
       timer: 2000,
       showConfirmButton: false,

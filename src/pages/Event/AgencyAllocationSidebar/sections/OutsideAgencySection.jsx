@@ -159,115 +159,120 @@ export default function OutsideAgencySection({
   }, [isDirty, close]);
 
   const handleAllocate = useCallback(
-    (allocationData) => {
-      const hasSelectedItems = Object.values(selectedItems).some(Boolean);
+  (allocationData) => {
+    const hasSelectedItems = Object.values(selectedItems).some(Boolean);
 
-      const hasNonTimeFields =
-        allocationData.partyId !== undefined ||
-        allocationData.quantity !== undefined ||
-        allocationData.shiftTransPrice !== undefined ||
-        allocationData.unitId !== undefined;
-
-      // Only require a selection if something OTHER than reporting date/time was provided
-      if (hasNonTimeFields && !hasSelectedItems) {
-        Swal.fire({ title: "Warning", text: "Please select at least one item to allocate", icon: "warning" });
-        return false;
-      }
-
-      if (
-        !hasNonTimeFields &&
-        allocationData.reportingTime === undefined &&
-        allocationData.reportingDate === undefined
-      ) {
-        Swal.fire({ title: "Warning", text: "Please provide at least one allocation value", icon: "warning" });
-        return false;
-      }
-
-      let allocatedCount = 0;
-      const current = menuItemsRef.current;
-
-      const updatedMenuItems = current.map((menuItem, menuIndex) => {
-        const updatedAllocations = menuItem.eventFunctionMenuAllocations.map(
-          (allocation, allocationIndex) => {
-            const itemKey = `${menuIndex}-${allocationIndex}`;
-            const isSelected = !!selectedItems[itemKey];
-
-            // reporting date & time are stamped on EVERY row, regardless of checkbox
-            const timeDateUpdate = {
-              ...(allocationData.reportingTime !== undefined ? { reportingTime: allocationData.reportingTime } : {}),
-              ...(allocationData.reportingDate !== undefined ? { reportingDate: allocationData.reportingDate } : {}),
-            };
-
-            if (!isSelected) {
-              return Object.keys(timeDateUpdate).length
-                ? { ...allocation, ...timeDateUpdate }
-                : allocation;
-            }
-
-            allocatedCount++;
-            const updates = { ...timeDateUpdate };
-
-            if (allocationData.partyId !== undefined) {
-              updates.partyId = allocationData.partyId;
-              updates.partyName = allocationData.partyName || "";
-            }
-            if (allocationData.quantity !== undefined) updates.quantity = allocationData.quantity;
-            if (allocationData.shiftTransPrice !== undefined)
-              updates.shiftTransPrice = allocationData.shiftTransPrice;
-            if (allocationData.unitId !== undefined) updates.unitId = allocationData.unitId;
-
-            const merged = { ...allocation, ...updates };
-            const qty = parseFloat(merged.quantity) || 0;
-            const price = parseFloat(merged.price) || 0;
-            const shiftTrans = parseFloat(merged.shiftTransPrice) || 0;
-            updates.totalPrice = qty * price + shiftTrans;
-
-            return { ...allocation, ...updates };
-          },
-        );
-
-        const hasUpdatedAllocations = menuItem.eventFunctionMenuAllocations.some(
-          (_, allocationIndex) => selectedItems[`${menuIndex}-${allocationIndex}`],
-        );
-
-        if (hasUpdatedAllocations && allocationData.quantity !== undefined) {
-          const itemKey = `${menuItem.menuItemId}-${menuItem.menuCategoryId}-${menuItem.eventFunctionId}`;
-          const initialItem = initialMenuItemsRef.current[menuIndex];
-          if (initialItem && initialItem.personCount !== allocationData.quantity) {
-            changedPaxItemsRef.current.add(itemKey);
-          }
-        }
-
-        return {
-          ...menuItem,
-          eventFunctionMenuAllocations: updatedAllocations,
-          ...(hasUpdatedAllocations &&
-            allocationData.quantity !== undefined && { personCount: allocationData.quantity }),
-        };
-      });
-
-      setMenuItems(updatedMenuItems);
-      onDirtyChange?.(true);
-      setSelectedItems({});
-
-      const hasDateTime =
-        allocationData.reportingTime !== undefined ||
-        allocationData.reportingDate !== undefined;
-
+    // FIX 1: a selection is ALWAYS required
+    // (before, date/time-only allocations worked with nothing selected)
+    if (!hasSelectedItems) {
       Swal.fire({
-        title: "Success",
-        text:
-          hasDateTime
-            ? `Reporting date/time set on all items${allocatedCount ? `, and ${allocatedCount} selected item(s) updated` : ""}`
-            : `Updated ${allocatedCount} selected item(s) successfully`,
-        icon: "success",
-        timer: 2000,
-        showConfirmButton: false,
+        title: "Warning",
+        text: "Please select at least one item to allocate",
+        icon: "warning",
       });
-      return true;
-    },
-    [selectedItems],
-  );
+      return false;
+    }
+
+    const hasAnyValue = [
+      "partyId",
+      "quantity",
+      "shiftTransPrice",
+      "unitId",
+      "reportingDate",
+      "reportingTime",
+    ].some((key) => allocationData[key] !== undefined);
+
+    if (!hasAnyValue) {
+      Swal.fire({
+        title: "Warning",
+        text: "Please provide at least one allocation value",
+        icon: "warning",
+      });
+      return false;
+    }
+
+    let allocatedCount = 0;
+    const current = menuItemsRef.current;
+
+    const updatedMenuItems = current.map((menuItem, menuIndex) => {
+      if (!Array.isArray(menuItem.eventFunctionMenuAllocations)) return menuItem;
+
+      let hasUpdatedAllocations = false;
+
+      const updatedAllocations = menuItem.eventFunctionMenuAllocations.map(
+        (allocation, allocationIndex) => {
+          const itemKey = `${menuIndex}-${allocationIndex}`;
+
+          // FIX 2: rows that are NOT selected stay untouched
+          // (before, date & time were stamped on EVERY row)
+          if (!selectedItems[itemKey]) return allocation;
+
+          allocatedCount++;
+          hasUpdatedAllocations = true;
+
+          const updates = {};
+
+          if (allocationData.reportingTime !== undefined)
+            updates.reportingTime = allocationData.reportingTime;
+          if (allocationData.reportingDate !== undefined)
+            updates.reportingDate = allocationData.reportingDate;
+
+          if (allocationData.partyId !== undefined) {
+            updates.partyId = allocationData.partyId;
+            updates.partyName = allocationData.partyName || "";
+          }
+          if (allocationData.quantity !== undefined)
+            updates.quantity = allocationData.quantity;
+          if (allocationData.shiftTransPrice !== undefined)
+            updates.shiftTransPrice = allocationData.shiftTransPrice;
+          if (allocationData.unitId !== undefined)
+            updates.unitId = allocationData.unitId;
+
+          const merged = { ...allocation, ...updates };
+          const qty = parseFloat(merged.quantity) || 0;
+          const price = parseFloat(merged.price) || 0;
+          const shiftTrans = parseFloat(merged.shiftTransPrice) || 0;
+          updates.totalPrice = qty * price + shiftTrans;
+
+          return { ...allocation, ...updates };
+        },
+      );
+
+      // no selected row in this menu item -> keep the same object
+      if (!hasUpdatedAllocations) return menuItem;
+
+      if (allocationData.quantity !== undefined) {
+        const itemKey = `${menuItem.menuItemId}-${menuItem.menuCategoryId}-${menuItem.eventFunctionId}`;
+        const initialItem = initialMenuItemsRef.current[menuIndex];
+        if (initialItem && initialItem.personCount !== allocationData.quantity) {
+          changedPaxItemsRef.current.add(itemKey);
+        }
+      }
+
+      return {
+        ...menuItem,
+        eventFunctionMenuAllocations: updatedAllocations,
+        ...(allocationData.quantity !== undefined && {
+          personCount: allocationData.quantity,
+        }),
+      };
+    });
+
+    setMenuItems(updatedMenuItems);
+    onDirtyChange?.(true);
+    setSelectedItems({});
+
+    Swal.fire({
+      title: "Success",
+      text: `Updated ${allocatedCount} selected item(s) successfully`,
+      icon: "success",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+    return true;
+  },
+  [selectedItems],
+);;
 
   const handleMenuItemUpdate = useCallback((menuIndex, updatedMenuItem) => {
     const initialItem = initialMenuItemsRef.current[menuIndex];

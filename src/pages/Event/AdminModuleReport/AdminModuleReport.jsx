@@ -266,7 +266,7 @@ export default function AdminModuleReport() {
     setAgencyType("order_summary");
     setIsManager(true);
   } else if (module.nameEnglish === "Raw Material Theme") {
-    setAgencyType("raw_material");
+    setAgencyType("chef");
     setIsManager(false);
   } else if (module.nameEnglish === "Order History Theme") {
   setAgencyType("order_history");
