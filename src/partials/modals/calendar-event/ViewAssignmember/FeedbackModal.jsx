@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Button, Form, Input, Radio, Rate, Popconfirm, message } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
+import { Button, Form, Input, Radio, Rate, Popconfirm, Table, message } from "antd";
 import { ArrowLeft, MessageSquare, Pencil, Plus, Trash2 } from "lucide-react";
 import { CustomModal } from "@/components/custom-modal/CustomModal";
 import {
@@ -21,11 +21,13 @@ const DEFAULT_VALUES = {
   description: "",
 };
 
-const RatingRow = ({ label, value }) => (
-  <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3 py-2">
-    <span className="text-[12px] font-medium text-slate-600">{label}</span>
-    <Rate value={Number(value) || 0} disabled allowHalf={false} />
-  </div>
+const StarCell = ({ value }) => (
+  <Rate
+    value={Number(value) || 0}
+    disabled
+    allowHalf={false}
+    style={{ fontSize: 13, whiteSpace: "nowrap" }}
+  />
 );
 
 const FeedbackModal = ({ open, onClose, eventId, eventFunctionId, functionName }) => {
@@ -74,6 +76,7 @@ const FeedbackModal = ({ open, onClose, eventId, eventFunctionId, functionName }
     setShowForm(false);
     setEditingId(null);
     fetchFeedbacks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, eventId, eventFunctionId]);
 
   const handleClose = () => {
@@ -169,18 +172,128 @@ const FeedbackModal = ({ open, onClose, eventId, eventFunctionId, functionName }
     }
   };
 
-  const renderList = () => {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center py-16 text-sm text-gray-400">
-          <span className="inline-flex items-center gap-2">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            Loading feedback...
+  // ── Table columns ──────────────────────────────────────────────────────────
+  const columns = useMemo(
+    () => [
+      {
+        title: "#",
+        key: "index",
+        width: 50,
+        render: (_, __, index) => <span className="text-gray-500">{index + 1}</span>,
+      },
+      {
+        title: "Name",
+        dataIndex: "name",
+        key: "name",
+        render: (v) => <span className="font-semibold text-slate-900">{v || "—"}</span>,
+      },
+      {
+        title: "Mobile",
+        dataIndex: "mobileno",
+        key: "mobileno",
+        render: (v) => v || "—",
+      },
+      {
+        title: "Provided Services",
+        dataIndex: "providedServices",
+        key: "providedServices",
+        render: (v) => <StarCell value={v} />,
+      },
+      {
+        title: "Satisfied Services",
+        dataIndex: "satisfiedServices",
+        key: "satisfiedServices",
+        render: (v) => <StarCell value={v} />,
+      },
+      {
+        title: "Expectation",
+        dataIndex: "expectation",
+        key: "expectation",
+        render: (v) => <StarCell value={v} />,
+      },
+      {
+        title: "Overall Experience",
+        dataIndex: "overallExperience",
+        key: "overallExperience",
+        render: (v) => <StarCell value={v} />,
+      },
+      {
+        title: "Recommend",
+        dataIndex: "recommend",
+        key: "recommend",
+        render: (v) =>
+          v === "YES" ? (
+            <span className="rounded-full bg-green-50 px-2.5 py-0.5 text-[11px] font-semibold text-green-600">
+              Yes
+            </span>
+          ) : v === "NO" ? (
+            <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-[11px] font-semibold text-red-500">
+              No
+            </span>
+          ) : (
+            "—"
+          ),
+      },
+      {
+        title: "Member",
+        dataIndex: "memberName",
+        key: "memberName",
+        render: (v) => v || "—",
+      },
+      {
+        title: "Description",
+        dataIndex: "description",
+        key: "description",
+        width: 220,
+        render: (v) => (
+          <span className="text-[12px] text-slate-600 whitespace-normal break-words">
+            {v || "—"}
           </span>
-        </div>
-      );
-    }
+        ),
+      },
+      {
+        title: "Actions",
+        key: "actions",
+        fixed: "right",
+        width: 110,
+        render: (_, record) => (
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => handleEditFeedback(record)}
+              className="text-blue-700"
+              aria-label="Edit feedback"
+              title="Edit"
+            >
+              <Pencil size={16} />
+            </button>
 
+            <Popconfirm
+              title="Delete this feedback?"
+              description="This action cannot be undone."
+              okText="Delete"
+              cancelText="Cancel"
+              placement="topRight"
+              onConfirm={() => handleDeleteFeedback(record.id)}
+            >
+              <button
+                type="button"
+                className="text-red-700"
+                aria-label="Delete feedback"
+                title="Delete"
+              >
+                <Trash2 size={16} />
+              </button>
+            </Popconfirm>
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editingId],
+  );
+
+  const renderList = () => {
     if (listError) {
       return (
         <div className="flex items-center justify-center py-16 text-sm text-red-500">
@@ -189,90 +302,31 @@ const FeedbackModal = ({ open, onClose, eventId, eventFunctionId, functionName }
       );
     }
 
-    if (!feedbacks.length) {
-      return (
-        <div className="flex flex-col items-center justify-center gap-4 py-14 text-center">
-          <div className="rounded-full bg-primary/5 p-4 text-primary">
-            <MessageSquare size={26} />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-700">No feedback recorded yet.</p>
-            <p className="text-[12px] text-gray-500">Add the first feedback for this function.</p>
-          </div>
-        </div>
-      );
-    }
-
     return (
-      <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-        {feedbacks.map((feedback) => (
-          <div
-            key={feedback.id}
-            className="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-3">
+      <Table
+        rowKey="id"
+        size="middle"
+        columns={columns}
+        dataSource={feedbacks}
+        loading={loading}
+        pagination={{ pageSize: 10, hideOnSinglePage: true, size: "small" }}
+        scroll={{ x: 1150 }}
+        locale={{
+          emptyText: (
+            <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+              <div className="rounded-full bg-primary/5 p-4 text-primary">
+                <MessageSquare size={26} />
+              </div>
               <div>
-                <p className="text-[15px] font-semibold text-slate-900">{feedback.name || "—"}</p>
-                <p className="text-[12px] text-gray-500">{feedback.mobileno || "—"}</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  size="small"
-                  type="default"
-                  className="!rounded-xl !border-gray-200 !text-slate-700"
-                  onClick={() => handleEditFeedback(feedback)}
-                  icon={<Pencil size={14} />}
-                >
-                  Edit
-                </Button>
-
-                <Popconfirm
-                  title="Delete this feedback?"
-                  description="This action cannot be undone."
-                  okText="Delete"
-                  cancelText="Cancel"
-                  placement="topRight"
-                  onConfirm={() => handleDeleteFeedback(feedback.id)}
-                >
-                  <Button
-                    size="small"
-                    danger
-                    className="!rounded-xl"
-                    icon={<Trash2 size={14} />}
-                  >
-                    Delete
-                  </Button>
-                </Popconfirm>
+                <p className="text-sm font-medium text-slate-700">No feedback recorded yet.</p>
+                <p className="text-[12px] text-gray-500">
+                  Add the first feedback for this function.
+                </p>
               </div>
             </div>
-
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <RatingRow label="Provided Services" value={feedback.providedServices} />
-              <RatingRow label="Satisfied Services" value={feedback.satisfiedServices} />
-              <RatingRow label="Expectation" value={feedback.expectation} />
-              <RatingRow label="Overall Experience" value={feedback.overallExperience} />
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] text-slate-600">
-              <span className="rounded-full bg-primary/5 px-2.5 py-1 font-medium text-primary">
-                Recommend: {feedback.recommend === "YES" ? "Yes" : feedback.recommend === "NO" ? "No" : "—"}
-              </span>
-              {feedback.memberName && (
-                <span className="rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-600">
-                  Member: {feedback.memberName}
-                </span>
-              )}
-            </div>
-
-            {feedback.description && (
-              <div className="mt-4 rounded-xl border border-gray-200 bg-white p-3 text-[12px] leading-6 text-slate-600">
-                {feedback.description}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+          ),
+        }}
+      />
     );
   };
 
@@ -286,7 +340,7 @@ const FeedbackModal = ({ open, onClose, eventId, eventFunctionId, functionName }
           <span>Feedback{functionName ? ` - ${functionName}` : ""}</span>
         </div>
       }
-      width={820}
+      width={1100}
       footer={null}
     >
       {!showForm ? (
@@ -362,61 +416,27 @@ const FeedbackModal = ({ open, onClose, eventId, eventFunctionId, functionName }
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Form.Item
-                label="Provided Services"
-                name="providedServices"
-                rules={[
-                  {
-                    validator: (_, value) =>
-                      value > 0 ? Promise.resolve() : Promise.reject("Please provide a rating"),
-                  },
-                ]}
-                valuePropName="value"
-              >
-                <Rate allowHalf={false} />
-              </Form.Item>
-
-              <Form.Item
-                label="Satisfied Services"
-                name="satisfiedServices"
-                rules={[
-                  {
-                    validator: (_, value) =>
-                      value > 0 ? Promise.resolve() : Promise.reject("Please provide a rating"),
-                  },
-                ]}
-                valuePropName="value"
-              >
-                <Rate allowHalf={false} />
-              </Form.Item>
-
-              <Form.Item
-                label="Expectation"
-                name="expectation"
-                rules={[
-                  {
-                    validator: (_, value) =>
-                      value > 0 ? Promise.resolve() : Promise.reject("Please provide a rating"),
-                  },
-                ]}
-                valuePropName="value"
-              >
-                <Rate allowHalf={false} />
-              </Form.Item>
-
-              <Form.Item
-                label="Overall Experience"
-                name="overallExperience"
-                rules={[
-                  {
-                    validator: (_, value) =>
-                      value > 0 ? Promise.resolve() : Promise.reject("Please provide a rating"),
-                  },
-                ]}
-                valuePropName="value"
-              >
-                <Rate allowHalf={false} />
-              </Form.Item>
+              {[
+                ["Provided Services", "providedServices"],
+                ["Satisfied Services", "satisfiedServices"],
+                ["Expectation", "expectation"],
+                ["Overall Experience", "overallExperience"],
+              ].map(([label, name]) => (
+                <Form.Item
+                  key={name}
+                  label={label}
+                  name={name}
+                  rules={[
+                    {
+                      validator: (_, value) =>
+                        value > 0 ? Promise.resolve() : Promise.reject("Please provide a rating"),
+                    },
+                  ]}
+                  valuePropName="value"
+                >
+                  <Rate allowHalf={false} />
+                </Form.Item>
+              ))}
             </div>
 
             <Form.Item

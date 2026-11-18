@@ -12,13 +12,10 @@ import {
   Trash2,
   Save,
   Search,
-  Edit,
   Plus,
   ChevronRight,
 } from "lucide-react";
-import { Tooltip, Select, Input } from "antd";
-
-const { TextArea } = Input;
+import { Tooltip, Select } from "antd";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const PRIORITY_OPTIONS = [
@@ -33,10 +30,14 @@ const PRIORITY_BADGE = {
   HIGH: "bg-red-50 text-red-600 border border-red-200",
 };
 
+// Keys cover both the API values (INPROGRESS, CANCEL) and the older spellings
 const STATUS_BADGE = {
   PENDING: "bg-amber-50 text-amber-600",
+  INPROGRESS: "bg-blue-50 text-blue-600",
   IN_PROGRESS: "bg-blue-50 text-blue-600",
+  RUNNING: "bg-blue-50 text-blue-600",
   COMPLETED: "bg-green-50 text-green-600",
+  CANCEL: "bg-red-50 text-red-500",
   CANCELLED: "bg-red-50 text-red-500",
 };
 
@@ -49,6 +50,14 @@ const STATUS_OPTIONS = [
 
 // ─── Columns builder ────────────────────────────────────────────────────────
 const columns = (onEdit) => [
+  {
+    id: "sequence",
+    header: "#",
+    accessorKey: "sequence",
+    cell: ({ row }) => (
+      <span className="text-sm text-gray-500">{row.original.sequence ?? row.index + 1}</span>
+    ),
+  },
   {
     id: "name",
     header: "Title",
@@ -87,15 +96,57 @@ const columns = (onEdit) => [
     id: "status",
     header: "Status",
     accessorKey: "status",
+    cell: ({ row }) => {
+      const s = String(row.original.status || "PENDING").toUpperCase();
+      return (
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+            STATUS_BADGE[s] || STATUS_BADGE.PENDING
+          }`}
+        >
+          {s}
+        </span>
+      );
+    },
+  },
+  {
+    id: "remarks",
+    header: "Remarks",
+    accessorKey: "remarks",
     cell: ({ row }) => (
-      <span
-        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
-          STATUS_BADGE[row.original.status] || STATUS_BADGE.PENDING
-        }`}
-      >
-        {row.original.status}
+      <span className="text-sm text-gray-600 max-w-[240px] truncate block">
+        {row.original.remarks || "—"}
       </span>
     ),
+  },
+  {
+    id: "files",
+    header: "Files",
+    cell: ({ row }) => {
+      const files = (row.original.files || []).filter((f) => f.url);
+      if (!files.length) return <span className="text-sm text-gray-400">—</span>;
+      return (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {files.map((f, i) => (
+            <a
+              key={f.fileKey ?? i}
+              href={f.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open image"
+              className="block h-10 w-10 overflow-hidden rounded-lg ring-1 ring-gray-200 bg-gray-100"
+            >
+              <img
+                src={f.url}
+                alt={f.name || `note-file-${i + 1}`}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+            </a>
+          ))}
+        </div>
+      );
+    },
   },
   {
     id: "action",
@@ -108,7 +159,7 @@ const columns = (onEdit) => [
             className="flex gap-1 items-center bg-primary text-white rounded-3xl p-2"
             aria-label="Edit note"
           >
-            View Details <ChevronRight size={12}/>
+            View Details <ChevronRight size={12} />
           </button>
         </Tooltip>
       </div>
@@ -126,6 +177,7 @@ const mapNote = (n) => ({
   eventFunctionId: n.eventFunctionId,
   eventId: n.eventId,
   remarks: n.remarks ?? "",
+  sequence: n.sequence ?? null,
   status: n.status ?? "PENDING",
   files: (n.files || []).map((f) => ({
     fileKey: `existing-file-${f.id}`,
@@ -152,7 +204,7 @@ export default function ManagerAllSpecialNotes() {
   const [notes, setNotes] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [detailNote, setDetailNote] = useState(null);
+  const [detailNote, setDetailNote] = useState(undefined);
   const [draftName, setDraftName] = useState("");
   const [draftDescription, setDraftDescription] = useState("");
   const [draftPriority, setDraftPriority] = useState("MEDIUM");
@@ -160,7 +212,6 @@ export default function ManagerAllSpecialNotes() {
   const [draftFiles, setDraftFiles] = useState([]);
   const [isSavingDetail, setIsSavingDetail] = useState(false);
   const [draftRemarks, setDraftRemarks] = useState("");
-
 
   const fetchNotes = useCallback(async () => {
     if (!eventFunctionId || !managerId) return;
@@ -175,6 +226,7 @@ export default function ManagerAllSpecialNotes() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventFunctionId, managerId]);
 
   useEffect(() => {
@@ -246,8 +298,6 @@ export default function ManagerAllSpecialNotes() {
 
     setIsSavingDetail(true);
     try {
-      const userId = localStorage.getItem("userId");
-
       const formData = new FormData();
       formData.append("id", detailNote?.id || -1);
       formData.append("eventFunctionId", eventFunctionId);
@@ -271,9 +321,7 @@ export default function ManagerAllSpecialNotes() {
 
       Swal.fire({
         title: "Saved",
-        text: detailNote
-          ? "Note updated successfully!"
-          : "Note added successfully!",
+        text: detailNote ? "Note updated successfully!" : "Note added successfully!",
         icon: "success",
         timer: 1500,
         showConfirmButton: false,
@@ -341,10 +389,7 @@ export default function ManagerAllSpecialNotes() {
       {/* ── Add / Edit Detail Drawer ── */}
       {isDrawerOpen && (
         <>
-          <div
-            className="fixed inset-0 bg-black/40 z-50"
-            onClick={handleCloseDetail}
-          />
+          <div className="fixed inset-0 bg-black/40 z-50" onClick={handleCloseDetail} />
           <div className="fixed top-0 right-0 h-full w-full sm:w-[420px] bg-white z-50 shadow-2xl flex flex-col">
             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
               <button
@@ -381,9 +426,7 @@ export default function ManagerAllSpecialNotes() {
 
               {/* Priority */}
               <div>
-                <p className="text-sm font-semibold text-gray-800 mb-2">
-                  Priority
-                </p>
+                <p className="text-sm font-semibold text-gray-800 mb-2">Priority</p>
                 <Select
                   className="w-full"
                   value={draftPriority}
@@ -394,9 +437,7 @@ export default function ManagerAllSpecialNotes() {
 
               {/* Status */}
               <div>
-                <p className="text-sm font-semibold text-gray-800 mb-2">
-                  Status
-                </p>
+                <p className="text-sm font-semibold text-gray-800 mb-2">Status</p>
                 <select
                   value={draftStatus}
                   onChange={(e) => setDraftStatus(e.target.value)}
@@ -411,10 +452,8 @@ export default function ManagerAllSpecialNotes() {
               </div>
 
               {/* Description */}
-               <div>
-                <p className="text-sm font-semibold text-gray-800 mb-2">
-                  Description
-                </p>
+              <div>
+                <p className="text-sm font-semibold text-gray-800 mb-2">Description</p>
                 <textarea
                   rows={5}
                   readOnly
@@ -425,9 +464,7 @@ export default function ManagerAllSpecialNotes() {
 
               {/* Remarks */}
               <div>
-                <p className="text-sm font-semibold text-gray-800 mb-2">
-                  Remarks
-                </p>
+                <p className="text-sm font-semibold text-gray-800 mb-2">Remarks</p>
                 <textarea
                   rows={4}
                   maxLength={500}
@@ -443,9 +480,7 @@ export default function ManagerAllSpecialNotes() {
 
               {/* Upload Work Proof */}
               <div>
-                <p className="text-sm font-semibold text-gray-800 mb-2">
-                  Upload Work Proof
-                </p>
+                <p className="text-sm font-semibold text-gray-800 mb-2">Upload Work Proof</p>
                 <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-xl py-6 cursor-pointer hover:border-primary/40 transition text-gray-400">
                   <UploadCloud className="w-6 h-6" />
                   <span className="text-sm">Tap to upload photos</span>
@@ -469,11 +504,7 @@ export default function ManagerAllSpecialNotes() {
                         className="relative rounded-lg overflow-hidden border border-gray-200 aspect-square bg-gray-100"
                       >
                         {f.url ? (
-                          <img
-                            src={f.url}
-                            alt={f.name}
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400 px-1 text-center">
                             {f.name}

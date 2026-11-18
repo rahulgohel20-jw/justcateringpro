@@ -143,16 +143,25 @@ const AddRawMaterialCategory = () => {
 
     const selectedField = languageMap[language] || "nameEnglish";
 
-    let mapped = rawOriginalData.map((cust, index) => ({
-      sr_no: index + 1,
-      id: cust.id,
-      nameEnglish: cust[selectedField] || "-",
-      raw_material_type: cust.rawMaterialType
-        ? cust.rawMaterialType[selectedField]
-        : "-",
-      isActive: cust.isActive,
-    }));
-
+  let mapped = rawOriginalData.map((cust, index) => ({
+  sr_no: index + 1,
+  rawCatid: cust.id,
+  id: cust.id,
+  // shown in the table (language based)
+  nameEnglish: cust[selectedField] || cust.nameEnglish || "-",
+  // used by the edit modal
+  name: cust.nameEnglish,
+  nameHindi: cust.nameHindi,
+  nameGujarati: cust.nameGujarati,
+  rawtype:
+    cust.rawMaterialCatType?.[selectedField] ||
+    cust.rawMaterialCatType?.nameEnglish ||
+    "-",
+  rawtypeid: cust.rawMaterialCatType?.id,
+  priority: cust.sequence,
+  status: cust.isActive,
+  isDirect: cust.isDirect,
+}));
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       mapped = mapped.filter(

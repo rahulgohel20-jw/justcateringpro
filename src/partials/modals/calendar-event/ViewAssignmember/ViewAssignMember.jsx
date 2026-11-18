@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   getallassignfunctionbyevent,
   getCurrentAttendance,
+  GetEventFunctionManagerTask,
+  GetSpecialNotes,
+  GetAllManagerTask,
 } from "@/services/apiServices";
 import { TableComponent } from "@/components/table/TableComponent";
 import { useNavigate, useParams } from "react-router-dom";
@@ -31,6 +34,35 @@ const statusStyles = {
   PUNCHED_OUT: "bg-gray-100 text-gray-700",
 };
 
+const ITEM_STATUS_BADGE = {
+  PENDING: "bg-amber-50 text-amber-600",
+  INPROGRESS: "bg-blue-50 text-blue-600",
+  IN_PROGRESS: "bg-blue-50 text-blue-600",
+  RUNNING: "bg-blue-50 text-blue-600",
+  COMPLETED: "bg-green-50 text-green-600",
+  CANCEL: "bg-red-50 text-red-500",
+  CANCELLED: "bg-red-50 text-red-500",
+};
+
+const PRIORITY_BADGE = {
+  LOW: "bg-slate-50 text-slate-500 border border-slate-200",
+  MEDIUM: "bg-amber-50 text-amber-600 border border-amber-200",
+  HIGH: "bg-red-50 text-red-600 border border-red-200",
+};
+
+const StatusPill = ({ value }) => {
+  const s = String(value || "PENDING").toUpperCase();
+  return (
+    <span
+      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+        ITEM_STATUS_BADGE[s] || ITEM_STATUS_BADGE.PENDING
+      }`}
+    >
+      {s.replaceAll("_", " ")}
+    </span>
+  );
+};
+
 const AttendanceRow = ({ label, value }) => (
   <div className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
     <span className="text-[13px] text-gray-500">{label}</span>
@@ -53,6 +85,28 @@ const mapLink = (lat, lng) =>
   ) : (
     "—"
   );
+
+const FileThumbs = ({ files }) => {
+  const list = (files || [])
+    .map((f) => ({ id: f.id, url: f.imagePath || f.fileUrl || f.url || f.path || "" }))
+    .filter((f) => f.url);
+  if (!list.length) return null;
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap mt-2">
+      {list.map((f, i) => (
+        <a
+          key={f.id ?? i}
+          href={f.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block h-10 w-10 overflow-hidden rounded-lg ring-1 ring-gray-200 bg-gray-100"
+        >
+          <img src={f.url} alt={`file-${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
+        </a>
+      ))}
+    </div>
+  );
+};
 
 const ManagerInfoCard = ({ manager }) => (
   <div className="bg-white rounded-2xl border border-gray-200 p-5 flex items-center justify-between flex-wrap gap-4 mb-7 shadow-sm">
@@ -90,6 +144,12 @@ const ManagerInfoCard = ({ manager }) => (
   </div>
 );
 
+const MODAL_TABS = [
+  { key: "attendance", label: "Attendance" },
+  { key: "tasks", label: "Tasks" },
+  { key: "notes", label: "Special Notes" },
+];
+
 const ViewAssignMember = () => {
   const navigate = useNavigate();
   const { eventId } = useParams();
@@ -102,12 +162,18 @@ const ViewAssignMember = () => {
   // Row whose "Task Views" icon was clicked. Modal shows while non-null.
   const [selectedFunction, setSelectedFunction] = useState(null);
 
-  // Attendance modal state
+  // Manager modal state (attendance + tasks + special notes)
   const [attendanceFn, setAttendanceFn] = useState(null);
+  const [activeTab, setActiveTab] = useState("attendance");
   const [attendance, setAttendance] = useState(null);
-  const [attendanceLoading, setAttendanceLoading] = useState(false);
-  const [attendanceError, setAttendanceError] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [sectionErrors, setSectionErrors] = useState({});
   const [feedbackModal, setFeedbackModal] = useState(null);
+
+  // Task master (id -> name), fetched once
+  const taskMasterRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -213,31 +279,103 @@ const ViewAssignMember = () => {
     });
   };
 
-  // Click on a manager name -> open attendance modal for that manager
-  const handleAttendanceClick = async (fn, mgr) => {
-    setAttendanceFn({ ...fn, clickedManagerName: mgr?.managerName });
-    setAttendance(null);
-    setAttendanceError(null);
-    setAttendanceLoading(true);
+  const loadTaskMaster = async (userId) => {
+    if (taskMasterRef.current) return taskMasterRef.current;
+    const res = await GetAllManagerTask(userId);
+    const list =
+      res?.data?.data?.["ManagerTasks"] || res?.data?.data || res?.data?.ManagerTask || [];
+    const map = {};
+    (Array.isArray(list) ? list : []).forEach((t) => {
+      map[t.id] = t.nameEnglish || t.name || t.taskName || `Task #${t.id}`;
+    });
+    taskMasterRef.current = map;
+    return map;
+  };
 
-    try {
-      // managerId of the clicked manager. To always use the stored value instead:
-      // const managerId = localStorage.getItem("mainId");
-      const managerId = mgr?.managerId;
-      const res = await getCurrentAttendance(fn.eventFunctionId, managerId);
-      setAttendance(res?.data?.data ?? res?.data ?? null);
-    } catch (err) {
-      console.error("Failed to fetch attendance:", err);
-      setAttendanceError("Failed to load attendance.");
-    } finally {
-      setAttendanceLoading(false);
+  // Click on a manager name -> modal with attendance, tasks and special notes
+  const handleAttendanceClick = async (fn, mgr) => {
+    const userId = localStorage.getItem("userId");
+
+    setAttendanceFn({ ...fn, clickedManagerName: mgr?.managerName, clickedManagerId: mgr?.managerId });
+    setActiveTab("attendance");
+    setAttendance(null);
+    setTasks([]);
+    setNotes([]);
+    setSectionErrors({});
+    setModalLoading(true);
+
+    // One failing call shouldn't blank out the other sections
+    const [attRes, taskRes, noteRes, masterRes] = await Promise.allSettled([
+      getCurrentAttendance(fn.eventFunctionId, mgr?.managerId),
+      GetEventFunctionManagerTask(fn.eventFunctionId, mgr?.managerId, ""),
+      GetSpecialNotes(fn.eventFunctionId, mgr?.managerId, userId),
+      loadTaskMaster(userId),
+    ]);
+
+    const errors = {};
+
+    if (attRes.status === "fulfilled") {
+      setAttendance(attRes.value?.data?.data ?? attRes.value?.data ?? null);
+    } else {
+      console.error("Failed to fetch attendance:", attRes.reason);
+      errors.attendance = "Failed to load attendance.";
     }
+
+    if (taskRes.status === "fulfilled") {
+      const master = masterRes.status === "fulfilled" ? masterRes.value : {};
+      const raw =
+        taskRes.value?.data?.data?.ManagerTasks?.functionManagerTasks ||
+        taskRes.value?.data?.data ||
+        [];
+      setTasks(
+        (Array.isArray(raw) ? raw : []).map((t, i) => ({
+          key: t.id ?? i,
+          name:
+            master[t.managerTaskId] ||
+            t.taskName ||
+            t.managerTaskName ||
+            t.nameEnglish ||
+            `Task #${t.managerTaskId ?? t.id}`,
+          status: t.status || "PENDING",
+          remarks: t.remarks || "",
+          files: t.files || [],
+        })),
+      );
+    } else {
+      console.error("Failed to fetch tasks:", taskRes.reason);
+      errors.tasks = "Failed to load tasks.";
+    }
+
+    if (noteRes.status === "fulfilled") {
+      const raw = noteRes.value?.data?.data?.["SpecialNotes"];
+      const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+      setNotes(
+        list.map((n, i) => ({
+          key: n.id ?? i,
+          sequence: n.sequence ?? i + 1,
+          name: n.name || "",
+          description: n.description || "",
+          priority: n.priority || "MEDIUM",
+          status: n.status || "PENDING",
+          remarks: n.remarks || "",
+          files: n.files || [],
+        })),
+      );
+    } else {
+      console.error("Failed to fetch special notes:", noteRes.reason);
+      errors.notes = "Failed to load special notes.";
+    }
+
+    setSectionErrors(errors);
+    setModalLoading(false);
   };
 
   const closeAttendanceModal = () => {
     setAttendanceFn(null);
     setAttendance(null);
-    setAttendanceError(null);
+    setTasks([]);
+    setNotes([]);
+    setSectionErrors({});
   };
 
   const openFeedbackModal = (fn) => {
@@ -332,6 +470,8 @@ const ViewAssignMember = () => {
     return col;
   });
 
+  const tabCount = { tasks: tasks.length, notes: notes.length };
+
   return (
     <div className="min-h-screen p-7">
       <div className="mb-4">
@@ -400,7 +540,7 @@ const ViewAssignMember = () => {
           title="Manager View"
           width={680}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-2">
             <div
               onClick={() => handleAllTaskClick(selectedFunction)}
               className="bg-white p-6 rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center min-h-[130px] cursor-pointer hover:shadow-md hover:border-indigo-200 transition"
@@ -422,18 +562,6 @@ const ViewAssignMember = () => {
                 Chef, Outside & Labour View
               </p>
             </div>
-
-            <div
-              onClick={() => handleSpecialNotesViewClick(selectedFunction)}
-              className="bg-white p-6 rounded-xl shadow border border-gray-100 flex flex-col items-center justify-center min-h-[130px] cursor-pointer hover:shadow-md hover:border-amber-200 transition"
-            >
-              <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mb-3">
-                <NotebookPen size={32} className="text-primary" />
-              </div>
-              <p className="font-semibold text-gray-700 text-center">
-                Special Notes
-              </p>
-            </div>
           </div>
         </CustomModal>
       )}
@@ -448,60 +576,161 @@ const ViewAssignMember = () => {
         />
       )}
 
-      {/* Attendance modal */}
+      {/* Manager modal: attendance + tasks + special notes */}
       {attendanceFn && (
         <CustomModal
           open={!!attendanceFn}
           onClose={closeAttendanceModal}
-          title={`Attendance${attendanceFn.clickedManagerName ? ` - ${attendanceFn.clickedManagerName}` : ""}`}
-          width={520}
+          title={attendanceFn.clickedManagerName || "Manager"}
+          width={720}
         >
           <div className="p-2">
-            {attendanceLoading ? (
-              <div className="flex items-center justify-center py-10 text-sm text-gray-400">
-                Loading attendance...
-              </div>
-            ) : attendanceError ? (
-              <div className="flex items-center justify-center py-10 text-sm text-red-400">
-                {attendanceError}
-              </div>
-            ) : !attendance ? (
-              <div className="flex items-center justify-center py-10 text-sm text-gray-400">
-                No attendance found.
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-base font-bold text-slate-900">
-                    {attendance.managerName ?? "—"}
-                  </span>
-                  <span
-                    className={`text-[11px] font-semibold rounded-full px-3 py-1 uppercase tracking-wide ${
-                      statusStyles[attendance.status] ?? "bg-blue-100 text-blue-700"
-                    }`}
-                  >
-                    {attendance.status?.replaceAll("_", " ") ?? "—"}
-                  </span>
+            <p className="text-[13px] text-gray-500 mb-3">{attendanceFn.functionName}</p>
+
+            {/* Tabs */}
+            <div className="flex items-center gap-1 border-b border-gray-200 mb-4">
+              {MODAL_TABS.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`px-4 py-2 text-[13px] font-semibold -mb-px border-b-2 transition-colors ${
+                    activeTab === tab.key
+                      ? "border-primary text-primary"
+                      : "border-transparent text-gray-500 hover:text-gray-800"
+                  }`}
+                >
+                  {tab.label}
+                  {!modalLoading && tabCount[tab.key] !== undefined && (
+                    <span className="ml-1.5 rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                      {tabCount[tab.key]}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto pr-1">
+              {modalLoading ? (
+                <div className="flex items-center justify-center py-10 text-sm text-gray-400">
+                  Loading...
                 </div>
+              ) : activeTab === "attendance" ? (
+                sectionErrors.attendance ? (
+                  <div className="flex items-center justify-center py-10 text-sm text-red-400">
+                    {sectionErrors.attendance}
+                  </div>
+                ) : !attendance ? (
+                  <div className="flex items-center justify-center py-10 text-sm text-gray-400">
+                    No attendance found.
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-base font-bold text-slate-900">
+                        {attendance.managerName ?? "—"}
+                      </span>
+                      <span
+                        className={`text-[11px] font-semibold rounded-full px-3 py-1 uppercase tracking-wide ${
+                          statusStyles[attendance.status] ?? "bg-blue-100 text-blue-700"
+                        }`}
+                      >
+                        {attendance.status?.replaceAll("_", " ") ?? "—"}
+                      </span>
+                    </div>
 
-                <AttendanceRow label="Shift" value={attendance.shiftName} />
-                <AttendanceRow label="Punch In" value={attendance.punchInTimeDisplay} />
-                <AttendanceRow label="Punch Out" value={attendance.punchOutTimeDisplay} />
-                <AttendanceRow label="Total Duration" value={attendance.totalDurationDisplay} />
-                <AttendanceRow
-                  label="Punch In Location"
-                  value={mapLink(attendance.punchInLat, attendance.punchInLng)}
-                />
-                <AttendanceRow
-                  label="Punch Out Location"
-                  value={mapLink(attendance.punchOutLat, attendance.punchOutLng)}
-                />
+                    <AttendanceRow label="Shift" value={attendance.shiftName} />
+                    <AttendanceRow label="Punch In" value={attendance.punchInTimeDisplay} />
+                    <AttendanceRow label="Punch Out" value={attendance.punchOutTimeDisplay} />
+                    <AttendanceRow label="Total Duration" value={attendance.totalDurationDisplay} />
+                    <AttendanceRow
+                      label="Punch In Location"
+                      value={mapLink(attendance.punchInLat, attendance.punchInLng)}
+                    />
+                    <AttendanceRow
+                      label="Punch Out Location"
+                      value={mapLink(attendance.punchOutLat, attendance.punchOutLng)}
+                    />
 
-                {attendance.message && (
-                  <p className="mt-3 text-[13px] text-gray-600">{attendance.message}</p>
-                )}
-              </>
-            )}
+                    {attendance.message && (
+                      <p className="mt-3 text-[13px] text-gray-600">{attendance.message}</p>
+                    )}
+                  </>
+                )
+              ) : activeTab === "tasks" ? (
+                sectionErrors.tasks ? (
+                  <div className="flex items-center justify-center py-10 text-sm text-red-400">
+                    {sectionErrors.tasks}
+                  </div>
+                ) : tasks.length === 0 ? (
+                  <div className="flex items-center justify-center py-10 text-sm text-gray-400">
+                    No tasks assigned.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {tasks.map((t, i) => (
+                      <div
+                        key={t.key}
+                        className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-semibold text-gray-800">
+                            <span className="mr-2 text-gray-400">{i + 1}.</span>
+                            {t.name}
+                          </p>
+                          <StatusPill value={t.status} />
+                        </div>
+                        {t.remarks && (
+                          <p className="mt-1 text-xs text-gray-500">Remarks: {t.remarks}</p>
+                        )}
+                        <FileThumbs files={t.files} />
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : sectionErrors.notes ? (
+                <div className="flex items-center justify-center py-10 text-sm text-red-400">
+                  {sectionErrors.notes}
+                </div>
+              ) : notes.length === 0 ? (
+                <div className="flex items-center justify-center py-10 text-sm text-gray-400">
+                  No special notes.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {notes.map((n) => (
+                    <div
+                      key={n.key}
+                      className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-sm font-semibold text-gray-800">
+                          <span className="mr-2 text-gray-400">{n.sequence}.</span>
+                          {n.name}
+                        </p>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+                              PRIORITY_BADGE[n.priority] || PRIORITY_BADGE.MEDIUM
+                            }`}
+                          >
+                            {n.priority}
+                          </span>
+                          <StatusPill value={n.status} />
+                        </div>
+                      </div>
+                      {n.description && (
+                        <p className="mt-1 text-xs text-gray-600">{n.description}</p>
+                      )}
+                      {n.remarks && (
+                        <p className="mt-1 text-xs text-gray-500">Remarks: {n.remarks}</p>
+                      )}
+                      <FileThumbs files={n.files} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </CustomModal>
       )}
