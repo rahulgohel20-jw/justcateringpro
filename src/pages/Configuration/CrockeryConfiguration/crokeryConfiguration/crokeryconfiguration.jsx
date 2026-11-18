@@ -363,16 +363,16 @@ const CrokeyClutly = () => {
 
   // ================= HANDLE VALUE CHANGE =================
   const handleValueChange = useCallback((rowKey, field, value) => {
-    setData((prev) =>
-      prev.map((item) =>
-        item._rowKey === rowKey
-          ? { ...item, [field]: value === "" ? "" : Number(value) }
-          : item,
-      ),
-    );
-    setIsDirty(true);
-  }, []);
+  // allow only digits and one decimal point (max 3 decimals)
+  if (field === "qty" && !/^\d*\.?\d{0,3}$/.test(value)) return;
 
+  setData((prev) =>
+    prev.map((item) =>
+      item._rowKey === rowKey ? { ...item, [field]: value } : item,
+    ),
+  );
+  setIsDirty(true);
+}, []);
   const filteredData = useMemo(() => {
     return data.filter((item) =>
       item.rawMaterialNameEnglish
@@ -855,14 +855,15 @@ const CrokeyClutly = () => {
           </span>
         ),
         cell: ({ row }) => (
-          <input
-            type="tel"
-            value={row.original.qty || ""}
-            onChange={(e) =>
-              handleValueChange(row.original._rowKey, "qty", e.target.value)
-            }
-            className="w-[90px] border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
-          />
+         <input
+  type="text"
+  inputMode="decimal"
+  value={row.original.qty ?? ""}
+  onChange={(e) =>
+    handleValueChange(row.original._rowKey, "qty", e.target.value)
+  }
+  className="w-[90px] border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
+/>
         ),
       },
 

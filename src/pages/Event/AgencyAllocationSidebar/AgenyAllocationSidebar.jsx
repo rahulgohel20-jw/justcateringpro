@@ -15,7 +15,7 @@ const TABS = [
   { id: "outside", label: "Outsource Agency" },
   { id: "inside", label: "Inside Kitchen" },
 ];
-
+  
 export default function AgencyAllocationSidebar({
   open,
   onClose,
