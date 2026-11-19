@@ -134,6 +134,15 @@ const VendorMaster = () => {
     }
   };
 
+  const isCustomerParty = (cust) => {
+  const contactType = cust?.contact?.contactType;
+  const typeName = (contactType?.nameEnglish || "").trim().toLowerCase();
+  const isCustomerByName = typeName === "customer";
+  const isCustomerById =
+    contactType?.id != null && excludedContactTypeIds.includes(contactType.id);
+  return isCustomerByName || isCustomerById;
+};
+
   // Extract dict words for suggestions
   useEffect(() => {
     let cancelled = false;
@@ -141,7 +150,9 @@ const VendorMaster = () => {
       try {
         const res = await GetAllCustomer(userId);
         if (cancelled) return;
-        const list = res?.data?.data?.["Party Details"] || [];
+        const list = (res?.data?.data?.["Party Details"] || []).filter(
+      (cust) => !isCustomerParty(cust),
+    );
         const words = extractDictWords(list, [
           "nameEnglish",
           "nameHindi",
@@ -245,16 +256,10 @@ const VendorMaster = () => {
       })
       .catch((error) => console.error("Error fetching categories:", error));
   };
-
-  const formatCustomerData = (partyDetails) => {
-    const filteredParties = partyDetails.filter((cust) => {
-      const contactTypeId = cust.contact?.contactType?.id;
-      const isExcluded =
-        contactTypeId && excludedContactTypeIds.includes(contactTypeId);
-      return !isExcluded;
-    });
-
-    return filteredParties.map((cust, index) => ({
+const formatCustomerData = (partyDetails) =>
+  partyDetails
+    .filter((cust) => !isCustomerParty(cust))
+    .map((cust, index) => ({
       sr_no: index + 1,
       customerid: cust.id,
       customer: getNameByLang(cust),
@@ -275,11 +280,16 @@ const VendorMaster = () => {
       addressHindi: cust.addressHindi,
       addressGujarati: cust.addressGujarati,
       pan: cust.pan,
+      // ── restored (were removed by the roll-back) ──
+      price: cust.price,
+      helperPrice: cust.helperPrice,
+      counterPrice: cust.counterPrice,
+      // ──────────────────────────────────────────────
       opb: cust.opb || "",
       opbDate: cust.opbDate || "",
       type: cust.type || "",
+      connectivity: "Connected",
     }));
-  };
 
   const fetchByCategory = (categoryId) => {
     GetPartyMasterByCatId(categoryId, userId)
