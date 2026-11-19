@@ -8,6 +8,9 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import { useAuthContext } from "../../../auth";
 
+const ACTIONS = ["view", "edit", "delete", "add"];
+const ACTION_LABELS = { view: "View", edit: "Edit", delete: "Delete", add: "Add" };
+
 const AddRole = ({ isModalOpen, setIsModalOpen, editData, onRoleAdded }) => {
   const [formData, setFormData] = useState({});
   const [openAddRoleModal, setOpenAddRoleModal] = useState(false);
@@ -17,16 +20,17 @@ const AddRole = ({ isModalOpen, setIsModalOpen, editData, onRoleAdded }) => {
   const [activeTab, setActiveTab] = useState("pages");
   const [modules, setModules] = useState([]);
   const [currentRole, setCurrentRole] = useState([]);
+  const [search, setSearch] = useState(""); // searches module name + page name
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
   const userId = localStorage.getItem("userId");
   const { refreshRights } = useAuthContext();
-
 
   /* ---------------- RESET ---------------- */
   const resetForm = () => {
     setFormData({});
     setRights({});
     setActiveTab("pages");
+    setSearch("");
   };
 
   const fetchuser = async () => {
@@ -143,20 +147,62 @@ const AddRole = ({ isModalOpen, setIsModalOpen, editData, onRoleAdded }) => {
     }));
   };
 
+  // "All" for one row: view + edit + delete + add
   const handleCheckAll = (moduleId, pageId, checked) => {
-  setRights((prev) => ({
-    ...prev,
-    [pageId]: {
-      ...prev[pageId],
-      moduleId,
-      pageid: pageId,
-      view: checked,
-      edit: checked,
-      delete: checked,
-      add: checked,
-    },
-  }));
-};
+    setRights((prev) => ({
+      ...prev,
+      [pageId]: {
+        ...prev[pageId],
+        moduleId,
+        pageid: pageId,
+        view: checked,
+        edit: checked,
+        delete: checked,
+        add: checked,
+      },
+    }));
+  };
+
+  /* ---------------- SEARCH + BULK SELECT ---------------- */
+  const query = search.trim().toLowerCase();
+
+  // module name matches -> show all its pages; otherwise only pages whose name matches
+  const getVisiblePages = (module) => {
+    const all = module.userRightsPages || [];
+    if (!query) return all;
+    if ((module.moduleName || "").toLowerCase().includes(query)) return all;
+    return all.filter((p) => (p.pagename || "").toLowerCase().includes(query));
+  };
+
+  const filteredModules = modules
+    .map((m) => ({ ...m, visiblePages: getVisiblePages(m) }))
+    .filter((m) => m.visiblePages.length > 0);
+
+  // set the given actions on many pages at once. items = [{ moduleId, pageId }]
+  const setBulk = (items, actions, checked) => {
+    setRights((prev) => {
+      const next = { ...prev };
+      items.forEach(({ moduleId, pageId }) => {
+        const patch = {};
+        actions.forEach((a) => (patch[a] = checked));
+        next[pageId] = { ...next[pageId], moduleId, pageid: pageId, ...patch };
+      });
+      return next;
+    });
+  };
+
+  const toItems = (moduleId, pagesList) =>
+    pagesList.map((p) => ({ moduleId, pageId: p.pageId }));
+
+  const allItems = filteredModules.flatMap((m) => toItems(m.moduleId, m.visiblePages));
+
+  // state helpers for the header checkboxes
+  const isChecked = (items, actions) =>
+    items.length > 0 &&
+    items.every(({ pageId }) => actions.every((a) => Boolean(rights[pageId]?.[a])));
+  const isPartial = (items, actions) =>
+    !isChecked(items, actions) &&
+    items.some(({ pageId }) => actions.some((a) => Boolean(rights[pageId]?.[a])));
 
   /* ---------------- HANDLE ROLE ADDED FROM NESTED MODAL ---------------- */
   const handleRoleAddedFromModal = async () => {
@@ -181,6 +227,7 @@ const AddRole = ({ isModalOpen, setIsModalOpen, editData, onRoleAdded }) => {
 
     const rightsList = [];
 
+    // uses ALL modules/pages (not just the searched ones), so searching never drops rights
     modules.forEach((module) => {
       module.userRightsPages.forEach((page) => {
         const existing = rights[page.pageId] || {};
@@ -216,8 +263,8 @@ const AddRole = ({ isModalOpen, setIsModalOpen, editData, onRoleAdded }) => {
 
         resetForm();
         handleModalClose();
-        onRoleAdded?.(); 
-         await refreshRights();
+        onRoleAdded?.();
+        await refreshRights();
       } else {
         // ❌ Backend returned success: false
         Swal.fire({
@@ -246,9 +293,9 @@ const AddRole = ({ isModalOpen, setIsModalOpen, editData, onRoleAdded }) => {
         width="min(650px, 95vw)"
         footer={[
           <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2 w-full" key="footer">
-  <button className="btn btn-light w-full sm:w-auto" onClick={handleModalClose}>Cancel</button>
-  <button className="btn btn-success w-full sm:w-auto" onClick={handleAddRole}>Save</button>
-</div>
+            <button className="btn btn-light w-full sm:w-auto" onClick={handleModalClose}>Cancel</button>
+            <button className="btn btn-success w-full sm:w-auto" onClick={handleAddRole}>Save</button>
+          </div>
         ]}
       >
         <div className="max-h-[65vh] sm:max-h-[60vh] overflow-y-auto px-1 sm:px-2">
@@ -284,95 +331,141 @@ const AddRole = ({ isModalOpen, setIsModalOpen, editData, onRoleAdded }) => {
               </div>
             </div>
 
+            {/* SEARCH + SELECT ALL (everything shown below) */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="input flex items-center gap-2 flex-1">
+                <i className="ki-filled ki-magnifier"></i>
+                <input
+                  type="text"
+                  className="h-full w-full bg-transparent outline-none"
+                  placeholder="Search module or page name"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="text-gray-400 hover:text-gray-600"
+                    aria-label="Clear search"
+                  >
+                    <i className="ki-filled ki-cross text-xs"></i>
+                  </button>
+                )}
+              </div>
+
+              <label className="flex items-center text-sm font-semibold text-gray-700 cursor-pointer whitespace-nowrap">
+                <Checkbox
+                  size="small"
+                  checked={isChecked(allItems, ACTIONS)}
+                  indeterminate={isPartial(allItems, ACTIONS)}
+                  disabled={allItems.length === 0}
+                  onChange={(e) => setBulk(allItems, ACTIONS, e.target.checked)}
+                />
+                Select All
+              </label>
+            </div>
+
             {/* RIGHTS TABLE */}
             <div className="border rounded-lg overflow-hidden">
-              {modules.map((module) => (
-                <div key={module.moduleId} className="mb-4">
-                  {/* MODULE HEADER */}
-                  <div className="bg-gray-200 px-4 py-2 font-bold text-primary">
-                    {module.moduleName}
-                  </div>
-                  <div className="overflow-x-auto">
-                  {/* PAGES TABLE */}
-                  <table className="min-w-full table-auto">
-                    <thead className="bg-gray-100">
-                      <tr>
-                       
-  <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
-    Page Name
-  </th>
-
-   <th className="p-2 sm:p-3 text-center text-xs sm:text-sm">
-    All
-  </th>
-
-  <th className="p-2 sm:p-3 text-center text-xs sm:text-sm">
-    View
-  </th>
-
-  <th className="p-2 sm:p-3 text-center text-xs sm:text-sm">
-    Edit
-  </th>
-
-  <th className="p-2 sm:p-3 text-center text-xs sm:text-sm">
-    Delete
-  </th>
-
-  <th className="p-2 sm:p-3 text-center text-xs sm:text-sm">
-    Add
-  </th>
-</tr>
-                    </thead>
-
-                    <tbody>
-                      {module.userRightsPages.map((page) => (
-                        <tr key={page.pageId} className="border-t">
-                          
-
-                         <td className="p-2 sm:p-3 text-xs sm:text-sm whitespace-nowrap">
-  {page.pagename}
-</td>
-
-<td className="text-center p-1 sm:p-2">
-  <Checkbox
-    checked={
-      Boolean(rights[page.pageId]?.view) &&
-      Boolean(rights[page.pageId]?.edit) &&
-      Boolean(rights[page.pageId]?.delete) &&
-      Boolean(rights[page.pageId]?.add)
-    }
-    onChange={(e) =>
-      handleCheckAll(
-        module.moduleId,
-        page.pageId,
-        e.target.checked,
-      )
-    }
-  />
-</td>
-{/* Individual Rights */}
-{["view", "edit", "delete", "add"].map((action) => (
-  <td key={action} className="text-center p-1 sm:p-2">
-    <Checkbox
-      checked={rights[page.pageId]?.[action] || false}
-      onChange={(e) =>
-        handleCheckboxChange(
-          module.moduleId,
-          page.pageId,
-          action,
-          e.target.checked,
-        )
-      }
-    />
-  </td>
-))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  </div>
+              {filteredModules.length === 0 && (
+                <div className="p-6 text-center text-sm text-gray-500">
+                  No modules or pages found
                 </div>
-              ))}
+              )}
+
+              {filteredModules.map((module) => {
+                const items = toItems(module.moduleId, module.visiblePages);
+
+                return (
+                  <div key={module.moduleId} className="mb-4">
+                    {/* MODULE HEADER */}
+                    <div className="bg-gray-200 px-4 py-2 font-bold text-primary">
+                      {module.moduleName}
+                    </div>
+                    <div className="overflow-x-auto">
+                      {/* PAGES TABLE */}
+                      <table className="min-w-full table-auto">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            <th className="p-2 sm:p-3 text-left text-xs sm:text-sm">
+                              Page Name
+                            </th>
+
+                            {/* All: ticks view + edit + delete + add for every page in this module */}
+                            <th className="p-1 sm:p-2 text-center text-xs sm:text-sm">
+                              <label className="inline-flex items-center cursor-pointer">
+                                <Checkbox
+                                  size="small"
+                                  checked={isChecked(items, ACTIONS)}
+                                  indeterminate={isPartial(items, ACTIONS)}
+                                  onChange={(e) => setBulk(items, ACTIONS, e.target.checked)}
+                                />
+                                All
+                              </label>
+                            </th>
+
+                            {/* View / Edit / Delete / Add: whole column for this module */}
+                            {ACTIONS.map((action) => (
+                              <th key={action} className="p-1 sm:p-2 text-center text-xs sm:text-sm">
+                                <label className="inline-flex items-center cursor-pointer">
+                                  <Checkbox
+                                    size="small"
+                                    checked={isChecked(items, [action])}
+                                    indeterminate={isPartial(items, [action])}
+                                    onChange={(e) => setBulk(items, [action], e.target.checked)}
+                                  />
+                                  {ACTION_LABELS[action]}
+                                </label>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {module.visiblePages.map((page) => (
+                            <tr key={page.pageId} className="border-t">
+                              <td className="p-2 sm:p-3 text-xs sm:text-sm whitespace-nowrap">
+                                {page.pagename}
+                              </td>
+
+                              <td className="text-center p-1 sm:p-2">
+                                <Checkbox
+                                  checked={ACTIONS.every((a) => Boolean(rights[page.pageId]?.[a]))}
+                                  onChange={(e) =>
+                                    handleCheckAll(
+                                      module.moduleId,
+                                      page.pageId,
+                                      e.target.checked,
+                                    )
+                                  }
+                                />
+                              </td>
+
+                              {/* Individual Rights */}
+                              {ACTIONS.map((action) => (
+                                <td key={action} className="text-center p-1 sm:p-2">
+                                  <Checkbox
+                                    checked={rights[page.pageId]?.[action] || false}
+                                    onChange={(e) =>
+                                      handleCheckboxChange(
+                                        module.moduleId,
+                                        page.pageId,
+                                        action,
+                                        e.target.checked,
+                                      )
+                                    }
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

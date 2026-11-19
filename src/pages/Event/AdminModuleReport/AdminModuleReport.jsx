@@ -20,6 +20,7 @@ const AGENCY_MODULES = [
 const ORDER_MODULES = ["Order Summary Theme"];
 const RAW_MATERIAL_MODULES = ["Raw Material Theme"];
 const ORDER_HISTORY_MODULES = ["Order History Theme"];
+const MENU_MODULES = ["Menu Report Theme"];
 
 export default function AdminModuleReport() {
   const { eventId } = useParams();
@@ -143,6 +144,7 @@ export default function AdminModuleReport() {
                 "Order Summary Theme",
                 "Raw Material Theme",
                 "Order History Theme",
+                "Menu Report Theme",
               ].includes(module.nameEnglish),
           );
 
@@ -271,18 +273,28 @@ export default function AdminModuleReport() {
   } else if (module.nameEnglish === "Order History Theme") {
   setAgencyType("order_history");
   setIsManager(false);
-} else {
+  }  else if (module.nameEnglish === "Menu Report Theme") {
+  setAgencyType("menu");
+  setIsManager(false);
+}
+ else {
     setAgencyType("");
     setIsManager(false);
   }
 
   setIsMenuReportOpen(true);
 };
+const SHOW_ALL_TEMPLATE_MODULES = [
+  "Order Summary Theme",
+  "Order History Theme",
+  "Menu Report Theme", // Menu Report tab: show every template
+];
 
-  const getFilteredTemplates = (module) => {
+const getFilteredTemplates = (module) => {
   const templates = moduleTemplates[module.id] || [];
+
   return templates.filter((template) => {
-    // ── Permission check (same pattern as SelectMenureport) ──
+    // Permission check
     if (allowedTemplateIds !== null) {
       if (allowedTemplateIds.size > 0) {
         if (!allowedTemplateIds.has(template.templateMasterId)) return false;
@@ -291,14 +303,13 @@ export default function AdminModuleReport() {
       }
     }
 
-    if (
-  module.nameEnglish === "Order Summary Theme" ||
-  module.nameEnglish === "Order History Theme"
-)
-  return true;
+    // Modules that list all their templates
+    if (SHOW_ALL_TEMPLATE_MODULES.includes(module.nameEnglish)) return true;
+
     if (module.nameEnglish === "Raw Material Theme") {
       return template.name === "Datewise Raw Material Report";
     }
+
     return template.isDate === 1;
   });
 };
@@ -310,6 +321,8 @@ export default function AdminModuleReport() {
     if (activeTab === "raw") return RAW_MATERIAL_MODULES.includes(m.nameEnglish);
     if (activeTab === "history")
   return ORDER_HISTORY_MODULES.includes(m.nameEnglish);
+if (activeTab === "menu")
+  return MENU_MODULES.includes(m.nameEnglish);
     return false;
   });
 
@@ -392,6 +405,23 @@ export default function AdminModuleReport() {
     defaultMessage="Order History Report"
   />
 </button>
+      <button
+  onClick={() => {
+    setActiveTab("menu");
+    setSelectedParty("");
+  }}
+  className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+    activeTab === "menu"
+      ? "bg-white text-primary shadow-sm"
+      : "text-gray-500 hover:text-gray-700"
+  }`}
+>
+  <i className="ki-filled ki-time text-base" />
+  <FormattedMessage
+    id="REPORTS.ORDER_HISTORY_REPORT"
+    defaultMessage="Menu Report"
+  />
+</button>
         </div>
 
         {loading ? (
@@ -438,7 +468,7 @@ export default function AdminModuleReport() {
                 </div>
 
                 {/* Select Party */}
-                {activeTab === "order" && (
+                {(activeTab === "order" || activeTab === "menu") && (
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                      <FormattedMessage id="COMMON.SELECT_PARTY" defaultMessage="Select Party" />
