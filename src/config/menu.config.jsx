@@ -147,7 +147,7 @@ export const allMenuItems = (navigate) => {
       ),
       icon: "  text-lg ki-filled ki-setting-4 text-primary",
       path: "/exhibition-setup",
-      pageName: "Exhibition Quotation",
+      pageName: "Exhibition setup",
       moduleName: "Exhibition Quotation"
     },
 

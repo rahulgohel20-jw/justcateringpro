@@ -747,10 +747,8 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
           </div>
 
          
-
-          {/* ── Assigned Tasks ───────────────────────────────────────── */}
+{false && (
           <div className="mx-4 mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-            {/* Header row — big progress ring */}
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-sm font-bold text-gray-900">Assigned Tasks</h3>
@@ -759,7 +757,6 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
                     ? `${doneTasks} of ${totalTasks} Done`
                     : "No tasks yet"}
                 </p>
-                {/* Linear progress bar under the label */}
                 {totalTasks > 0 && (
                   <div className="mt-2 w-40">
                     <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -773,7 +770,6 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
                 )}
               </div>
 
-              {/* Big circular progress ring */}
               {totalTasks > 0 && (
                 <div className="relative w-20 h-20 flex-shrink-0">
                   <svg className="w-20 h-20 -rotate-90" viewBox="0 0 88 88">
@@ -800,7 +796,6 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
               )}
             </div>
 
-            {/* Task list */}
             {loadingPredefinedTasks ? (
               <div className="flex items-center gap-2 py-6 justify-center">
                 <svg className="w-4 h-4 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
@@ -832,7 +827,6 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
               </div>
             )}
 
-            {/* View more / Add task */}
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
               {hasMoreTasks ? (
                 <button
@@ -853,7 +847,6 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
               </button>
             </div>
 
-            {/* Quick add input */}
             {isQuickAddOpen && (
               <div className="flex items-center gap-2 mt-2">
                 <input
@@ -890,8 +883,7 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
               </div>
             )}
           </div>
-
-          {/* ── Remarks ──────────────────────────────────────────────── */}
+)}
           <div className="mx-4 mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Remarks</p>
             <textarea
@@ -903,7 +895,6 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
             />
           </div>
 
-          {/* ── Work Proof ───────────────────────────────────────────── */}
           <div className="mx-4 mt-3 mb-6 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-gray-900">Work Proof</h3>
@@ -961,7 +952,6 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
           </div>
         </div>
 
-        {/* ── Sticky footer ────────────────────────────────────────────── */}
         <div className="flex-shrink-0 border-t border-gray-100 px-5 py-3.5 bg-white flex items-center justify-between gap-3">
           {/* Progress summary */}
           <p className="text-xs text-gray-400">

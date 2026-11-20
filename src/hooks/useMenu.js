@@ -24,15 +24,18 @@ const HEADER_OWNED_TITLES = [
 const applyUpgradedModules = (menuItems, upgradedModules, currentUser) => {
   const GATED_MODULES = ["Account", "Stock", "CRM", "AI Menu", "Menu Share Link", "Banquet" , "Captain Recipe" , "Assign Manager", "Food Taste Festival", "Event Flow", "Decor", "Menu Extra Features" , "kyc" , "followup" , "Security Deposit" , "Purchase Approve" , "Guest Signature" , "Exhibition Quotation" , "Generate with Ai Solgan" , "Generate multiple invoices", "POS" , "Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , " Multi Images Upload" , "Generate with Ai Solgan" , "Generate multiple invoices" , "POS" , "Multi Images Selection" , "Bank Selection Quotaion" , "Preparation Master" , "labour helper","Notes Management" , "BatchWise Purchase","Direct Share on Whatsapp"];
 
-  const modules =
+ const modules =
     upgradedModules?.length > 0
       ? upgradedModules
       : currentUser?.userUpgradedModule || [];
 
   const activeModuleNames = modules
     .filter((m) => m.isActive && m.isPayDone)
-    .map((m) => m.moduleName);
+.map((m) => m.moduleName?.trim());
 
+  console.log("[DEBUG] upgraded modules:", modules.map((m) => [JSON.stringify(m.moduleName), m.isActive, m.isPayDone]));
+  console.log("[DEBUG] active module names:", activeModuleNames.map((n) => JSON.stringify(n)));
+  console.log("[DEBUG] Notes Management gated?", GATED_MODULES.includes("Notes Management"), "| active?", activeModuleNames.includes("Notes Management"));
   return menuItems.filter((item) => {
     if (!item.moduleName) return true;
     if (!GATED_MODULES.includes(item.moduleName)) return true;
@@ -141,9 +144,11 @@ baseMenu = applyUserIdFilter(baseMenu, currentUserId)
         ? upgradedModules
         : currentUser?.userUpgradedModule || [];
 
-    const activeModuleNames = modules
+        const activeModuleNames = modules
       .filter((m) => m.isActive && m.isPayDone)
-      .map((m) => m.moduleName);
+      .map((m) => m.moduleName?.trim());
+
+    console.log("[RIGHTS CHECK]", rights?.["Exhibition Quotation"], Object.keys(rights || {}).filter(k => k.toLowerCase().includes("exhib")), activeModuleNames);
 
     return applyMenuRights(baseMenu, rights, activeModuleNames);
   }, [currentUser, rights, upgradedModules, location.pathname]);

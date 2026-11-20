@@ -16,13 +16,13 @@
 //       return {
 //         ...item,
 //         children: item.children ? children : undefined,
-//       };
+//       }; 
 //     })
 //     .filter(Boolean);
 // };
 
 
-
+const RIGHTS_REQUIRED_MODULES = ["Preparation Master" , "Exhibition Quotation" , "aptain Recipe" ,"Food Taste Festival" , "followup"];
 export const applyMenuRights = (menuItems, rights, activeModuleNames = []) => {
   const hasPageRight = (name) => {
     if (!name) return true;
@@ -70,8 +70,10 @@ export const applyMenuRights = (menuItems, rights, activeModuleNames = []) => {
         const canView = hasSpecifiedRights(item.rightsKeys);
         if (!canView) return null;
       } else if (item.pageName) {
-        const isUpgradedModule =
-          item.moduleName && activeModuleNames.includes(item.moduleName);
+               const isUpgradedModule =
+          item.moduleName &&
+          activeModuleNames.includes(item.moduleName) &&
+          !RIGHTS_REQUIRED_MODULES.includes(item.moduleName);
 
         if (!isUpgradedModule) {
           const canView = hasPageRight(item.pageName);
