@@ -22,6 +22,15 @@ const ORDER_MODULES = ["Order Summary Theme"];
 const RAW_MATERIAL_MODULES = ["Raw Material Theme"];
 const ORDER_HISTORY_MODULES = ["Order History Theme"];
 const MENU_MODULES = ["Menu Report Theme"];
+const QUOTATION_MODULES = ["QUOTATION REPORTS"];
+// Quotation tab shows only templates of this mapping type
+const QUOTATION_ALLOWED_TYPE = "Type 13";
+// Tabs where selecting a party is mandatory
+const PARTY_REQUIRED_TABS = ["menu", "quotation"];
+// Tabs whose party dropdown comes from the contact/customer list
+const CONTACT_PARTY_TABS = ["menu", "quotation"];
+// Tabs that show the party dropdown at all
+const PARTY_FILTER_TABS = ["order", "menu", "quotation"];
 
 export default function AdminModuleReport() {
   const { eventId } = useParams();
@@ -58,6 +67,8 @@ export default function AdminModuleReport() {
   const [partyNumber, setPartyNumber] = useState("");
   const [selectedTemplateIsDate, setSelectedTemplateIsDate] = useState(0);
 const [menuParties, setMenuParties] = useState([]);
+const [partyError, setPartyError] = useState(false);
+
   const getLangValue = (obj, baseKey) => {
     if (!obj) return "";
     if (activeLang === "hi")
@@ -76,7 +87,7 @@ const isPartyRecord = (cust) => {
 };
 
 useEffect(() => {
-  if (activeTab !== "menu") return;
+  if (!CONTACT_PARTY_TABS.includes(activeTab)) return;
 
   const fetchMenuParties = async () => {
     try {
@@ -89,8 +100,9 @@ useEffect(() => {
         mobileno: cust.mobileno || "",
       }));
 
-      const unique = Array.from(new Map(mapped.map((p) => [p.id, p])).values());
-      setMenuParties(unique);
+      setMenuParties(
+        Array.from(new Map(mapped.map((p) => [p.id, p])).values()),
+      );
     } catch (error) {
       console.error("Error fetching menu parties:", error);
     }
@@ -177,6 +189,7 @@ useEffect(() => {
                 "Raw Material Theme",
                 "Order History Theme",
                 "Menu Report Theme",
+                "QUOTATION REPORTS",
               ].includes(module.nameEnglish),
           );
 
@@ -235,6 +248,7 @@ useEffect(() => {
   mappingId: item.templateMappingResponseDto?.id || item.id,
   isDate: item.templateMappingResponseDto?.isDate || 0,
   nameEnglish: item.templateModuleMaster?.nameEnglish || "",
+  typeName: item.templateMappingResponseDto?.nameEnglish || "", 
 }));
       }
 
@@ -279,7 +293,17 @@ useEffect(() => {
     });
     return;
   }
-
+  if (PARTY_REQUIRED_TABS.includes(activeTab) && !selectedParty) {
+    setPartyError(true);
+    Swal.fire({
+      icon: "warning",
+      title: intl.formatMessage({
+        id: "COMMON.SELECT_PARTY_REQUIRED",
+        defaultMessage: "Please select a Party",
+      }),
+    });
+    return;
+  }
   setSelectedCard(template.id);
   setSelectedModuleId(module.id);
   setSelectedMappingId(template.mappingId);
@@ -309,6 +333,10 @@ useEffect(() => {
   setAgencyType("menu");
   setIsManager(false);
 }
+else if (module.nameEnglish === "QUOTATION REPORTS") {
+  setAgencyType("quotation");
+  setIsManager(false);
+}
  else {
     setAgencyType("");
     setIsManager(false);
@@ -319,7 +347,9 @@ useEffect(() => {
 const SHOW_ALL_TEMPLATE_MODULES = [
   "Order Summary Theme",
   "Order History Theme",
-  "Menu Report Theme", // Menu Report tab: show every template
+  "Menu Report Theme",
+
+   // Menu Report tab: show every template
 ];
 
 const getFilteredTemplates = (module) => {
@@ -333,6 +363,11 @@ const getFilteredTemplates = (module) => {
       } else {
         return false;
       }
+    }
+
+    // Quotation: only the allowed type (must come BEFORE the show-all check)
+    if (module.nameEnglish === "QUOTATION REPORTS") {
+      return (template.typeName || "").trim() === QUOTATION_ALLOWED_TYPE;
     }
 
     // Modules that list all their templates
@@ -355,8 +390,13 @@ const getFilteredTemplates = (module) => {
   return ORDER_HISTORY_MODULES.includes(m.nameEnglish);
 if (activeTab === "menu")
   return MENU_MODULES.includes(m.nameEnglish);
+if (activeTab === "quotation")
+  return QUOTATION_MODULES.includes(m.nameEnglish);
     return false;
   });
+  const partyOptionsSource = CONTACT_PARTY_TABS.includes(activeTab)
+    ? menuParties
+    : parties;
 
   return (
     <Fragment>
@@ -454,6 +494,23 @@ if (activeTab === "menu")
     defaultMessage="Menu Report"
   />
 </button>
+  <button
+  onClick={() => {
+    setActiveTab("quotation");
+    setSelectedParty("");
+  }}
+  className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+    activeTab === "quotation"
+      ? "bg-white text-primary shadow-sm"
+      : "text-gray-500 hover:text-gray-700"
+  }`}
+>
+  <i className="ki-filled ki-time text-base" />
+  <FormattedMessage
+    id="REPORTS.ORDER_HISTORY_REPORT"
+    defaultMessage="Quotation Report"
+  />
+</button>
         </div>
 
         {loading ? (
@@ -501,47 +558,15 @@ if (activeTab === "menu")
 
                 {/* Select Party */}
               {/* Select Party */}
-{activeTab === "order" && (
+{/* Select Party */}
+{PARTY_FILTER_TABS.includes(activeTab) && (
   <div>
     <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-      <FormattedMessage id="COMMON.SELECT_PARTY" defaultMessage="Select Party" />
-    </label>
-    <div className="relative">
-      <select
-        value={selectedParty}
-        onChange={(e) => {
-          const partyId = e.target.value;
-          setSelectedParty(partyId);
-          const party = parties.find((p) => String(p.id) === String(partyId));
-          if (party) {
-            setEventName(party.name);
-            setPartyNumber(party.mobileno);
-          } else {
-            setEventName("");
-            setPartyNumber("");
-          }
-        }}
-        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white appearance-none pr-8 text-black"
-      >
-        <option value="">
-          {intl.formatMessage({ id: "COMMON.CHOOSE_PARTY", defaultMessage: "Choose Party" })}
-        </option>
-        {parties.map((party) => (
-          <option key={party.id} value={party.id}>
-            {party.name}
-          </option>
-        ))}
-      </select>
-      <i className="ki-filled ki-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
-    </div>
-  </div>
-)}
-
-{activeTab === "menu" && (
-  <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-      <FormattedMessage id="COMMON.SELECT_PARTY" defaultMessage="Select Party" />
-    </label>
+  <FormattedMessage id="COMMON.SELECT_PARTY" defaultMessage="Select Party" />
+  {PARTY_REQUIRED_TABS.includes(activeTab) && (
+    <span className="text-red-500 ml-0.5">*</span>
+  )}
+</label>
     <Select
       showSearch
       allowClear
@@ -554,8 +579,9 @@ if (activeTab === "menu")
       filterOption={(input, option) =>
         (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
       }
-      options={menuParties.map((p) => ({ value: p.id, label: p.name }))}
+      options={partyOptionsSource.map((p) => ({ value: p.id, label: p.name }))}
       onChange={(partyId) => {
+         setPartyError(false);
         if (!partyId) {
           setSelectedParty("");
           setEventName("");
@@ -563,7 +589,9 @@ if (activeTab === "menu")
           return;
         }
         setSelectedParty(partyId);
-        const party = menuParties.find((p) => String(p.id) === String(partyId));
+        const party = partyOptionsSource.find(
+          (p) => String(p.id) === String(partyId),
+        );
         setEventName(party?.name || "");
         setPartyNumber(party?.mobileno || "");
       }}

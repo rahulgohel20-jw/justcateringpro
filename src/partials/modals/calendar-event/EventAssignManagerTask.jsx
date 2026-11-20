@@ -137,19 +137,82 @@ const buildColumns = ({ taskLabel, onEdit, onDelete }) => [
       </span>
     ),
   },
+    {
+    id: "priority",
+    header: "Priority",
+    cell: ({ row }) => (
+      <span className="text-xs font-semibold text-gray-700">
+        {row.original.priority || "—"}
+      </span>
+    ),
+  },
+  {
+    id: "remarks",
+    header: "Remarks",
+    cell: ({ row }) => (
+      <span className="text-sm text-gray-600">
+        {row.original.remarks || row.original.description || "—"}
+      </span>
+    ),
+  },
+  {
+    id: "completedAt",
+    header: "Completed At",
+    cell: ({ row }) => {
+      const v = row.original.completedAt;
+      return (
+        <span className="text-sm text-gray-600">
+          {v && dayjs(v).isValid() ? dayjs(v).format("DD MMM YYYY, hh:mm A") : "—"}
+        </span>
+      );
+    },
+  },
+  {
+    id: "location",
+    header: "Location",
+    cell: ({ row }) => {
+      const { latitude, longitude } = row.original;
+      if (!latitude || !longitude) return <span className="text-gray-400">—</span>;
+      return (
+        <a
+          href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-primary underline"
+        >
+          View map
+        </a>
+      );
+    },
+  },
+  {
+    id: "files",
+    header: "Images",
+    cell: ({ row }) => {
+      const files = (row.original.files || []).filter((f) => f.imagePath);
+      if (files.length === 0) return <span className="text-gray-400">—</span>;
+      return (
+        <div className="flex items-center gap-1.5">
+          {files.map((f) => (
+            <a key={f.fileKey} href={f.imagePath} target="_blank" rel="noopener noreferrer">
+              <img
+                src={f.imagePath}
+                alt="Task file"
+                className="w-9 h-9 object-cover rounded border border-gray-200"
+              />
+            </a>
+          ))}
+        </div>
+      );
+    },
+  },
   {
     id: "action",
     header: "Actions",
     cell: ({ row }) => (
       <div className="flex items-center justify-center gap-3">
         <Tooltip title="Edit Task">
-          <button
-            onClick={() => onEdit(row.original, row.index)}
-            className="text-blue-700"
-            aria-label="Edit task"
-          >
-            <Edit size={16} />
-          </button>
+          
         </Tooltip>
         <Tooltip title="Delete Task">
           <button
@@ -327,20 +390,27 @@ const EventAssignManagerTask = () => {
         assignedRes?.data?.data ||
         [];
 
-      const rows = (Array.isArray(assignedData) ? assignedData : []).map((item) => ({
-        rowKey: `existing-${item.id}`,
-        id: item.id,
-        managerTaskId: item.managerTaskId,
-        managerId: item.managerId ?? selectedManagerId,
-        status: item.status || "PENDING",
-        files: (item.files || []).map((f) => ({
-          fileKey: `existing-file-${f.id}`,
-          id: f.id,
-          file: null,
-          name: f.fileName || f.name || f.fileUrl || `File #${f.id}`,
-        })),
-      }));
-
+     const rows = (Array.isArray(assignedData) ? assignedData : []).map((item) => ({
+  rowKey: `existing-${item.id}`,
+  id: item.id,
+  managerTaskId: item.managerTaskId,
+  managerId: item.managerId ?? selectedManagerId,
+  status: item.status || "PENDING",
+  type: item.type,
+  priority: item.priority,
+  description: item.description,
+  remarks: item.remarks,
+  latitude: item.latitude,
+  longitude: item.longitude,
+  completedAt: item.completedAt,
+  files: (item.files || []).map((f) => ({
+    fileKey: `existing-file-${f.id}`,
+    id: f.id,
+    file: null,
+    imagePath: f.imagePath,
+    name: f.fileName || f.name || f.fileUrl || f.imagePath || `File #${f.id}`,
+  })),
+}));
       setTaskRows(rows);
       setDirty(false);
     } catch (err) {
