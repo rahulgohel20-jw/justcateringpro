@@ -217,7 +217,21 @@ const GstReport = () => {
       ),
     );
   }, [rows, search]);
+const columnTotals = useMemo(() => {
+  const sum = (key) =>
+    filteredRows.reduce((s, r) => s + (Number(r[key]) || 0), 0);
 
+  return {
+    basic: sum("basic"),
+    cgst: sum("cgst"),
+    sgst: sum("sgst"),
+    igst: sum("igst"),
+    gstAmt: sum("gstAmt"),
+    total: sum("total"),
+  };
+}, [filteredRows]);
+
+const firstNumericIdx = columns.findIndex((c) => c.numeric);
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
   const pagedRows = filteredRows.slice(
     (page - 1) * PAGE_SIZE,
@@ -651,6 +665,27 @@ const GstReport = () => {
                   </tr>
                 ) : null}
               </tbody>
+              {!loading && filteredRows.length > 0 && (
+  <tfoot>
+    <tr style={{ background: "#eff6ff" }}>
+      <td
+        colSpan={firstNumericIdx}
+        className="px-4 py-3 text-sm font-bold text-slate-800 text-right"
+      >
+        <FormattedMessage id="COMMON.TOTAL" defaultMessage="Total" />
+      </td>
+      {columns.slice(firstNumericIdx).map((col) => (
+        <td
+          key={col.key}
+          className="px-4 py-3 text-sm font-bold text-slate-900"
+          style={{ textAlign: col.align }}
+        >
+          ₹ {fmt(columnTotals[col.key])}
+        </td>
+      ))}
+    </tr>
+  </tfoot>
+)}
             </table>
           </div>
 
