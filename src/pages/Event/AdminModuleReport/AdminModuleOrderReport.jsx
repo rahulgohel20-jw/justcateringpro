@@ -147,6 +147,8 @@ const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
         return "ki-sun";
       case "Order Summary Theme":
         return "ki-notepad-edit";
+      case "Exclusive Theme":
+        return "ki-menu";
       default:
         return "ki-document";
     }
@@ -241,6 +243,10 @@ const isChildUser = authStorage?.state?.user?.ischilduser ?? false;
       setAgencyType("outside");
     } else if (selectedModule?.nameEnglish === "Order Summary Theme") {
       setAgencyType("order_summary");
+    }
+       else if (selectedModule?.nameEnglish === "Exclusive Theme") {
+      setAgencyType("menu");
+    
     } else {
       setAgencyType("");
     }

@@ -5,13 +5,14 @@ import {
   GettemplatebyuserId,
   GetAllCustomThemeByUserIdAndModuleId,
   Ftechpartydata,
+    GetAllCustomer,
 } from "@/services/apiServices";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Container } from "@/components/container";
 import MenuReport from "../../../partials/modals/menu-report/MenuReport";
 import { useReportPermission } from "@/hooks/useReportPermission";
 import Swal from "sweetalert2";
-
+import { Select } from "antd";
 const AGENCY_MODULES = [
   "Chef Agency Theme",
   "Labour Agency Theme",
@@ -20,6 +21,7 @@ const AGENCY_MODULES = [
 const ORDER_MODULES = ["Order Summary Theme"];
 const RAW_MATERIAL_MODULES = ["Raw Material Theme"];
 const ORDER_HISTORY_MODULES = ["Order History Theme"];
+const MENU_MODULES = ["Menu Report Theme"];
 
 export default function AdminModuleReport() {
   const { eventId } = useParams();
@@ -55,7 +57,7 @@ export default function AdminModuleReport() {
   const [eventName, setEventName] = useState("");
   const [partyNumber, setPartyNumber] = useState("");
   const [selectedTemplateIsDate, setSelectedTemplateIsDate] = useState(0);
-
+const [menuParties, setMenuParties] = useState([]);
   const getLangValue = (obj, baseKey) => {
     if (!obj) return "";
     if (activeLang === "hi")
@@ -64,7 +66,38 @@ export default function AdminModuleReport() {
       return obj[`${baseKey}Gujarati`] || obj[`${baseKey}English`];
     return obj[`${baseKey}English`];
   };
+// Contact type ID 1 = Customer/Party (contact.contactType.id in the API response)
+const isPartyRecord = (cust) => {
+  const ct = cust?.contact?.contactType;
+  return (
+    ct?.id === 1 ||
+    (ct?.nameEnglish || "").trim().toLowerCase() === "customer"
+  );
+};
 
+useEffect(() => {
+  if (activeTab !== "menu") return;
+
+  const fetchMenuParties = async () => {
+    try {
+      const res = await GetAllCustomer(userId);
+      const list = res?.data?.data?.["Party Details"] || [];
+
+      const mapped = list.filter(isPartyRecord).map((cust) => ({
+        id: cust.id,
+        name: getLangValue(cust, "name") || "-",
+        mobileno: cust.mobileno || "",
+      }));
+
+      const unique = Array.from(new Map(mapped.map((p) => [p.id, p])).values());
+      setMenuParties(unique);
+    } catch (error) {
+      console.error("Error fetching menu parties:", error);
+    }
+  };
+
+  fetchMenuParties();
+}, [activeTab, activeLang]);
   useEffect(() => {
     const fetchParty = async () => {
       try {
@@ -143,6 +176,7 @@ export default function AdminModuleReport() {
                 "Order Summary Theme",
                 "Raw Material Theme",
                 "Order History Theme",
+                "Menu Report Theme",
               ].includes(module.nameEnglish),
           );
 
@@ -271,18 +305,28 @@ export default function AdminModuleReport() {
   } else if (module.nameEnglish === "Order History Theme") {
   setAgencyType("order_history");
   setIsManager(false);
-} else {
+  }  else if (module.nameEnglish === "Menu Report Theme") {
+  setAgencyType("menu");
+  setIsManager(false);
+}
+ else {
     setAgencyType("");
     setIsManager(false);
   }
 
   setIsMenuReportOpen(true);
 };
+const SHOW_ALL_TEMPLATE_MODULES = [
+  "Order Summary Theme",
+  "Order History Theme",
+  "Menu Report Theme", // Menu Report tab: show every template
+];
 
-  const getFilteredTemplates = (module) => {
+const getFilteredTemplates = (module) => {
   const templates = moduleTemplates[module.id] || [];
+
   return templates.filter((template) => {
-    // ── Permission check (same pattern as SelectMenureport) ──
+    // Permission check
     if (allowedTemplateIds !== null) {
       if (allowedTemplateIds.size > 0) {
         if (!allowedTemplateIds.has(template.templateMasterId)) return false;
@@ -291,14 +335,13 @@ export default function AdminModuleReport() {
       }
     }
 
-    if (
-  module.nameEnglish === "Order Summary Theme" ||
-  module.nameEnglish === "Order History Theme"
-)
-  return true;
+    // Modules that list all their templates
+    if (SHOW_ALL_TEMPLATE_MODULES.includes(module.nameEnglish)) return true;
+
     if (module.nameEnglish === "Raw Material Theme") {
       return template.name === "Datewise Raw Material Report";
     }
+
     return template.isDate === 1;
   });
 };
@@ -310,6 +353,8 @@ export default function AdminModuleReport() {
     if (activeTab === "raw") return RAW_MATERIAL_MODULES.includes(m.nameEnglish);
     if (activeTab === "history")
   return ORDER_HISTORY_MODULES.includes(m.nameEnglish);
+if (activeTab === "menu")
+  return MENU_MODULES.includes(m.nameEnglish);
     return false;
   });
 
@@ -392,6 +437,23 @@ export default function AdminModuleReport() {
     defaultMessage="Order History Report"
   />
 </button>
+      <button
+  onClick={() => {
+    setActiveTab("menu");
+    setSelectedParty("");
+  }}
+  className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+    activeTab === "menu"
+      ? "bg-white text-primary shadow-sm"
+      : "text-gray-500 hover:text-gray-700"
+  }`}
+>
+  <i className="ki-filled ki-time text-base" />
+  <FormattedMessage
+    id="REPORTS.ORDER_HISTORY_REPORT"
+    defaultMessage="Menu Report"
+  />
+</button>
         </div>
 
         {loading ? (
@@ -438,41 +500,76 @@ export default function AdminModuleReport() {
                 </div>
 
                 {/* Select Party */}
-                {activeTab === "order" && (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                     <FormattedMessage id="COMMON.SELECT_PARTY" defaultMessage="Select Party" />
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedParty}
-                        onChange={(e) => {
-                          const partyId = e.target.value;
-                          setSelectedParty(partyId);
-                          const party = parties.find(
-                            (p) => String(p.id) === String(partyId),
-                          );
-                          if (party) {
-                            setEventName(party.name);
-                            setPartyNumber(party.mobileno);
-                          } else {
-                            setEventName("");
-                            setPartyNumber("");
-                          }
-                        }}
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white appearance-none pr-8 text-black"
-                      >
-                   <option value="">{intl.formatMessage({ id: "COMMON.CHOOSE_PARTY", defaultMessage: "Choose Party" })}</option>
-                        {parties.map((party) => (
-                          <option key={party.id} value={party.id}>
-                            {party.name}
-                          </option>
-                        ))}
-                      </select>
-                      <i className="ki-filled ki-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
-                    </div>
-                  </div>
-                )}
+              {/* Select Party */}
+{activeTab === "order" && (
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+      <FormattedMessage id="COMMON.SELECT_PARTY" defaultMessage="Select Party" />
+    </label>
+    <div className="relative">
+      <select
+        value={selectedParty}
+        onChange={(e) => {
+          const partyId = e.target.value;
+          setSelectedParty(partyId);
+          const party = parties.find((p) => String(p.id) === String(partyId));
+          if (party) {
+            setEventName(party.name);
+            setPartyNumber(party.mobileno);
+          } else {
+            setEventName("");
+            setPartyNumber("");
+          }
+        }}
+        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white appearance-none pr-8 text-black"
+      >
+        <option value="">
+          {intl.formatMessage({ id: "COMMON.CHOOSE_PARTY", defaultMessage: "Choose Party" })}
+        </option>
+        {parties.map((party) => (
+          <option key={party.id} value={party.id}>
+            {party.name}
+          </option>
+        ))}
+      </select>
+      <i className="ki-filled ki-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
+    </div>
+  </div>
+)}
+
+{activeTab === "menu" && (
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+      <FormattedMessage id="COMMON.SELECT_PARTY" defaultMessage="Select Party" />
+    </label>
+    <Select
+      showSearch
+      allowClear
+      style={{ width: "100%", height: 42 }}
+      placeholder={intl.formatMessage({
+        id: "COMMON.CHOOSE_PARTY",
+        defaultMessage: "Choose Party",
+      })}
+      value={selectedParty || undefined}
+      filterOption={(input, option) =>
+        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+      }
+      options={menuParties.map((p) => ({ value: p.id, label: p.name }))}
+      onChange={(partyId) => {
+        if (!partyId) {
+          setSelectedParty("");
+          setEventName("");
+          setPartyNumber("");
+          return;
+        }
+        setSelectedParty(partyId);
+        const party = menuParties.find((p) => String(p.id) === String(partyId));
+        setEventName(party?.name || "");
+        setPartyNumber(party?.mobileno || "");
+      }}
+    />
+  </div>
+)}
               </div>
             </div>
 

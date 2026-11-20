@@ -50,7 +50,7 @@ const VendorMaster = () => {
   const searchBoxRef = useRef(null);
 
   // Exclude contact type ID 2 (Customer)
-  const excludedContactTypeIds = [2];
+  const excludedContactTypeIds = [1];
 
   // ✅ Fixed: reads `fileUrl` from API response
   const handleExcelDownload = async () => {
@@ -136,10 +136,14 @@ const VendorMaster = () => {
 
   const isCustomerParty = (cust) => {
   const contactType = cust?.contact?.contactType;
+
   const typeName = (contactType?.nameEnglish || "").trim().toLowerCase();
-  const isCustomerByName = typeName === "customer";
+  const categoryName = (cust?.contact?.nameEnglish || "").trim().toLowerCase();
+
+  const isCustomerByName = typeName === "customer" || categoryName === "customer";
   const isCustomerById =
     contactType?.id != null && excludedContactTypeIds.includes(contactType.id);
+
   return isCustomerByName || isCustomerById;
 };
 

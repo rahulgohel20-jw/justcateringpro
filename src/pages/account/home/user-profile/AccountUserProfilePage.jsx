@@ -269,7 +269,7 @@ const AccountUserProfilePage = () => {
                 </div>
 
              
-                <div className="px-5 pb-5">
+                {/* <div className="px-5 pb-5">
                   <hr className="border-2 border-dotted mb-4" />
                   <button
                     className="flex gap-2 justify-center align-items-center w-full rounded-md bg-red-50 text-red-600 border border-red-200 text-sm px-4 py-2 hover:bg-red-100 transition-colors"
@@ -277,7 +277,7 @@ const AccountUserProfilePage = () => {
                   >
                    <Trash size={15} /> <FormattedMessage id="PROFILE.DELETE_ACCOUNT" defaultMessage="Delete Account" />
                   </button>
-                </div>
+                </div> */}
 
               </div>
             </div>
@@ -386,7 +386,7 @@ const AccountUserProfilePage = () => {
               >
                 <FormattedMessage id="COMMON.CANCEL" defaultMessage="Cancel" />
               </button>
-              <button
+              {/* <button
                 className="flex-1 rounded-md bg-red-600 text-white text-sm px-4 py-2 hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
                 onClick={handleDeleteAccount}
                 disabled={isDeleting}
@@ -396,7 +396,7 @@ const AccountUserProfilePage = () => {
                   id={isDeleting ? "COMMON.DELETING" : "PROFILE.DELETE_ACCOUNT"}
                   defaultMessage={isDeleting ? "Deleting..." : "Delete Account"}
                 />
-              </button>
+              </button> */}
             </div>
 
           </div>

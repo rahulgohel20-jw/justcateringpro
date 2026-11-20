@@ -172,7 +172,7 @@ const cateringBaseRef = useRef(0);
         const permissionQuotation = usePermission("Quotation")
         const canAccessecuritydeposit = hasModuleAccess("Security Deposit");
 const canAccessbankselection = hasModuleAccess("Bank Selection Quotaion");
-
+const canAccessjournalVoucher = hasModuleAccess("Account");
       const getErrorMessage = (error, fallback = "Something went wrong") => {
         return (
           error?.response?.data?.msg ||
@@ -1571,7 +1571,9 @@ const isPostLockEditable = (fn) =>
         setQuotationData((prev) => ({ ...prev, notes: value }));
         setIsEdited(true);
       };
-
+const handleOpenJournalVoucher = () => {
+  window.open("/journal-voucher", "_blank", "noopener,noreferrer");
+};
       const buildPayload = (overrides = {}) => {
   const effectiveIsLocked = overrides.isLocked ?? isLocked;
   const effectiveLockDateAt =
@@ -4546,16 +4548,29 @@ const handleLockReport = async () => {
     <i className="ki-filled ki-notepad text-primary"></i>
     <FormattedMessage id="COMMON.NOTES" defaultMessage="Notes" />
   </label>
-                      <textarea
-                        rows={5}
-                        className="input w-full p-3"
-                        placeholder={intl.formatMessage({
-                          id: "COMMON.ADD_NOTES",
-                          defaultMessage: "Add notes",
-                        })}
-                        value={quotationData.notes}
-                        onChange={handleNotesChange}
-                      />
+                     <textarea
+  rows={5}
+  className="input w-full p-3"
+  placeholder={intl.formatMessage({
+    id: "COMMON.ADD_NOTES",
+    defaultMessage: "Add notes",
+  })}
+  value={quotationData.notes}
+  onChange={handleNotesChange}
+/>
+
+{canAccessjournalVoucher && (
+  <div className="flex justify-end">
+    <button
+      type="button"
+      className="btn btn-primary w-full sm:w-auto"
+      onClick={handleOpenJournalVoucher}
+    >
+      <i className="ki-filled ki-document"></i>
+      Journal Voucher
+    </button>
+  </div>
+)}
                       {!isDecor && quotationData.banquetHallId !== null && eventRemarks.length > 0 && (
       <div className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-3 bg-gray-50">
         <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
