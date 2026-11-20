@@ -5,13 +5,14 @@ import {
   GettemplatebyuserId,
   GetAllCustomThemeByUserIdAndModuleId,
   Ftechpartydata,
+    GetAllCustomer,
 } from "@/services/apiServices";
 import { FormattedMessage, useIntl } from "react-intl";
 import { Container } from "@/components/container";
 import MenuReport from "../../../partials/modals/menu-report/MenuReport";
 import { useReportPermission } from "@/hooks/useReportPermission";
 import Swal from "sweetalert2";
-
+import { Select } from "antd";
 const AGENCY_MODULES = [
   "Chef Agency Theme",
   "Labour Agency Theme",
@@ -56,7 +57,7 @@ export default function AdminModuleReport() {
   const [eventName, setEventName] = useState("");
   const [partyNumber, setPartyNumber] = useState("");
   const [selectedTemplateIsDate, setSelectedTemplateIsDate] = useState(0);
-
+const [menuParties, setMenuParties] = useState([]);
   const getLangValue = (obj, baseKey) => {
     if (!obj) return "";
     if (activeLang === "hi")
@@ -65,7 +66,38 @@ export default function AdminModuleReport() {
       return obj[`${baseKey}Gujarati`] || obj[`${baseKey}English`];
     return obj[`${baseKey}English`];
   };
+// Contact type ID 1 = Customer/Party (contact.contactType.id in the API response)
+const isPartyRecord = (cust) => {
+  const ct = cust?.contact?.contactType;
+  return (
+    ct?.id === 1 ||
+    (ct?.nameEnglish || "").trim().toLowerCase() === "customer"
+  );
+};
 
+useEffect(() => {
+  if (activeTab !== "menu") return;
+
+  const fetchMenuParties = async () => {
+    try {
+      const res = await GetAllCustomer(userId);
+      const list = res?.data?.data?.["Party Details"] || [];
+
+      const mapped = list.filter(isPartyRecord).map((cust) => ({
+        id: cust.id,
+        name: getLangValue(cust, "name") || "-",
+        mobileno: cust.mobileno || "",
+      }));
+
+      const unique = Array.from(new Map(mapped.map((p) => [p.id, p])).values());
+      setMenuParties(unique);
+    } catch (error) {
+      console.error("Error fetching menu parties:", error);
+    }
+  };
+
+  fetchMenuParties();
+}, [activeTab, activeLang]);
   useEffect(() => {
     const fetchParty = async () => {
       try {
@@ -468,41 +500,76 @@ if (activeTab === "menu")
                 </div>
 
                 {/* Select Party */}
-                {(activeTab === "order" || activeTab === "menu") && (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                     <FormattedMessage id="COMMON.SELECT_PARTY" defaultMessage="Select Party" />
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={selectedParty}
-                        onChange={(e) => {
-                          const partyId = e.target.value;
-                          setSelectedParty(partyId);
-                          const party = parties.find(
-                            (p) => String(p.id) === String(partyId),
-                          );
-                          if (party) {
-                            setEventName(party.name);
-                            setPartyNumber(party.mobileno);
-                          } else {
-                            setEventName("");
-                            setPartyNumber("");
-                          }
-                        }}
-                        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white appearance-none pr-8 text-black"
-                      >
-                   <option value="">{intl.formatMessage({ id: "COMMON.CHOOSE_PARTY", defaultMessage: "Choose Party" })}</option>
-                        {parties.map((party) => (
-                          <option key={party.id} value={party.id}>
-                            {party.name}
-                          </option>
-                        ))}
-                      </select>
-                      <i className="ki-filled ki-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
-                    </div>
-                  </div>
-                )}
+              {/* Select Party */}
+{activeTab === "order" && (
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+      <FormattedMessage id="COMMON.SELECT_PARTY" defaultMessage="Select Party" />
+    </label>
+    <div className="relative">
+      <select
+        value={selectedParty}
+        onChange={(e) => {
+          const partyId = e.target.value;
+          setSelectedParty(partyId);
+          const party = parties.find((p) => String(p.id) === String(partyId));
+          if (party) {
+            setEventName(party.name);
+            setPartyNumber(party.mobileno);
+          } else {
+            setEventName("");
+            setPartyNumber("");
+          }
+        }}
+        className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-white appearance-none pr-8 text-black"
+      >
+        <option value="">
+          {intl.formatMessage({ id: "COMMON.CHOOSE_PARTY", defaultMessage: "Choose Party" })}
+        </option>
+        {parties.map((party) => (
+          <option key={party.id} value={party.id}>
+            {party.name}
+          </option>
+        ))}
+      </select>
+      <i className="ki-filled ki-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none" />
+    </div>
+  </div>
+)}
+
+{activeTab === "menu" && (
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+      <FormattedMessage id="COMMON.SELECT_PARTY" defaultMessage="Select Party" />
+    </label>
+    <Select
+      showSearch
+      allowClear
+      style={{ width: "100%", height: 42 }}
+      placeholder={intl.formatMessage({
+        id: "COMMON.CHOOSE_PARTY",
+        defaultMessage: "Choose Party",
+      })}
+      value={selectedParty || undefined}
+      filterOption={(input, option) =>
+        (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+      }
+      options={menuParties.map((p) => ({ value: p.id, label: p.name }))}
+      onChange={(partyId) => {
+        if (!partyId) {
+          setSelectedParty("");
+          setEventName("");
+          setPartyNumber("");
+          return;
+        }
+        setSelectedParty(partyId);
+        const party = menuParties.find((p) => String(p.id) === String(partyId));
+        setEventName(party?.name || "");
+        setPartyNumber(party?.mobileno || "");
+      }}
+    />
+  </div>
+)}
               </div>
             </div>
 

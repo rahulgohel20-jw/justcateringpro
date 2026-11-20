@@ -227,17 +227,22 @@ const CustomerMaster = () => {
       setShowSpell(false);
     }
   };
+// Contact type ID 1 = Customer (contact.contactType.id in the API response)
+const CUSTOMER_CONTACT_TYPE_ID = 1;
 
+const isCustomerParty = (cust) => {
+  const contactType = cust?.contact?.contactType;
+  const byId = contactType?.id === CUSTOMER_CONTACT_TYPE_ID;
+  const byName =
+    (contactType?.nameEnglish || "").trim().toLowerCase() === "customer";
+  return byId || byName;
+};
   const FetchCustomer = () => {
     GetAllCustomer(userId)
       .then(({ data: { data } }) => {
         const allCustomers = data["Party Details"] || [];
 
-        const filtered = allCustomers.filter(
-          (cust) =>
-            cust.contact?.contactType?.nameEnglish?.toLowerCase() ===
-            "customer",
-        );
+        const filtered = allCustomers.filter(isCustomerParty);
 
         const formatted = filtered.map((cust, index) => ({
           sr_no: index + 1,
