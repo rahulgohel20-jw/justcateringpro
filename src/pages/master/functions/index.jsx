@@ -255,6 +255,16 @@ const FunctionsMaster = () => {
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
+  const handleModalClose = () => {
+    setIsMemberModalOpen(false);
+    setSelectedFunction(null);    setSelectedFunction(null);
+  };
+
+  const handleSuccess = () => {
+    fetchFunctions(searchTerm);    fetchFunctions(searchTerm);
+    handleModalClose();
+  };
+
   const handleEdit = (functionType) => {
     setSelectedFunction(functionType);
     setIsMemberModalOpen(true);
@@ -400,10 +410,11 @@ const FunctionsMaster = () => {
         </div>
 
         <AddFunctionType
-          isModalOpen={isMemberModalOpen}
+          isOpen={isMemberModalOpen}
           setIsModalOpen={setIsMemberModalOpen}
           refreshData={fetchFunctions}
           editData={selectedFunction}
+          onClose={handleModalClose}
         />
         <TableComponent
           columns={columns(handleEdit, DeleteFunction, permissions)}
