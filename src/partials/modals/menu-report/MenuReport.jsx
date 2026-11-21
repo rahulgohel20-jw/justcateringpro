@@ -234,12 +234,13 @@ const getCompanyAuthInfo = () => {
     return { companyMobileNo: "", companyName: "" };
   }
 };
-
+const bustCache = (url) =>
+  url ? `${url}${url.includes("?") ? "&" : "?"}_t=${Date.now()}` : url;
 const mergePdfs = async (urls) => {
   const merged = await PDFDocument.create();
 
   for (const url of urls) {
-    const res = await fetch(url);
+   const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error(`Failed to fetch PDF: ${url}`);
     const bytes = await res.arrayBuffer();
     const doc = await PDFDocument.load(bytes, { ignoreEncryption: true });
@@ -611,7 +612,7 @@ const MenuReport = ({
       isPrintingRef.current = true;
 
       try {
-        const response = await fetch(pdfUrl);
+       const response = await fetch(pdfUrl, { cache: "no-store" });
         if (!response.ok) throw new Error("Failed to fetch PDF");
 
         const blob = await response.blob();
@@ -1465,6 +1466,7 @@ contentFontColor: normalizeColor(contentFontColor),
       }
 
       if (data?.success && data?.report_path) {
+        const freshMainUrl = bustCache(data.report_path);
         successMsgPopup(data?.msg || "Report generated");
 
         const agencyContact =
@@ -1479,7 +1481,7 @@ contentFontColor: normalizeColor(contentFontColor),
 
         if (isFileDownload) {
           try {
-            const response = await fetch(data.report_path);
+            const response = await fetch(data.report_path, { cache: "no-store" });
             const blob = await response.blob();
             const blobUrl = URL.createObjectURL(blob);
             const link = document.createElement("a");
@@ -1496,14 +1498,13 @@ contentFontColor: normalizeColor(contentFontColor),
             window.open(data.report_path, "_blank");
           }
         } else {
-          if (!shortMenuPayload) setPdfUrl(data.report_path);
-          setMainUrl(data.report_path);
-
+         if (!shortMenuPayload) setPdfUrl(freshMainUrl);
+setMainUrl(freshMainUrl);
           if (agencyContact?.contactNo) {
             await handleWhatsAppSend(
               `+91${agencyContact.contactNo.replace(/\D/g, "")}`,
               agencyContact.nameEnglish || "",
-              data.report_path,
+                freshMainUrl,
             );
           }
         }
@@ -1514,27 +1515,23 @@ contentFontColor: normalizeColor(contentFontColor),
             const shortData = await submitReport(shortMenuPayload);
 
             if (shortData?.success && shortData?.report_path) {
-              if (isFileDownload) {
-                // main was an Excel/Doc download, so just show the short menu
-                setShortMenuUrl(shortData.report_path);
-                setPdfUrl(shortData.report_path);
-              } else {
-                try {
-                  progressCapRef.current = 97;
-                  setReportStep("Merging reports...");
-                  // Raw Material first, Short Menu appended after it
-                  const mergedUrl = await mergePdfs([
-                    data.report_path,
-                    shortData.report_path,
-                  ]);
-                  setPdfUrl(mergedUrl);
-                } catch (mergeErr) {
-                  console.error("PDF merge failed", mergeErr);
-                  setShortMenuUrl(shortData.report_path); // fallback: tabs
-                  setPdfUrl(data.report_path);
-                  errorMsgPopup("Could not combine the reports, showing them separately");
-                }
-              }
+              const freshShortUrl = bustCache(shortData.report_path);
+             if (isFileDownload) {
+  setShortMenuUrl(freshShortUrl);
+  setPdfUrl(freshShortUrl);
+} else {
+  try {
+    progressCapRef.current = 97;
+    setReportStep("Merging reports...");
+    const mergedUrl = await mergePdfs([freshMainUrl, freshShortUrl]);
+    setPdfUrl(mergedUrl);
+  } catch (mergeErr) {
+    console.error("PDF merge failed", mergeErr);
+    setShortMenuUrl(freshShortUrl);
+    setPdfUrl(freshMainUrl);
+    errorMsgPopup("Could not combine the reports, showing them separately");
+  }
+}
             } else {
               if (!isFileDownload) setPdfUrl(data.report_path);
               errorMsgPopup(shortData?.msg || "Failed to generate Short Menu Report");
@@ -1643,7 +1640,8 @@ const handleWhatsAppConfirm = async ({ method, name, mobile }) => {
   await handleWhatsAppSend(`+91${String(r.mobile).replace(/\D/g, "")}`, r.name);
 };
 
-  const handleWhatsAppSend = async (mobile, recipientName) => {
+ const handleWhatsAppSend = async (mobile, recipientName, urlOverride) => {
+  const shareUrl = urlOverride || (pdfUrl?.startsWith("blob:") ? mainUrl : pdfUrl);
     const greeting = recipientName || eventName || "there";
     const message = buildWaMessage({
       greeting,

@@ -55,7 +55,9 @@
       const isVatUser = VAT_USER.includes(String(userId));
       const isTaxUser = TAX_USER.includes(String(userId));
     const isOfferRateUser = OFFER_RATE_USER_IDS.includes(String(userId));
-    const DECOR_GST_USER_IDS = ["757"];
+    const DECOR_GST_USER_IDS = ["757" , "233"];
+    const HALL_RENT_GST_USER_IDS = ["757" , "233"];
+    const isHallRentGstUser = HALL_RENT_GST_USER_IDS.includes(String(userId)); 
   const isDecorGstUser = DECOR_GST_USER_IDS.includes(String(userId));
 const LOCK_REPORT_USER_IDS = ["233", "299", "298"]; //bhandhari
 const canViewLockReport = LOCK_REPORT_USER_IDS.includes(String(userId));                        
@@ -124,6 +126,12 @@ const [isLockReportLoading, setIsLockReportLoading] = useState(false);
     SGST: { percentage: "9", amount: "0" },
     IGST: { percentage: "0", amount: "0" },
   });
+  const [chequePaymentHallRent, setChequePaymentHallRent] = useState("0");
+const [hallRentTax, setHallRentTax] = useState({
+  CGST: { percentage: "9", amount: "0" },
+  SGST: { percentage: "9", amount: "0" },
+  IGST: { percentage: "0", amount: "0" },
+});
       const [quotationData, setQuotationData] = useState({
         eventName: "",
         partyName: "",
@@ -729,37 +737,95 @@ isAddedAfterFinal: isFinalBillingFeatureUser && billingView === "FINAL",        
         return num % 1 === 0 ? num.toString() : num.toFixed(2);
       };
 // GST base: catering cheque for user 757, normal cheque for everyone else
-const cateringBase = isDecorGstUser
+const isSplitGstUser = isDecorGstUser || isHallRentGstUser;
+
+const cateringBase = isSplitGstUser
   ? parseFloat(chequePaymentCatering) || 0
   : parseFloat(chequePayment) || 0;
 
-const handleChequeCateringChange = (value) => {
-  setIsEdited(true);
-  setChequePaymentCatering(value);
+const getDecorAmt = () => (isDecorGstUser ? parseFloat(chequePaymentDecor) || 0 : 0);
+const getHallAmt = () => (isHallRentGstUser ? parseFloat(chequePaymentHallRent) || 0 : 0);
 
-  const catering = parseFloat(value) || 0;
-  const total = parseFloat(chequePayment) || 0;
-  const decor = parseFloat(Math.max(0, total - catering).toFixed(2));
-
+const applyDecorAmount = (decor) => {
   setChequePaymentDecor(String(decor));
   setDecorTax((prev) => ({
     CGST: { ...prev.CGST, amount: calcPctAmount(decor, prev.CGST.percentage) },
     SGST: { ...prev.SGST, amount: calcPctAmount(decor, prev.SGST.percentage) },
     IGST: { ...prev.IGST, amount: calcPctAmount(decor, prev.IGST.percentage) },
   }));
+};
 
+// Catering edited -> decor gets the remainder (hall rent stays as entered)
+const handleChequeCateringChange = (value) => {
+  setIsEdited(true);
+  setChequePaymentCatering(value);
+  const catering = parseFloat(value) || 0;
+  const total = parseFloat(chequePayment) || 0;
+
+  if (isDecorGstUser) {
+    applyDecorAmount(
+      parseFloat(Math.max(0, total - catering - getHallAmt()).toFixed(2)),
+    );
+  }
   cateringBaseRef.current = total;
 };
 
-// normal cheque changes -> becomes the new catering base, then subtract any existing decor amount
+// Decor edited -> catering = total - decor - hallRent
+const handleChequeDecorChange = (value) => {
+  setIsEdited(true);
+  const decor = parseFloat(value) || 0;
+  setChequePaymentDecor(value);
+  setDecorTax((prev) => ({
+    CGST: { ...prev.CGST, amount: calcPctAmount(decor, prev.CGST.percentage) },
+    SGST: { ...prev.SGST, amount: calcPctAmount(decor, prev.SGST.percentage) },
+    IGST: { ...prev.IGST, amount: calcPctAmount(decor, prev.IGST.percentage) },
+  }));
+  const total = parseFloat(chequePayment) || 0;
+  setChequePaymentCatering(
+    parseFloat(Math.max(0, total - decor - getHallAmt()).toFixed(2)),
+  );
+  cateringBaseRef.current = total;
+};
+
+// Hall rent edited -> catering = total - decor - hallRent
+const handleChequeHallRentChange = (value) => {
+  setIsEdited(true);
+  const hall = parseFloat(value) || 0;
+  setChequePaymentHallRent(value);
+  setHallRentTax((prev) => ({
+    CGST: { ...prev.CGST, amount: calcPctAmount(hall, prev.CGST.percentage) },
+    SGST: { ...prev.SGST, amount: calcPctAmount(hall, prev.SGST.percentage) },
+    IGST: { ...prev.IGST, amount: calcPctAmount(hall, prev.IGST.percentage) },
+  }));
+  const total = parseFloat(chequePayment) || 0;
+  setChequePaymentCatering(
+    parseFloat(Math.max(0, total - getDecorAmt() - hall).toFixed(2)),
+  );
+  cateringBaseRef.current = total;
+};
+
+const handleHallRentTaxChange = (label, field, value) => {
+  setIsEdited(true);
+  const base = parseFloat(chequePaymentHallRent) || 0;
+  setHallRentTax((prev) => {
+    const cur = { ...prev[label], [field]: value };
+    if (field === "percentage") cur.amount = calcPctAmount(base, value);
+    else cur.percentage =
+      base > 0 ? (((parseFloat(value) || 0) / base) * 100).toFixed(2) : "0";
+    return { ...prev, [label]: cur };
+  });
+};
+
+// Total cheque changes (cash, discount, transport...) -> recompute catering
 useEffect(() => {
-  if (!isDecorGstUser) return;
+  if (!isSplitGstUser) return;
   const c = parseFloat(chequePayment) || 0;
   if (lastSyncedChequeRef.current === c) return;
   lastSyncedChequeRef.current = c;
   cateringBaseRef.current = c;
-  const decorAmt = parseFloat(chequePaymentDecor) || 0;
-  setChequePaymentCatering(Math.max(0, c - decorAmt));
+  setChequePaymentCatering(
+    parseFloat(Math.max(0, c - getDecorAmt() - getHallAmt()).toFixed(2)),
+  );
 }, [chequePayment]);
 
       const calcGstOnAmount = (chequeAmt) => {
@@ -874,21 +940,7 @@ useEffect(() => {
     return v % 1 === 0 ? v.toString() : v.toFixed(2);
   };
 
- const handleChequeDecorChange = (value) => {
-  setIsEdited(true);
-  setChequePaymentDecor(value);
-  const base = parseFloat(value) || 0;
-  setDecorTax((prev) => ({
-    CGST: { ...prev.CGST, amount: calcPctAmount(base, prev.CGST.percentage) },
-    SGST: { ...prev.SGST, amount: calcPctAmount(base, prev.SGST.percentage) },
-    IGST: { ...prev.IGST, amount: calcPctAmount(base, prev.IGST.percentage) },
-  }));
 
-  // Decor cheque is subtracted from the catering base
-const total = parseFloat(chequePayment) || 0;
-setChequePaymentCatering(parseFloat(Math.max(0, total - base).toFixed(2)));
-cateringBaseRef.current = total;
-};
 
   // % changed -> amount auto-calculates, amount changed -> % auto-calculates
   const handleDecorTaxChange = (label, field, value) => {
@@ -1170,31 +1222,44 @@ isAddedAfterFinal: item.isAddedAfterFinal === true,
           setCashPayment(parseFloat(quotationInfo.cashPayment) || 0);
 setSelectedBankId(quotationInfo.bankId ?? null);
 
-const loadedCheque = parseFloat(quotationInfo.chequePayment) || 0;   
-
+const loadedCheque = parseFloat(quotationInfo.chequePayment) || 0;
 lastSyncedChequeRef.current = loadedCheque;
 setChequePayment(loadedCheque);
+
 const loadedCateringVal = quotationInfo.chequePaymentCatering != null
   ? parseFloat(quotationInfo.chequePaymentCatering) || 0
-  : loadedCheque; // old quotations with no saved catering value
+  : loadedCheque;
 const loadedDecorVal = parseFloat(quotationInfo.chequePaymentDecor) || 0;
+const loadedHallVal = parseFloat(quotationInfo.chequePaymentHallRent) || 0;
+
 setChequePaymentCatering(loadedCateringVal);
 setChequePaymentDecor(String(quotationInfo.chequePaymentDecor ?? 0));
-cateringBaseRef.current = loadedCateringVal + loadedDecorVal; // reconstruct pre-decor base
-            setTransportationCharge(parseFloat(quotationInfo.transportation) || 0);
-    const decorBase = parseFloat(quotationInfo.chequePaymentDecor) || 0;
-  const pick = (val, def) =>
-    val === null || val === undefined || val === "" ? def : String(val);
-  const dCgst = pick(quotationInfo.cgstDecor, "9");
-  const dSgst = pick(quotationInfo.sgstDecor, "9");
-  const dIgst = pick(quotationInfo.igstDecor, "0");
+setChequePaymentHallRent(String(quotationInfo.chequePaymentHallRent ?? 0));
+cateringBaseRef.current = loadedCateringVal + loadedDecorVal + loadedHallVal;
+setTransportationCharge(parseFloat(quotationInfo.transportation) || 0);
 
-  setDecorTax({
-    CGST: { percentage: dCgst, amount: pick(quotationInfo.cgstAmntDecor, calcPctAmount(decorBase, dCgst)) },
-    SGST: { percentage: dSgst, amount: pick(quotationInfo.sgstAmntDecor, calcPctAmount(decorBase, dSgst)) },
-    IGST: { percentage: dIgst, amount: pick(quotationInfo.igstAmntDecor, calcPctAmount(decorBase, dIgst)) },
-  });
-            const rawIsDiscountPercent = quotationInfo.isDiscountPercent;
+const pick = (val, def) =>
+  val === null || val === undefined || val === "" ? def : String(val);
+
+const dCgst = pick(quotationInfo.cgstDecor, "9");
+const dSgst = pick(quotationInfo.sgstDecor, "9");
+const dIgst = pick(quotationInfo.igstDecor, "0");
+setDecorTax({
+  CGST: { percentage: dCgst, amount: pick(quotationInfo.cgstAmntDecor, calcPctAmount(loadedDecorVal, dCgst)) },
+  SGST: { percentage: dSgst, amount: pick(quotationInfo.sgstAmntDecor, calcPctAmount(loadedDecorVal, dSgst)) },
+  IGST: { percentage: dIgst, amount: pick(quotationInfo.igstAmntDecor, calcPctAmount(loadedDecorVal, dIgst)) },
+});
+
+const hCgst = pick(quotationInfo.cgstHallRent, "9");
+const hSgst = pick(quotationInfo.sgstHallRent, "9");
+const hIgst = pick(quotationInfo.igstHallRent, "0");
+setHallRentTax({
+  CGST: { percentage: hCgst, amount: pick(quotationInfo.cgstAmntHallRent, calcPctAmount(loadedHallVal, hCgst)) },
+  SGST: { percentage: hSgst, amount: pick(quotationInfo.sgstAmntHallRent, calcPctAmount(loadedHallVal, hSgst)) },
+  IGST: { percentage: hIgst, amount: pick(quotationInfo.igstAmntHallRent, calcPctAmount(loadedHallVal, hIgst)) },
+});
+
+const rawIsDiscountPercent = quotationInfo.isDiscountPercent;
   const inferredIsPercent =
     rawIsDiscountPercent === true
       ? true
@@ -1289,27 +1354,35 @@ cateringBaseRef.current = loadedCateringVal + loadedDecorVal; // reconstruct pre
     const sgstPercentage = parseFloat(sgstDetail?.percentage || 0);
     const igstPercentage = parseFloat(igstDetail?.percentage || 0);
 
-const cateringChequeAmt = isDecorGstUser ? parseFloat(chequePaymentCatering) || 0 : 0;
-const gstBase = isDecorGstUser ? cateringChequeAmt : parseFloat(chequePayment) || 0;
-  const cgstAmount = (gstBase * cgstPercentage) / 100;
-  const sgstAmount = (gstBase * sgstPercentage) / 100;
-  const igstAmount = (gstBase * igstPercentage) / 100;
+const cateringChequeAmt = isSplitGstUser ? parseFloat(chequePaymentCatering) || 0 : 0;
+const gstBase = isSplitGstUser ? cateringChequeAmt : parseFloat(chequePayment) || 0;
+const cgstAmount = (gstBase * cgstPercentage) / 100;
+const sgstAmount = (gstBase * sgstPercentage) / 100;
+const igstAmount = (gstBase * igstPercentage) / 100;
 
-    const roundOffAmount = parseFloat(
-      quotationData.taxDetails.find((tax) => tax.label === "Round Off")
-        ?.amount || 0,
-    );
+const roundOffAmount = parseFloat(
+  quotationData.taxDetails.find((tax) => tax.label === "Round Off")?.amount || 0,
+);
 
-    const totalTaxAmount = cgstAmount + sgstAmount + igstAmount;
-  const decorChequeAmt = isDecorGstUser ? parseFloat(chequePaymentDecor) || 0 : 0;
-  const decorTaxAmt = isDecorGstUser
-    ? (parseFloat(decorTax.CGST.amount) || 0) +
-      (parseFloat(decorTax.SGST.amount) || 0) +
-      (parseFloat(decorTax.IGST.amount) || 0)
-    : 0;
-  const decorExtra = decorChequeAmt + decorTaxAmt;
+const totalTaxAmount = cgstAmount + sgstAmount + igstAmount;
 
-const baseForGrand = isDecorGstUser
+const decorChequeAmt = isDecorGstUser ? parseFloat(chequePaymentDecor) || 0 : 0;
+const decorTaxAmt = isDecorGstUser
+  ? (parseFloat(decorTax.CGST.amount) || 0) +
+    (parseFloat(decorTax.SGST.amount) || 0) +
+    (parseFloat(decorTax.IGST.amount) || 0)
+  : 0;
+const decorExtra = decorChequeAmt + decorTaxAmt;
+
+const hallRentChequeAmt = isHallRentGstUser ? parseFloat(chequePaymentHallRent) || 0 : 0;
+const hallRentTaxAmt = isHallRentGstUser
+  ? (parseFloat(hallRentTax.CGST.amount) || 0) +
+    (parseFloat(hallRentTax.SGST.amount) || 0) +
+    (parseFloat(hallRentTax.IGST.amount) || 0)
+  : 0;
+const hallRentExtra = hallRentChequeAmt + hallRentTaxAmt;
+
+const baseForGrand = isSplitGstUser
   ? (parseFloat(cashPayment) || 0) + cateringChequeAmt
   : amountAfterDiscount;
 
@@ -1318,10 +1391,12 @@ const grandTotal =
   cgstAmount + sgstAmount + igstAmount +
   foodTaxTotalAmt + serviceTaxTotalAmt + vatTaxTotalAmt +
   roundOffAmount +
-  decorExtra;
+  decorExtra + hallRentExtra;
 
-const cateringTotal = cateringChequeAmt + totalTaxAmount;
-const cateringDecorTotal = cateringTotal + decorExtra;
+const cateringTotal = cateringChequeAmt + totalTaxAmount + roundOffAmount;
+const cateringDecorTotal = cateringTotal + decorExtra + hallRentExtra;
+
+
     const totalPaid = (quotationData.advancePayments || []).reduce((sum, p) => {
       const val = parseFloat(p.amount) || 0;
       return sum + val;
@@ -1355,7 +1430,10 @@ const cateringDecorTotal = cateringTotal + decorExtra;
 cateringChequeAmount: formatAmount(cateringChequeAmt),
 cateringTotal: formatAmount(cateringTotal),
 decorTotal: formatAmount(decorExtra),
-cateringDecorTotal: formatAmount(cateringDecorTotal),    };
+cateringDecorTotal: formatAmount(cateringDecorTotal), 
+hallRentChequeAmount: formatAmount(hallRentChequeAmt),
+hallRentTaxAmount: formatAmount(hallRentTaxAmt),
+hallRentTotal: formatAmount(hallRentExtra),   };
   };
 
 
@@ -1625,29 +1703,33 @@ const handleOpenJournalVoucher = () => {
         const sgstPercentage = parseFloat(sgstDetail?.percentage || 0);
         const igstPercentage = parseFloat(igstDetail?.percentage || 0);
 
-const cateringChequeAmt = isDecorGstUser ? parseFloat(chequePaymentCatering) || 0 : 0;
-const gstBase = isDecorGstUser ? cateringChequeAmt : parseFloat(chequePayment) || 0;
-  const cgstAmnt = (gstBase * cgstPercentage) / 100;
-  const sgstAmnt = (gstBase * sgstPercentage) / 100;
-  const igstAmnt = (gstBase * igstPercentage) / 100;
-        const totalAmount =
-          amountAfterDiscount + cgstAmnt + sgstAmnt + igstAmnt + roundOff;
+const cateringChequeAmt = isSplitGstUser ? parseFloat(chequePaymentCatering) || 0 : 0;
+const gstBase = isSplitGstUser ? cateringChequeAmt : parseFloat(chequePayment) || 0;
+const cgstAmnt = (gstBase * cgstPercentage) / 100;
+const sgstAmnt = (gstBase * sgstPercentage) / 100;
+const igstAmnt = (gstBase * igstPercentage) / 100;
 
+const foodTaxTotalAmnt = (foodTaxAmnt * foodTaxPercentage) / 100;
+const serviceTaxTotalAmnt = (serviceTaxAmnt * serviceTaxPercentage) / 100;
+const vatTaxTotalAmnt = (vatTaxAmnt * vatTaxPercentage) / 100;
 
-      const foodTaxTotalAmnt = (foodTaxAmnt * foodTaxPercentage) / 100;
-  const serviceTaxTotalAmnt = (serviceTaxAmnt * serviceTaxPercentage) / 100;
-  const vatTaxTotalAmnt = (vatTaxAmnt * vatTaxPercentage) / 100;
+const decorChequeAmt = isDecorGstUser ? parseFloat(chequePaymentDecor) || 0 : 0;
+const decorTaxAmt = isDecorGstUser
+  ? (parseFloat(decorTax.CGST.amount) || 0) +
+    (parseFloat(decorTax.SGST.amount) || 0) +
+    (parseFloat(decorTax.IGST.amount) || 0)
+  : 0;
+const decorExtra = decorChequeAmt + decorTaxAmt;
 
+const hallRentChequeAmt = isHallRentGstUser ? parseFloat(chequePaymentHallRent) || 0 : 0;
+const hallRentTaxAmt = isHallRentGstUser
+  ? (parseFloat(hallRentTax.CGST.amount) || 0) +
+    (parseFloat(hallRentTax.SGST.amount) || 0) +
+    (parseFloat(hallRentTax.IGST.amount) || 0)
+  : 0;
+const hallRentExtra = hallRentChequeAmt + hallRentTaxAmt;
 
-  const decorChequeAmt = isDecorGstUser ? parseFloat(chequePaymentDecor) || 0 : 0;
-  const decorTaxAmt = isDecorGstUser
-    ? (parseFloat(decorTax.CGST.amount) || 0) +
-      (parseFloat(decorTax.SGST.amount) || 0) +
-      (parseFloat(decorTax.IGST.amount) || 0)
-    : 0;
-  const decorExtra = decorChequeAmt + decorTaxAmt;
-
-const baseForGrand = isDecorGstUser
+const baseForGrand = isSplitGstUser
   ? (parseFloat(cashPayment) || 0) + cateringChequeAmt
   : amountAfterDiscount;
 
@@ -1656,7 +1738,7 @@ const grandTotal =
   cgstAmnt + sgstAmnt + igstAmnt +
   foodTaxTotalAmnt + serviceTaxTotalAmnt + vatTaxTotalAmnt +
   roundOff +
-  decorExtra;
+  decorExtra + hallRentExtra;
 
         const payments = (quotationData.advancePayments || [])
           .filter((p) => parseFloat(p.amount) > 0)
@@ -1822,15 +1904,26 @@ isAddedAfterFinal: fn.isAddedAfterFinal === true,
   vatTax: `${vatTaxPercentage}`,
   vatTaxAmount: vatTaxAmnt,
   vatTaxTotalAmount: (vatTaxAmnt * vatTaxPercentage) / 100,
+   ...(isSplitGstUser && {
+    chequePaymentCatering: cateringChequeAmt,
+  }),
   ...(isDecorGstUser && {
     chequePaymentDecor: decorChequeAmt,
-chequePaymentCatering: cateringChequeAmt,
     cgstDecor: `${parseFloat(decorTax.CGST.percentage) || 0}`,
     cgstAmntDecor: parseFloat(decorTax.CGST.amount) || 0,
     sgstDecor: `${parseFloat(decorTax.SGST.percentage) || 0}`,
     sgstAmntDecor: parseFloat(decorTax.SGST.amount) || 0,
     igstDecor: `${parseFloat(decorTax.IGST.percentage) || 0}`,
     igstAmntDecor: parseFloat(decorTax.IGST.amount) || 0,
+  }),
+  ...(isHallRentGstUser && {
+    chequePaymentHallRent: hallRentChequeAmt,
+    cgstHallRent: `${parseFloat(hallRentTax.CGST.percentage) || 0}`,
+    cgstAmntHallRent: parseFloat(hallRentTax.CGST.amount) || 0,
+    sgstHallRent: `${parseFloat(hallRentTax.SGST.percentage) || 0}`,
+    sgstAmntHallRent: parseFloat(hallRentTax.SGST.amount) || 0,
+    igstHallRent: `${parseFloat(hallRentTax.IGST.percentage) || 0}`,
+    igstAmntHallRent: parseFloat(hallRentTax.IGST.amount) || 0,
   }),
   };
         return payload;
@@ -3957,12 +4050,82 @@ const handleLockReport = async () => {
           Cheque Total
         </div>
         <div className="w-[250px] text-base font-bold text-purple-700 px-2">
-  &#8377; {totals.decorTotal}
+   &#8377; {totals.decorTotal}
 </div>
       </div>
     </div>
   )}
+  {isHallRentGstUser && (
+  <div className="flex flex-col border-y border-teal-200 border-dashed bg-teal-50 p-4 gap-1">
+    {/* Tag */}
+    <div className="flex items-center justify-end mb-2">
+      <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-teal-100 text-teal-700 text-xs font-bold uppercase tracking-wide border border-teal-200">
+        <i className="ki-filled ki-home text-xs"></i> Hall Rent
+      </span>
+    </div>
 
+    {/* 1. Hall Rent Cheque input */}
+    <div className="flex items-center justify-end gap-6 py-1">
+      <div className="text-base font-semibold text-teal-700 w-[180px] text-right">
+        Cheque Amount
+      </div>
+      <div className="flex items-center input text-base text-gray-900 w-[250px] border-teal-200">
+        <span className="text-gray-500 ml-1">&#8377;</span>
+        <input
+          className="h-full text-gray-900 w-full ml-1"
+          value={chequePaymentHallRent}
+          type="tel"
+          min="0"
+          placeholder="0"
+          onChange={(e) => handleChequeHallRentChange(e.target.value)}
+        />
+      </div>
+    </div>
+
+    {/* 2. Hall Rent CGST / SGST / IGST */}
+    {["CGST", "SGST", "IGST"].map((label) => (
+      <div key={`hall-${label}`} className="flex items-center justify-end gap-6 py-1">
+        <div className="text-base font-normal text-teal-700 w-[180px] text-right">
+          {label}
+        </div>
+        <div className="flex items-center input text-base text-gray-900 w-[250px] border-teal-200">
+          <div>
+            <input
+              className="h-full text-gray-900 w-[60px]"
+              value={hallRentTax[label].percentage}
+              type="tel"
+              min="0"
+              placeholder="0"
+              onChange={(e) => handleHallRentTaxChange(label, "percentage", e.target.value)}
+            />
+            <span className="text-gray-500">%</span>
+          </div>
+          <div className="flex items-center ml-3">
+            <span className="text-gray-500 mr-1">&#8377;</span>
+            <input
+              className="h-full text-gray-900 w-[90px]"
+              value={hallRentTax[label].amount}
+              type="tel"
+              min="0"
+              placeholder="0"
+              onChange={(e) => handleHallRentTaxChange(label, "amount", e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+    ))}
+
+    {/* 3. Total */}
+    <div className="flex items-center justify-end gap-6 py-1">
+      <div className="text-base font-semibold text-teal-700 w-[180px] text-right">
+        Hall Rent Total
+      </div>
+      <div className="w-[250px] text-base font-bold text-teal-700 px-2">
+        &#8377; {totals.hallRentTotal}
+      </div>
+    </div>
+  </div>
+)}
                       {/* Food / Service / VAT Tax — independent of GST */}
   {/* Food / Service / VAT Tax — independent of GST */}
 
@@ -4027,9 +4190,9 @@ const handleLockReport = async () => {
     <FormattedMessage id="COMMON.CHEQUE_AMT_INCL_GST" defaultMessage="Cheque Amt (incl. GST)" />
   </div>
                       <div className="w-[200px] text-base font-bold text-green-700 px-2">
-                      &#8377; {isDecorGstUser
+            &#8377; {isSplitGstUser
   ? parseFloat(totals.cateringDecorTotal).toFixed(2)
-  : calcGstOnAmount(chequePayment).toFixed(2)}
+  : (calcGstOnAmount(chequePayment) + parseFloat(totals.roundOffAmount)).toFixed(2)}
                       </div>
                     </div>
 
@@ -4049,9 +4212,7 @@ const handleLockReport = async () => {
       (chequePayment > 0
         ? cashPayment + calcGstOnAmount(chequePayment) + parseFloat(totals.roundOffAmount)
         : parseFloat(totals.amountAfterDiscount) + parseFloat(totals.totalTaxAmount) + parseFloat(totals.roundOffAmount))
-      + parseFloat(totals.foodTaxTotalAmount)
-      + parseFloat(totals.serviceTaxTotalAmount)
-      + parseFloat(totals.vatTaxTotalAmount)
+      + food + service + vat
     ).toFixed(2)}
       </div>
       {(parseFloat(totals.foodTaxTotalAmount) +
