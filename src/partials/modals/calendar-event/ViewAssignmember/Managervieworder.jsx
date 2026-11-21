@@ -23,6 +23,12 @@ const STATUS_STYLES = {
 const getStatusStyle = (rawStatus) =>
   STATUS_STYLES[(rawStatus ?? "").toUpperCase()] ?? STATUS_STYLES.PENDING;
 
+// Google Maps link for a lat/lng pair (null when either is missing)
+const getMapsUrl = (lat, lng) =>
+  lat != null && lat !== "" && lng != null && lng !== ""
+    ? `https://www.google.com/maps?q=${lat},${lng}`
+    : null;
+
 function ChefIcon({ className = "" }) {
   return (
     <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -99,6 +105,7 @@ function EmptyStatePlaceholder({ message }) {
 
 const OrderCard = ({ order, onViewDetails }) => {
   const status = getStatusStyle(order.status);
+  const mapsUrl = getMapsUrl(order.raw?.latitude, order.raw?.longitude);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 px-6 py-5 flex items-start gap-6 hover:shadow-md transition-shadow duration-200">
@@ -145,9 +152,26 @@ const OrderCard = ({ order, onViewDetails }) => {
         ))}
       </div>
 
+      {/* Punch-in location — opens Google Maps */}
+      {mapsUrl && (
+        <a
+          href={mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-1.5 text-[12px] font-semibold text-primary hover:underline whitespace-nowrap shrink-0 ml-auto"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          View Location
+        </a>
+      )}
+
       <button
         onClick={onViewDetails}
-        className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-[13px] font-semibold rounded-lg px-5 py-2.5 transition-colors duration-150 whitespace-nowrap shrink-0 ml-auto"
+        className={`flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-[13px] font-semibold rounded-lg px-5 py-2.5 transition-colors duration-150 whitespace-nowrap shrink-0 ${mapsUrl ? "" : "ml-auto"}`}
       >
         View Details
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -382,11 +406,11 @@ const ManagerViewOrder = () => {
           </div>
         ) : (
           filteredOrders.map((order) => (
-         <OrderCard
-  key={`${order.vendorId}-${order.rawId}`}
-  order={order}
-  onViewDetails={() => setSelectedOrder(order)}
-/>
+            <OrderCard
+              key={`${order.vendorId}-${order.rawId}`}
+              order={order}
+              onViewDetails={() => setSelectedOrder(order)}
+            />
           ))
         )}
       </div>

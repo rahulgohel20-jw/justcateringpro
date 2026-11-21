@@ -159,6 +159,7 @@ else if (mode === "allocation" && !ischef && !isOutside) {
                 "Menu Allocation Theme",
                 "Chef Agency Theme",
                 "Outside Agency Theme",
+                "Inside Agency Theme",
                 "Name Plate Theme",
                 "General Fix Theme",
                 "Attendance Theme", 
@@ -173,6 +174,11 @@ else if (mode === "allocation" && !ischef && !isOutside) {
             modules = modules.filter(
               (module) => module.nameEnglish === "Labour Agency Theme",
             );
+            } else if (mode === "inside") {
+  modules = modules.filter(
+    (module) => module.nameEnglish === "Inside Agency Theme",
+  );
+
           } else if (mode === "costing") {
             modules = modules.filter(
               (module) => module.nameEnglish === "Costing Report Theme",
@@ -356,7 +362,9 @@ setSelectedNamePlateImages(template.namePlateImages || null);
       type = "outside";
     } else if (selectedTab?.nameEnglish === "Labour Agency Theme") {
       type = "labour";
-    } 
+    } else if (selectedTab?.nameEnglish === "Inside Agency Theme") {   // 👈 ADD
+  type = "inside";
+}
    
 
 else if (selectedTab?.nameEnglish === "Raw Material Theme") {

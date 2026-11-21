@@ -17,7 +17,12 @@ const AGENCY_MODULES = [
   "Chef Agency Theme",
   "Labour Agency Theme",
   "Outside Agency Theme",
+  "Inside Agency Theme",
 ];
+// Modules that show only one mapping type (exact match on typeName)
+const MODULE_ALLOWED_TYPE = {
+  "Inside Agency Theme": "Type 1",
+};
 const ORDER_MODULES = ["Order Summary Theme"];
 const RAW_MATERIAL_MODULES = ["Raw Material Theme"];
 const ORDER_HISTORY_MODULES = ["Order History Theme"];
@@ -185,6 +190,7 @@ useEffect(() => {
                 "Chef Agency Theme",
                 "Labour Agency Theme",
                 "Outside Agency Theme",
+                "Inside Agency Theme",
                 "Order Summary Theme",
                 "Raw Material Theme",
                 "Order History Theme",
@@ -320,6 +326,10 @@ useEffect(() => {
   } else if (module.nameEnglish === "Outside Agency Theme") {
     setAgencyType("outside");
     setIsManager(false);
+  }  else if (module.nameEnglish === "Inside Agency Theme") {
+    setAgencyType("inside");
+    setIsManager(false);
+  
   } else if (module.nameEnglish === "Order Summary Theme") {
     setAgencyType("order_summary");
     setIsManager(true);
@@ -365,10 +375,18 @@ const getFilteredTemplates = (module) => {
       }
     }
 
+    // 👇 ADD THIS BLOCK HERE
+    // Per-module type restriction (Inside Agency -> Type 1 only)
+    const allowedType = MODULE_ALLOWED_TYPE[module.nameEnglish];
+    if (allowedType) {
+      return (template.typeName || "").trim() === allowedType;
+    }
+
     // Quotation: only the allowed type (must come BEFORE the show-all check)
     if (module.nameEnglish === "QUOTATION REPORTS") {
       return (template.typeName || "").trim() === QUOTATION_ALLOWED_TYPE;
     }
+
 
     // Modules that list all their templates
     if (SHOW_ALL_TEMPLATE_MODULES.includes(module.nameEnglish)) return true;
