@@ -16,13 +16,16 @@ const AddBankDetailsModal = ({
   allBankDetails = [],
 }) => {
   const [form] = Form.useForm();
+  const isHallRentValue = Form.useWatch("isHallRent", form);
   const intl = useIntl();
   const userId = JSON.parse(localStorage.getItem("userId"));
   const [qrImage, setQrImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
-const DECOR_USER_IDS = ["757"];
+const DECOR_USER_IDS = ["757" , "233"];
+const HALL_RENT_USER_IDS = ["757" , "233"];
 const canSetDecor = DECOR_USER_IDS.includes(String(userId));
-  useEffect(() => {
+  const canSetHallRent = HALL_RENT_USER_IDS.includes(String(userId));
+    useEffect(() => {
     if (bankDetails?.qrCodeImage) {
       setPreviewUrl(bankDetails.qrCodeImage);
     }
@@ -38,6 +41,7 @@ const canSetDecor = DECOR_USER_IDS.includes(String(userId));
         gstNo :bankDetails.gstNo || "",
         isPrimary: bankDetails.isPrimary || false,
         isDecor: bankDetails.isDecor || false,
+          isHallRent: bankDetails.isHallRent || false,  
         openingBalance: bankDetails.openingBalance || 0,
 
         // ✅ convert string "DD/MM/YYYY" → dayjs so DatePicker shows the value
@@ -50,6 +54,7 @@ const canSetDecor = DECOR_USER_IDS.includes(String(userId));
       form.setFieldsValue({
         openingDate: dayjs(),
         isDecor: false,
+         isHallRent: false,
       });
     }
   }, [bankDetails, isOpen, form]);
@@ -68,6 +73,10 @@ const canSetDecor = DECOR_USER_IDS.includes(String(userId));
     }
   };
   const handleSubmit = async (values) => {
+    const hallRentFinal = canSetHallRent ? !!values.isHallRent : false;
+const decorFinal = hallRentFinal ? false : canSetDecor ? !!values.isDecor : false;
+
+
     try {
       if (values.isPrimary) {
         const existingPrimary = allBankDetails.find(
@@ -140,7 +149,8 @@ const canSetDecor = DECOR_USER_IDS.includes(String(userId));
       formData.append("upiId", values.upiId || "");
       formData.append("gstNo" , values.gstNo || 0);
       formData.append("isPrimary", values.isPrimary || false);
-      formData.append("isDecor", canSetDecor ? !!values.isDecor : false);
+      formData.append("isDecor", decorFinal);
+formData.append("isHallRent", hallRentFinal);
       formData.append("userId", userId);
       formData.append("id", bankDetails?.id || -1);
       formData.append(
@@ -515,7 +525,7 @@ const canSetDecor = DECOR_USER_IDS.includes(String(userId));
           >
             <Switch className="accent-primary" />
           </Form.Item>
-          {canSetDecor && (
+       {canSetDecor && (
   <Form.Item
     label={
       <FormattedMessage id="BANK.IS_DECOR" defaultMessage="Is Decor?" />
@@ -524,9 +534,27 @@ const canSetDecor = DECOR_USER_IDS.includes(String(userId));
     valuePropName="checked"
     className="mb-4"
   >
-    <Switch className="accent-primary" />
+    <Switch className="accent-primary" disabled={!!isHallRentValue} />
   </Form.Item>
 )}
+{canSetHallRent && (
+  <Form.Item
+    label={
+      <FormattedMessage id="BANK.IS_HALL_RENT" defaultMessage="Is Hall Rent?" />
+    }
+    name="isHallRent"
+    valuePropName="checked"
+    className="mb-4"
+  >
+    <Switch
+      className="accent-primary"
+      onChange={(checked) => {
+        if (checked) form.setFieldsValue({ isDecor: false });
+      }}
+    />
+  </Form.Item>
+)}
+
         </div>
 
         <Form.Item className="mb-0">

@@ -84,6 +84,33 @@ const formatDDMMYYYYWithTime = (d) => {
   return `${day}/${month}/${year} ${String(hours).padStart(2, "0")}:${mins} ${period}`;
 };
 
+const hasCoords = (lat, lng) =>
+  lat != null && lat !== "" && lng != null && lng !== "";
+
+// Google Maps link for a lat/lng pair (null when either is missing)
+const getMapsUrl = (lat, lng) =>
+  hasCoords(lat, lng) ? `https://www.google.com/maps?q=${lat},${lng}` : null;
+
+// Embedded map preview (no API key needed)
+const getEmbedUrl = (lat, lng) =>
+  hasCoords(lat, lng)
+    ? `https://maps.google.com/maps?q=${lat},${lng}&z=16&output=embed`
+    : null;
+
+// Promise wrapper around the browser geolocation API
+const getCurrentPosition = () =>
+  new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Location is not supported on this device."));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true, // GPS, not just wifi/IP
+      timeout: 15000,
+      maximumAge: 0, // never reuse an old position
+    });
+  });
+
 // ─── Sub-components ───────────────────────────────────────────────────────
 
 /** Small info pill */
@@ -181,6 +208,10 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
   const resolvedResourceType = (order?.resourceType || data.resourceType || "").toUpperCase();
   const assignmentId = order?.rawId ?? data.rawId ?? (order?.raw ? data.id : -1);
 
+  // Saved coordinates may sit on the vendor or on its first item
+  const savedLat = data.latitude ?? data.items?.[0]?.latitude ?? null;
+  const savedLng = data.longitude ?? data.items?.[0]?.longitude ?? null;
+
   // ── Task state ──
   const [predefinedTasks, setPredefinedTasks] = useState([]);
   const [loadingPredefinedTasks, setLoadingPredefined] = useState(false);
@@ -199,6 +230,11 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
     formatAMPMToTime24(data.arrivalTime) || ""
   );
   const [hasPunchedIn, setHasPunchedIn] = useState(!!data.arrivalTime);
+
+  // ── Punch-in location ──
+  const [latitude, setLatitude] = useState(savedLat);
+  const [longitude, setLongitude] = useState(savedLng);
+  const [isLocating, setIsLocating] = useState(false);
 
   // ── Upload ──
   const [uploadFiles, setUploadFiles] = useState([]);
@@ -222,6 +258,11 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
     setArrivalTimeValue(formatAMPMToTime24(data.arrivalTime) || "");
     setHasPunchedIn(!!data.arrivalTime);
   }, [data.arrivalTime]);
+
+  useEffect(() => {
+    setLatitude(savedLat);
+    setLongitude(savedLng);
+  }, [savedLat, savedLng]);
 
   useEffect(() => { setAssignedQtyValue(data.labour?.assignedQty ?? ""); }, [data.labour?.assignedQty]);
   useEffect(() => { setConfirmedQtyValue(data.labour?.confirmedQty ?? ""); }, [data.labour?.confirmedQty]);
@@ -303,11 +344,29 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
   const chefInitials = (data.vendorNameEnglish || "—")
     .split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
 
-  // ── Punch In ──
-  const handlePunchIn = () => {
-    const now = getNow24();
-    setArrivalTimeValue(now);
-    setHasPunchedIn(true);
+  const mapsUrl = getMapsUrl(latitude, longitude);
+  const embedUrl = getEmbedUrl(latitude, longitude);
+
+  // ── Punch In (captures current GPS location) ──
+  const handlePunchIn = async () => {
+    setIsLocating(true);
+    try {
+      const pos = await getCurrentPosition();
+      setLatitude(pos.coords.latitude);
+      setLongitude(pos.coords.longitude);
+      setArrivalTimeValue(getNow24());
+      setHasPunchedIn(true);
+    } catch (err) {
+      const msg =
+        err?.code === 1
+          ? "Location permission is blocked. Allow location access in your browser and try again."
+          : err?.code === 3
+            ? "Could not get your location in time. Please try again."
+            : err?.message || "Could not get your location.";
+      Swal.fire({ icon: "error", title: "Location required", text: msg });
+    } finally {
+      setIsLocating(false);
+    }
   };
 
   // ── Tasks ──
@@ -455,8 +514,8 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
         remarks: remarksValue || "",
         status: derivedStatus,
         isPresent: hasPunchedIn,
-        latitude: data.latitude,
-        longitude: data.longitude,
+        latitude: latitude ?? data.latitude,
+        longitude: longitude ?? data.longitude,
         menuItemId: data.menuItemId,
         instructions: data.instructions,
         instructionsHindi: data.instructionsHindi,
@@ -472,12 +531,12 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
           weight: data.outside.weight,
           unitId: data.outside.unitId,
         } : undefined,
-      labour: (data.labour || confirmedQtyValue !== "") ? {
-  staffCategory: data.labour?.staffCategory,
-  shift: data.labour?.shift,
-  assignedQty: data.labour?.assignedQty,
-  confirmedQty: confirmedQtyValue === "" ? 0 : Number(confirmedQtyValue),
-} : undefined,
+        labour: (data.labour || confirmedQtyValue !== "") ? {
+          staffCategory: data.labour?.staffCategory,
+          shift: data.labour?.shift,
+          assignedQty: data.labour?.assignedQty,
+          confirmedQty: confirmedQtyValue === "" ? 0 : Number(confirmedQtyValue),
+        } : undefined,
         vendorImages: uploadFiles,
         vendorTasks: vendorTasksPayload,
       };
@@ -645,38 +704,38 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Shift</p>
                       <p className="text-sm font-bold text-gray-800">{data.labour?.shift || "—"}</p>
                     </div>
-                   <div className="bg-gray-50 rounded-xl px-3 py-2.5">
-  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Assigned Qty</p>
-  <p className="text-sm font-bold text-gray-800">
-    {assignedQtyValue !== "" ? assignedQtyValue : (data.labour?.assignedQty ?? "—")}
-  </p>
-</div>
+                    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Assigned Qty</p>
+                      <p className="text-sm font-bold text-gray-800">
+                        {assignedQtyValue !== "" ? assignedQtyValue : (data.labour?.assignedQty ?? "—")}
+                      </p>
+                    </div>
 
-<div className="bg-gray-50 rounded-xl px-3 py-2.5">
-  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Confirmed Qty</p>
-  {(AssignManagerPermission.add || AssignManagerPermission.edit) ? (
-    <input
-      type="number"
-      min="0"
-      max={assignedQtyValue !== "" ? assignedQtyValue : undefined}
-      value={confirmedQtyValue}
-      placeholder="Enter qty"
-      onChange={(e) => {
-        const v = e.target.value;
-        if (v === "") return setConfirmedQtyValue("");
-        const n = Number(v);
-        if (n < 0) return;
-        if (assignedQtyValue !== "" && n > Number(assignedQtyValue)) return;
-        setConfirmedQtyValue(v);
-      }}
-      className="w-full text-sm font-bold text-gray-800 bg-white border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
-    />
-  ) : (
-    <p className="text-sm font-bold text-gray-800">
-      {confirmedQtyValue !== "" ? confirmedQtyValue : "—"}
-    </p>
-  )}
-</div>
+                    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Confirmed Qty</p>
+                      {(AssignManagerPermission.add || AssignManagerPermission.edit) ? (
+                        <input
+                          type="number"
+                          min="0"
+                          max={assignedQtyValue !== "" ? assignedQtyValue : undefined}
+                          value={confirmedQtyValue}
+                          placeholder="Enter qty"
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === "") return setConfirmedQtyValue("");
+                            const n = Number(v);
+                            if (n < 0) return;
+                            if (assignedQtyValue !== "" && n > Number(assignedQtyValue)) return;
+                            setConfirmedQtyValue(v);
+                          }}
+                          className="w-full text-sm font-bold text-gray-800 bg-white border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        />
+                      ) : (
+                        <p className="text-sm font-bold text-gray-800">
+                          {confirmedQtyValue !== "" ? confirmedQtyValue : "—"}
+                        </p>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
@@ -711,18 +770,18 @@ export default function ChefTaskSidebar({ isOpen, onClose, order, onArrivalTimeU
                 <input
                   type="time"
                   value={arrivalTimeValue}
-disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
+                  disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
                   onChange={(e) => setArrivalTimeValue(e.target.value)}
                   className="w-full text-sm font-bold text-gray-800 bg-white border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400 mb-2"
                 />
                 {(AssignManagerPermission.add || AssignManagerPermission.edit) && (
                   <button
                     onClick={handlePunchIn}
-                    disabled={hasPunchedIn}
-                    title={hasPunchedIn ? `Punched in at ${formatTimeToAMPM(arrivalTimeValue)}` : "Set current time as arrival"}
+                    disabled={hasPunchedIn || isLocating}
+                    title={hasPunchedIn ? `Punched in at ${formatTimeToAMPM(arrivalTimeValue)}` : "Set current time and location as arrival"}
                     className={`w-full flex items-center justify-center gap-1.5 text-[11px] font-bold py-1.5 rounded-lg transition-all ${hasPunchedIn
                       ? "bg-green-50 text-green-600 border border-green-200 cursor-not-allowed"
-                      : "bg-primary text-white hover:bg-blue-700 active:scale-95"
+                      : "bg-primary text-white hover:bg-blue-700 active:scale-95 disabled:opacity-60 disabled:cursor-wait"
                       }`}
                   >
                     {hasPunchedIn ? (
@@ -731,6 +790,14 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
                         Punched In · {formatTimeToAMPM(arrivalTimeValue)}
+                      </>
+                    ) : isLocating ? (
+                      <>
+                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                        Getting location…
                       </>
                     ) : (
                       <>
@@ -744,154 +811,184 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
                 )}
               </div>
             </div>
+
+            {/* Punch-in location: map preview, click opens Google Maps */}
+            {mapsUrl && (
+              <div className="mt-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                    Punch-in Location
+                  </p>
+                  <p className="text-[10px] text-gray-400">
+                    {Number(latitude).toFixed(6)}, {Number(longitude).toFixed(6)}
+                  </p>
+                </div>
+
+                <div className="relative overflow-hidden rounded-xl border border-gray-200">
+                  <iframe
+                    title="Punch-in location"
+                    src={embedUrl}
+                    width="100%"
+                    height="180"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                  {/* Transparent overlay: an iframe swallows clicks, so this link catches them */}
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open in Google Maps"
+                    className="absolute inset-0 flex items-end justify-end p-2 cursor-pointer"
+                  >
+                    <span className="rounded-md bg-white/90 px-2 py-1 text-[10px] font-bold text-primary shadow">
+                      Open in Maps ↗
+                    </span>
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
 
-         
 
-          {/* ── Assigned Tasks ───────────────────────────────────────── */}
-          <div className="mx-4 mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-            {/* Header row — big progress ring */}
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-gray-900">Assigned Tasks</h3>
-                <p className="text-sm text-gray-700 mt-0.5">
-                  {totalTasks > 0
-                    ? `${doneTasks} of ${totalTasks} Done`
-                    : "No tasks yet"}
-                </p>
-                {/* Linear progress bar under the label */}
+          {false && (
+            <div className="mx-4 mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Assigned Tasks</h3>
+                  <p className="text-sm text-gray-700 mt-0.5">
+                    {totalTasks > 0
+                      ? `${doneTasks} of ${totalTasks} Done`
+                      : "No tasks yet"}
+                  </p>
+                  {totalTasks > 0 && (
+                    <div className="mt-2 w-40">
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${progress === 100 ? "bg-green-500" : "bg-primary"
+                            }`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {totalTasks > 0 && (
-                  <div className="mt-2 w-40">
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${progress === 100 ? "bg-green-500" : "bg-primary"
-                          }`}
-                        style={{ width: `${progress}%` }}
+                  <div className="relative w-20 h-20 flex-shrink-0">
+                    <svg className="w-20 h-20 -rotate-90" viewBox="0 0 88 88">
+                      {/* Track */}
+                      <circle cx="44" cy="44" r="38" fill="none" stroke="#f3f4f6" strokeWidth="7" />
+                      {/* Progress */}
+                      <circle
+                        cx="44" cy="44" r="38" fill="none"
+                        stroke={progress === 100 ? "#28A745" : "#2563eb"}
+                        strokeWidth="7"
+                        strokeLinecap="round"
+                        strokeDasharray={`${strokeDash} ${circumference}`}
+                        style={{ transition: "stroke-dasharray 0.5s ease" }}
                       />
+                    </svg>
+                    {/* Centre label */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className={`text-lg font-black leading-none ${progress === 100 ? "text-green-700" : "text-primary"}`}>
+                        {progress}%
+                      </span>
+
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Big circular progress ring */}
-              {totalTasks > 0 && (
-                <div className="relative w-20 h-20 flex-shrink-0">
-                  <svg className="w-20 h-20 -rotate-90" viewBox="0 0 88 88">
-                    {/* Track */}
-                    <circle cx="44" cy="44" r="38" fill="none" stroke="#f3f4f6" strokeWidth="7" />
-                    {/* Progress */}
-                    <circle
-                      cx="44" cy="44" r="38" fill="none"
-                      stroke={progress === 100 ? "#28A745" : "#2563eb"}
-                      strokeWidth="7"
-                      strokeLinecap="round"
-                      strokeDasharray={`${strokeDash} ${circumference}`}
-                      style={{ transition: "stroke-dasharray 0.5s ease" }}
-                    />
+              {loadingPredefinedTasks ? (
+                <div className="flex items-center gap-2 py-6 justify-center">
+                  <svg className="w-4 h-4 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                   </svg>
-                  {/* Centre label */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-lg font-black leading-none ${progress === 100 ? "text-green-700" : "text-primary"}`}>
-                      {progress}%
-                    </span>
+                  <span className="text-xs text-gray-400">Loading tasks…</span>
+                </div>
+              ) : allTasks.length > 0 ? (
+                <div className="space-y-2">
+                  {inlineTasks.map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      isComplete={completedPredefinedIds.has(task.id)}
+                      onToggle={toggleComplete}
+                      onDelete={handleDeleteTask}
+                      onRemarksChange={handleTaskRemarksChange}
+                      AssignManagerPermission={AssignManagerPermission}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed border-gray-200">
+                  <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  <p className="text-xs text-gray-400">No tasks for this resource type</p>
+                </div>
+              )}
 
-                  </div>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
+                {hasMoreTasks ? (
+                  <button
+                    onClick={() => setIsViewAllOpen(true)}
+                    className="text-xs font-semibold text-primary hover:underline"
+                  >
+                    View all ({allTasks.length - INLINE_TASK_LIMIT} more)
+                  </button>
+                ) : <span />}
+                <button
+                  onClick={() => setIsQuickAddOpen((p) => !p)}
+                  className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Task
+                </button>
+              </div>
+
+              {isQuickAddOpen && (
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={quickTaskName}
+                    onChange={(e) => setQuickTaskName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); handleQuickAddTask(); }
+                      if (e.key === "Escape") { setIsQuickAddOpen(false); setQuickTaskName(""); }
+                    }}
+                    placeholder="Type task name and press Enter…"
+                    autoFocus
+                    className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleQuickAddTask}
+                    disabled={!quickTaskName.trim()}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-primary text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setIsQuickAddOpen(false); setQuickTaskName(""); }}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 flex-shrink-0"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
               )}
             </div>
-
-            {/* Task list */}
-            {loadingPredefinedTasks ? (
-              <div className="flex items-center gap-2 py-6 justify-center">
-                <svg className="w-4 h-4 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                </svg>
-                <span className="text-xs text-gray-400">Loading tasks…</span>
-              </div>
-            ) : allTasks.length > 0 ? (
-              <div className="space-y-2">
-                {inlineTasks.map((task) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    isComplete={completedPredefinedIds.has(task.id)}
-                    onToggle={toggleComplete}
-                    onDelete={handleDeleteTask}
-                    onRemarksChange={handleTaskRemarksChange}
-                    AssignManagerPermission={AssignManagerPermission}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2 py-8 rounded-xl border-2 border-dashed border-gray-200">
-                <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <p className="text-xs text-gray-400">No tasks for this resource type</p>
-              </div>
-            )}
-
-            {/* View more / Add task */}
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
-              {hasMoreTasks ? (
-                <button
-                  onClick={() => setIsViewAllOpen(true)}
-                  className="text-xs font-semibold text-primary hover:underline"
-                >
-                  View all ({allTasks.length - INLINE_TASK_LIMIT} more)
-                </button>
-              ) : <span />}
-              <button
-                onClick={() => setIsQuickAddOpen((p) => !p)}
-                className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Task
-              </button>
-            </div>
-
-            {/* Quick add input */}
-            {isQuickAddOpen && (
-              <div className="flex items-center gap-2 mt-2">
-                <input
-                  type="text"
-                  value={quickTaskName}
-                  onChange={(e) => setQuickTaskName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") { e.preventDefault(); handleQuickAddTask(); }
-                    if (e.key === "Escape") { setIsQuickAddOpen(false); setQuickTaskName(""); }
-                  }}
-                  placeholder="Type task name and press Enter…"
-                  autoFocus
-                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                />
-                <button
-                  type="button"
-                  onClick={handleQuickAddTask}
-                  disabled={!quickTaskName.trim()}
-                  className="w-9 h-9 flex items-center justify-center rounded-lg bg-primary text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsQuickAddOpen(false); setQuickTaskName(""); }}
-                  className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 flex-shrink-0"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* ── Remarks ──────────────────────────────────────────────── */}
+          )}
           <div className="mx-4 mt-3 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Remarks</p>
             <textarea
@@ -903,7 +1000,6 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
             />
           </div>
 
-          {/* ── Work Proof ───────────────────────────────────────────── */}
           <div className="mx-4 mt-3 mb-6 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-gray-900">Work Proof</h3>
@@ -961,13 +1057,9 @@ disabled={!AssignManagerPermission.add && !AssignManagerPermission.edit}
           </div>
         </div>
 
-        {/* ── Sticky footer ────────────────────────────────────────────── */}
         <div className="flex-shrink-0 border-t border-gray-100 px-5 py-3.5 bg-white flex items-center justify-between gap-3">
           {/* Progress summary */}
           <p className="text-xs text-gray-400">
-            {totalTasks > 0
-              ? <><span className="font-semibold text-gray-700">{doneTasks}/{totalTasks} Tasks Done</span> </>
-              : "No tasks"}
             {hasPunchedIn && (
               <span className="ml-2 text-green-600 font-semibold">· Punched In</span>
             )}

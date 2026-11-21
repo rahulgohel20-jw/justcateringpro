@@ -878,19 +878,20 @@ const StorePo = () => {
 
         <div className="relative">
           <div className="relative">
-  <TableComponent
-    columns={columns(
-      permissions.edit ? handleEdit : null,
-      permissions.delete ? handleDelete : null,
-      handlePrint,
-      handleExcel,
-      handleStorePoPdf,
-    )}
-    serverSide
-    onFetchData={handleFetchData}
-    paginationSize={10}
-    getRowClassName={getRowClassName}
-  />
+<TableComponent
+  key={refreshKey}
+  columns={columns(
+    permissions.edit ? handleEdit : null,
+    permissions.delete ? handleDelete : null,
+    handlePrint,
+    handleExcel,
+    handleStorePoPdf,
+  )}
+  serverSide
+  onFetchData={handleFetchData}
+  paginationSize={10}
+  getRowClassName={getRowClassName}
+/>
 </div>
          {tableLoading && (
   <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/70">

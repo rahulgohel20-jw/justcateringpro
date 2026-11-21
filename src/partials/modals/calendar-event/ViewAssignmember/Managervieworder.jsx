@@ -15,12 +15,19 @@ const STATUS_STYLES = {
   RUNNING:   { dot: "bg-amber-400",   text: "text-amber-500",   label: "Running"   },
   CONFIRMED: { dot: "bg-emerald-500", text: "text-emerald-600", label: "Confirmed" },
   PENDING:   { dot: "bg-slate-400",   text: "text-slate-500",   label: "Pending"   },
-  COMPLETED: { dot: "bg-green-600",    text: "text-green-700",    label: "Completed" },
+  COMPLETED: { dot: "bg-green-600",   text: "text-green-700",   label: "Completed" },
+  CANCEL:    { dot: "bg-red-500",     text: "text-red-600",     label: "Cancelled" },
+  CANCELLED: { dot: "bg-red-500",     text: "text-red-600",     label: "Cancelled" },
 };
-
 
 const getStatusStyle = (rawStatus) =>
   STATUS_STYLES[(rawStatus ?? "").toUpperCase()] ?? STATUS_STYLES.PENDING;
+
+// Google Maps link for a lat/lng pair (null when either is missing)
+const getMapsUrl = (lat, lng) =>
+  lat != null && lat !== "" && lng != null && lng !== ""
+    ? `https://www.google.com/maps?q=${lat},${lng}`
+    : null;
 
 function ChefIcon({ className = "" }) {
   return (
@@ -97,25 +104,23 @@ function EmptyStatePlaceholder({ message }) {
 }
 
 const OrderCard = ({ order, onViewDetails }) => {
-  // Use raw status string from API response — normalize inside getStatusStyle
   const status = getStatusStyle(order.status);
+  const mapsUrl = getMapsUrl(order.raw?.latitude, order.raw?.longitude);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 px-6 py-5 flex items-center gap-6 hover:shadow-md transition-shadow duration-200">
+    <div className="bg-white rounded-xl border border-slate-200 px-6 py-5 flex items-start gap-6 hover:shadow-md transition-shadow duration-200">
+      {/* Vendor (common data) */}
       <div className="min-w-[160px]">
-        <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-0.5">Order #</p>
-        <p className="text-[15px] font-bold text-slate-800 leading-tight">#{order.id}</p>
-        <p className="text-[13px] text-slate-500 mt-0.5">{order.name}</p>
-        {order.menuItemNameEnglish && (
-          <p className="text-[12px] font-medium text-slate-700 mt-1 truncate max-w-[180px]" title={order.menuItemNameEnglish}>
-            {order.menuItemNameEnglish}
-          </p>
-        )}
+        <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-0.5">Vendor</p>
+        <p className="text-[15px] font-bold text-slate-800 leading-tight">{order.name}</p>
+        <p className="text-[12px] text-slate-500 mt-0.5">
+          {order.items.length} item{order.items.length === 1 ? "" : "s"}
+        </p>
       </div>
 
       <div className="h-12 w-px bg-slate-100 shrink-0" />
 
-      {/* Status — label comes from STATUS_STYLES, not hardcoded */}
+      {/* Status (common data) */}
       <div className="min-w-[110px]">
         <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-1">Status</p>
         <div className="flex items-center gap-1.5">
@@ -126,32 +131,47 @@ const OrderCard = ({ order, onViewDetails }) => {
 
       <div className="h-12 w-px bg-slate-100 shrink-0" />
 
-      <div className="min-w-[110px]">
-        <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-1">Type</p>
-        <p className="text-[13px] font-medium text-slate-700">{order.type}</p>
+      {/* Items (one row per item) */}
+      <div className="flex-1 flex flex-col gap-3">
+        {order.items.map((item, idx) => (
+          <div key={item.id ?? idx} className="flex items-center gap-3 flex-wrap">
+            <p className="text-[12px] font-semibold text-slate-700 min-w-[180px]">
+              {item.menuItemNameEnglish || `Item #${item.id}`}
+            </p>
+            {item.resources?.length ? (
+              item.resources.map((r, i) => (
+                <span key={i} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 text-[12px] font-medium text-slate-600">
+                  <ResourceIcon type={r.icon} />
+                  {r.label}
+                </span>
+              ))
+            ) : (
+              <span className="text-[12px] text-slate-400 italic">No resource data</span>
+            )}
+          </div>
+        ))}
       </div>
 
-      <div className="h-12 w-px bg-slate-100 shrink-0" />
-
-      <div className="flex-1">
-        <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide mb-1.5">{order.resourceType}</p>
-        <div className="flex items-center gap-2 flex-wrap">
-          {order.resources?.length ? (
-            order.resources.map((r, i) => (
-              <span key={i} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1 text-[12px] font-medium text-slate-600">
-                <ResourceIcon type={r.icon} />
-                {r.label}
-              </span>
-            ))
-          ) : (
-            <span className="text-[12px] text-slate-400 italic">No resource data available</span>
-          )}
-        </div>
-      </div>
+      {/* Punch-in location — opens Google Maps */}
+      {mapsUrl && (
+        <a
+          href={mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-1.5 text-[12px] font-semibold text-primary hover:underline whitespace-nowrap shrink-0 ml-auto"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          View Location
+        </a>
+      )}
 
       <button
         onClick={onViewDetails}
-        className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-[13px] font-semibold rounded-lg px-5 py-2.5 transition-colors duration-150 whitespace-nowrap shrink-0 ml-auto"
+        className={`flex items-center gap-2 bg-primary hover:bg-primary/90 text-white text-[13px] font-semibold rounded-lg px-5 py-2.5 transition-colors duration-150 whitespace-nowrap shrink-0 ${mapsUrl ? "" : "ml-auto"}`}
       >
         View Details
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -221,77 +241,51 @@ const buildResources = (detail, resourceType) => {
   return resources;
 };
 
-const mapOrders = (list) => {
-  const flattened = [];
+const mapOrders = (list) =>
+  (list ?? []).map((vendor) => {
+    const items =
+      Array.isArray(vendor.items) && vendor.items.length > 0 ? vendor.items : [vendor];
+    const first = items[0];
+    const resourceType = (first.resourceType || vendor.resourceType || "").toUpperCase();
 
-  (list ?? []).forEach((vendor) => {
-    const items = Array.isArray(vendor.items) && vendor.items.length > 0 ? vendor.items : [vendor];
-    items.forEach((subItem) => {
-      const rawId = subItem.id ?? vendor.id;
-      const normalizedResourceType = (subItem.resourceType || vendor.resourceType || "").toUpperCase();
+    const cardItems = items.map((item) => {
+      const rt = (item.resourceType || vendor.resourceType || "").toUpperCase();
       const detail =
-        normalizedResourceType === "CHEF"
-          ? subItem.chefLabour ?? vendor.chefLabour ?? {}
-          : normalizedResourceType === "OUTSIDE"
-          ? subItem.outside ?? vendor.outside ?? {}
-          : normalizedResourceType === "LABOUR"
-          ? subItem.labour ?? vendor.labour ?? {}
-          : subItem.chefLabour ?? vendor.chefLabour ?? subItem.outside ?? vendor.outside ?? subItem.labour ?? vendor.labour ?? {};
-
-      const staffCat = detail.staffCategory ? detail.staffCategory.replace(/_/g, " ").trim() : "";
-      const displayType = staffCat
-        ? staffCat.replace(/\b\w/g, (c) => c.toUpperCase())
-        : normalizedResourceType;
-
-      flattened.push({
-        rawId,
-        vendorId: vendor.vendorId ?? subItem.vendorId,
-        eventId: vendor.eventId ?? subItem.eventId,
-        eventFunctionId: vendor.eventFunctionId ?? subItem.eventFunctionId,
-        eventNameEnglish: vendor.eventNameEnglish,
-        functionNameEnglish: vendor.functionNameEnglish,
-        venue: vendor.venue,
-        reportingTime: vendor.reportingTime ?? subItem.reportingTime,
-        arrivalTime: vendor.arrivalTime ?? subItem.arrivalTime,
-        isPresent: vendor.isPresent ?? subItem.isPresent,
-        remarks: vendor.remarks ?? subItem.remarks,
-        latitude: vendor.latitude ?? subItem.latitude,
-        longitude: vendor.longitude ?? subItem.longitude,
-        menuItemId: subItem.menuItemId ?? vendor.menuItemId,
-        menuItemNameEnglish: subItem.menuItemNameEnglish ?? vendor.menuItemNameEnglish,
-        instructions: subItem.instructions ?? vendor.instructions,
-        instructionsHindi: subItem.instructionsHindi ?? vendor.instructionsHindi,
-        instructionsGujarati: subItem.instructionsGujarati ?? vendor.instructionsGujarati,
-        managerId: vendor.managerId ?? subItem.managerId,
-        name: vendor.vendorNameEnglish || subItem.vendorNameEnglish || "—",
-        type: displayType,
-        resourceType: normalizedResourceType,
-        resources: buildResources(detail, normalizedResourceType),
-        status: vendor.status ?? subItem.status,
-        chefLabour: subItem.chefLabour ?? vendor.chefLabour,
-        outside: subItem.outside ?? vendor.outside,
-        labour: subItem.labour ?? vendor.labour,
-        raw: {
-          ...vendor,
-          ...subItem,
-          id: rawId,
-          rawId,
-          resourceType: normalizedResourceType,
-          chefLabour: subItem.chefLabour ?? vendor.chefLabour,
-          outside: subItem.outside ?? vendor.outside,
-          labour: subItem.labour ?? vendor.labour,
-          vendorImages: vendor.vendorImages ?? subItem.vendorImages ?? [],
-          vendorTasks: vendor.vendorTasks ?? subItem.vendorTasks ?? [],
-        },
-      });
+        rt === "CHEF" ? item.chefLabour ?? {}
+        : rt === "OUTSIDE" ? item.outside ?? {}
+        : rt === "LABOUR" ? item.labour ?? {}
+        : item.chefLabour ?? item.outside ?? item.labour ?? {};
+      return {
+        id: item.id,
+        menuItemNameEnglish: item.menuItemNameEnglish,
+        resourceType: rt,
+        resources: buildResources(detail, rt),
+      };
     });
-  });
 
-  return flattened.map((order, index) => ({
-    ...order,
-    id: index + 1,
-  }));
-};
+    const rawId = first.id ?? vendor.id;
+
+    return {
+      id: rawId,
+      rawId,
+      vendorId: vendor.vendorId,
+      eventId: vendor.eventId,
+      eventFunctionId: vendor.eventFunctionId,
+      name: vendor.vendorNameEnglish || "—",
+      status: vendor.status,
+      resourceType,
+      items: cardItems,
+      raw: {
+        ...vendor,
+        items,
+        id: rawId,
+        rawId,
+        resourceType,
+        vendorImages: vendor.vendorImages ?? [],
+        vendorTasks: vendor.vendorTasks ?? [],
+      },
+    };
+  });
 
 const ManagerViewOrder = () => {
   const [activeTab, setActiveTab]       = useState("chef");
@@ -411,8 +405,12 @@ const ManagerViewOrder = () => {
             </div>
           </div>
         ) : (
-          filteredOrders.map((order, i) => (
-            <OrderCard key={i} order={order} onViewDetails={() => setSelectedOrder(order)} />
+          filteredOrders.map((order) => (
+            <OrderCard
+              key={`${order.vendorId}-${order.rawId}`}
+              order={order}
+              onViewDetails={() => setSelectedOrder(order)}
+            />
           ))
         )}
       </div>
