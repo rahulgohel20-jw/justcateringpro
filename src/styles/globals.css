@@ -20,8 +20,10 @@ body::-webkit-scrollbar {
 
 /* Hide scrollbar for IE, Edge and Firefox */
 body {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 /* Also hide for html element */
@@ -91,6 +93,7 @@ html {
 .custom-tabs .ant-tabs-ink-bar {
   background: #005ba8 !important;
 }
+
 .allocation-inner-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
   color: #ffffff !important;
 }
@@ -134,8 +137,10 @@ html {
 
 
 .completed-row {
-  background-color: #f0fdf4 !important;  /* green-600 */
-  border-left: 4px solid #f0fdf4 !important;  /* green-700 */
+  background-color: #f0fdf4 !important;
+  /* green-600 */
+  border-left: 4px solid #f0fdf4 !important;
+  /* green-700 */
 }
 
 .completed-row td {
@@ -149,14 +154,11 @@ html {
   color: #4ca567 !important;
 }
 
-.ant-select-dropdown
-  .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+.ant-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
   background-color: var(--tw-primary);
 }
 
-.ant-select-dropdown
-  .ant-select-item-option-selected:not(.ant-select-item-option-disabled)
-  .ant-select-item-option-state {
+.ant-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) .ant-select-item-option-state {
   color: var(--tw-primary);
 }
 
@@ -169,49 +171,29 @@ html {
   gap: 6px;
 }
 
-.segmentedTabs
-  .ant-segmented-group
-  .ant-segmented-item
-  .ant-segmented-item-label {
+.segmentedTabs .ant-segmented-group .ant-segmented-item .ant-segmented-item-label {
   min-height: unset;
   line-height: unset;
   padding: 10px 14px;
 }
 
-.segmentedTabs
-  .ant-segmented-group
-  .ant-segmented-item.ant-segmented-item-selected
-  .ant-segmented-item-label {
+.segmentedTabs .ant-segmented-group .ant-segmented-item.ant-segmented-item-selected .ant-segmented-item-label {
   color: var(--tw-primary);
 }
 
-.segmentedTabs
-  .ant-segmented-group
-  .ant-segmented-item
-  .ant-segmented-item-label
-  > span
-  i {
+.segmentedTabs .ant-segmented-group .ant-segmented-item .ant-segmented-item-label>span i {
   font-size: 18px;
 }
 
-.segmentedTabs
-  .ant-segmented-group
-  .ant-segmented-item:hover:not(.ant-segmented-item-selected):not(
-    .ant-segmented-item-disabled
-  )::after {
+.segmentedTabs .ant-segmented-group .ant-segmented-item:hover:not(.ant-segmented-item-selected):not(.ant-segmented-item-disabled)::after {
   background-color: #fff;
 }
 
-.ant-select-dropdown
-  .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+.ant-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
   color: #fff;
 }
 
-.ant-select-dropdown
-  .ant-select-item-option-selected:not(.ant-select-item-option-disabled)
-  .anticon.anticon-check
-  > svg
-  > path {
+.ant-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) .anticon.anticon-check>svg>path {
   fill: #fff;
 }
 
@@ -236,15 +218,15 @@ html {
 
 /* ant-table */
 .ant-table-wrapper .ant-table-cell,
-.ant-table-wrapper .ant-table-thead > tr > th,
-.ant-table-wrapper .ant-table-tbody > tr > th,
-.ant-table-wrapper .ant-table-tbody > tr > td,
-.ant-table-wrapper tfoot > tr > th,
-.ant-table-wrapper tfoot > tr > td {
+.ant-table-wrapper .ant-table-thead>tr>th,
+.ant-table-wrapper .ant-table-tbody>tr>th,
+.ant-table-wrapper .ant-table-tbody>tr>td,
+.ant-table-wrapper tfoot>tr>th,
+.ant-table-wrapper tfoot>tr>td {
   padding: 10px;
 }
 
-.ant-table-thead > tr > th {
+.ant-table-thead>tr>th {
   background-color: #f9f9f9 !important;
 }
 
@@ -270,6 +252,7 @@ html {
 
 /* Mobile Calendar Optimizations - UPDATED */
 @media (max-width: 640px) {
+
   /* Ensure calendar fits on mobile screens */
   .fullCalendarCommon {
     font-size: 14px;
@@ -418,6 +401,7 @@ html {
 
 /* Touch device improvements */
 @media (hover: none) and (pointer: coarse) {
+
   /* Better touch targets */
   .fc-daygrid-day {
     cursor: pointer;
@@ -502,17 +486,22 @@ html {
 
 /* Hide scrollbar for all browsers */
 .scrollbar-hide {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
+
 .scrollbar-hide::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
+  /* Chrome, Safari, Opera */
 }
 
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -520,10 +509,12 @@ html {
 .tab-scroll::-webkit-scrollbar {
   height: 4px;
 }
+
 .tab-scroll::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 9999px;
 }
+
 .tab-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -601,3 +592,123 @@ html {
 .swal-on-top {
   z-index: 99999 !important;
 }
+
+
+/* Calendar Festival Style */
+
+.fullCalendarCommon .fc-daygrid-day-top {
+  display: block;
+}
+
+.fullCalendarCommon .fc-daygrid-day-number {
+  display: block;
+  width: 100%;
+  padding: 4px 6px 2px;
+}
+
+/* Row: festival text on the left, date number on the right */
+.fullCalendarCommon .fday {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+}
+
+.fullCalendarCommon .fday__name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #b45309;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.fullCalendarCommon .fday__mark {
+  font-style: normal;
+  font-size: 8px;
+  margin-right: 3px;
+  color: #f59e0b;
+}
+
+.fullCalendarCommon .fday__name b {
+  color: #92400e;
+}
+
+.fullCalendarCommon .fday__num {
+  flex-shrink: 0;
+}
+
+.tippy-box[data-theme~="festival"] {
+  background: #fff;
+  color: #1f2937;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.tippy-box[data-theme~="festival"] .tippy-content {
+  padding: 0;
+}
+
+.tippy-box[data-theme~="festival"] .tippy-arrow {
+  color: #fff;
+}
+
+.tippy-box[data-theme~="festival"] .tippy-arrow::before {
+  filter: drop-shadow(0 1px 0 #fde68a);
+}
+
+.ftip {
+  min-width: 170px;
+}
+
+.ftip__head {
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 7px 12px;
+  border-bottom: 1px solid #fef3c7;
+  border-radius: 10px 10px 0 0;
+}
+
+.ftip__list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px 4px;
+}
+
+.ftip__list li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.ftip__list li::before {
+  content: "◆";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  font-size: 8px;
+  color: #f59e0b;
+}
+
+.ftip__date {
+  padding: 0 12px 9px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Festival day: gold line across the top of the cell */
