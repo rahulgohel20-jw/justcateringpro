@@ -3,35 +3,121 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
-import tippy from "tippy.js";
+import tippy, { delegate } from "tippy.js";
 import "tippy.js/dist/tippy.css";
 import useStyles from "./style";
 import { useIntl } from "react-intl";
 import { useLanguage } from "@/i18n";
 import { useEffect, useState, useRef, useMemo } from "react";
 
-const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange, loading, initialDate, extraFilters }) => {
+// Vite: import.meta.env.VITE_GOOGLE_CAL_KEY
+// CRA:  process.env.REACT_APP_GOOGLE_CAL_KEY
+const GOOGLE_CAL_API_KEY = import.meta.env.VITE_GOOGLE_CAL_KEY;
+
+const FESTIVAL_CAL_ID = "en.indian#holiday@group.v.calendar.google.com";
+
+const escapeHtml = (s = "") =>
+  String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+const toDateKey = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// Fetch festivals for a date range and return { "YYYY-MM-DD": [names] }
+const fetchFestivalRange = async (start, end) => {
+  const url =
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(FESTIVAL_CAL_ID)}/events` +
+    `?key=${GOOGLE_CAL_API_KEY}&singleEvents=true&orderBy=startTime&maxResults=250` +
+    `&timeMin=${start.toISOString()}&timeMax=${end.toISOString()}`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Festival fetch failed: ${res.status}`);
+  const json = await res.json();
+
+  const map = {};
+  (json.items || []).forEach((it) => {
+    const key = (it.start?.date || it.start?.dateTime || "").slice(0, 10);
+    if (key) (map[key] = map[key] || []).push(it.summary);
+  });
+  return map;
+};
+
+const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange, loading }) => {
   const classes = useStyles();
   const intl = useIntl();
   const { isRTL } = useLanguage();
   const calendarRef = useRef(null);
+  const wrapperRef = useRef(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [currentView, setCurrentView] = useState("dayGridMonth");
   const prevDateRef = useRef(null);
 
   const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [toolbarTitle, setToolbarTitle] = useState("");
 
-  const getEffectiveInitialDate = () => {
-    if (initialDate instanceof Date && !isNaN(initialDate.getTime())) {
-      return initialDate;
+  // Festivals live in their own state, independent of the bookings `data`
+  const [festivalMap, setFestivalMap] = useState({});
+  const loadedRangesRef = useRef(new Set());
+
+  const loadFestivals = async (start, end) => {
+    if (!GOOGLE_CAL_API_KEY) return;
+    const rangeKey = `${start.toISOString()}_${end.toISOString()}`;
+    if (loadedRangesRef.current.has(rangeKey)) return;
+    loadedRangesRef.current.add(rangeKey);
+    try {
+      const map = await fetchFestivalRange(start, end);
+      setFestivalMap((prev) => ({ ...prev, ...map })); // merge, never reset
+    } catch (err) {
+      loadedRangesRef.current.delete(rangeKey); // allow retry
+      console.error(err);
     }
-    return new Date();
   };
 
-  const initDate = useMemo(getEffectiveInitialDate, [initialDate]);
-  const [selectedMonth, setSelectedMonth] = useState(initDate.getMonth());
-  const [selectedYear, setSelectedYear] = useState(initDate.getFullYear());
-  const [toolbarTitle, setToolbarTitle] = useState("");
+  // Festival hover tooltip (event delegation on the calendar wrapper)
+  useEffect(() => {
+    if (!wrapperRef.current) return;
+
+    const instance = delegate(wrapperRef.current, {
+      target: "[data-festival]",
+      allowHTML: true,
+      theme: "festival",
+      placement: "top",
+      arrow: true,
+      delay: [100, 0],
+      maxWidth: 260,
+      appendTo: () => document.body,
+      onShow(inst) {
+        const el = inst.reference;
+        let names = [];
+        try {
+          names = JSON.parse(el.dataset.festival || "[]");
+        } catch { }
+        const dateLabel = el.dataset.date
+          ? new Date(`${el.dataset.date}T00:00:00`).toLocaleDateString("en-IN", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })
+          : "";
+
+        inst.setContent(`
+          <div class="ftip">
+            <div class="ftip__head">Festival${names.length > 1 ? "s" : ""}</div>
+            <ul class="ftip__list">
+              ${names.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}
+            </ul>
+            <div class="ftip__date">${escapeHtml(dateLabel)}</div>
+          </div>
+        `);
+      },
+    });
+
+    return () => {
+      (Array.isArray(instance) ? instance : [instance]).forEach((i) => i.destroy());
+    };
+  }, []);
 
   const monthNames = useMemo(
     () => [
@@ -59,6 +145,8 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
   }, []);
 
   const handleDatesSet = (info) => {
+    loadFestivals(info.start, info.end); // always load festivals, even while bookings load
+
     if (loading) {
       if (prevDateRef.current && calendarRef.current) {
         calendarRef.current.getApi().gotoDate(prevDateRef.current);
@@ -139,11 +227,10 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
               type="button"
               disabled={loading}
               onClick={() => changeView(view)}
-              className={`px-3 py-2 text-xs md:text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                currentView === view
-                  ? "bg-primary text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
-              }`}
+              className={`px-3 py-2 text-xs md:text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${currentView === view
+                ? "bg-primary text-white"
+                : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
             >
               {label}
             </button>
@@ -174,7 +261,6 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
             </option>
           ))}
         </select>
-        {extraFilters}
       </div>
 
       {/* Center: title */}
@@ -215,7 +301,7 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
   );
 
   return (
-    <div className={`${classes.fullCalendar} fullCalendarCommon relative`}>
+    <div ref={wrapperRef} className={`${classes.fullCalendar} fullCalendarCommon relative`}>
       {loading && (
         <div className="absolute inset-0 z-10 bg-white/60 flex items-center justify-center rounded-lg cursor-not-allowed">
           <div className="flex flex-col items-center gap-2 text-sm text-gray-500 font-medium">
@@ -237,7 +323,6 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
         eventClick={(e) => openEvent(e)}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView="dayGridMonth"
-        initialDate={initDate}
         headerToolbar={false}
         contentHeight={getContentHeight()}
         aspectRatio={windowWidth < 768 ? 1.2 : 1.8}
@@ -246,28 +331,55 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
           setCurrentView(info.view.type);
           setToolbarTitle(info.view.title);
         }}
+        dayCellClassNames={(arg) =>
+          festivalMap[toDateKey(arg.date)] ? ["has-festival"] : []
+        }
+        dayCellContent={(arg) => {
+          const key = toDateKey(arg.date);
+          const names = festivalMap[key] || [];
+
+          return (
+            <div className="fday">
+              <span
+                className="fday__name"
+                {...(names.length > 0
+                  ? { "data-festival": JSON.stringify(names), "data-date": key }
+                  : {})}
+              >
+                {names.length > 0 && (
+                  <>
+                    <i className="fday__mark">◆</i>
+                    {names[0]}
+                    {names.length > 1 && <b> +{names.length - 1}</b>}
+                  </>
+                )}
+              </span>
+              <span className="fday__num">{arg.dayNumberText}</span>
+            </div>
+          );
+        }}
         eventDidMount={(info) => {
-  const { event, el } = info;
-  const raw = event.extendedProps.raw; // grouped follow-up items, if present
-  const first = Array.isArray(raw) ? raw[0] : null;
+          const { event, el } = info;
 
-  const company = event.extendedProps.company;
-  const contact = event.extendedProps.contact;
-  const email = event.extendedProps.email;
+          const raw = event.extendedProps.raw; // grouped follow-up items, if present
+          const first = Array.isArray(raw) ? raw[0] : null;
 
-  // Fall back to the first grouped item's fields when `raw` is present,
-  // otherwise use the flat extendedProps (used by other calendars).
-  const time = first?.followupDate || event.extendedProps.time || "";
-  const address = event.extendedProps.address || "";
-  const events = first?.description || event.extendedProps.event || "";
-  const mobile = first?.managerName || event.extendedProps.mobile || "";
-  const clientName = first?.clientName || event.extendedProps.clientName || "";
-  const banquetHallName = event.extendedProps.banquetHallName || "";
-  const locationText = banquetHallName || address;
+          const company = event.extendedProps.company;
+          const contact = event.extendedProps.contact;
+          const email = event.extendedProps.email;
 
-  const tooltipContent =
-    company || email || contact
-      ? `
+          // Fall back to the first grouped item's fields when `raw` is present,
+          // otherwise use the flat extendedProps (used by other calendars).
+          const time = first?.followupDate || event.extendedProps.time || "";
+          const address = event.extendedProps.address || "";
+          const events = first?.description || event.extendedProps.event || "";
+          const mobile = first?.managerName || event.extendedProps.mobile || "";
+          const banquetHallName = event.extendedProps.banquetHallName || "";
+          const locationText = banquetHallName || address;
+
+          const tooltipContent =
+            company || email || contact
+              ? `
         <div class="p-1">
           <p class="mb-1"><strong>${event.title}</strong></p>
           <p class="mb-1"><i class="me-1 ki-filled ki-briefcase text-success"></i>
@@ -278,25 +390,22 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
             <span>${email || "N/A"}</span></p>
         </div>
       `
-      : `
-            
+              : `
         <div class="p-1">
           <p class="mb-1"><strong>${event.title}</strong></p>
-          ${clientName ? `<p class="mb-1"><i class="me-1 ki-filled ki-user text-success"></i><span>${clientName}</span></p>` : ""}
           <p class="mb-1"><i class="me-1 ki-filled ki-calendar-tick text-success"></i><span>${events}</span></p>
           <p class="mb-1"><i class="me-1 ki-filled ki-call text-success"></i><span>${mobile}</span></p>
           <p class="mb-1"><i class="me-1 ki-filled ki-time text-success"></i><span>${time}</span></p>
           ${locationText ? `<p class="mb-1"><i class="me-1 ki-filled ki-geolocation text-success"></i><span>${locationText}</span></p>` : ""}
         </div>
-     
       `;
 
-  tippy(el, {
-    content: tooltipContent,
-    allowHTML: true,
-    theme: "light",
-  });
-}}
+          tippy(el, {
+            content: tooltipContent,
+            allowHTML: true,
+            theme: "light",
+          });
+        }}
       />
     </div>
   );
