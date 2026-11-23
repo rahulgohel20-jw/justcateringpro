@@ -23,11 +23,16 @@ import workerUrl from "pdfjs-dist/build/pdf.worker.min.js?url";
 import { Send } from "lucide-react";
 import { WhatsAppOutlined } from "@ant-design/icons";
 import WhatsAppShareModal from "../../../partials/modals/menu-report/WhatsAppShareModal";
+import { useModuleAccess } from "../../../hooks/useModuleAccess";
 
 
 
 
-
+const toDMY = (d) => {
+  if (!d) return "";
+  const [y, m, day] = d.split("-");
+  return `${day}/${m}/${y}`;
+};
 
 const EXCLUSIVE_MODULE_NAMES = ["Exclusive Theme", "Back Office Theme"];
 
@@ -156,6 +161,8 @@ const ConfigModal = ({
   isQuotationFlow,
 }) => {
   const userId = localStorage.getItem("userId");
+   const { hasModuleAccess } = useModuleAccess();            
+  const canAccessDecor = hasModuleAccess("Decor");  
   const canShowRoomDetails = String(userId) === "757";
   const [selectedLanguage, setSelectedLanguage] = useState("english");
   const [isQrcode, setIsQrcode] = useState(false);
@@ -238,7 +245,7 @@ const ConfigModal = ({
             categorySlogan: config.isCategorySlogan,
             categoryInstruction: config.isCategoryInstruction,
             categoryImage: config.isCategoryImage,
-            isAddDecoration: config.isAddDecoration,
+           isAddDecoration: canAccessDecor && config.isAddDecoration,
             itemSlogan: config.isItemSlogan,
             itemInstruction: config.isItemInstruction,
             companyLogo: config.isCompanyLogo,
@@ -316,7 +323,7 @@ const ConfigModal = ({
               isHalfPax: config.isHalfPax === 0,
               isOnePage: config.isOnePage === 0,
               isAdvancedPay: config.isAdvancedPay === 1,
-              isAddDecoration: config.isAddDecoration === 0,
+            isAddDecoration: canAccessDecor && config.isAddDecoration === 0,
               isShowEventRemarks: config.isShowEventRemarks === 1,
               showAdditional: config.showAdditional === 0,
               isAgencyNextPage: config.isAgencyNextPage === 0,
@@ -439,7 +446,7 @@ const ConfigModal = ({
 
   return (
     <Modal
-      open={open}
+     open={open}
       onCancel={onClose}
       title={
         <span className="text-base font-semibold text-gray-800">
@@ -728,8 +735,7 @@ const getCompanyAuthInfo = () => {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobileNumber, partyName, invoiceId = null, }) => {
-  const [selectedThemes, setSelectedThemes] = useState({}); // { [moduleId]: themeId }
+const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobileNumber, partyName, invoiceId = null, directTheme = null, startDate, endDate, partyId }) => {  const [selectedThemes, setSelectedThemes] = useState({}); // { [moduleId]: themeId }
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -761,16 +767,28 @@ const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobi
 
 
   useEffect(() => {
-    if (open) fetchAllModulesWithThemes();
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) {
-      setSelectedThemes({});
-      setModules([]);
-      setError(null);
-    }
-  }, [open]);
+  if (!open) return;
+  if (directTheme) {
+    setModules([
+      {
+        id: directTheme.moduleId,
+        name: directTheme.moduleName,
+        nameEnglish: "QUOTATION REPORTS",
+        isExclusive: false,
+        themes: [
+          {
+            id: directTheme.themeId,
+            templateMappingResponseDto: { id: directTheme.mappingId },
+          },
+        ],
+      },
+    ]);
+    setSelectedThemes({ [directTheme.moduleId]: directTheme.themeId });
+    setIsConfigOpen(true); // go straight to configuration
+  } else {
+    fetchAllModulesWithThemes();
+  }
+}, [open, directTheme]);
 
 
 
@@ -907,6 +925,7 @@ const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobi
     isSignature = 0,
     isShowCashAmount = 0,
     isShowChequeAmount = 0,
+    
   } = {}) => {
     setLoadingPdf(true);
     try {
@@ -944,6 +963,9 @@ const InvoiceTheme = ({ open, onClose, eventId, isinvoice, isDecor = false, mobi
             isShowCashAmount,
             isShowChequeAmount,
             isinvoice === 0 ? (invoiceId ?? 0) : 0,
+            toDMY(startDate),
+toDMY(endDate),
+partyId || -1,
           ),
         ),
       );
@@ -1100,15 +1122,22 @@ const { data } = await AddExclusiveReport(formData);
   };
 
 
-  const mergePdfUrls = async (urls) => {
-    if (urls.length === 1) return urls[0];
+const withBust = (url) =>
+  url.startsWith("blob:") ? url : `${url}${url.includes("?") ? "&" : "?"}_t=${Date.now()}`;
 
-    console.time("1-download");
-    const buffers = await Promise.all(urls.map(async (url) => {
-      const res = await fetch(url);
+const mergePdfUrls = async (urls) => {
+  if (urls.length === 1) return withBust(urls[0]);   // single PDF: bust cache too
+
+  const buffers = await Promise.all(
+    urls.map(async (url) => {
+      const res = await fetch(withBust(url), { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.arrayBuffer();
-    }));
+    }),
+  );
+
+    console.time("1-download");
+  
     console.timeEnd("1-download");
 
     console.time("2-parse");
@@ -1406,7 +1435,7 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
             />
           </span>
         }
-        open={open}
+       open={open && !directTheme}
         onCancel={onClose}
         width={900}
         style={{ top: 20 }}
@@ -1496,6 +1525,18 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
                   return false;
                 }
 
+
+// Quotation page only: hide QUOTATION REPORTS -> Type 13 for userId 84
+const isQuotationReports =
+  module.nameEnglish?.trim().toUpperCase() === "QUOTATION REPORTS";
+if (
+  String(userId) === "84" &&
+  isinvoice !== 0 &&
+  isQuotationReports &&
+  themeType?.trim() === "Type 13"
+) {
+  return false;
+}
                 return true;
               });
 
@@ -1620,8 +1661,10 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
       {isConfigOpen && (
         <ConfigModal
           open={isConfigOpen}
-          onClose={() => setIsConfigOpen(false)}
-          onGenerate={handleConfigGenerate}
+onClose={() => {
+  setIsConfigOpen(false);
+  if (directTheme) onClose();
+}}          onGenerate={handleConfigGenerate}
           selectedModules={exclusiveModulesSelected}
           loading={generatingPdf}
           isExclusiveFlow={hasExclusiveSelected}
@@ -1678,15 +1721,16 @@ const handleWhatsAppSend = async (mobile, recipientName) => {
         }
       >
         <div style={{ height: "70vh" }}>
-          {pdfUrl && (
-            <Worker workerUrl={workerUrl}>
-              <Viewer
-                fileUrl={pdfUrl}
-                plugins={[pdfPlugin]}
-                defaultScale={1.0}
-              />
-            </Worker>
-          )}
+        {pdfUrl && (
+  <Worker workerUrl={workerUrl}>
+    <Viewer
+      key={pdfUrl}
+      fileUrl={pdfUrl}
+      plugins={[pdfPlugin]}
+      defaultScale={1.0}
+    />
+  </Worker>
+)}
         </div>
       </Modal>
     </>

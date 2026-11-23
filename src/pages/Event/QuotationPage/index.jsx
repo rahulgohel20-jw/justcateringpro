@@ -4212,7 +4212,9 @@ const handleLockReport = async () => {
       (chequePayment > 0
         ? cashPayment + calcGstOnAmount(chequePayment) + parseFloat(totals.roundOffAmount)
         : parseFloat(totals.amountAfterDiscount) + parseFloat(totals.totalTaxAmount) + parseFloat(totals.roundOffAmount))
-      + food + service + vat
+          + parseFloat(totals.foodTaxTotalAmount)
+      + parseFloat(totals.serviceTaxTotalAmount)
+      + parseFloat(totals.vatTaxTotalAmount)
     ).toFixed(2)}
       </div>
       {(parseFloat(totals.foodTaxTotalAmount) +

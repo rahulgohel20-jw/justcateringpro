@@ -287,10 +287,40 @@ export const GetQuotationReport = (
   isShowCashAmount = 0,
   isShowChequeAmount = 0,
   invoiceId = 0,
+  startDate = "",
+  endDate = "",
+  partyId = -1,
 ) => {
-  return POST(
-    `/quotationreport/generatequotation?adminTemplateModuleId=${adminTemplateModuleId}&eventId=${eventId}&lang=${language}&userId=${userId}&isInvoice=${isInvoice}&isQrCode=${isQrCode}&isTermsCond=${isTermsCond}&isAdvance=${isAdvance}&isWithPrice=${isWithPrice}&isCompanyDetails=${isCompanyDetails}&isDecore=${isDecor}&isOnePage=${isOnePage}&isCombo=${isCombo}&isNotes=${isNotes}&exclusiveThemeId=${exclusiveThemeId}&backOfficeId=${backOfficeId}&showLastPage=${showLastPage}&isSignature=${isSignature}&isShowCashAmount=${isShowCashAmount}&isShowChequeAmount=${isShowChequeAmount}&invoiceId=${invoiceId}`,
-  );
+  const params = new URLSearchParams({
+    adminTemplateModuleId,
+    eventId,
+    lang: language,
+    userId,
+    isInvoice,
+    isQrCode,
+    isTermsCond,
+    isAdvance,
+    isWithPrice,
+    isCompanyDetails,
+    isDecore: isDecor,
+    isOnePage,
+    isCombo,
+    isNotes,
+    exclusiveThemeId,
+    backOfficeId,
+    showLastPage,
+    isSignature,
+    isShowCashAmount,
+    isShowChequeAmount,
+    invoiceId,
+  });
+
+  // Only send the date range and party when they are provided
+  if (startDate) params.append("startDate", startDate);
+  if (endDate) params.append("endDate", endDate);
+  if (partyId && Number(partyId) !== -1) params.append("partyId", partyId);
+
+  return POST(`/quotationreport/generatequotation?${params.toString()}`);
 };
 
 export const GetAllQuotationByFilter = (enddate, startdate, userid, id, isVenue) => {
