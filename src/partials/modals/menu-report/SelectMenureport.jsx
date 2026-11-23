@@ -726,7 +726,12 @@ else if (selectedTab?.nameEnglish === "Raw Material Theme") {
                   ) {
                     return false;
                   }
-
+if (
+  tabName === "Inside Agency Theme" &&
+  template.type === "Type 1"
+) {
+  return false;
+}
                   if (
                     tabName === "Raw Material Theme" &&
                     template.type === "Type 6"

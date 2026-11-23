@@ -1322,7 +1322,7 @@ const MenuReport = ({
       adminTemplateModuleId: isAdminModuleReport
         ? (selectedTemplateId ?? mappingId)
         : (selectedTemplateId ?? 0),
-      type: reportType || null,
+    type: agencyType === "inside" ? "inside" : (reportType || null),
       userId,
       lang: selectedLanguage === "english" ? 0 : selectedLanguage === "hindi" ? 1 : 2,
       isCategoryImage: opts.categoryImage,
