@@ -258,7 +258,7 @@ const SHORT_MENU_TEMPLATE_NAME = "Short Menu Report";
 
 const isFlagOn = (v) => v === true || v === 1 || v === "1" || v === "true";   // NEW
 
-const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails }) => ({
+const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails  , canAccessDecor }) => ({
   categorySlogan: config.isCategorySlogan === 0,
   categoryInstruction: config.isCategoryInstruction === 1,
   categoryImage: config.isCategoryImage === 0,
@@ -284,7 +284,7 @@ const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock, ca
   isHalfPax: isDefaultHalfPaxOn ? true : config.isHalfPax === 0,
   is3Column: config.is3Column === 0,
   isFunctionNextPage: config.isFunctionNextPage === 1,
-  isAddDecoration: config.isAddDecoration === 0,
+   isAddDecoration: canAccessDecor && config.isAddDecoration === 0,
   isOnePage: config.isOnePage === 0,
   isShowEventRemarks: config.isShowEventRemarks === 0,
   showAdditional: config.showAdditional === 0,
@@ -309,7 +309,7 @@ const buildOptionsFromConfig = (config, { isDefaultHalfPaxOn, canAccessStock, ca
   showLastPage: false,
 });
 
-const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails }) =>
+const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails ,canAccessDecor  }) =>
   Object.entries({
     CompanyInfo: config.isCompanyDetails,
     categorySlogan: config.isCategorySlogan,
@@ -335,7 +335,7 @@ const getVisibleOptionKeys = (config, { isDefaultHalfPaxOn, canAccessStock, canS
     isHalfPax: isDefaultHalfPaxOn ? true : config.isHalfPax,
     is3Column: config.is3Column,
     isFunctionNextPage: config.isFunctionNextPage,
-    isAddDecoration: config.isAddDecoration,
+   isAddDecoration: canAccessDecor && config.isAddDecoration,
     isOnePage: config.isOnePage,
     isShowEventRemarks: config.isShowEventRemarks,
     showAdditional: config.showAdditional,
@@ -481,6 +481,7 @@ const MenuReport = ({
   }, [loading]);
   const { hasModuleAccess } = useModuleAccess();
     const candirectsharewhatapp = hasModuleAccess("Direct Share on Whatsapp");
+    const canAccessDecor = hasModuleAccess("Decor");
   const [options, setOptions] = useState({});
   const [showNamePlateUI, setShowNamePlateUI] = useState(false);
   const [isDropdownStatus, setisDropdownStatus] = useState();
@@ -858,7 +859,7 @@ const MenuReport = ({
           isHalfPax: isDefaultHalfPaxOn ? true : config.isHalfPax === 0,
           is3Column: config.is3Column === 0,
           isFunctionNextPage: config.isFunctionNextPage === 1,
-          isAddDecoration: config.isAddDecoration === 0,
+          isAddDecoration: canAccessDecor && config.isAddDecoration === 0,
           isOnePage: config.isOnePage === 0,
           isShowEventRemarks: config.isShowEventRemarks === 0,
           showAdditional: config.showAdditional === 0,
@@ -910,7 +911,7 @@ const MenuReport = ({
             isHalfPax: isDefaultHalfPaxOn ? true : config.isHalfPax,
             is3Column: config.is3Column,
             isFunctionNextPage: config.isFunctionNextPage,
-            isAddDecoration: config.isAddDecoration,
+        isAddDecoration: canAccessDecor && config.isAddDecoration,
             isOnePage: config.isOnePage,
             isShowEventRemarks: config.isShowEventRemarks,
             showAdditional: config.showAdditional,
@@ -942,7 +943,7 @@ const MenuReport = ({
       }
     };
     fetchConfig();
-  }, [isModalOpen, mappingId, moduleId, isAdminModuleReport, agencyType, isDefaultHalfPaxOn]);
+  }, [isModalOpen, mappingId, moduleId, isAdminModuleReport, agencyType, isDefaultHalfPaxOn , canAccessDecor]);
 
   useEffect(() => {
     if (!isModalOpen || isDropdownStatus !== 1 || isAdminModuleReport) return;
@@ -1172,7 +1173,7 @@ const MenuReport = ({
         const cfg = cfgRes?.data?.data?.[0];
         if (!cfg || cancelled) return;
 
-        const ctx = { isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails };
+        const ctx = { isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails , canAccessDecor  };
         setShortMenuOptions(buildOptionsFromConfig(cfg, ctx));
         setShortMenuVisibleOptions(getVisibleOptionKeys(cfg, ctx));
         setShortMenuHasItems(cfg.isItem === 1);
@@ -1191,7 +1192,7 @@ const MenuReport = ({
     return () => {
       cancelled = true;
     };
-  }, [isModalOpen, addShortMenu, userId, isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails]);
+  }, [isModalOpen, addShortMenu, userId, isDefaultHalfPaxOn, canAccessStock, canShowRoomDetails , canAccessDecor]);
 
   // Load items for the Short Menu (its config has isItem = 1)
   useEffect(() => {

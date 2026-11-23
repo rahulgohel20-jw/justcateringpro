@@ -13,6 +13,7 @@ import MenuReport from "../../../partials/modals/menu-report/MenuReport";
 import { useReportPermission } from "@/hooks/useReportPermission";
 import Swal from "sweetalert2";
 import { Select } from "antd";
+import InvoiceTheme from "../AddInvoicePage/InvoiceTheme";
 const AGENCY_MODULES = [
   "Chef Agency Theme",
   "Labour Agency Theme",
@@ -73,7 +74,9 @@ export default function AdminModuleReport() {
   const [selectedTemplateIsDate, setSelectedTemplateIsDate] = useState(0);
 const [menuParties, setMenuParties] = useState([]);
 const [partyError, setPartyError] = useState(false);
+const [isQuotationThemeOpen, setIsQuotationThemeOpen] = useState(false);
 
+const [quotationDirect, setQuotationDirect] = useState(null);
   const getLangValue = (obj, baseKey) => {
     if (!obj) return "";
     if (activeLang === "hi")
@@ -344,8 +347,13 @@ useEffect(() => {
   setIsManager(false);
 }
 else if (module.nameEnglish === "QUOTATION REPORTS") {
-  setAgencyType("quotation");
-  setIsManager(false);
+  setQuotationDirect({
+    moduleId: module.id,
+    moduleName: module.name,
+    themeId: template.id,
+    mappingId: template.mappingId,
+  });
+  return;
 }
  else {
     setAgencyType("");
@@ -721,6 +729,19 @@ if (activeTab === "quotation")
         selectedParty={selectedParty}
         isManager={isManager}
       />
+     <InvoiceTheme
+  open={!!quotationDirect}
+  onClose={() => setQuotationDirect(null)}
+  directTheme={quotationDirect}
+  eventId={-1}
+  isinvoice={1}
+  isDecor={false}
+  mobileNumber={partyNumber}
+  partyName={eventName}
+  startDate={startDate}
+  endDate={endDate}
+  partyId={selectedParty}
+/>
     </Fragment>
   );
 }

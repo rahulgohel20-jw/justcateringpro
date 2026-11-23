@@ -685,12 +685,14 @@ isExtraCharges: item.isExtraCharges === true,
       setRows(mappedRows);
       setOriginalRows(mappedRows); 
 if (showRemaining) {
-  const qRemaining =
+   const qRemaining =
     (parseFloat(qInfo.chequePayment) || 0) +
     (parseFloat(qInfo.cgstAmnt) || 0) +
     (parseFloat(qInfo.cgstAmntDecor) || 0) +
+    (parseFloat(qInfo.cgstAmntHallRent) || 0) +
     (parseFloat(qInfo.sgstAmnt) || 0) +
-    (parseFloat(qInfo.sgstAmntDecor) || 0);
+    (parseFloat(qInfo.sgstAmntDecor) || 0) +
+    (parseFloat(qInfo.sgstAmntHallRent) || 0);
   setSavedRemaining(qRemaining);
 }
      const prevExtraTax =
