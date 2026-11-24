@@ -11,6 +11,7 @@ import {
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { FormattedMessage, useIntl } from "react-intl";
+import { logExpense, diffFields } from "@/utils/expenseLog";  
 // ✅ TAB_CONFIG removed — only import what Expenseconfig still exports
 import {
   PAYMENT_METHODS,
@@ -327,6 +328,50 @@ const config = getTabConfig(expenseType, intl);
     handleFiles(e.dataTransfer.files, setFieldValue, currentFiles);
   };
 
+const nameOf = (id) =>
+  managers.find((m) => String(m.value) === String(id))?.label ?? id ?? "-";
+
+const FIELDS = [
+  ["title", "Title"],
+  ["contact", "Account Contact"],
+  ["expenseDate", "Expense Date"],
+  ["paidDate", "Paid Date"],
+  ["dueDate", "Due Date"],
+  ["amount", "Amount"],
+  ["paymentMethod", "Payment Mode"],
+  ["remarks", "Remarks"],
+];
+
+const logSimpleExpense = (values) => {
+  const isUpdate = !!values.id;
+  const prev = buildInitialValues(editData);
+
+  const lines = isUpdate
+    ? diffFields(
+        { ...prev, contact: nameOf(prev.employeeId) },
+        { ...values, contact: nameOf(values.employeeId) },
+        FIELDS,
+      )
+    : [
+        `Account Contact: ${nameOf(values.employeeId)}`,
+        `Amount: ₹${values.amount}`,
+        `Date: ${values.expenseDate}`,
+        `Payment Mode: ${values.paymentMethod}`,
+        `Remarks: ${values.remarks || "-"}`,
+      ];
+
+  if (values.billFiles?.length) {
+    lines.push(`New bills uploaded: ${values.billFiles.length}`);
+  }
+
+  logExpense({
+    action: isUpdate ? "Update" : "Save",
+    expenseType,
+    title: values.title,
+    lines: lines.length ? lines : ["No field changes detected."],
+  });
+};
+
   const handleSubmit = async (values, { setSubmitting }) => {
   setApiError("");
 
@@ -349,17 +394,22 @@ const config = getTabConfig(expenseType, intl);
       isSuperAdmin,
       expenseType,
     );
-    const res = await AddOrUpdateOfficeExpense(fd);
-    if (res?.data?.success || res?.success) {
-      await Swal.fire({
-        icon: "success",
-        title: "Success",
-        text: res?.data?.msg || res?.msg || "Saved successfully",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      onClose();
-    } else {
+   const res = await AddOrUpdateOfficeExpense(fd);
+if (res?.data?.success || res?.success) {
+  try {
+    logSimpleExpense(values);
+  } catch (logErr) {
+    console.error("logExpense failed:", logErr);
+  }
+  await Swal.fire({
+    icon: "success",
+    title: "Success",
+    text: res?.data?.msg || res?.msg || "Saved successfully",
+    timer: 1500,
+    showConfirmButton: false,
+  });
+  onClose();
+}else {
       throw new Error(res?.data?.msg || res?.msg || "Something went wrong");
     }
   } catch (err) {

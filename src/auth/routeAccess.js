@@ -27,10 +27,10 @@ let rules;
 const getRules = () => {
   if (!rules) {
     const map = new Map();
-    flatten(allMenuItems(() => { })).forEach((r) => map.set(r.path, r));
-    if (Array.isArray(superAdminMenuItems)) {
-      flatten(superAdminMenuItems).forEach((r) => map.set(r.path, r));
-    }
+  if (Array.isArray(superAdminMenuItems)) {
+  flatten(superAdminMenuItems).forEach((r) => map.set(r.path, r));
+}
+flatten(allMenuItems(() => { })).forEach((r) => map.set(r.path, r));
     OVERRIDES.forEach((r) => map.set(r.path, r)); // overrides replace menu entries
     rules = [...map.values()].sort((a, b) => b.path.length - a.path.length); // longest prefix wins
   }

@@ -32,7 +32,8 @@ import {
   Section,
   SubmitFooter,
 } from "./Expenseconfig";
-
+import { usePermission } from "../../../hooks/usePermission";
+import { logExpense, diffFields } from "@/utils/expenseLog";
 const COMPLEX_TAB_CONFIG = {
   trip: {
     label: "Trip Expense",
@@ -122,7 +123,7 @@ const ComplexExpenseForm = ({
   // ✅ storageUserId maps to payload "adminId"
   const storageUserId = Number(localStorage.getItem("userId"));
   const isSuperAdmin = storageMainId  === 1;
-
+const accountContactPerm = usePermission("Account Contact");
   const [rowPreviews, setRowPreviews] = useState({});
   const [apiError, setApiError] = useState("");
   const [cityOptions, setCityOptions] = useState([]);
@@ -146,20 +147,24 @@ const ComplexExpenseForm = ({
   const authStorage = JSON.parse(localStorage.getItem("auth-storage"));
 
   const roleId = getRoleId();
-  const refreshMembers = () => {
-    GetAllAccountContactMaster(storageMainId  )
-      .then((res) => {
-        const list = res?.data?.data ?? [];
-        setMembers(
-          list.map((m) => ({
-            value: m.accountContactId,
-            label: m.name || "-",
-            subtitle: m.memberType || "",
-          })),
-        );
-      })
-      .catch(() => setMembers([]));
-  };
+  const refreshMembers = async () => {
+  const [contactsRes] = await Promise.allSettled([
+    GetAllAccountContactMaster(storageUserId),
+  ]);
+
+  const contacts =
+    contactsRes.status === "fulfilled"
+      ? (contactsRes.value?.data?.data ?? []).map((m) => ({
+          value: m.accountContactId,
+          label: m.name || "-",
+          subtitle: m.memberType || "Account Contact",
+        }))
+      : [];
+
+  setMembers(contacts);
+};
+
+  
 
   useEffect(() => {
     if (isOpen) {
@@ -231,6 +236,64 @@ const ComplexExpenseForm = ({
     }));
   };
 
+  const nameOf = (id) =>
+  members.find((m) => String(m.value) === String(id))?.label ?? id ?? "-";
+const cityOf = (id) =>
+  citySelectOptions.find((c) => c.value === id)?.label ?? id ?? "-";
+
+const logTripExpense = (values) => {
+  const isUpdate = !!values.id;
+  const prev = buildInitialValues(editData);
+  let lines;
+
+  if (isUpdate) {
+    lines = diffFields(
+      { ...prev, member: nameOf(prev.memberId), from: cityOf(prev.fromCity), to: cityOf(prev.toCity) },
+      { ...values, member: nameOf(values.memberId), from: cityOf(values.fromCity), to: cityOf(values.toCity) },
+      [
+        ["tripName", "Trip Title"], ["member", "Claimant"],
+        ["startDate", "From Date"], ["endDate", "To Date"],
+        ["from", "From City"], ["to", "To City"],
+        ["dueDate", "Due Date"], ["paidDate", "Paid Date"],
+        ["amount", "Total Amount"], ["remark", "Remarks"],
+      ],
+    );
+
+    const prevMap = new Map(prev.expenseRows.map((r) => [r.id, r]));
+    values.expenseRows.forEach((r, i) => {
+      const p = prevMap.get(r.id);
+      if (r.id === -1 || !p) {
+        lines.push(`Expense #${i + 1} added (${r.description || "-"}, ₹${r.amount || 0}, ${r.paymentMode})`);
+      } else {
+        diffFields(p, r, [
+          ["description", "Description"], ["date", "Date"], ["amount", "Amount"],
+          ["paymentMode", "Mode"], ["km", "KM"],
+        ]).forEach((l) => lines.push(`Expense #${i + 1} ${l}`));
+        if (r.file instanceof File) lines.push(`Expense #${i + 1} bill replaced`);
+      }
+    });
+    prev.expenseRows
+      .filter((p) => !values.expenseRows.some((r) => r.id === p.id))
+      .forEach((p) => lines.push(`Expense removed (${p.description || "-"}, ₹${p.amount || 0})`));
+  } else {
+    lines = [
+      `Claimant: ${nameOf(values.memberId)}`,
+      `Dates: ${values.startDate} → ${values.endDate || "-"}`,
+      `Cities: ${cityOf(values.fromCity)} → ${cityOf(values.toCity)}`,
+      `Total: ₹${values.amount}`,
+      ...values.expenseRows.map(
+        (r, i) => `Expense #${i + 1}: ${r.description || "-"} | ₹${r.amount || 0} | ${r.paymentMode} | KM ${r.km || 0}`,
+      ),
+    ];
+  }
+
+  logExpense({
+    action: isUpdate ? "Update" : "Save",
+    expenseType,
+    title: values[titleKey],
+    lines: lines.length ? lines : ["No field changes detected."],
+  });
+};
  const handleSubmit = async (values, { setSubmitting }) => {
   setApiError("");
 
@@ -257,6 +320,7 @@ const ComplexExpenseForm = ({
     );
     const res = await Addupdateemployeeexpense(fd);
     if (res?.data?.success || res?.success) {
+      logTripExpense(values);
       await Swal.fire({
         icon: "success",
         title: "Success",
@@ -477,7 +541,7 @@ const ComplexExpenseForm = ({
                             />
                           </div>
 
-                          {[1, 2].includes(Number(roleId)) && (
+                         {accountContactPerm.add && (
                             <button
                               type="button"
                               onClick={() => setAddMemberOpen(true)}

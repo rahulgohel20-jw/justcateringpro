@@ -11,7 +11,6 @@ import { useLanguage } from "@/i18n";
 import { useEffect, useState, useRef, useMemo } from "react";
 
 // Vite: import.meta.env.VITE_GOOGLE_CAL_KEY
-// CRA:  process.env.REACT_APP_GOOGLE_CAL_KEY
 const GOOGLE_CAL_API_KEY = import.meta.env.VITE_GOOGLE_CAL_KEY;
 
 const FESTIVAL_CAL_ID = "en.indian#holiday@group.v.calendar.google.com";
@@ -41,7 +40,7 @@ const fetchFestivalRange = async (start, end) => {
   return map;
 };
 
-const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange, loading }) => {
+const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange, loading, initialDate, extraFilters }) => {
   const classes = useStyles();
   const intl = useIntl();
   const { isRTL } = useLanguage();
@@ -52,8 +51,17 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
   const prevDateRef = useRef(null);
 
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+
+  const getEffectiveInitialDate = () => {
+    if (initialDate instanceof Date && !isNaN(initialDate.getTime())) {
+      return initialDate;
+    }
+    return new Date();
+  };
+
+  const initDate = useMemo(getEffectiveInitialDate, [initialDate]);
+  const [selectedMonth, setSelectedMonth] = useState(initDate.getMonth());
+  const [selectedYear, setSelectedYear] = useState(initDate.getFullYear());
   const [toolbarTitle, setToolbarTitle] = useState("");
 
   // Festivals live in their own state, independent of the bookings `data`
@@ -214,8 +222,6 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
     { view: "listWeek", label: intl.formatMessage({ id: "USER.DASHBOARD.DASHBOARD_CALENDAR_LIST", defaultMessage: "List" }) },
   ];
 
-  // Fully custom toolbar — single row, everything inline: view pills + month/year
-  // dropdowns on the left, title centered, prev/next/Today on the right.
   const CustomToolbar = () => (
     <div className="flex items-center justify-between gap-3 mb-3 flex-wrap md:flex-nowrap">
       {/* Left: view switcher pills + month/year dropdowns */}
@@ -261,6 +267,8 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
             </option>
           ))}
         </select>
+
+        {extraFilters}
       </div>
 
       {/* Center: title */}
@@ -323,6 +331,7 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
         eventClick={(e) => openEvent(e)}
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView="dayGridMonth"
+        initialDate={initDate}
         headerToolbar={false}
         contentHeight={getContentHeight()}
         aspectRatio={windowWidth < 768 ? 1.2 : 1.8}
@@ -368,12 +377,11 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
           const contact = event.extendedProps.contact;
           const email = event.extendedProps.email;
 
-          // Fall back to the first grouped item's fields when `raw` is present,
-          // otherwise use the flat extendedProps (used by other calendars).
           const time = first?.followupDate || event.extendedProps.time || "";
           const address = event.extendedProps.address || "";
           const events = first?.description || event.extendedProps.event || "";
           const mobile = first?.managerName || event.extendedProps.mobile || "";
+          const clientName = first?.clientName || event.extendedProps.clientName || "";
           const banquetHallName = event.extendedProps.banquetHallName || "";
           const locationText = banquetHallName || address;
 
@@ -393,6 +401,7 @@ const CalendarComponent = ({ data, openEvent, handleDateClick, handleMonthChange
               : `
         <div class="p-1">
           <p class="mb-1"><strong>${event.title}</strong></p>
+          ${clientName ? `<p class="mb-1"><i class="me-1 ki-filled ki-user text-success"></i><span>${clientName}</span></p>` : ""}
           <p class="mb-1"><i class="me-1 ki-filled ki-calendar-tick text-success"></i><span>${events}</span></p>
           <p class="mb-1"><i class="me-1 ki-filled ki-call text-success"></i><span>${mobile}</span></p>
           <p class="mb-1"><i class="me-1 ki-filled ki-time text-success"></i><span>${time}</span></p>
