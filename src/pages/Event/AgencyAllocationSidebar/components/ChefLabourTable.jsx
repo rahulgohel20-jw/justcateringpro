@@ -40,7 +40,7 @@ export default function ChefLabourTable({
   const fetchUnit = async () => {
     try {
       const data = await GetUnitData(localStorage.getItem("userId"));
-      const unitData = data?.data?.data["Unit Details"] || [];
+const unitData = data?.data?.data?.["Unit Details"] || [];
       setUnit(unitData);
 
       const paxUnit = unitData.find(
@@ -75,8 +75,7 @@ export default function ChefLabourTable({
     try {
       setLoadingVendors(true);
       const data = await OutsideContactName(5, localStorage.getItem("userId"));
-      const vendorList = data?.data?.data["Party Details"] || [];
-      setVendors(vendorList);
+const vendorList = data?.data?.data?.["Party Details"] || [];      setVendors(vendorList);
     } catch (error) {
       console.error("Error fetching vendors:", error);
       setVendors([]);

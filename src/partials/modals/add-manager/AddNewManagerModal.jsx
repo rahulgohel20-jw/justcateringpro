@@ -18,6 +18,7 @@ export default function AddNewManagerModal({
   eventId,
   eventData,
   eventNo,
+  editData = null,
 }) {
   const [form, setForm] = useState({
     manager: "",
@@ -40,6 +41,8 @@ export default function AddNewManagerModal({
   const [partyId, setPartyId] = useState(null);
   const { Option } = Select;
   const [managerSearch, setManagerSearch] = useState("");
+  const [managerSearchQuery, setManagerSearchQuery] = useState("");
+  const [managerSearchDraft, setManagerSearchDraft] = useState("");
   const [managerDropdownOpen, setManagerDropdownOpen] = useState(false);
   const managerDropdownRef = useRef(null);
 
@@ -213,6 +216,9 @@ export default function AddNewManagerModal({
 
   const resetForm = () => {
     setForm(initialFormState);
+    setManagerSearch("");
+    setManagerSearchQuery("");
+    setManagerSearchDraft("");
     setShowGST(false);
     setCities([]);
   };
@@ -246,7 +252,7 @@ export default function AddNewManagerModal({
       formData.append("paymentType", form.paymentType || "");
       formData.append("mobileNo", form.mobile || "");
       formData.append("name", form.name || "");
-      formData.append("expenseId", -1);
+      formData.append("expenseId", editData ? editData.id : -1);
       formData.append("partyId", 0);
 
       // ADDRESS
@@ -309,9 +315,61 @@ export default function AddNewManagerModal({
   };
 
   const validateForm = () => {
+    if (!form.manager) return "Manager Name is required";
+    if (!form.amount || Number(form.amount) <= 0) return "Amount is required and must be greater than 0";
     if (!form.date) return "Date is required";
     return null;
   };
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (editData) {
+      const rawDate = String(editData.date || "");
+      let date = "";
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDate)) {
+        const [day, month, year] = rawDate.split("/");
+        date = `${year}-${month}-${day}`;
+      } else if (/^\d{4}-\d{2}-\d{2}/.test(rawDate)) {
+        date = rawDate.slice(0, 10);
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        manager: String(editData.managerId || ""),
+        role: editData.role || "",
+        roleId: editData.roleId || 0,
+        mobile: editData.mobile === "-" ? "" : editData.mobile || "",
+        date,
+        amount: String(editData.amount ?? ""),
+        paymentType:
+          String(editData.paymentType || "").toLowerCase() === "cash"
+            ? "cash"
+            : String(editData.paymentType || "").toLowerCase() === "online"
+              ? "online"
+              : "",
+        remarks: editData.remarks || "",
+        description: editData.remarks || "",
+        gst: editData.gst || "",
+        billFlat: editData.address || "",
+        billPincode: editData.pincode || "",
+        stateId: editData.stateId || "",
+        cityId: editData.cityId || "",
+        expenseId: editData.id || "",
+      }));
+
+      setManagerSearch(editData.name || "");
+      setManagerSearchQuery("");
+      if (editData.stateId) {
+        fetchCitiesByState(Number(editData.stateId))
+          .then((res) => setCities(res?.data?.data?.["City Details"] || []))
+          .catch(() => setCities([]));
+      }
+    } else {
+      resetForm();
+      setManagerSearch("");
+    }
+  }, [open, editData]);
 
   return (
     <AnimatePresence>
@@ -338,7 +396,7 @@ export default function AddNewManagerModal({
                   <h2 className="text-xl font-semibold text-gray-800">
                     <FormattedMessage
                       id="MANAGER.ADD.TITLE"
-                      defaultMessage="Add New Manager"
+                      defaultMessage={editData ? "Edit Manager Expense" : "Add New Manager"}
                     />
                   </h2>
                 </h2>
@@ -370,6 +428,7 @@ export default function AddNewManagerModal({
                         id="MANAGER.NAME"
                         defaultMessage="Manager Name"
                       />
+                      <span className="text-red-500">*</span>
                     </label>
 
                     {/* REPLACE the <Select>...</Select> block with: */}
@@ -381,6 +440,7 @@ export default function AddNewManagerModal({
                             : "border-gray-300 hover:border-gray-400"
                         }`}
                         onClick={() => {
+                          setManagerSearchQuery("");
                           setManagerDropdownOpen(true);
                           setTimeout(
                             () =>
@@ -399,9 +459,13 @@ export default function AddNewManagerModal({
                           value={managerSearch}
                           onChange={(e) => {
                             setManagerSearch(e.target.value);
+                            setManagerSearchQuery(e.target.value);
                             setManagerDropdownOpen(true);
                           }}
-                          onFocus={() => setManagerDropdownOpen(true)}
+                          onFocus={() => {
+                            setManagerSearchQuery("");
+                            setManagerDropdownOpen(true);
+                          }}
                         />
 
                         {/* Clear button */}
@@ -411,6 +475,7 @@ export default function AddNewManagerModal({
                             onMouseDown={(e) => {
                               e.preventDefault();
                               setManagerSearch("");
+                              setManagerSearchQuery("");
                               setManagerDropdownOpen(false);
                               setForm((prev) => ({
                                 ...prev,
@@ -460,7 +525,7 @@ export default function AddNewManagerModal({
                             {managers.filter((m) =>
                               m.label
                                 .toLowerCase()
-                                .includes(managerSearch.toLowerCase()),
+                                .includes(managerSearchQuery.toLowerCase()),
                             ).length === 0 ? (
                               <li className="px-4 py-3 text-sm text-gray-400 text-center">
                                 No managers found
@@ -470,7 +535,7 @@ export default function AddNewManagerModal({
                                 .filter((m) =>
                                   m.label
                                     .toLowerCase()
-                                    .includes(managerSearch.toLowerCase()),
+                                    .includes(managerSearchQuery.toLowerCase()),
                                 )
                                 .map((mgr) => {
                                   const isSelected =
@@ -592,11 +657,15 @@ export default function AddNewManagerModal({
                         id="COMMON.AMOUNT"
                         defaultMessage="Amount"
                       />
+                      <span className="text-red-500">*</span>
                     </label>
 
                     <input
                       name="amount"
-                      type="tel"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      required
                       value={form.amount}
                       onChange={handleInput}
                       placeholder="₹ 0.00"

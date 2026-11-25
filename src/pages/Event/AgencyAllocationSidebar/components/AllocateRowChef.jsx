@@ -68,9 +68,9 @@ export default function AllocateRowChef({
   const fetchdata = async () => {
     try {
       setLoading(true);
-      const partyMasters = await OutsideContactName(5, userid);
-      const data = partyMasters.data.data["Party Details"] || [];
-      setVendors(data);
+     const partyMasters = await OutsideContactName(5, userid);
+const data = partyMasters?.data?.data?.["Party Details"] || [];
+setVendors(data);
     } catch (error) {
       console.error("Error fetching vendors:", error);
     } finally {

@@ -43,7 +43,7 @@ import {
 import { FormattedMessage } from "react-intl";
 import { useMemo } from "react"; // add to the existing react import
 import { useExpensePermission } from "@/hooks/useExpensePermission";
-
+import { logExpense } from "@/utils/expenseLog";
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 export const formatDate = (raw) => {
   if (!raw) return "";
@@ -943,6 +943,7 @@ useEffect(() => {
 };
 
   const handleDelete = async (id) => {
+      const row = data.find((r) => r.id === id);  
     const { isConfirmed } = await Swal.fire({
       title: "Are you sure?",
       text: "This expense will be permanently deleted.",
@@ -964,6 +965,23 @@ useEffect(() => {
       simple
         ? await DeleteEmployeeExpenseoffice(id)
         : await DeleteEmployeeExpenseTrip(id);
+
+      try {
+        logExpense({
+          action: "Delete",
+          expenseType: activeTab,
+          title: row?.title,
+          lines: [
+            `Expense ID: ${id}`,
+            `Member: ${row?.memberName ?? "-"}`,
+            `Date: ${row?.startDate ?? "-"}`,
+            `Total: ₹${row?.totalAmount ?? 0} | Paid: ₹${row?.paidAmount ?? 0} | Remaining: ₹${row?.remainingAmount ?? 0}`,
+          ],
+        });
+      } catch (logErr) {
+        console.error("logExpense failed:", logErr);
+      }
+
       setData((prev) => prev.filter((item) => item.id !== id));
       Swal.fire({
         title: "Deleted!",
@@ -972,10 +990,11 @@ useEffect(() => {
         confirmButtonColor: "#1d4ed8",
         customClass: { popup: "!rounded-2xl", confirmButton: "!rounded-xl" },
       });
-    } catch {
+    } catch (err) {
+      console.error("handleDelete error:", err);
       Swal.fire({
         title: "Failed!",
-        text: "Something went wrong.",
+        text: err?.response?.data?.msg || err?.message || "Something went wrong.",
         icon: "error",
       });
     }

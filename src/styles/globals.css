@@ -712,3 +712,52 @@ html {
 }
 
 /* Festival day: gold line across the top of the cell */
+
+/* Keep the current-date badge aligned inside its calendar cell */
+.fullCalendarCommon .fc-day-today .fc-daygrid-day-top {
+  display: block !important;
+  width: 100%;
+  margin: 0 !important;
+  padding: 4px 4px 0 0 !important;
+  box-sizing: border-box;
+}
+
+.fullCalendarCommon .fc-day-today .fc-daygrid-day-number {
+  display: flex !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px;
+  margin: 0 0 0 auto !important;
+  padding: 0 !important;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  background: var(--tw-primary);
+  color: var(--tw-light) !important;
+}
+
+.fullCalendarCommon .fc-day-today .fday {
+  width: 24px;
+  height: 24px;
+  justify-content: center;
+  align-items: center;
+  gap: 0;
+}
+
+.fullCalendarCommon .fc-day-today .fday__name {
+  display: none;
+}
+
+.fullCalendarCommon .fc-day-today .fday__num {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  line-height: 24px;
+}

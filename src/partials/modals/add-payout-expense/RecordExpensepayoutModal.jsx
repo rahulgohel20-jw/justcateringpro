@@ -3,6 +3,7 @@ import { CustomModal } from "@/components/custom-modal/CustomModal";
 import { Tooltip } from "antd";
 import { TableComponent } from "@/components/table/TableComponent";
 import Swal from "sweetalert2";
+import { logExpense, diffFields } from "@/utils/expenseLog";
 import {
   CashAccountGetAll,
   GetbankdetailsbyuserId,
@@ -222,7 +223,7 @@ const RecordExpensepayoutModal = ({
   const [saving, setSaving] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-
+const [editingOriginal, setEditingOriginal] = useState(null);
   // Resolve APIs whenever expenseType changes
   const apis = getApis(expenseType);
 
@@ -288,15 +289,17 @@ const RecordExpensepayoutModal = ({
         ? String(d.cashType?.id ?? row.cashType?.id ?? "")
         : String(d.bankAccount?.id ?? row.bankAccount?.id ?? "");
 
-      setForm({
-        date: toInputDate(d.paymentDate ?? row.paymentDate),
-        mode: d.paymentMode ?? row.paymentMode ?? "CASH",
-        accountId,
-        reference: d.transactionId ?? d.chequeNo ?? "",
-        description: d.description ?? "",
-        amount: String(d.payoutAmount ?? d.amount ?? ""),
-      });
-      setEditingPayoutId(row.id);
+     const loaded = {
+  date: toInputDate(d.paymentDate ?? row.paymentDate),
+  mode: d.paymentMode ?? row.paymentMode ?? "CASH",
+  accountId,
+  reference: d.transactionId ?? d.chequeNo ?? "",
+  description: d.description ?? "",
+  amount: String(d.payoutAmount ?? d.amount ?? ""),
+};
+setForm(loaded);
+setEditingOriginal(loaded);
+setEditingPayoutId(row.id);
     } catch (err) {
       console.error("Failed to load payout for edit:", err);
       Swal.fire({
@@ -331,6 +334,20 @@ const RecordExpensepayoutModal = ({
         timer: 1500,
         showConfirmButton: false,
       });
+      logExpense({
+  action: "Payout",
+  expenseType,
+  title: customerName,
+  lines: [
+    `Payout DELETED (Expense ID: ${expenseId}, Payout ID: ${row.payoutId ?? row.id})`,
+    `Paid Amount: ₹${Number(row.amount ?? row.payoutAmount ?? 0).toFixed(2)}`,
+    `Payment Date: ${row.paymentDate ?? "-"}`,
+    `Payment Mode: ${row.paymentMode ?? "-"}`,
+    `Account: ${row.cashType?.accountName ?? row.cashType?.name ?? row.bankAccount?.bankName ?? "-"}`,
+    `Reference: ${row.transactionId || row.chequeNo || "-"}`,
+    `Status: ${row.status ?? "-"}`,
+  ],
+});
       fetchHistory();
     } catch (err) {
       console.error("Delete failed:", err);
@@ -341,6 +358,15 @@ const RecordExpensepayoutModal = ({
       });
     }
   };
+const accountLabel = (mode, id) => {
+  const list = mode === "CASH" ? cashAccounts : bankAccounts;
+  const a = list.find((x) => String(x.id) === String(id));
+  if (!a) return id || "-";
+  const last4 = String(a.accountNumber ?? "").slice(-4);
+  return a.accountName ?? a.name ?? (a.bankName ? `${a.bankName}${last4 ? ` ****${last4}` : ""}` : `#${id}`);
+};
+
+
 
   const handleSave = async () => {
     setSaving(true);
@@ -390,9 +416,42 @@ const RecordExpensepayoutModal = ({
         timer: 1500,
         showConfirmButton: false,
       });
+ const isUpdate = !!editingPayoutId;
+      const lines = isUpdate
+        ? diffFields(
+            { ...editingOriginal, account: accountLabel(editingOriginal?.mode, editingOriginal?.accountId) },
+            { ...form, account: accountLabel(form.mode, form.accountId) },
+            [
+              ["date", "Payment Date"],
+              ["mode", "Payment Mode"],
+              ["account", "Account"],
+              ["reference", "Reference"],
+              ["description", "Description"],
+              ["amount", "Paid Amount"],
+            ],
+          )
+        : [
+            `Paid Amount: ₹${payoutAmount}`,
+            `Payment Date: ${inputToDMY(form.date)}`,
+            `Payment Mode: ${form.mode}`,
+            `Account: ${accountLabel(form.mode, form.accountId)}`,
+            `Reference: ${form.reference || "-"}`,
+            `Description: ${form.description || "-"}`,
+            `Payable before: ₹${remaining.toFixed(2)} → after: ₹${newDueAmount.toFixed(2)}`,
+          ];
 
+      logExpense({
+        action: "Payout",
+        expenseType,
+        title: customerName,
+        lines: [
+          `${isUpdate ? "Payout UPDATED" : "Payout ADDED"} (Expense ID: ${expenseId}${isUpdate ? `, Payout ID: ${editingPayoutId}` : ""})`,
+          ...(lines.length ? lines : ["No field changes detected."]),
+        ],
+      });
       setForm({ ...EMPTY_FORM, date: todayISO() });
       setEditingPayoutId(null);
+      setEditingOriginal(null); 
       fetchHistory();
       onSave?.();
     } catch (err) {

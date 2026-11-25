@@ -5,13 +5,38 @@ import {
   GetAllContactType,
   Translateapi,
 } from "@/services/apiServices";
-import { Formik, Form, Field, ErrorMessage } from "formik";
+import { Formik, Form, Field, ErrorMessage, useFormikContext } from "formik";
 import * as Yup from "yup";
 import Swal from "sweetalert2";
 import { FormattedMessage, useIntl } from "react-intl";
-import { getLangConfig, extractTranslations } from "@/utils/langConfig";
+import { extractTranslations } from "@/utils/langConfig";
 import MultiLangInputBox from "../../../components/form-inputs/MultiLangInputbox";
- 
+
+// Auto-translate English name into Gujarati / Hindi (debounced).
+// Lives in its own component so hooks are not called inside Formik's render prop.
+const AutoTranslate = () => {
+  const { values, setFieldValue } = useFormikContext();
+
+  useEffect(() => {
+    if (!values.nameEnglish?.trim()) return;
+
+    const timer = setTimeout(() => {
+      Translateapi(values.nameEnglish)
+        .then((res) => {
+          const { regional, hindi } = extractTranslations(res.data);
+          setFieldValue("nameGujarati", regional);
+          setFieldValue("nameHindi", hindi);
+        })
+        .catch((err) => console.error("Translation error:", err));
+    }, 500);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.nameEnglish]);
+
+  return null;
+};
+
 const AddContactCategory = ({
   isOpen,
   onClose,
@@ -20,8 +45,6 @@ const AddContactCategory = ({
   labourOnly = false,
   excludeCustomerType = false,
 }) => {
-  if (!isOpen) return null;
- 
   const initialFormState = {
     nameEnglish: "",
     nameGujarati: "",
@@ -29,12 +52,13 @@ const AddContactCategory = ({
     sequence: "",
     contcatTypeId: "",
   };
- 
+
   const intl = useIntl();
   const [contactTypes, setContactTypes] = useState([]);
   const Id = JSON.parse(localStorage.getItem("userId"));
- 
+
   useEffect(() => {
+    if (!isOpen) return;
     if (Id) {
       GetAllContactType(1)
         .then((res) => {
@@ -46,38 +70,42 @@ const AddContactCategory = ({
         })
         .catch((err) => console.error(err));
     }
-  }, [Id, labourOnly]);
- 
+  }, [Id, labourOnly, isOpen]);
+
   const validationSchema = Yup.object().shape({
     nameEnglish: Yup.string().required("Name is required"),
     contcatTypeId: Yup.string().required("Contact Type is required"),
   });
- 
+
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
       if (!Id) {
         alert("User data not found");
         return;
       }
- 
+
       const matchedType = contactTypes.find(
-        (t) => t.nameEnglish === values.contcatTypeId
+        (t) => t.nameEnglish === values.contcatTypeId,
       );
- 
+
       const payload = {
         ...values,
         userId: Id,
         contcatTypeId: matchedType?.id ?? values.contcatTypeId,
       };
- 
+
       if (contactCategory) {
         await EditContactCategory(contactCategory.contactid, payload);
-        Swal.fire("Updated!", "Contact category updated successfully.", "success");
+        Swal.fire(
+          "Updated!",
+          "Contact category updated successfully.",
+          "success",
+        );
       } else {
         await Addcontactcategory(payload);
         Swal.fire("Saved!", "Contact category added successfully.", "success");
       }
- 
+
       refreshData();
       onClose();
       resetForm();
@@ -87,7 +115,10 @@ const AddContactCategory = ({
       setSubmitting(false);
     }
   };
- 
+
+  // Early return AFTER all hooks (fixes hooks-order problem)
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white rounded-xl w-full max-w-5xl p-6 relative overflow-y-auto max-h-[90vh]">
@@ -106,11 +137,14 @@ const AddContactCategory = ({
               />
             )}
           </h2>
-          <button onClick={() => onClose(false)} className="text-2xl text-gray-600">
+          <button
+            onClick={() => onClose(false)}
+            className="text-2xl text-gray-600"
+          >
             &times;
           </button>
         </div>
- 
+
         {/* Form */}
         <Formik
           initialValues={
@@ -119,7 +153,10 @@ const AddContactCategory = ({
                   nameEnglish: contactCategory.contact_name || "",
                   nameGujarati: contactCategory.nameGujarati || "",
                   nameHindi: contactCategory.nameHindi || "",
-                  sequence: contactCategory.sequence || "",
+                  sequence:
+                    contactCategory.sequence === "-"
+                      ? ""
+                      : contactCategory.sequence || "",
                   contcatTypeId: contactCategory.contcatTypeId || "",
                 }
               : initialFormState
@@ -129,41 +166,22 @@ const AddContactCategory = ({
           enableReinitialize
         >
           {({ isSubmitting, values, setFieldValue, errors, touched }) => {
-            const [debounceTimer, setDebounceTimer] = useState(null);
- 
             const formData = {
               nameEnglish: values.nameEnglish,
               nameGujarati: values.nameGujarati,
               nameHindi: values.nameHindi,
             };
- 
+
             const setFormData = (updated) => {
               Object.entries(updated).forEach(([key, val]) => {
                 setFieldValue(key, val);
               });
             };
- 
-            useEffect(() => {
-              if (!values.nameEnglish?.trim()) return;
- 
-              if (debounceTimer) clearTimeout(debounceTimer);
- 
-              const timer = setTimeout(() => {
-                Translateapi(values.nameEnglish)
-                  .then((res) => {
-                    const { regional, hindi } = extractTranslations(res.data);
-                    setFieldValue("nameGujarati", regional);
-                    setFieldValue("nameHindi", hindi);
-                  })
-                  .catch((err) => console.error("Translation error:", err));
-              }, 500);
- 
-              setDebounceTimer(timer);
-              return () => clearTimeout(timer);
-            }, [values.nameEnglish]);
- 
+
             return (
               <Form>
+                <AutoTranslate />
+
                 <div className="grid grid-cols-1 gap-4">
                   <MultiLangInputBox
                     label={intl.formatMessage({
@@ -180,7 +198,7 @@ const AddContactCategory = ({
                       hindi: "nameHindi",
                     }}
                   />
- 
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Contact Type Dropdown */}
                     <div className="flex flex-col">
@@ -197,10 +215,10 @@ const AddContactCategory = ({
                         className="border border-gray-300 rounded-lg p-2 w-full"
                       >
                         <option value="">
-                          <FormattedMessage
-                            id="USER.MASTER.SELECT_CONTACT_TYPE"
-                            defaultMessage="-- Select Contact Type --"
-                          />
+                          {intl.formatMessage({
+                            id: "USER.MASTER.SELECT_CONTACT_TYPE",
+                            defaultMessage: "-- Select Contact Type --",
+                          })}
                         </option>
                         {contactTypes
                           .filter((type) => type.isActive)
@@ -216,7 +234,7 @@ const AddContactCategory = ({
                         className="text-red-500 text-sm mt-1"
                       />
                     </div>
- 
+
                     {/* Sequence */}
                     <InputWithFormik
                       label={
@@ -235,7 +253,7 @@ const AddContactCategory = ({
                     />
                   </div>
                 </div>
- 
+
                 {/* Actions */}
                 <div className="flex w-full justify-end mt-6 gap-3">
                   <button
@@ -243,7 +261,10 @@ const AddContactCategory = ({
                     onClick={() => onClose(false)}
                     className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-100"
                   >
-                    <FormattedMessage id="COMMON.CANCEL" defaultMessage="Cancel" />
+                    <FormattedMessage
+                      id="COMMON.CANCEL"
+                      defaultMessage="Cancel"
+                    />
                   </button>
                   <button
                     type="submit"
@@ -251,9 +272,15 @@ const AddContactCategory = ({
                     className="bg-primary text-white px-5 py-2 rounded-lg hover:bg-primary/90 transition"
                   >
                     {contactCategory ? (
-                      <FormattedMessage id="COMMON.UPDATE" defaultMessage="Update" />
+                      <FormattedMessage
+                        id="COMMON.UPDATE"
+                        defaultMessage="Update"
+                      />
                     ) : (
-                      <FormattedMessage id="COMMON.SAVE" defaultMessage="Save" />
+                      <FormattedMessage
+                        id="COMMON.SAVE"
+                        defaultMessage="Save"
+                      />
                     )}
                   </button>
                 </div>
@@ -265,8 +292,14 @@ const AddContactCategory = ({
     </div>
   );
 };
- 
-const InputWithFormik = ({ label, name, type = "text", placeholder, required = true }) => (
+
+const InputWithFormik = ({
+  label,
+  name,
+  type = "text",
+  placeholder,
+  required = true,
+}) => (
   <div className="flex flex-col">
     <label className="block text-gray-600 mb-1">
       {label}
@@ -279,9 +312,13 @@ const InputWithFormik = ({ label, name, type = "text", placeholder, required = t
       className="border border-gray-300 rounded-lg p-2 w-full"
     />
     {required && (
-      <ErrorMessage name={name} component="div" className="text-red-500 text-sm mt-1" />
+      <ErrorMessage
+        name={name}
+        component="div"
+        className="text-red-500 text-sm mt-1"
+      />
     )}
   </div>
 );
- 
+
 export default AddContactCategory;

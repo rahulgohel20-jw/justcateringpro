@@ -219,15 +219,17 @@ export default function InHouseCookTable({
                             </BaseSelect>
                           </td>
                           <td className="p-2">
-                            <BaseInput
-                              type="tel"
-                              placeholder="0"
-                              value={allocation.counterQuantity || ""}
-                              onChange={(e) =>
-                                handleAllocationChange(menuIndex, allocationIndex, "counterQuantity", e.target.value)
-                              }
-                            />
-                          </td>
+                          
+  <BaseInput
+    type="tel"
+    placeholder="0"
+    value={allocation.number || ""}
+    onChange={(e) =>
+      handleAllocationChange(menuIndex, allocationIndex, "number", e.target.value)
+    }
+  />
+</td>
+                         
 
                           {/* Shift/Trans Price */}
                           <td className="p-2">
