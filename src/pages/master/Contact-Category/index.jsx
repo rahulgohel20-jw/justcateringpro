@@ -252,11 +252,13 @@ const ContactCategoryMaster = () => {
   // 5️⃣ EDIT HANDLER
   // --------------------------
   const handleEdit = (item) => {
-    setSelectedconatctCategory(null); // ← reset first
-    setTimeout(() => {
-      setSelectedconatctCategory(item);
-      setIsContactModalOpen(true);
-    }, 0);
+    setSelectedconatctCategory(item);
+    setIsContactModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsContactModalOpen(false);
+    setSelectedconatctCategory(null);
   };
 
   return (
@@ -343,11 +345,12 @@ const ContactCategoryMaster = () => {
           )}
         </div>
 
+        {/* FIXED: prop names now match what AddContactCategory expects */}
         <AddContactCategory
-          isModalOpen={isconatctModalOpen}
-          setIsModalOpen={setIsContactModalOpen}
+          isOpen={isconatctModalOpen}
+          onClose={handleCloseModal}
           refreshData={FetchConatctCategory}
-          selectedconatctCategory={selectedconatctCategory}
+          contactCategory={selectedconatctCategory}
         />
 
         <TableComponent

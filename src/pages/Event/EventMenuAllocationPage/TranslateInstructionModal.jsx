@@ -12,6 +12,8 @@ const TranslateInstructionModal = ({
   onChange,
 }) => {
   const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState(false); // typed, waiting for debounce
+const isTranslating = loading || pending;
   const [formData, setFormData] = useState({
     instructions: "",
     instructionsHindi: "",
@@ -33,35 +35,41 @@ const TranslateInstructionModal = ({
   }, [isOpen, sourceText, valueHindi, valueGujarati]);
 
   // ── Translation ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isOpen) return;
-    if (translateTimer.current) clearTimeout(translateTimer.current);
+ useEffect(() => {
+  if (!isOpen) return;
+  if (translateTimer.current) clearTimeout(translateTimer.current);
 
-    if (!formData.instructions?.trim()) {
-      setFormData((prev) => ({ ...prev, instructionsHindi: "", instructionsGujarati: "" }));
-      return;
-    }
+  if (!formData.instructions?.trim()) {
+    setPending(false);
+    setFormData((prev) => ({ ...prev, instructionsHindi: "", instructionsGujarati: "" }));
+    return;
+  }
 
-    translateTimer.current = setTimeout(() => {
-      handleTranslate(formData.instructions);
-    }, 600);
+  setPending(true);
+  translateTimer.current = setTimeout(() => {
+    handleTranslate(formData.instructions);
+  }, 600);
 
-    return () => clearTimeout(translateTimer.current);
-  }, [formData.instructions]);
+  return () => clearTimeout(translateTimer.current);
+}, [formData.instructions]);
 
-  const handleTranslate = async (text) => {
-    if (!text?.trim()) return;
-    setLoading(true);
-    try {
-      const res = await Translateapi(text.trim());
-      const { regional, hindi } = extractTranslations(res?.data?.data || res?.data || {});
-      setFormData((prev) => ({ ...prev, instructionsHindi: hindi, instructionsGujarati: regional }));
-    } catch (err) {
-      console.error("Translation failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+ const handleTranslate = async (text) => {
+  if (!text?.trim()) {
+    setPending(false);
+    return;
+  }
+  setLoading(true);
+  try {
+    const res = await Translateapi(text.trim());
+    const { regional, hindi } = extractTranslations(res?.data?.data || res?.data || {});
+    setFormData((prev) => ({ ...prev, instructionsHindi: hindi, instructionsGujarati: regional }));
+  } catch (err) {
+    console.error("Translation failed:", err);
+  } finally {
+    setLoading(false);
+    setPending(false);
+  }
+};
 
   if (!isOpen) return null;
 
@@ -101,14 +109,18 @@ const TranslateInstructionModal = ({
           >
             Cancel
           </button>
-          <button
-            type="button"
-            onClick={() => { onChange(formData); onClose(); }}
-            disabled={loading}
-            className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
-          >
-            {loading ? "Translating..." : "Save"}
-          </button>
+         <button
+  type="button"
+  onClick={() => {
+    if (isTranslating) return;
+    onChange(formData);
+    onClose();
+  }}
+  disabled={isTranslating}
+  className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  {isTranslating ? "Translating..." : "Save"}
+</button>
         </div>
       </div>
     </div>

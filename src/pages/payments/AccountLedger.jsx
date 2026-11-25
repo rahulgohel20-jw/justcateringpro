@@ -192,20 +192,40 @@ const handlePartyChange = (value, option) => {
         {/* Title and Actions */}
         <div className="px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-gray-900">
-  <FormattedMessage
-    id="COMMON.GENERAL_ACCOUNT_LEDGER"
-    defaultMessage="General Account Ledger"
-  />
-</h1>
+  <div className="flex items-center gap-2">
+    <h1 className="text-3xl font-semibold text-gray-900">
+      <FormattedMessage
+        id="COMMON.GENERAL_ACCOUNT_LEDGER"
+        defaultMessage="General Account Ledger"
+      />
+    </h1>
 
-<p className="text-sm text-gray-500 mt-1">
-  <FormattedMessage
-    id="COMMON.GENERAL_ACCOUNT_LEDGER_DESCRIPTION"
-    defaultMessage="View and manage detailed transaction logs for accounts."
-  />
-</p>
-          </div>
+    <div className="relative group">
+      <button
+        type="button"
+        className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-primary text-xs font-bold border-0 cursor-help"
+        aria-label="Info"
+      >
+        i
+      </button>
+      <div className="absolute z-50 hidden group-hover:block top-full left-0 mt-2 w-72 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg whitespace-normal text-left pointer-events-none">
+        <FormattedMessage
+          id="COMMON.LEDGER_ACCOUNT_NAME_INFO"
+          defaultMessage="If an account name is not showing in the party list, go to Quotation and add the Billing Name there. Only then will the account appear here."
+        />
+        <div className="absolute bottom-full left-3 border-4 border-transparent border-b-gray-900" />
+      </div>
+    </div>
+  </div>
+
+  <p className="text-sm text-gray-500 mt-1">
+    <FormattedMessage
+      id="COMMON.GENERAL_ACCOUNT_LEDGER_DESCRIPTION"
+      defaultMessage="View and manage detailed transaction logs for accounts."
+    />
+  </p>
+</div>
+
           {ledgerData.length > 0 && (
   <div className="flex flex-wrap items-center gap-3">
     <button
@@ -642,44 +662,44 @@ placeholder={
                   </tr>
                 ))
               )}
-            </tbody>
-          </table>
-        </div>
+                      </tbody>
 
-        {/* Footer Summary */}
-        <div className="px-6 py-6 bg-gray-50 border-t border-gray-200">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="text-sm font-medium text-gray-700">
-         <FormattedMessage
-  id="COMMON.AMOUNT_TO_CREDIT"
-  defaultMessage="Amount to Credit:"
-/>
-            </div>
-            <div className="flex flex-wrap gap-[26px] items-center">
-              <div className="text-sm">
-                <span className="text-primary font-semibold">
-                  {totalCredit.toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-              <div className="text-sm">
-                <span className="text-primary font-semibold">
-                  {totalDebit.toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-              <div className="px-4 py-2 bg-primary text-white font-semibold rounded-md">
-                {totalBalance.toLocaleString("en-IN", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </div>
-            </div>
-          </div>
+            {ledgerData.length > 0 && (
+              <tfoot>
+                <tr className="bg-gray-50 border-t border-gray-200">
+                  <td
+                    colSpan={7}
+                    className="px-6 py-4 text-left text-sm font-medium text-gray-700"
+                  >
+                    <FormattedMessage
+                      id="COMMON.AMOUNT_TO_CREDIT"
+                      defaultMessage="Amount to Credit:"
+                    />
+                  </td>
+                  <td className="px-4 py-4 text-center text-sm font-semibold text-primary">
+                    {totalCredit.toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="px-4 py-4 text-center text-sm font-semibold text-primary">
+                    {totalDebit.toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="px-4 py-4 text-center">
+                    <span className="inline-block px-4 py-2 bg-primary text-white text-sm font-semibold rounded-md">
+                      {totalBalance.toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
         </div>
       </div>
 

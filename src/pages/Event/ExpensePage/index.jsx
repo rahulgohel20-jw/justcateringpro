@@ -30,6 +30,7 @@ export default function ExpenseDetails() {
   const [contactType, setContactType] = useState("Supplier");
   const [openExpenseModal, setOpenExpenseModal] = useState(false);
   const [selectedManager, setSelectedManager] = useState("");
+  const [editExpense, setEditExpense] = useState(null);
 
   const [viewOpen, setViewOpen] = useState(false);
   const [viewData, setViewData] = useState(null);
@@ -137,7 +138,16 @@ export default function ExpenseDetails() {
           initials: (managerName[0] || "U").toUpperCase(),
           bgColor: "bg-blue-100",
           textColor: "text-blue-700",
-            items: e.items || [],
+          items: e.items || [],
+          managerId: e.managerId ?? null,
+          partyId: e.partyId ?? null,
+          roleId: e.roleId ?? null,
+          remarks: e.remark || e.description || "",
+          gst: e.gstin || "",
+          address: e.buildingAddress || "",
+          stateId: e.stateId ?? e.state?.id ?? "",
+          cityId: e.cityId ?? e.city?.id ?? "",
+          pincode: e.pincode || "",
         };
       });
 
@@ -182,9 +192,21 @@ export default function ExpenseDetails() {
     setOpenManagerModal(false);
     setOpenSupplierModal(false);
     setOpenExpenseModal(false);
+    setEditExpense(null);
 
     if (newExpense) {
       fetchExpenses();
+    }
+  };
+
+  const handleEditExpense = (expense) => {
+    setEditExpense(expense);
+
+    if (activeTab === "manager") {
+      setOpenManagerModal(true);
+    } else {
+      setContactType(activeTab === "customer" ? "Customer" : "Supplier");
+      setOpenSupplierModal(true);
     }
   };
 
@@ -392,6 +414,7 @@ export default function ExpenseDetails() {
                 onView={handleView}
                 onDelete={handleDeleteExpense}
                 eventId={eventId}
+                onEdit={handleEditExpense}
               />
             )}
           </div>
@@ -422,6 +445,7 @@ export default function ExpenseDetails() {
           onClose={handleModalClose}
           eventId={eventId}
           eventData={eventData}
+          editData={editExpense}
         />
         <AddSupplierCustomerModal
           open={openSupplierModal}
@@ -430,6 +454,7 @@ export default function ExpenseDetails() {
           eventId={eventId}
           eventData={eventData}
           eventNo={eventData?.eventNo}
+          editData={editExpense}
         />
         <AddExpenseModal
           open={openExpenseModal}

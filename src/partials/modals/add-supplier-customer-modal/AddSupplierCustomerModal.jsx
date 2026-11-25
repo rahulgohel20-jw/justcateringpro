@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   GetAllCustomer,
-  Fetchmanager,
   AddExpensemanagement,
   fetchStatesByCountry,
   fetchCitiesByState,
@@ -29,6 +28,7 @@ const getInitialForm = (type) => ({
   cityId: "",
   sameShipping: false,
   roleId: null,
+  managerId: null, // NEW: filled from the selected party
   image: null,
 });
 
@@ -38,17 +38,31 @@ export default function AddSupplierCustomerModal({
   type,
   eventId,
   eventNo,
+  eventData = null,
+  editData = null,
 }) {
+  // Manager id: event's manager first (party has none), then edit data
+  const eventManagerId =
+    eventData?.managerId ??
+    eventData?.manager?.id ??
+    eventData?.eventManager?.id ??
+    eventData?.assignedManagerId ??
+    null;
   const [partyList, setPartyList] = useState([]);
   const [selectedParty, setSelectedParty] = useState("");
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
 
   const userEmail = (() => {
-  try {
-    return JSON.parse(localStorage.getItem("auth-storage"))?.state?.user?.email || "";
-  } catch { return ""; }
-})();
+    try {
+      return (
+        JSON.parse(localStorage.getItem("auth-storage"))?.state?.user?.email ||
+        ""
+      );
+    } catch {
+      return "";
+    }
+  })();
 
   const [form, setForm] = useState(getInitialForm(type));
 
@@ -65,12 +79,13 @@ export default function AddSupplierCustomerModal({
   // Always start with a blank form when the modal is opened
   useEffect(() => {
     if (open) {
+      if (editData) return;
       setForm(getInitialForm(type));
       setSelectedParty("");
       setShowGST(false);
       setCities([]);
     }
-  }, [open]);
+  }, [open, editData, type]);
 
   useEffect(() => {
     if (!open) return;
@@ -129,26 +144,30 @@ export default function AddSupplierCustomerModal({
         mobile: "",
         gst: "",
         address: "",
+        managerId: null,
       })); // reset prefilled fields
     };
 
-    // Customer -> same API as the Manager Name dropdown (Fetchmanager)
+    // Customer -> load parties categorized as Customer
     if (form.type === "Customer") {
-      Fetchmanager(userId)
+      GetAllCustomer(userId)
         .then((res) => {
-          const users = res?.data?.data?.userDetails || [];
-          // map to the same shape the party dropdown already uses
-          const list = users.map((man) => ({
-            id: man.id,
-            nameEnglish: `${man.firstName || ""} ${man.lastName || ""}`.trim(),
-            mobileno: man.contactNo || "",
-            gst: man.userBasicDetails?.gstin || "",
-            addressEnglish: man.userBasicDetails?.address || "",
-            contact: {
-              contactType: { id: man.userBasicDetails?.role?.id || null },
-            },
-          }));
-          resetSelection(list);
+          const list = res?.data?.data?.["Party Details"] || [];
+          const customerList = list.filter((party) => {
+            const contactType = party.contact?.contactType;
+            const byId = Number(contactType?.id) === 1;
+            const byName =
+              String(contactType?.nameEnglish || "")
+                .trim()
+                .toLowerCase() === "customer";
+            return byId || byName;
+          });
+
+          if (editData) {
+            setPartyList(customerList);
+          } else {
+            resetSelection(customerList);
+          }
         })
         .catch((err) => {
           console.error("Failed to fetch customers", err);
@@ -164,9 +183,13 @@ export default function AddSupplierCustomerModal({
 
         // exclude customers
         const filteredList = list.filter((cust) => {
-          const typeName =
-            cust.contact?.contactType?.nameEnglish?.toLowerCase();
-          return typeName !== "customer";
+          const contactType = cust.contact?.contactType;
+          const isCustomerId = Number(contactType?.id) === 1;
+          const isCustomerName =
+            String(contactType?.nameEnglish || "")
+              .trim()
+              .toLowerCase() === "customer";
+          return !isCustomerId && !isCustomerName;
         });
 
         resetSelection(filteredList);
@@ -183,6 +206,23 @@ export default function AddSupplierCustomerModal({
     const party = partyList.find((p) => p.id === id);
     if (!party) return;
 
+    // TEMP DEBUG: remove after finding the manager id field
+    console.log("party:", party);
+    console.log(
+      "manager keys:",
+      Object.entries(party).filter(([k]) =>
+        k.toLowerCase().includes("manager"),
+      ),
+    );
+    console.log("auth user:", (() => {
+      try {
+        return JSON.parse(localStorage.getItem("auth-storage"))?.state?.user;
+      } catch {
+        return null;
+      }
+    })());
+    console.log("localStorage keys:", Object.keys(localStorage));
+
     setForm((prev) => ({
       ...prev,
       name: party.nameEnglish || "",
@@ -190,8 +230,9 @@ export default function AddSupplierCustomerModal({
       gst: party.gst || "",
       address: party.addressEnglish || "",
       countryCode: "+91",
-
-      roleId: party?.contact?.contactType?.id || null, // ✅ FIX
+      roleId: party?.contact?.contactType?.id || null,
+      // NEW: adjust this path after checking the console log above
+      managerId: party?.managerId ?? party?.manager?.id ?? null,
     }));
   };
 
@@ -215,7 +256,7 @@ export default function AddSupplierCustomerModal({
         return `${day}/${month}/${year}`;
       };
 
-      const formData = new FormData(); // ✅ CHANGED FROM payload object
+      const formData = new FormData();
 
       // BASIC
       formData.append("amount", Number(form.amount || 0));
@@ -225,15 +266,13 @@ export default function AddSupplierCustomerModal({
       formData.append("paymentType", form.paymentType || "");
       formData.append("mobileNo", form.mobile || "");
       formData.append("name", form.name || "");
-      formData.append("expenseId", -1);
-      // The selected id is always sent as partyId (backend validates it).
-      // For the Customer tab the list comes from the manager API, so the same
-      // id is also sent as managerId.
-      const isManagerSelection = form.type === "Customer";
+      formData.append("expenseId", editData ? editData.id : -1);
+      // Send the selected Customer or Supplier party ID only.
       formData.append("partyId", Number(selectedParty));
+      // managerId: party -> event -> edit data -> 0
       formData.append(
         "managerId",
-        isManagerSelection ? Number(selectedParty) : 0,
+        form.managerId ?? eventManagerId ?? editData?.managerId ?? 0,
       );
 
       // ADDRESS
@@ -251,13 +290,25 @@ export default function AddSupplierCustomerModal({
       formData.append("userType", form.type.toUpperCase());
       formData.append("gstin", form.gst || "");
 
-      // FILE  ✅ NEW
+      // FILE
       if (form.image) {
         formData.append("file", form.image);
         formData.append("document", "");
       }
 
-      const res = await AddExpensemanagement(formData); // ✅ PASS formData instead of payload
+      // TEMP DEBUG: shows exactly what is sent
+      console.log("eventData:", eventData);
+      console.log(
+        "eventData manager keys:",
+        Object.entries(eventData || {}).filter(([k]) =>
+          k.toLowerCase().includes("manager"),
+        ),
+      );
+      console.log("eventManagerId:", eventManagerId);
+      console.log("managerId sent:", formData.get("managerId"));
+      console.log("form.managerId:", form.managerId);
+
+      const res = await AddExpensemanagement(formData);
 
       // API may reply { msg, success: false } without throwing
       if (res?.data?.success === false) {
@@ -273,31 +324,31 @@ export default function AddSupplierCustomerModal({
         return;
       }
 
-     await Swal.fire({
-  title: "Success!",
-  text: `${form.type} expense added successfully`,
-  icon: "success",
-  timer: 2000,
-  showConfirmButton: false,
-});
+      await Swal.fire({
+        title: "Success!",
+        text: `${form.type} expense added successfully`,
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
 
-try {
-    await AddLogs({
-    id: 0,
-    description: `${form.type} expense added for event No: ${eventNo || eventId} — Party: ${form.name}, Amount: ${form.amount}`,
-    eventType: "Expense Save",
-    user: userEmail,
-  });
-} catch (logErr) {
-  console.error("Log failed (non-blocking):", logErr);
-}
+      try {
+        await AddLogs({
+          id: 0,
+          description: `${form.type} expense added for event No: ${eventNo || eventId} — Party: ${form.name}, Amount: ${form.amount}`,
+          eventType: "Expense Save",
+          user: userEmail,
+        });
+      } catch (logErr) {
+        console.error("Log failed (non-blocking):", logErr);
+      }
 
-setForm(getInitialForm(form.type));
-setSelectedParty("");
-setShowGST(false);
-setCities([]);
+      setForm(getInitialForm(form.type));
+      setSelectedParty("");
+      setShowGST(false);
+      setCities([]);
 
-onClose(res?.data?.data || null);
+      onClose(res?.data?.data || null);
     } catch (err) {
       console.error("Failed to add supplier/customer expense", err);
       Swal.fire({
@@ -311,6 +362,77 @@ onClose(res?.data?.data || null);
       });
     }
   };
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (!editData) return;
+
+    const selectedId = editData.partyId ?? "";
+    setSelectedParty(selectedId ? String(selectedId) : "");
+
+    setForm((prev) => ({
+      ...prev,
+      type,
+      name: editData.name || "",
+      amount: String(editData.amount ?? ""),
+      mobile: editData.mobile === "-" ? "" : editData.mobile || "",
+      paymentType:
+        String(editData.paymentType || "").toLowerCase() === "cash"
+          ? "cash"
+          : String(editData.paymentType || "").toLowerCase() === "online"
+            ? "online"
+            : "",
+      remarks: editData.remarks || "",
+      gst: editData.gst || "",
+      address: editData.address || "",
+      billFlat: editData.address || "",
+      billPincode: editData.pincode || "",
+      stateId: editData.stateId || "",
+      cityId: editData.cityId || "",
+      roleId: editData.roleId || null,
+      managerId: editData.managerId ?? null,
+    }));
+
+    if (editData.stateId) {
+      fetchCitiesByState(Number(editData.stateId))
+        .then((res) => setCities(res?.data?.data?.["City Details"] || []))
+        .catch(() => setCities([]));
+    }
+  }, [open, editData, type]);
+
+  useEffect(() => {
+    if (!open || !editData) return;
+
+    if (type === "Customer" && partyList.length > 0) {
+      const matchingCustomer = partyList.find(
+        (party) =>
+          String(party.nameEnglish || "")
+            .trim()
+            .toLowerCase() ===
+          String(editData.name || "")
+            .trim()
+            .toLowerCase(),
+      );
+
+      if (matchingCustomer) {
+        setSelectedParty(String(matchingCustomer.id));
+        setForm((prev) => ({
+          ...prev,
+          name: matchingCustomer.nameEnglish || editData.name || "",
+          mobile: matchingCustomer.mobileno || prev.mobile,
+          gst: matchingCustomer.gst || prev.gst,
+          address: matchingCustomer.addressEnglish || prev.address,
+          roleId: matchingCustomer.contact?.contactType?.id || null,
+          managerId:
+            matchingCustomer.managerId ??
+            matchingCustomer.manager?.id ??
+            prev.managerId,
+        }));
+      }
+    }
+  }, [open, editData, type, partyList]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -335,7 +457,9 @@ onClose(res?.data?.data || null);
                 <h2 className="text-xl font-semibold text-gray-800">
                   <FormattedMessage
                     id="CONTACT.ADD.TITLE"
-                    defaultMessage="Add New Supplier"
+                    defaultMessage={
+                      editData ? `Edit ${form.type}` : `Add New ${form.type}`
+                    }
                   />
                 </h2>
 
@@ -360,34 +484,10 @@ onClose(res?.data?.data || null);
               </div>
 
               <div className="overflow-y-auto p-6 space-y-6">
-                {/* <div className="ps-3">
-                  {" "}
-                  <FormattedMessage id="CONTACT.TYPE" defaultMessage="Type" />
-                </div>
-                <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-2xl w-fit">
-                  {["Supplier", "Customer"].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setForm({ ...form, type: t })}
-                      className={`
-        px-5 py-2 rounded-xl text-sm transition-all duration-200
-        ${
-          form.type === t
-            ? "bg-white font-semibold text-gray-900 shadow-sm"
-            : "text-gray-600 hover:text-gray-800"
-        }
-      `}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div> */}
-
                 <div>
                   <label className="text-sm font-medium text-gray-600">
                     {form.type === "Customer" ? (
-                      "Select Manager"
+                      "Select Customer"
                     ) : (
                       <>
                         <FormattedMessage
@@ -404,7 +504,7 @@ onClose(res?.data?.data || null);
                     showSearch
                     placeholder={
                       form.type === "Customer"
-                        ? "Select Manager"
+                        ? "Select Customer"
                         : `Select ${form.type}`
                     }
                     value={selectedParty || undefined}

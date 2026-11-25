@@ -1,5 +1,5 @@
 import { Fragment, useMemo, useState } from "react";
-import { Eye, Plus, Trash, ChevronDown } from "lucide-react";
+import { Eye, Plus, Trash, ChevronDown, Pencil } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
@@ -58,6 +58,7 @@ export default function ExpenseTable({
   onAddExpense,
   onView,
   onDelete,
+  onEdit,
 }) {
   const isManager = activeTab === "manager";
   const [page, setPage] = useState(0);
@@ -172,6 +173,11 @@ export default function ExpenseTable({
                           />
                         </>
                       )}
+                      <Pencil
+                        aria-label="Edit expense"
+                        className="w-4 h-4 md:w-5 md:h-5 text-gray-400 hover:text-blue-600 cursor-pointer flex-shrink-0"
+                        onClick={() => onEdit(row)}
+                      />
                       <Trash
                         className="w-4 h-4 md:w-5 md:h-5 text-gray-400 hover:text-red-600 cursor-pointer flex-shrink-0"
                         onClick={() => onDelete(row.id)}

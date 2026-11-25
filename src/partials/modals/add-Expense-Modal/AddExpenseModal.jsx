@@ -3,6 +3,7 @@ import { AddExpenseItem, GetAllCustomer } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { CustomModal } from "@/components/custom-modal/CustomModal";
 import { AddLogs } from "../../../services/apiServices";
+import AddVendor from "@/partials/modals/add-vendor/AddVendor";
 
 export default function AddExpenseModal({
   open,
@@ -17,6 +18,8 @@ export default function AddExpenseModal({
   const [partyList, setPartyList] = useState([]);
   const [allParties, setAllParties] = useState([]);
   const [selectedParty, setSelectedParty] = useState(undefined);
+  const [selectedPartyLabel, setSelectedPartyLabel] = useState("");
+  const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
 
   // Dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -54,6 +57,17 @@ export default function AddExpenseModal({
     setSelectedParty(undefined);
     setSearchQuery("");
     setDropdownOpen(false);
+    setSelectedPartyLabel("");
+  };
+
+  const fetchSuppliers = async () => {
+    try {
+      const res = await GetAllCustomer(userId);
+      const list = res?.data?.data?.["Party Details"] || [];
+      setAllParties(list);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   /* Close dropdown on outside click */
@@ -77,16 +91,7 @@ export default function AddExpenseModal({
   /* Fetch Party List */
   useEffect(() => {
     if (!open) return;
-    const fetchSupplier = async () => {
-      try {
-        const res = await GetAllCustomer(userId);
-        const list = res?.data?.data?.["Party Details"] || [];
-        setAllParties(list);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-    fetchSupplier();
+    fetchSuppliers();
   }, [open, userId]);
 
   /* Filter Supplier / Customer */
@@ -109,6 +114,15 @@ export default function AddExpenseModal({
   };
 
   const handleSave = async () => {
+    if (!form.amount || Number(form.amount) <= 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Amount is required",
+        text: "Please enter an amount greater than 0.",
+      });
+      return;
+    }
+
     if (!expenseId) {
       Swal.fire({
         icon: "warning",
@@ -199,16 +213,18 @@ export default function AddExpenseModal({
   const handleSelect = (id) => {
     setSelectedParty(id);
     const found = partyList.find((p) => p.id === id);
-    if (found)
-      setSearchQuery(
-        `${found.nameEnglish}${found.mobileno ? ` (${found.mobileno})` : ""}`,
-      );
+    const label = found
+      ? `${found.nameEnglish}${found.mobileno ? ` (${found.mobileno})` : ""}`
+      : "";
+    setSelectedPartyLabel(label);
+    setSearchQuery("");
     setDropdownOpen(false);
   };
 
   const handleClear = (e) => {
     e.stopPropagation();
     setSelectedParty(undefined);
+    setSelectedPartyLabel("");
     setSearchQuery("");
     setDropdownOpen(false);
   };
@@ -237,134 +253,161 @@ export default function AddExpenseModal({
             {form.type}
           </label>
 
-          <div ref={dropdownRef} className="relative">
-            {/* Input trigger */}
-            <div
-              className={`flex items-center w-full border rounded-lg px-3 py-2 bg-white cursor-text transition-all ${
-                dropdownOpen
-                  ? "border-blue-500 ring-2 ring-blue-100"
-                  : "border-gray-300 hover:border-gray-400"
-              }`}
-              onClick={() => {
-                setDropdownOpen(true);
-                setTimeout(() => inputRef.current?.focus(), 0);
-              }}
-            >
-              <svg
-                className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
-                />
-              </svg>
-
-              <input
-                ref={inputRef}
-                type="text"
-                className="flex-1 outline-none text-sm bg-transparent text-gray-800 placeholder-gray-400"
-                placeholder={`Search ${form.type}...`}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
+          <div className="flex items-start gap-2">
+            <div className="flex-1" ref={dropdownRef}>
+              {/* Input trigger */}
+              <div
+                className={`flex items-center w-full border rounded-lg px-3 py-2 bg-white cursor-text transition-all ${
+                  dropdownOpen
+                    ? "border-blue-500 ring-2 ring-blue-100"
+                    : "border-gray-300 hover:border-gray-400"
+                }`}
+                onClick={() => {
+                  setSearchQuery("");
                   setDropdownOpen(true);
-                  if (selectedParty) setSelectedParty(undefined);
+                  setTimeout(() => inputRef.current?.focus(), 0);
                 }}
-                onFocus={() => setDropdownOpen(true)}
-              />
-
-              {/* Clear button */}
-              {(searchQuery || selectedParty) && (
-                <button
-                  type="button"
-                  onClick={handleClear}
-                  className="ml-1 text-gray-400 hover:text-gray-600 flex-shrink-0"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              )}
-
-              {/* Chevron */}
-              <svg
-                className={`w-4 h-4 text-gray-400 ml-1 flex-shrink-0 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
+                <svg
+                  className="w-4 h-4 text-gray-400 mr-2 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
+                  />
+                </svg>
+
+                <input
+                  ref={inputRef}
+                  type="text"
+                  className="flex-1 outline-none text-sm bg-transparent text-gray-800 placeholder-gray-400"
+                  placeholder={selectedPartyLabel || `Search ${form.type}...`}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setDropdownOpen(true);
+                  }}
+                  onFocus={() => {
+                    setSearchQuery("");
+                    setDropdownOpen(true);
+                  }}
                 />
-              </svg>
+
+                {/* Clear button */}
+                {(searchQuery || selectedParty) && (
+                  <button
+                    type="button"
+                    onClick={handleClear}
+                    className="ml-1 text-gray-400 hover:text-gray-600 flex-shrink-0"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
+
+                {/* Chevron */}
+                <svg
+                  className={`w-4 h-4 text-gray-400 ml-1 flex-shrink-0 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+
+              {/* Dropdown list */}
+              {dropdownOpen && (
+                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                  <ul className="max-h-52 overflow-y-auto py-1">
+                    {filteredOptions.length === 0 ? (
+                      <li className="px-4 py-3 text-sm text-gray-400 text-center">
+                        No results found
+                      </li>
+                    ) : (
+                      filteredOptions.map((p) => {
+                        const label = `${p.nameEnglish}${p.mobileno ? ` (${p.mobileno})` : ""}`;
+                        const isSelected = selectedParty === p.id;
+                        return (
+                          <li
+                            key={p.id}
+                            onMouseDown={(e) => {
+                              e.preventDefault(); // prevent blur before click
+                              handleSelect(p.id);
+                            }}
+                            className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-colors ${
+                              isSelected
+                                ? "bg-blue-50 text-blue-700 font-medium"
+                                : "text-gray-700 hover:bg-gray-50"
+                            }`}
+                          >
+                            <span>{label}</span>
+                            {isSelected && (
+                              <svg
+                                className="w-4 h-4 text-blue-500 flex-shrink-0"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2.5}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                            )}
+                          </li>
+                        );
+                      })
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
 
-            {/* Dropdown list */}
-            {dropdownOpen && (
-              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                <ul className="max-h-52 overflow-y-auto py-1">
-                  {filteredOptions.length === 0 ? (
-                    <li className="px-4 py-3 text-sm text-gray-400 text-center">
-                      No results found
-                    </li>
-                  ) : (
-                    filteredOptions.map((p) => {
-                      const label = `${p.nameEnglish}${p.mobileno ? ` (${p.mobileno})` : ""}`;
-                      const isSelected = selectedParty === p.id;
-                      return (
-                        <li
-                          key={p.id}
-                          onMouseDown={(e) => {
-                            e.preventDefault(); // prevent blur before click
-                            handleSelect(p.id);
-                          }}
-                          className={`px-4 py-2.5 text-sm cursor-pointer flex items-center justify-between transition-colors ${
-                            isSelected
-                              ? "bg-blue-50 text-blue-700 font-medium"
-                              : "text-gray-700 hover:bg-gray-50"
-                          }`}
-                        >
-                          <span>{label}</span>
-                          {isSelected && (
-                            <svg
-                              className="w-4 h-4 text-blue-500 flex-shrink-0"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2.5}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                          )}
-                        </li>
-                      );
-                    })
-                  )}
-                </ul>
-              </div>
-            )}
+            {/* Add Vendor Button */}
+            <button
+              type="button"
+              onClick={() => setIsVendorModalOpen(true)}
+              className="p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+              title="Add Vendor"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -380,11 +423,14 @@ export default function AddExpenseModal({
 
         {/* Amount */}
         <input
-          type="tel"
+          type="number"
           name="amount"
+          min="0.01"
+          step="0.01"
+          required
           value={form.amount}
           onChange={handleInput}
-          placeholder="₹ Amount"
+          placeholder="₹ Amount *"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
         />
 
@@ -465,6 +511,20 @@ export default function AddExpenseModal({
           </button>
         </div>
       </div>
+
+      {/* Vendor Modal */}
+      {isVendorModalOpen && (
+        <AddVendor
+          isModalOpen={isVendorModalOpen}
+          setIsModalOpen={(value) => {
+            setIsVendorModalOpen(value);
+            if (!value) {
+              fetchSuppliers();
+            }
+          }}
+          refreshData={fetchSuppliers}
+        />
+      )}
     </CustomModal>
   );
 }

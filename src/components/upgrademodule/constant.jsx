@@ -14,6 +14,56 @@ export const getColumns = (onDelete, onEdit, onView) => [
     ),
   },
   {
+  accessorKey: "description",
+  header: ({ column }) => (
+    <DataGridColumnHeader title="Description" column={column} />
+  ),
+  cell: ({ row }) => {
+    const text = row.original.description;
+    return (
+      <span
+        className="block max-w-[260px] truncate"
+        title={text || ""}
+      >
+        {text || "-"}
+      </span>
+    );
+  },
+},
+{
+  accessorKey: "features",
+  header: ({ column }) => (
+    <DataGridColumnHeader title="Features" column={column} />
+  ),
+  enableSorting: false,
+  cell: ({ row }) => {
+    const features = row.original.features || [];
+    if (features.length === 0) return <span>-</span>;
+
+    const visible = features.slice(0, 2);
+    const extra = features.length - visible.length;
+    const allText = features.map((f) => f.featureText).join(", ");
+
+    return (
+      <div className="flex flex-wrap items-center gap-1 max-w-[260px]" title={allText}>
+        {visible.map((f) => (
+          <span
+            key={f.id}
+            className="px-2 py-0.5 text-xs rounded-full bg-blue-50 text-primary border border-blue-100 truncate max-w-[120px]"
+          >
+            {f.featureText}
+          </span>
+        ))}
+        {extra > 0 && (
+          <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+            +{extra} more
+          </span>
+        )}
+      </div>
+    );
+  },
+},
+  {
     accessorKey: "billingCycle",
     header: ({ column }) => (
       <DataGridColumnHeader title="Billing Cycle" column={column} />
