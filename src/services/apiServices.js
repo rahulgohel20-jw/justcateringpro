@@ -4484,3 +4484,7 @@ export const geratemangerallreport = (eventFunctionId, eventId, userId) => {
     `/eventmaster/generateAssignedManagerReport?eventFunctionId=${eventFunctionId}&eventId=${eventId}&userId=${userId}`
   );
 };
+
+export const generateeventexpensereprot = (eventId, userId) => {
+  return POST(`/expensemanagement/generate-event-expense-report?eventId=${eventId}&userId=${userId}`);
+};
