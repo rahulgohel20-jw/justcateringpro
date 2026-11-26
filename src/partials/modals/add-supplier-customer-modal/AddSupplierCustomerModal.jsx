@@ -5,6 +5,7 @@ import {
   AddExpensemanagement,
   fetchStatesByCountry,
   fetchCitiesByState,
+  Fetchmanager,
 } from "@/services/apiServices";
 import Swal from "sweetalert2";
 import { FormattedMessage } from "react-intl";
@@ -28,7 +29,7 @@ const getInitialForm = (type) => ({
   cityId: "",
   sameShipping: false,
   roleId: null,
-  managerId: null, // NEW: filled from the selected party
+  managerId: null, // Customer: selected manager. Supplier: filled from the selected party
   image: null,
 });
 
@@ -48,6 +49,10 @@ export default function AddSupplierCustomerModal({
     eventData?.eventManager?.id ??
     eventData?.assignedManagerId ??
     null;
+
+  // The event's party (e.g. "Chirag") - sent as partyId on the Customer tab
+  const eventPartyId = eventData?.party?.id ?? eventData?.partyId ?? null;
+
   const [partyList, setPartyList] = useState([]);
   const [selectedParty, setSelectedParty] = useState("");
   const [states, setStates] = useState([]);
@@ -148,29 +153,24 @@ export default function AddSupplierCustomerModal({
       })); // reset prefilled fields
     };
 
-    // Customer -> load parties categorized as Customer
+    // Customer -> the dropdown lists managers (not customers)
     if (form.type === "Customer") {
-      GetAllCustomer(userId)
+      Fetchmanager(userId)
         .then((res) => {
-          const list = res?.data?.data?.["Party Details"] || [];
-          const customerList = list.filter((party) => {
-            const contactType = party.contact?.contactType;
-            const byId = Number(contactType?.id) === 1;
-            const byName =
-              String(contactType?.nameEnglish || "")
-                .trim()
-                .toLowerCase() === "customer";
-            return byId || byName;
-          });
+          const managers = (res?.data?.data?.["userDetails"] || []).map((m) => ({
+            id: m.id,
+            nameEnglish: [m.firstName, m.lastName].filter(Boolean).join(" "),
+            mobileno: m.mobileNo || m.mobile || m.mobileno || "",
+          }));
 
           if (editData) {
-            setPartyList(customerList);
+            setPartyList(managers);
           } else {
-            resetSelection(customerList);
+            resetSelection(managers);
           }
         })
         .catch((err) => {
-          console.error("Failed to fetch customers", err);
+          console.error("Failed to fetch managers", err);
           resetSelection([]);
         });
       return;
@@ -206,23 +206,20 @@ export default function AddSupplierCustomerModal({
     const party = partyList.find((p) => p.id === id);
     if (!party) return;
 
-    // TEMP DEBUG: remove after finding the manager id field
-    console.log("party:", party);
-    console.log(
-      "manager keys:",
-      Object.entries(party).filter(([k]) =>
-        k.toLowerCase().includes("manager"),
-      ),
-    );
-    console.log("auth user:", (() => {
-      try {
-        return JSON.parse(localStorage.getItem("auth-storage"))?.state?.user;
-      } catch {
-        return null;
-      }
-    })());
-    console.log("localStorage keys:", Object.keys(localStorage));
+    // Customer tab: the dropdown lists managers
+    if (form.type === "Customer") {
+      setForm((prev) => ({
+        ...prev,
+        name: party.nameEnglish || "",
+        mobile: party.mobileno || "",
+        countryCode: "+91",
+        roleId: null,
+        managerId: party.id,
+      }));
+      return;
+    }
 
+    // Supplier tab: unchanged
     setForm((prev) => ({
       ...prev,
       name: party.nameEnglish || "",
@@ -231,7 +228,6 @@ export default function AddSupplierCustomerModal({
       address: party.addressEnglish || "",
       countryCode: "+91",
       roleId: party?.contact?.contactType?.id || null,
-      // NEW: adjust this path after checking the console log above
       managerId: party?.managerId ?? party?.manager?.id ?? null,
     }));
   };
@@ -267,12 +263,20 @@ export default function AddSupplierCustomerModal({
       formData.append("mobileNo", form.mobile || "");
       formData.append("name", form.name || "");
       formData.append("expenseId", editData ? editData.id : -1);
-      // Send the selected Customer or Supplier party ID only.
-      formData.append("partyId", Number(selectedParty));
-      // managerId: party -> event -> edit data -> 0
+
+      const isCustomer = form.type === "Customer";
+
+      // Customer: partyId = the event's party, managerId = the selected manager
+      // Supplier: partyId = the selected party, managerId as before
+      formData.append(
+        "partyId",
+        isCustomer ? Number(eventPartyId ?? 0) : Number(selectedParty),
+      );
       formData.append(
         "managerId",
-        form.managerId ?? eventManagerId ?? editData?.managerId ?? 0,
+        isCustomer
+          ? Number(selectedParty)
+          : (form.managerId ?? eventManagerId ?? editData?.managerId ?? 0),
       );
 
       // ADDRESS
@@ -298,15 +302,9 @@ export default function AddSupplierCustomerModal({
 
       // TEMP DEBUG: shows exactly what is sent
       console.log("eventData:", eventData);
-      console.log(
-        "eventData manager keys:",
-        Object.entries(eventData || {}).filter(([k]) =>
-          k.toLowerCase().includes("manager"),
-        ),
-      );
-      console.log("eventManagerId:", eventManagerId);
+      console.log("eventPartyId:", eventPartyId);
+      console.log("partyId sent:", formData.get("partyId"));
       console.log("managerId sent:", formData.get("managerId"));
-      console.log("form.managerId:", form.managerId);
 
       const res = await AddExpensemanagement(formData);
 
@@ -368,7 +366,11 @@ export default function AddSupplierCustomerModal({
 
     if (!editData) return;
 
-    const selectedId = editData.partyId ?? "";
+    // Customer tab: the dropdown holds managers, so select by managerId
+    const selectedId =
+      type === "Customer"
+        ? (editData.managerId ?? "")
+        : (editData.partyId ?? "");
     setSelectedParty(selectedId ? String(selectedId) : "");
 
     setForm((prev) => ({
@@ -405,29 +407,17 @@ export default function AddSupplierCustomerModal({
     if (!open || !editData) return;
 
     if (type === "Customer" && partyList.length > 0) {
-      const matchingCustomer = partyList.find(
-        (party) =>
-          String(party.nameEnglish || "")
-            .trim()
-            .toLowerCase() ===
-          String(editData.name || "")
-            .trim()
-            .toLowerCase(),
+      const matchingManager = partyList.find(
+        (m) => String(m.id) === String(editData.managerId),
       );
 
-      if (matchingCustomer) {
-        setSelectedParty(String(matchingCustomer.id));
+      if (matchingManager) {
+        setSelectedParty(String(matchingManager.id));
         setForm((prev) => ({
           ...prev,
-          name: matchingCustomer.nameEnglish || editData.name || "",
-          mobile: matchingCustomer.mobileno || prev.mobile,
-          gst: matchingCustomer.gst || prev.gst,
-          address: matchingCustomer.addressEnglish || prev.address,
-          roleId: matchingCustomer.contact?.contactType?.id || null,
-          managerId:
-            matchingCustomer.managerId ??
-            matchingCustomer.manager?.id ??
-            prev.managerId,
+          name: matchingManager.nameEnglish || prev.name,
+          mobile: matchingManager.mobileno || prev.mobile,
+          managerId: matchingManager.id,
         }));
       }
     }
@@ -487,7 +477,7 @@ export default function AddSupplierCustomerModal({
                 <div>
                   <label className="text-sm font-medium text-gray-600">
                     {form.type === "Customer" ? (
-                      "Select Customer"
+                      "Select manager"
                     ) : (
                       <>
                         <FormattedMessage
@@ -504,10 +494,10 @@ export default function AddSupplierCustomerModal({
                     showSearch
                     placeholder={
                       form.type === "Customer"
-                        ? "Select Customer"
+                        ? "Select manager"
                         : `Select ${form.type}`
                     }
-                    value={selectedParty || undefined}
+                    value={selectedParty ? Number(selectedParty) : undefined}
                     optionFilterProp="label"
                     onChange={(value) =>
                       handlePartySelect({ target: { value } })

@@ -15,6 +15,7 @@ import {
   GETExpenseBYUserType,
   GetEventMasterById,
   DeleteByExpenseID,
+  generateeventexpensereprot
 } from "@/services/apiServices";
 
 export default function ExpenseDetails() {
@@ -41,7 +42,7 @@ export default function ExpenseDetails() {
   const userId = localStorage.getItem("userId");
 
   const [cards, setCards] = useState([]);
-
+const [exporting, setExporting] = useState(false);
   const [totals, setTotals] = useState({
     totalGiven: 0,
     totalUsed: 0,
@@ -180,6 +181,33 @@ export default function ExpenseDetails() {
     setSelectedExpenseId(expense.id);
     setViewOpen(true);
   };
+
+  const handleExport = async () => {
+  if (!eventId || !userId) return;
+
+  // open the new tab immediately so the browser doesn't block the popup
+  const newTab = window.open("", "_blank");
+  setExporting(true);
+
+  try {
+    const res = await generateeventexpensereprot(eventId, userId);
+    const d = res?.data?.data ?? res?.data;
+   const url = res?.data?.report_path;
+
+    if (!url) throw new Error("No report URL returned");
+    newTab.location.href = url;
+  } catch (err) {
+    console.error("Export failed:", err);
+    newTab?.close();
+    Swal.fire({
+      title: "Error!",
+      text: "Failed to generate report. Please try again.",
+      icon: "error",
+    });
+  } finally {
+    setExporting(false);
+  }
+};
 
   const getTitle = () => {
     return `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Expense Usage Details`;
@@ -377,11 +405,23 @@ export default function ExpenseDetails() {
         {/* Expense Table */}
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 flex flex-col flex-1 min-h-0">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
-            <h2 className="text-base md:text-lg font-semibold text-gray-900">
-              Recent Expense Reports
-            </h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
+  <h2 className="text-base md:text-lg font-semibold text-gray-900">
+    Recent Expense Reports
+  </h2>
+  
+</div>
+
             <div className="relative w-full sm:w-auto">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+    <button
+      onClick={handleExport}
+      disabled={exporting}
+      className="btn btn-primary py-2 px-4 whitespace-nowrap"
+    >
+      {exporting ? "Exporting..." : "Export"}
+    </button>
+    
+ 
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
