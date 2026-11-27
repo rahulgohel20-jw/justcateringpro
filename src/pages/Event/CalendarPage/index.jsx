@@ -43,7 +43,7 @@ const [selectedBanquet, setSelectedBanquet] = useState(-1);
   let Id = localStorage.getItem("userId");
   const normalizedLocalUserId = Number(Id ?? 0);
   //  const isAgencyUser = normalizedLocalUserId === 233;
-  const isAgencyUser = normalizedLocalUserId === 376; // amoncar
+  const isAgencyUser = [376, 145].includes(normalizedLocalUserId);
 
   const getStorageKeys = (userId) => ({
     monthKey: userId ? `calendar_selected_month_${userId}` : "calendar_selected_month",

@@ -161,12 +161,17 @@ const getFunctionName = (functionObj) => {
 const REPORTING_TIME_FORMAT = "hh:mm A"; // see the note on format below
 
 // "02/09/2026 04:00 PM" -> "04:00 PM"  (empty if the string has no time)
-const getFunctionTime = (functionStartDateTime) => {
+const getFunctionTime = (functionStartDateTime, earlyHours = 0) => {
   if (!functionStartDateTime || !/\d{1,2}:\d{2}/.test(functionStartDateTime)) return "";
-  const parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
-  return parsed.isValid() ? parsed.format(REPORTING_TIME_FORMAT) : "";
+  let parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
+  if (!parsed.isValid()) return "";
+  if (earlyHours) parsed = parsed.subtract(earlyHours, "hour");
+  return parsed.format(REPORTING_TIME_FORMAT);
 };
 
+// 2 hours earlier for user 83, chef + outside rows only
+const getEarlyHours = (row) =>
+  Number(localStorage.getItem("userId")) === 83 && (row.chefLabour || row.outside) ? 2 : 0;
 
 const TopTabs = ({ value, onChange, functions, tableLoading }) => {
   return (
@@ -1745,9 +1750,9 @@ const EventMenuAllocationPage = ({ mode }) => {
     eventData?.eventFunctions?.find((f) => f.id === fnId)?.functionStartDateTime;
 
   // saved reporting time, or the function's start time when empty
-  const resolveReportingTime = (alloc, row) =>
-    alloc.reportingTime || getFunctionTime(getFunctionStart(row.eventFunctionId));
-
+ const resolveReportingTime = (alloc, row) =>
+  alloc.reportingTime ||
+  getFunctionTime(getFunctionStart(row.eventFunctionId), getEarlyHours(row));
   // const isAllFunctions = activeFunction?.id === -1;
 
   // const groupedByFunction = useMemo(() => {
@@ -2008,8 +2013,7 @@ const EventMenuAllocationPage = ({ mode }) => {
             helperPrice: alloc.helperPrice || 0,
             totalPrice: allocationTotal,
             shiftTransPrice: alloc.shiftTransPrice ?? 0,
-            reportingTime: alloc.reportingTime || getFunctionTime(getFunctionStart(item.eventFunctionId)),
-            isOutside,
+reportingTime: alloc.reportingTime || getFunctionTime(getFunctionStart(item.eventFunctionId), getEarlyHours(item)),            isOutside,
             isChefLabour,
             isInside,
             number: alloc.number ?? null,

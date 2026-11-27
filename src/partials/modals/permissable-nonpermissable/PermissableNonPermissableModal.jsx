@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Trash2, Plus, ChevronDown, Search } from "lucide-react";
 import Swal from "sweetalert2";
-import { GetRawMaterialByCategoryId, GetPermissableNonPermissable } from "@/services/apiServices";
+import {
+  GetRawMaterialByCategoryId,
+  getEventPermissionRawMaterial,
+  addOrUpdatePermissableNotPermissableItem,
+} from "@/services/apiServices";
 
 const TABS = [
   { key: "permissables", label: "Permissable in Jain" },
@@ -24,6 +28,7 @@ const PermissableNonPermissableModal = ({
   userId,
   eventFunctionId,
   eventId,
+  eventFunctions = [],
   initialData = null,
 }) => {
   const [activeTab, setActiveTab] = useState("permissables");
@@ -35,6 +40,11 @@ const PermissableNonPermissableModal = ({
   const [showCatDropdown, setShowCatDropdown] = useState(false);
   const [catSearch, setCatSearch] = useState("");
   const [rmSearch, setRmSearch] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [selectedFunctionIds, setSelectedFunctionIds] = useState([]);
+  const [showFnDropdown, setShowFnDropdown] = useState(false);
+  const fnDropdownRef = useRef(null);
+  const selectionTimerRef = useRef(null);
   const dropdownRef = useRef(null);
   const catDropdownRef = useRef(null);
 
@@ -50,29 +60,56 @@ const PermissableNonPermissableModal = ({
     item?.materialName ||
     `RM #${item?.rawMaterialId || ""}`;
 
-const getCategoryName = (item) =>
-  item?.rawCatNameEnglish ||            // ← what the API actually returns
-  item?.categoryName ||
-  item?.categoryNameEnglish ||
-  item?.rawMaterialCatNameEnglish ||
-  item?.rawMaterialCat?.nameEnglish ||
-  item?.rawMaterialCategory?.nameEnglish ||
-  item?.rawMaterialCatName ||
-  item?.rawMaterialCategoryName ||
-  "—";
+  const getCategoryName = (item) =>
+    item?.rawCatNameEnglish || // ← what the API actually returns
+    item?.categoryName ||
+    item?.categoryNameEnglish ||
+    item?.rawMaterialCatNameEnglish ||
+    item?.rawMaterialCat?.nameEnglish ||
+    item?.rawMaterialCategory?.nameEnglish ||
+    item?.rawMaterialCatName ||
+    item?.rawMaterialCategoryName ||
+    "—";
 
-// const mapItems = (list = []) =>
-//   list.map((item) => ({
-//     rawMaterialId: item.rawMaterialId,
-//     rawMaterialName: getRawMaterialName(item),
-//     rawMaterialNameGujarati: item.rawMaterialNameGujarati || "",
-//     rawMaterialNameHindi: item.rawMaterialNameHindi || "",
-//     categoryId: item.rawCatId,
-//     categoryName: getCategoryName(item),
-//   }));
+  const mapItems = (list = []) =>
+    list.map((item) => ({
+      rawMaterialId: item.rawMaterialId,
+      rawMaterialName: getRawMaterialName(item),
+      rawMaterialNameGujarati: item.rawMaterialNameGujarati || "",
+      rawMaterialNameHindi: item.rawMaterialNameHindi || "",
+      categoryId: item.rawCatId,
+      categoryName: getCategoryName(item),
+    }));
 
-  const fetchPermissableData = useCallback(async () => {
-    if (!eventFunctionId || !eventId) return;
+  // Loads the saved lists for the given function ids from the server
+  // and returns them already mapped for the table.
+  const loadPermissable = useCallback(
+    async (ids) => {
+      const res = await getEventPermissionRawMaterial(ids, eventId, userId);
+      const data = res?.data?.data;
+      const unique = (list) => {
+        const seen = new Set();
+        return list.filter((i) => {
+          const key = Number(i.rawMaterialId);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      };
+      return {
+        permissables: unique(mapItems(data?.permissables)),
+        notPermissables: unique(mapItems(data?.notPermissables)),
+      };
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [eventId, userId],
+  );
+
+const fetchPermissableData = useCallback(
+  async (ids) => {
+    const targetIds =
+      ids?.length ? ids : eventFunctionId ? [Number(eventFunctionId)] : [];
+    if (!targetIds.length || !eventId) return;
 
     if (fetchAbortRef.current) fetchAbortRef.current.abort();
     const controller = new AbortController();
@@ -80,32 +117,18 @@ const getCategoryName = (item) =>
 
     setDataLoading(true);
     try {
-      const res = await GetPermissableNonPermissable(
-        eventFunctionId,
-        eventId,
-        userId,
-        controller.signal
-      );
-      const data = res?.data?.data;
-
-      // const mapItems = (list = []) =>
-      //   list.map((item) => ({
-      //     rawMaterialId: item.rawMaterialId,
-      //     rawMaterialName: getRawMaterialName(item),
-      //     categoryName: getCategoryName(item),
-      //   }));
-
-      setPermissables(mapItems(data?.permissables));
-      setNotPermissables(mapItems(data?.notPermissables));
+      const fresh = await loadPermissable(targetIds);
+      if (controller.signal.aborted) return;
+      setPermissables(fresh.permissables);
+      setNotPermissables(fresh.notPermissables);
     } catch (err) {
-      if (err?.name !== "CanceledError" && err?.code !== "ERR_CANCELED") {
-        console.error("Failed to fetch permissable data:", err);
-      }
+      console.error("Failed to fetch permissable data:", err);
     } finally {
-      setDataLoading(false);
+      if (!controller.signal.aborted) setDataLoading(false);
     }
-  }, [eventFunctionId, eventId, userId]);
-
+  },
+  [eventFunctionId, eventId, loadPermissable],
+);
   // ── Raw material search (API-driven, now category-aware) ──
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -141,8 +164,6 @@ const getCategoryName = (item) =>
         const items = data["Raw Material Details"] || [];
         const total = data.totalItems || 0;
 
-        
-
         setSearchResults((prev) => (append ? [...prev, ...items] : items));
         setSearchHasMore(page * RM_PAGE_SIZE < total);
         setSearchPage(page);
@@ -160,14 +181,50 @@ const getCategoryName = (item) =>
   const prevIsOpenRef = useRef(false);
 
   useEffect(() => {
+  const justOpened = isOpen && !prevIsOpenRef.current;
+  prevIsOpenRef.current = isOpen;
+
+  if (!isOpen || !justOpened) return;
+
+  const allIds = eventFunctions.length
+    ? eventFunctions.map((f) => Number(f.id))
+    : eventFunctionId
+      ? [Number(eventFunctionId)]
+      : [];
+
+  setActiveTab("permissables");
+  setSelectedFunctionIds(allIds);
+  setShowFnDropdown(false);
+  setSelectedRawMaterialIds([]);
+  setShowRmDropdown(false);
+  setShowCatDropdown(false);
+  setCatSearch("");
+  setRmSearch("");
+  setSearchResults([]);
+  setSearchPage(1);
+  setSearchHasMore(true);
+
+  if (initialData) {
+    setPermissables(initialData.permissables || []);
+    setNotPermissables(initialData.notPermissables || []);
+  } else {
+    setPermissables([]);
+    setNotPermissables([]);
+  }
+
+  fetchPermissableData(allIds);
+}, [isOpen, initialData, fetchPermissableData, eventFunctionId, eventFunctions]);
+  useEffect(() => {
     const justOpened = isOpen && !prevIsOpenRef.current;
     prevIsOpenRef.current = isOpen;
 
     if (!isOpen) return;
 
     if (justOpened) {
-      console.log("initialData:", initialData); 
       setActiveTab("permissables");
+      setSelectedFunctionIds(allIds); 
+      setSelectedFunctionIds(eventFunctionId ? [Number(eventFunctionId)] : []);
+      setShowFnDropdown(false);
       setSelectedRawMaterialIds([]);
       setShowRmDropdown(false);
       setShowCatDropdown(false);
@@ -176,17 +233,19 @@ const getCategoryName = (item) =>
       setSearchResults([]);
       setSearchPage(1);
       setSearchHasMore(true);
+      setSelectedFunctionIds(allIds); 
 
       if (initialData) {
+        // show what the page already has while the fresh GET runs
         setPermissables(initialData.permissables || []);
         setNotPermissables(initialData.notPermissables || []);
       } else {
         setPermissables([]);
         setNotPermissables([]);
-        fetchPermissableData();
       }
+      fetchPermissableData();
     }
-  }, [isOpen, initialData, fetchPermissableData]);
+  }, [isOpen, initialData, fetchPermissableData, eventFunctionId]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -195,6 +254,9 @@ const getCategoryName = (item) =>
       }
       if (catDropdownRef.current && !catDropdownRef.current.contains(e.target)) {
         setShowCatDropdown(false);
+      }
+      if (fnDropdownRef.current && !fnDropdownRef.current.contains(e.target)) {
+        setShowFnDropdown(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -225,10 +287,7 @@ const getCategoryName = (item) =>
   });
 
   // Fallback client-side filter — kept as a safety net in case the API
-  // doesn't actually scope by category server-side. If your API DOES
-  // filter correctly once the categoryId param above is wired up
-  // correctly, this filter becomes a no-op and can be simplified to
-  // just `searchResults`.
+  // doesn't actually scope by category server-side.
   const filteredRawMaterials = searchResults.filter((rm) => {
     if (!selectedCategoryId) return true;
     const catId =
@@ -318,19 +377,114 @@ const getCategoryName = (item) =>
     }
   };
 
-  const handleSave = () => {
-    onSave({
-      permissables: permissables.map((item) => ({
-        rawMaterialId: item.rawMaterialId,
-        rawMaterialName: item.rawMaterialName,
-        categoryName: item.categoryName,
+  const getFunctionLabel = (fn) =>
+    fn?.function?.nameEnglish || fn?.nameEnglish || `Function #${fn?.id}`;
+
+  // Re-calls the GET with ALL selected function ids (debounced).
+  const reloadForSelection = (ids) => {
+    if (selectionTimerRef.current) clearTimeout(selectionTimerRef.current);
+    if (!ids.length || !eventId) return; // nothing selected -> keep current lists
+
+    selectionTimerRef.current = setTimeout(async () => {
+      if (fetchAbortRef.current) fetchAbortRef.current.abort();
+      const controller = new AbortController();
+      fetchAbortRef.current = controller;
+
+      setDataLoading(true);
+      try {
+        const fresh = await loadPermissable(ids);
+        if (controller.signal.aborted) return;
+        setPermissables(fresh.permissables);
+        setNotPermissables(fresh.notPermissables);
+      } catch (err) {
+        console.error("Failed to load for selected functions:", err);
+      } finally {
+        if (!controller.signal.aborted) setDataLoading(false);
+      }
+    }, 300);
+  };
+
+  const applyFunctionSelection = (next) => {
+    setSelectedFunctionIds(next);
+    reloadForSelection(next);
+  };
+
+  const toggleFunction = (id) =>
+    applyFunctionSelection(
+      selectedFunctionIds.includes(id)
+        ? selectedFunctionIds.filter((x) => x !== id)
+        : [...selectedFunctionIds, id],
+    );
+
+  const allFunctionsSelected =
+    eventFunctions.length > 0 && selectedFunctionIds.length === eventFunctions.length;
+
+  const handleSave = async () => {
+     if (!selectedFunctionIds.length) {
+    Swal.fire({ icon: "warning", title: "Select at least one function", timer: 1500, showConfirmButton: false });
+    return;
+  }
+    const ids = selectedFunctionIds;
+
+    const lists = {
+      permissables: permissables.map((i) => ({
+        rawMaterialId: Number(i.rawMaterialId),
       })),
-      notPermissables: notPermissables.map((item) => ({
-        rawMaterialId: item.rawMaterialId,
-        rawMaterialName: item.rawMaterialName,
-        categoryName: item.categoryName,
+      notPermissables: notPermissables.map((i) => ({
+        rawMaterialId: Number(i.rawMaterialId),
       })),
-    });
+    };
+
+    const payload = {
+      eventId: Number(eventId),
+      userId: Number(userId),
+      eventFunction: ids.map((id) => ({ eventFunctionId: id, ...lists })),
+    };
+
+    try {
+      setSaving(true);
+      const res = await addOrUpdatePermissableNotPermissableItem(payload);
+
+      if (res?.data?.success === false) {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: res?.data?.message || res?.data?.msg || "Failed to save",
+        });
+        return;
+      }
+
+      // 1) success message from the API
+      Swal.fire({
+        icon: "success",
+        title: res?.data?.msg || "Saved successfully",
+        timer: 1800,
+        showConfirmButton: false,
+      });
+
+      // 2) reload saved lists from the server (current function)
+      let fresh = null;
+      try {
+        fresh = await loadPermissable(ids);
+        setPermissables(fresh.permissables);
+        setNotPermissables(fresh.notPermissables);
+      } catch (reloadErr) {
+        console.error("Reload after save failed:", reloadErr);
+      }
+
+      // 3) let the parent update its state / close the modal
+      onSave?.(
+        fresh || {
+          permissables,
+          notPermissables,
+        },
+      );
+    } catch (err) {
+      console.error("Save failed:", err);
+      Swal.fire({ icon: "error", title: "Error", text: "Failed to save" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -349,6 +503,92 @@ const getCategoryName = (item) =>
 
         {/* Body */}
         <div className="flex-1 px-6 py-4 flex flex-col min-h-0">
+          {/* Functions — multi-select dropdown */}
+          {eventFunctions.length > 0 && (
+            <div className="mb-3 flex-shrink-0" ref={fnDropdownRef}>
+              <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-1">
+                Functions {selectedFunctionIds.length > 0 && `(${selectedFunctionIds.length} selected)`}
+              </label>
+              <div className="relative">
+                <button
+                  type="button"
+                  className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  onClick={() => {
+                    setShowFnDropdown((prev) => !prev);
+                    setShowCatDropdown(false);
+                    setShowRmDropdown(false);
+                  }}
+                >
+                  <span className={selectedFunctionIds.length > 0 ? "text-gray-800 truncate" : "text-gray-400"}>
+                    {selectedFunctionIds.length === 0
+                      ? "Select functions"
+                      : selectedFunctionIds.length === 1
+                        ? getFunctionLabel(
+                            eventFunctions.find((f) => Number(f.id) === selectedFunctionIds[0]),
+                          )
+                        : `${selectedFunctionIds.length} functions selected`}
+                  </span>
+                  <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />
+                </button>
+
+                {showFnDropdown && (
+                  <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] overflow-hidden">
+                    <div
+                     onClick={() =>
+  applyFunctionSelection(
+    allFunctionsSelected ? [] : eventFunctions.map((f) => Number(f.id)),
+  )
+}
+                      className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 border-b border-gray-100 font-semibold text-gray-700"
+                    >
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                        allFunctionsSelected ? "bg-primary border-primary" : "border-gray-300"
+                      }`}>
+                        {allFunctionsSelected && (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        )}
+                      </div>
+                      Select all
+                    </div>
+                    <div className="max-h-52 overflow-y-auto">
+                      {eventFunctions.map((fn) => {
+                        const id = Number(fn.id);
+                        const isSelected = selectedFunctionIds.includes(id);
+                        return (
+                          <div
+                            key={id}
+                            onClick={() => toggleFunction(id)}
+                            className={`flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 ${
+                              isSelected ? "bg-primary/5" : ""
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                              isSelected ? "bg-primary border-primary" : "border-gray-300"
+                            }`}>
+                              {isSelected && (
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-gray-700 truncate">{getFunctionLabel(fn)}</div>
+                              {fn.functionStartDateTime && (
+                                <div className="text-[11px] text-gray-400 truncate">{fn.functionStartDateTime}</div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Tabs */}
           <div className="flex border-b border-gray-200 mb-4 flex-shrink-0">
             {TABS.map((tab) => (
@@ -378,7 +618,7 @@ const getCategoryName = (item) =>
                 <button
                   type="button"
                   className="w-full border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                  onClick={() => { setShowCatDropdown((prev) => !prev); setShowRmDropdown(false); }}
+                  onClick={() => { setShowCatDropdown((prev) => !prev); setShowRmDropdown(false); setShowFnDropdown(false); }}
                 >
                   <span className={selectedCategoryId ? "text-gray-800" : "text-gray-400"}>
                     {selectedCategoryId
@@ -457,6 +697,7 @@ const getCategoryName = (item) =>
                       return next;
                     });
                     setShowCatDropdown(false);
+                    setShowFnDropdown(false);
                   }}
                 >
                   <span className={selectedRawMaterialIds.length > 0 ? "text-gray-800" : "text-gray-400"}>
@@ -560,12 +801,13 @@ const getCategoryName = (item) =>
                     currentList.map((item, idx) => (
                       <tr key={item.rawMaterialId} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                         <td className="px-4 py-2.5 text-gray-500">{idx + 1}</td>
-<td className="px-4 py-2.5 font-medium text-gray-800">
-  {item.rawMaterialName}
-  {item.rawMaterialNameGujarati && (
-    <div className="text-xs font-normal text-gray-500">{item.rawMaterialNameGujarati}</div>
-  )}
-</td>                        <td className="px-4 py-2.5 text-gray-500">{item.categoryName}</td>
+                        <td className="px-4 py-2.5 font-medium text-gray-800">
+                          {item.rawMaterialName}
+                          {item.rawMaterialNameGujarati && (
+                            <div className="text-xs font-normal text-gray-500">{item.rawMaterialNameGujarati}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 text-gray-500">{item.categoryName}</td>
                         <td className="px-4 py-2.5 text-center">
                           <button onClick={() => handleRemove(item.rawMaterialId)} className="text-red-500 hover:text-red-700 transition">
                             <Trash2 size={15} />
@@ -583,7 +825,14 @@ const getCategoryName = (item) =>
         {/* Footer */}
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-100 flex-shrink-0">
           <button type="button" onClick={onClose} className="btn btn-light text-sm h-9 px-4">Cancel</button>
-          <button type="button" onClick={handleSave} className="btn btn-primary text-sm h-9 px-5">Save</button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="btn btn-primary text-sm h-9 px-5 disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save"}
+          </button>
         </div>
       </div>
     </>
