@@ -1,6 +1,7 @@
 import { Path } from "leaflet";
 import { FormattedMessage } from "react-intl";
 
+const ALWAYS_ALLOWED = new Set(["/dashboard"]);
 export const disableMenuItems = (menuItems) => {
   return menuItems.map((item) => {
     const isPlanPage = item.path && item.path.toLowerCase().includes("price");

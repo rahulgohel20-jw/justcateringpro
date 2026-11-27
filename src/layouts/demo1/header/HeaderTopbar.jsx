@@ -24,6 +24,7 @@ import {
 } from "@/services/apiServices";
 import { useMenuPrepStore } from "../../../store/useMenuPrepStore";
 import { useModuleAccess } from "../../../hooks/useModuleAccess";
+import GlobalSearch from "./GlobalSearch";
 
 const PATH_TO_RIGHTS_KEY = {
   "/master/contact-type":             "Types",
@@ -486,7 +487,7 @@ const openPmsClientPortal = useCallback(() => {
     "";
 
   const pmsUrl =
-    `https://pms.cheeragskitchen.in/?clientCode=${encodeURIComponent(clientCode)}` +
+    `https://pms.justcatering.in/?clientCode=${encodeURIComponent(clientCode)}` +
     `&token=${encodeURIComponent(token)}` +
     `&email=${encodeURIComponent(clientEmail)}`;
 
@@ -999,6 +1000,10 @@ const fetchFollowUps = useCallback(() => {
     document.body
   )}
 </span>
+ <GlobalSearch
+  isSuperUser={isSuperUser}
+  pathToRightsKey={PATH_TO_RIGHTS_KEY}
+/>
             {canAccessMenuExtraFeature && (
               <Menu>
                 <MenuItem
@@ -1039,6 +1044,7 @@ const fetchFollowUps = useCallback(() => {
                 </MenuItem>
               </Menu>
             )}
+           
             <Menu>
               <MenuItem
                 ref={itemChatRef}

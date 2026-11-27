@@ -65,7 +65,7 @@ const FINAL_BILLING_USER_IDS = ["233", "299", "298"]; //bhandhari
 const isFinalBillingFeatureUser = FINAL_BILLING_USER_IDS.includes(String(userId));
 const [billingView, setBillingView] = useState("BEFORE");
 const [isLockReportLoading, setIsLockReportLoading] = useState(false);
-      const [quotationId, setQuotationId] = useState(null);
+      const [quotationId, setQuotationId] = useState(null); 
       const { eventId } = useParams();
       const [billingName, setBillingName] = useState("");
       const [gstNumber, setGstNumber] = useState("");
@@ -181,6 +181,9 @@ const cateringBaseRef = useRef(0);
         const canAccessecuritydeposit = hasModuleAccess("Security Deposit");
 const canAccessbankselection = hasModuleAccess("Bank Selection Quotaion");
 const canAccessjournalVoucher = hasModuleAccess("Account");
+// const canAccessservicewisechequegstbreakdown = hasModuleAccess("Service-wise Cheque and GST Breakdown Quot/inv");
+// const isDecorGstUser = canAccessservicewisechequegstbreakdown;
+// const isHallRentGstUser = canAccessservicewisechequegstbreakdown;
       const getErrorMessage = (error, fallback = "Something went wrong") => {
         return (
           error?.response?.data?.msg ||
