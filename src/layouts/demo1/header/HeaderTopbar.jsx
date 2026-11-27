@@ -15,6 +15,7 @@ import { useAuthStore } from "../../../store/useAuthStore";
 import { DropdownFollowUp } from "../../../partials/dropdowns/notifications/DropdownFollowUp";
 import { DropdownMenuPrepNotifications } from "../../../partials/dropdowns/notifications";
 import dayjs from "dayjs";
+import { Ticket } from "lucide-react";
 import {
   followupnotiy,
   GetMenuPreparationNotifications,
@@ -459,6 +460,66 @@ const [shakeBell, setShakeBell] = useState(false);
   const [checkInModal, setCheckInModal] = useState(false);
   const [openMenuKey, setOpenMenuKey]   = useState(null);
   const { user, refreshUser } = useUser();
+const openPmsClientPortal = useCallback(() => {
+  let authUser = null;
+  try {
+    authUser = JSON.parse(localStorage.getItem("auth-storage"))?.state?.user;
+  } catch {}
+
+  const token =
+    localStorage.getItem("userToken") ||
+    localStorage.getItem("token") ||
+    "";
+
+  const clientCode =
+    currentUser?.uniqueCode ||
+    currentUser?.code ||
+    user?.userBasicDetails?.uniqueCode ||
+    authUser?.uniqueCode ||
+    authUser?.code ||
+    "";
+
+  const clientEmail =
+    currentUser?.email ||
+    user?.userBasicDetails?.email ||
+    authUser?.email ||
+    "";
+
+  const pmsUrl =
+    `https://pms.cheeragskitchen.in/?clientCode=${encodeURIComponent(clientCode)}` +
+    `&token=${encodeURIComponent(token)}` +
+    `&email=${encodeURIComponent(clientEmail)}`;
+
+  window.open(pmsUrl, "_blank", "noopener,noreferrer");
+}, [currentUser, user]);
+
+const TICKET_INTRO_KEY = "ticket-intro-seen-v1";
+const [showTicketIntro, setShowTicketIntro] = useState(false);
+
+useEffect(() => {
+  try {
+    if (localStorage.getItem(TICKET_INTRO_KEY)) return;
+  } catch {
+    return; // storage blocked, so don't show it every time
+  }
+  const t = setTimeout(() => setShowTicketIntro(true), 1000);
+  return () => clearTimeout(t);
+}, []);
+
+const dismissTicketIntro = useCallback(() => {
+  setShowTicketIntro(false);
+  try {
+    localStorage.setItem(TICKET_INTRO_KEY, "1");
+  } catch {}
+}, []);
+
+// close on Escape
+useEffect(() => {
+  if (!showTicketIntro) return;
+  const onKey = (e) => e.key === "Escape" && dismissTicketIntro();
+  document.addEventListener("keydown", onKey);
+  return () => document.removeEventListener("keydown", onKey);
+}, [showTicketIntro, dismissTicketIntro]);
 
   useEffect(() => {
     if (!isMenuPrepRoute) return;
@@ -795,7 +856,16 @@ const fetchFollowUps = useCallback(() => {
 
   return (
     <div className="flex items-center justify-between w-full gap-2 min-w-0">
-
+ <style>{`
+      @keyframes ticket-pulse {
+        0%   { box-shadow: 0 0 0 0 rgba(30, 90, 168, .55), 0 4px 12px rgba(30, 90, 168, .35); }
+        70%  { box-shadow: 0 0 0 10px rgba(30, 90, 168, 0), 0 4px 12px rgba(30, 90, 168, .35); }
+        100% { box-shadow: 0 0 0 0 rgba(30, 90, 168, 0), 0 4px 12px rgba(30, 90, 168, .35); }
+      }
+      .ticket-blink { animation: ticket-pulse 1.8s ease-out infinite; }
+      .ticket-blink:hover { animation: none; }
+      @media (prefers-reduced-motion: reduce) { .ticket-blink { animation: none; } }
+    `}</style>
    {!isVisible && (
   <div className="flex items-center gap-2 shrink-0 min-w-0">
     {/* Company Name */}
@@ -851,7 +921,84 @@ const fetchFollowUps = useCallback(() => {
   >
     Upgrade
   </button>
-)}
+)} 
+
+<span className="relative inline-flex">
+  <button
+    type="button"
+    onClick={() => {
+      dismissTicketIntro();
+      openPmsClientPortal();
+    }}
+    title="Raise / view tickets"
+    className="ticket-blink flex items-center gap-1.5 h-9 px-3 rounded-full border border-primary text-primary bg-white text-xs font-semibold whitespace-nowrap hover:bg-primary hover:text-white transition-colors"
+  >
+    <Ticket size={16} />
+    <span className="hidden md:inline">Tickets</span>
+  </button>
+{showTicketIntro &&
+  createPortal(
+    <div
+      className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 p-4"
+      onClick={dismissTicketIntro}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="New: Tickets"
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 text-center"
+      >
+        <button
+          type="button"
+          onClick={dismissTicketIntro}
+          aria-label="Close"
+          className="absolute top-3 right-3 size-8 rounded-full text-gray-500 hover:bg-gray-100"
+        >
+          <i className="ki-filled ki-cross" />
+        </button>
+
+        <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Ticket size={30} />
+        </div>
+
+        <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-white bg-primary rounded px-2 py-0.5 mb-2">
+          New feature
+        </span>
+
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          Raise your queries with Tickets
+        </h3>
+        <p className="text-sm text-gray-600 leading-relaxed mb-5">
+          You can now raise a query or report an issue directly from the
+          <b> Tickets </b> button in the top bar, and track its status
+          anytime.
+        </p>
+
+        <div className="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={dismissTicketIntro}
+            className="btn btn-sm px-5 py-2 rounded-full border border-gray-300 text-gray-700 text-xs font-semibold hover:bg-gray-50"
+          >
+            Got it
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              dismissTicketIntro();
+              openPmsClientPortal();
+            }}
+            className="btn btn-sm px-5 py-2 rounded-full bg-primary text-white text-xs font-semibold hover:bg-primary/90"
+          >
+            Try it now
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  )}
+</span>
             {canAccessMenuExtraFeature && (
               <Menu>
                 <MenuItem
@@ -879,6 +1026,7 @@ const fetchFollowUps = useCallback(() => {
     </span>
   )}
 </MenuToggle>
+
                 {DropdownMenuPrepNotifications({
                     menuItemRef: itemMenuPrepNotifRef,
                     notifications: menuPrepNotifications,
@@ -924,6 +1072,7 @@ const fetchFollowUps = useCallback(() => {
                 {DropdownNotifications({ menuTtemRef: itemNotificationsRef })}
               </MenuItem>
             </Menu>
+          
 { canAccessfollowup && (
     <Menu>
   <MenuItem

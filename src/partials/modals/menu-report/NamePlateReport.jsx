@@ -140,22 +140,24 @@ const langConfig = getLangConfig();
 
         setMenuFontSize(apiData?.category_font_size ?? 10);
         setItemFontSize(apiData?.item_font_size ?? 15);
-
-        setItems(
-          list
-            .sort((a, b) => a.sequence - b.sequence)
-            .map((item, index) => ({
-              id: item.id,
-              menuid: item.menuItemId,
-              itemNameEnglish: item.itemNameEnglish || "",
-              itemNameHindi: item.itemNameHindi || "",
-              itemNameGujarati: item.itemNameGujarati || "",
-              isTableMenuChecked: item.isTableMenuChecked === 1,
-              is_checked: item.is_checked === 1,
-              isStandyChecked: item.isStandyChecked === 1,
-              sequence: item.sequence ?? index + 1,
-            })),
-        );
+const sorted = [...list].sort((a, b) => a.sequence - b.sequence);
+const hasSavedSelection = sorted.some((i) =>
+  isTableMenuExclusive ? i.is_checked === 1 : i.isTableMenuChecked === 1,
+);
+const selectAllByDefault = sorted.length > 0 && !hasSavedSelection;
+      setItems(
+  sorted.map((item, index) => ({
+    id: item.id,
+    menuid: item.menuItemId,
+    itemNameEnglish: item.itemNameEnglish || "",
+    itemNameHindi: item.itemNameHindi || "",
+    itemNameGujarati: item.itemNameGujarati || "",
+    isTableMenuChecked: selectAllByDefault ? true : item.isTableMenuChecked === 1,
+    is_checked: selectAllByDefault ? true : item.is_checked === 1,
+    isStandyChecked: item.isStandyChecked === 1,
+    sequence: item.sequence ?? index + 1,
+  })),
+);
       } catch (err) {
         console.error("Failed to fetch name plate data:", err);
       }

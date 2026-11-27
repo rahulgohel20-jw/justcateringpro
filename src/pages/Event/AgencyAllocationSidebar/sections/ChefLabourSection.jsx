@@ -7,8 +7,12 @@ import dayjs from "dayjs";
 
 const getFunctionTime24 = (functionStartDateTime) => {
   if (!functionStartDateTime || !/\d{1,2}:\d{2}/.test(functionStartDateTime)) return "";
-  const parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
-  return parsed.isValid() ? parsed.format("HH:mm") : "";
+  let parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
+  if (!parsed.isValid()) return "";
+  if (Number(localStorage.getItem("userId")) === 83) {
+    parsed = parsed.subtract(2, "hour");
+  }
+  return parsed.format("HH:mm");
 };
 
 const getFunctionDateDMY = (functionStartDateTime) => {
@@ -470,7 +474,7 @@ const handleCancel = useCallback(() => {
       partyId: allocation.partyId || 0,
       number: "",
       serviceType: allocation.serviceType || "plate_wise",
-      quantity: allocation.quantity || 0,
+  quantity: allocation.quantity === "" ? 0 : (allocation.quantity ?? menuItem.personCount ?? 0),
       price: allocation.price || 0,
       counterQuantity: allocation.counterQuantity || 0,
       counterPrice: allocation.counterPrice || 0,

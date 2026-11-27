@@ -4488,3 +4488,17 @@ export const geratemangerallreport = (eventFunctionId, eventId, userId) => {
 export const generateeventexpensereprot = (eventId, userId) => {
   return POST(`/expensemanagement/generate-event-expense-report?eventId=${eventId}&userId=${userId}`);
 };
+
+export const addOrUpdatePermissableNotPermissableItem = (data) =>{
+  return POST(`/menupreparation/addOrUpdatePermissableNotPermissableItem`, data);
+
+};
+
+export const getEventPermissionRawMaterial = (eventFunctionIds, eventId, userId) => {
+  const ids = [].concat(eventFunctionIds)
+    .map((id) => `eventFunctionIds=${id}`)
+    .join("&");
+  return GET(
+    `/menupreparation/geteventpermissionrawmaterial?${ids}&eventId=${eventId}&userId=${userId}`
+  );
+};

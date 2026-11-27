@@ -42,10 +42,12 @@ export default function OutsideAgencyTable({
       eventFunctionMenuAllocations: menuItem.eventFunctionMenuAllocations?.map(
         (allocation) => ({
           ...allocation,
-          quantity:
-            allocation.quantity && allocation.quantity > 0
-              ? allocation.quantity
-              : (menuItem.personCount ?? ""),
+         quantity:
+  allocation.quantity !== null &&
+  allocation.quantity !== undefined &&
+  allocation.quantity !== ""
+    ? allocation.quantity
+    : (menuItem.personCount ?? ""),
           isQuantityEdited: allocation.isQuantityEdited ?? false,
         }),
       ),

@@ -10,8 +10,12 @@ import { OutsideContactName, GetUnitData } from "@/services/apiServices";
 
 const getFunctionTime24 = (functionStartDateTime) => {
   if (!functionStartDateTime || !/\d{1,2}:\d{2}/.test(functionStartDateTime)) return "";
-  const parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
-  return parsed.isValid() ? parsed.format("HH:mm") : "";
+  let parsed = dayjs(functionStartDateTime, "DD/MM/YYYY hh:mm A");
+  if (!parsed.isValid()) return "";
+  if (Number(localStorage.getItem("userId")) === 83) {
+    parsed = parsed.subtract(2, "hour");
+  }
+  return parsed.format("HH:mm");
 };
 
 const parseDMY = (dateStr) => {

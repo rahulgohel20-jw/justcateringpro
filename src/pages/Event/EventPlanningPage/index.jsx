@@ -3649,7 +3649,7 @@ const EventPlanningPage = ({ mode = "menu" }) => {
       packageInfo: packageInfoByFunction[selectedFunction] || null,
       packageItems: packageItemsByFunction[selectedFunction] || [],
       categoryLimits: packageCategoryLimitsByFunction[selectedFunction] || {},
-      permissionRawMaterials,
+      // permissionRawMaterials,
       userId,
     });
     return payload;
@@ -6140,22 +6140,23 @@ const EventPlanningPage = ({ mode = "menu" }) => {
         selectedEvent={null}
         eventId={eventId}
       />
-      <PermissableNonPermissableModal
-        isOpen={showPermissableModal}
-        onClose={() => setShowPermissableModal(false)}
-        rawMaterials={rawMaterials}
-        categories={rawMaterialCategories}
-        onSave={handlePermissableSave}
-        onLoadMore={handleRawMaterialLoadMore}
-        hasMore={rawMaterialHasMore}
-        loading={rawMaterialLoading}
-        onCategoryChange={handleRawMaterialCategoryChange}
-        selectedCategoryId={rawMaterialCategoryFilter}
-        userId={userId}
-        eventFunctionId={selectedFunction}
-        eventId={eventId}
-        initialData={permissionRawMaterials}
-      />
+   <PermissableNonPermissableModal
+  isOpen={showPermissableModal}
+  onClose={() => setShowPermissableModal(false)}
+  rawMaterials={rawMaterials}
+  categories={rawMaterialCategories}
+  onSave={handlePermissableSave}
+  onLoadMore={handleRawMaterialLoadMore}
+  hasMore={rawMaterialHasMore}
+  loading={rawMaterialLoading}
+  onCategoryChange={handleRawMaterialCategoryChange}
+  selectedCategoryId={rawMaterialCategoryFilter}
+  userId={userId}
+  eventFunctionId={selectedFunction}
+  eventId={eventId}
+  eventFunctions={eventData?.eventFunctions || []}   // ← add this
+  initialData={permissionRawMaterials}
+/>
 
 
     </Fragment>
